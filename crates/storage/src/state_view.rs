@@ -6,6 +6,7 @@
 //! This crate defines [`trait StateView`](StateView).
 
 use anyhow::Result;
+use bytes::Bytes;
 use initia_types::access_path::AccessPath;
 
 /// `StateView` is a trait that defines a read-only snapshot of the global state. It is passed to
@@ -13,5 +14,5 @@ use initia_types::access_path::AccessPath;
 /// given state.
 pub trait StateView {
     /// Gets the state for a single access path.
-    fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>>;
+    fn get(&self, access_path: &AccessPath) -> Result<Option<Bytes>>;
 }

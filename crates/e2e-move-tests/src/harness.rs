@@ -1,6 +1,7 @@
 // Copyright (c) initia
 // SPDX-License-Identifier: BUSL-1.1
 
+use bytes::Bytes;
 use initia_compiler::built_package::{BuildOptions, BuiltPackage};
 use initia_types::env::Env;
 use initia_types::view_function::ViewFunction;
@@ -330,10 +331,10 @@ impl MoveHarness {
         struct_tag: StructTag,
     ) -> Option<Vec<u8>> {
         let path = AccessPath::resource_access_path(*addr, struct_tag);
-        self.read_state_value(&path)
+        self.read_state_value(&path).map(|v| v.to_vec())
     }
 
-    pub fn read_state_value(&self, path: &AccessPath) -> Option<Vec<u8>> {
+    pub fn read_state_value(&self, path: &AccessPath) -> Option<Bytes> {
         let state = self.chain.create_state();
         state.get(path).unwrap()
     }

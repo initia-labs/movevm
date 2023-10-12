@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use initia_storage::state_view::StateView;
 use initia_types::access_path::AccessPath;
 use initia_vm::backend::BackendResult;
@@ -38,7 +39,7 @@ impl<'r> GoStorage<'r> {
 }
 
 impl<'r> StateView for GoStorage<'r> {
-    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
+    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Bytes>> {
         let key = access_path.to_bytes()?;
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
@@ -60,7 +61,7 @@ impl<'r> StateView for GoStorage<'r> {
             }
         }
 
-        anyhow::Result::Ok(output)
+        anyhow::Result::Ok(output.map(|v| v.into()))
     }
 }
 

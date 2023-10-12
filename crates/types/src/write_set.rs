@@ -22,12 +22,12 @@ impl WriteSet {
             let (modules, resources) = account_changeset.into_inner();
             for (struct_tag, blob_opt) in resources {
                 let ap = AccessPath::resource_access_path(addr, struct_tag);
-                write_set.insert(ap, blob_opt);
+                write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
 
             for (name, blob_opt) in modules {
                 let ap = AccessPath::from(&ModuleId::new(addr, name));
-                write_set.insert(ap, blob_opt);
+                write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
         }
 

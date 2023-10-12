@@ -3,6 +3,7 @@
 use super::state_view::StateView;
 
 use anyhow::Result;
+use bytes::Bytes;
 use move_binary_format::CompiledModule;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::StructTag;
@@ -25,7 +26,7 @@ impl<'block, S: StateView> StateViewImpl<'block, S> {
 }
 
 impl<'block, S: StateView> StateViewImpl<'block, S> {
-    pub(crate) fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
+    pub(crate) fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Bytes>> {
         self.state_view.get(access_path)
     }
 }
@@ -43,7 +44,7 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
         module.metadata
     }
 
-    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>> {
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Bytes>> {
         let ap = AccessPath::from(module_id);
 
         self.get(&ap)
@@ -56,7 +57,7 @@ impl<'block, S: StateView> ResourceResolver for StateViewImpl<'block, S> {
         address: &AccountAddress,
         struct_tag: &StructTag,
         _metadata: &[Metadata], // not supporting resource group
-    ) -> Result<(Option<Vec<u8>>, usize)> {
+    ) -> Result<(Option<Bytes>, usize)> {
         let ap = AccessPath::resource_access_path(*address, struct_tag.clone());
         let buf = self.get(&ap)?;
         let buf_size = resource_size(&buf);

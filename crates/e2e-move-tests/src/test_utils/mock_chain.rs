@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use initia_storage::{state_view::StateView, table_view::TableView};
 use std::{
     collections::BTreeMap,
@@ -68,8 +69,8 @@ impl MockState {
 }
 
 impl StateView for MockState {
-    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
-        Ok(self.map.get(&access_path.to_bytes()?).cloned())
+    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Bytes>> {
+        Ok(self.map.get(&access_path.to_bytes()?).map(|v| v.clone().into()))
     }
 }
 

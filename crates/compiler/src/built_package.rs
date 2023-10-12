@@ -112,6 +112,7 @@ impl BuiltPackage {
             architecture: None,
             generate_abis: options.with_abis,
             generate_docs: options.with_docs,
+            generate_move_model: true,
             install_dir: options.install_dir.clone(),
             test_mode: options.test_mode,
             force_recompilation: false,
@@ -119,14 +120,13 @@ impl BuiltPackage {
             skip_fetch_latest_git_deps: options.skip_fetch_latest_git_deps,
             ..Default::default()
         };
-        eprintln!("Compiling, may take a little while to download git dependencies...");
-        let mut package = build_config
-            .clone()
-            .compile_package_no_exit(&package_path, &mut stderr())?;
 
-        // Build the Move model for extra processing and run extended checks as well derive
-        // runtime metadata
-        let model = &build_model(package_path.as_path(), build_config)?;
+        eprintln!("Compiling, may take a little while to download git dependencies...");
+        let (mut package, model_opt) =
+            build_config.compile_package_no_exit(&package_path, &mut stderr())?;
+
+        // Run extended checks as well derive runtime metadata
+        let model = &model_opt.expect("move model");
         if model.diag_count(Severity::Warning) > 0 {
             let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
             model.report_diag(&mut error_writer, Severity::Warning);
@@ -136,10 +136,17 @@ impl BuiltPackage {
         }
 
         let runtime_metadata = extended_checks::run_extended_checks(model);
+        let compiled_pkg_path = package
+            .compiled_package_info
+            .build_flags
+            .install_dir
+            .as_ref()
+            .unwrap_or(&package_path)
+            .join(CompiledPackageLayout::Root.path())
+            .join(package.compiled_package_info.package_name.as_str());
+
         inject_runtime_metadata(
-            package_path
-                .join(CompiledPackageLayout::Root.path())
-                .join(package.compiled_package_info.package_name.as_str()),
+            compiled_pkg_path,
             &mut package,
             runtime_metadata,
             options.bytecode_version,
@@ -253,7 +260,7 @@ fn inject_runtime_metadata(
                                 value: serialized_metadata,
                             });
                         } else {
-                            anyhow::bail!("not supported bytecode version")
+                            bail!("not supported bytecode version")
                         };
 
                         // Also need to update the .mv file on disk.

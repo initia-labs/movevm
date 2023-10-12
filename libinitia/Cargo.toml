@@ -27,6 +27,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = { workspace = true }
+bytes = { workspace = true }
 bcs = { workspace = true }
 errno = { workspace = true }
 hex = { workspace = true }
