@@ -1,0 +1,8 @@
+debug/
+target/
+
+.DS_Store
+
+build/
+*.mv
+

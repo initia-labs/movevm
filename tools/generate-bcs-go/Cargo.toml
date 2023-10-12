@@ -1,0 +1,35 @@
+[package]
+name = "generate-bcs-go"
+version = "0.1.0"
+edition = "2021"
+rust-version = { workspace = true }
+description = "Initia VM Engine"
+homepage = "https://www.initia.co"
+repository = "https://github.com/initia-labs/initiavm"
+license = "BUSL-1.1"
+exclude = [".gitignore"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+# This feature requires Rust nightly because it depends on the unstable backtrace feature.
+backtraces = []
+
+[dependencies]
+bcs = { workspace = true }
+serde-generate = { workspace = true }
+serde-reflection = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+hex = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+errno = { workspace = true }
+serde_json = { workspace = true }
+
+initia-types = { workspace = true }
+initia-natives = { workspace = true }
+initia-storage = { workspace = true }
+initia-vm = { workspace = true }
+
+move-core-types = { workspace = true }

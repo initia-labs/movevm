@@ -1,0 +1,78 @@
+name: Release rust libinitiavm
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build-linux-glibc:
+    name: Linux glibc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: make release-build-linux
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: libinitia-linux-glibc
+          path: api/*.so
+
+  build-linux-muslc:
+    name: Linux muslc (alpine)
+    if: startsWith(github.ref, 'refs/tags/') # Build linux-muslc only on tags/releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: make release-build-alpine
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: libinitia-linux-muslc
+          path: api/*.a
+
+  build-macos:
+    name: MacOS glibc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: make release-build-macos
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: libinitia-macos
+          path: api/*.dylib
+
+  release:
+    name: Release shared libraries
+    needs: [build-linux-glibc, build-linux-muslc, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get linux-glibc artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: libinitia-linux-glibc
+
+      - name: Get linux-muslc artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: libinitia-linux-muslc
+
+      - name: Get macos artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: libinitia-macos
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.so
+            *.a
+            *.dylib

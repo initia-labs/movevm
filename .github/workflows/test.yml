@@ -1,0 +1,51 @@
+name: Test
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "**.go"
+      - "**.rs"
+      - "**.mv"
+      - "**.move"
+  push:
+    branches:
+      - main
+      - "release/*"
+    paths:
+      - "**.go"
+      - "**.rs"
+      - "**.mv"
+      - "**.move"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Rust libinitiavm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install latest rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            crates/move-test/build/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      - name: Build
+        run: |
+          make build-rust
+      - name: Test
+        run: |
+          make test

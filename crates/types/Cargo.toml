@@ -1,0 +1,19 @@
+[package]
+name = "initia-types"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/initia-labs/initiavm/tree/main/crates/types"
+rust-version = { workspace = true }
+
+[dependencies]
+move-binary-format = { workspace = true }
+move-core-types = { workspace = true }
+
+anyhow = { workspace = true }
+bcs = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+once_cell = { workspace = true }
+move-model = { workspace = true }

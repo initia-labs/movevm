@@ -1,0 +1,35 @@
+use crate::error::Error;
+
+use initia_types::{message::MessageOutput, result::ExecutionResult};
+
+use serde::Serialize;
+
+pub fn to_vec<T>(data: &T) -> Result<Vec<u8>, Error>
+where
+    T: Serialize + ?Sized,
+{
+    bcs::to_bytes(data).map_err(|_| Error::invalid_utf8("failed to serialize"))
+}
+
+pub fn generate_result(output: MessageOutput) -> Result<ExecutionResult, Error> {
+    let (
+        events,
+        _write_set,
+        staking_change_set,
+        cosmos_messages,
+        new_accounts,
+        gas_used,
+        gas_usage_set,
+        new_published_modules_loaded,
+    ) = output.into_inner();
+
+    Ok(ExecutionResult::new(
+        events.into_inner(),
+        staking_change_set.into_inner(),
+        cosmos_messages.into_inner(),
+        new_accounts.into_inner(),
+        gas_used,
+        gas_usage_set.into_inner(),
+        new_published_modules_loaded,
+    ))
+}

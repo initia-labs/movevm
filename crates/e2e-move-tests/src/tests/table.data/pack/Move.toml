@@ -1,0 +1,11 @@
+[package]
+name = "pack"
+version = "0.0.0"
+
+[dependencies]
+MoveNursery = { local = "../../../../../../precompile/modules/move_nursery" }
+InitiaStdlib = { local = "../../../../../../precompile/modules/initia_stdlib" }
+
+[addresses]
+std =  "0x1"
+initia_std = "0x1"

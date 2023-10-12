@@ -1,0 +1,20 @@
+[package]
+name = "precompile"
+version = "0.1.0"
+edition = "2021"
+rust-version = { workspace = true }
+description = "precompile move contracts."
+homepage = "https://www.initia.co"
+repository = "https://github.com/initia-labs/initiavm"
+license = "BUSL-1.1"
+exclude = [".gitignore"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+
+[dependencies]
+initia-compiler = { workspace = true }
+
+move-cli = { workspace = true }
+move-package = { workspace = true }
