@@ -231,6 +231,7 @@ impl AccountAPI for MockAPI {
         bool, /* found */
         u64,  /* account_number */
         u64,  /* sequence */
+        u8,   /* account_type */
     )> {
         self.account_api.get_account_info(addr)
     }
@@ -262,7 +263,7 @@ impl StakingAPI for MockAPI {
 }
 
 pub struct MockAccountAPI {
-    pub accounts: BTreeMap<AccountAddress, (u64, u64)>,
+    pub accounts: BTreeMap<AccountAddress, (u64, u64, u8)>,
 }
 
 impl MockAccountAPI {
@@ -272,17 +273,17 @@ impl MockAccountAPI {
         }
     }
 
-    pub fn set_account(&mut self, addr: AccountAddress, account_number: u64, sequence: u64) {
-        self.accounts.insert(addr, (account_number, sequence));
+    pub fn set_account(&mut self, addr: AccountAddress, account_number: u64, sequence: u64, account_type: u8) {
+        self.accounts.insert(addr, (account_number, sequence, account_type));
     }
 }
 
 impl MockAccountAPI {
-    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64)> {
-        if let Some((account_number, sequence)) = self.accounts.get(&addr) {
-            Ok((true, *account_number, *sequence))
+    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8)> {
+        if let Some((account_number, sequence, account_type)) = self.accounts.get(&addr) {
+            Ok((true, *account_number, *sequence, *account_type))
         } else {
-            Ok((false, 0, 0))
+            Ok((false, 0, 0, 0))
         }
     }
 }
@@ -417,8 +418,9 @@ impl AccountAPI for BlankAccountAPIImpl {
         bool, /* found */
         u64,  /* account_number */
         u64,  /* sequence */
+        u8,   /* account_ype */
     )> {
-        Ok((false, 0, 0))
+        Ok((false, 0, 0, 0))
     }
 }
 

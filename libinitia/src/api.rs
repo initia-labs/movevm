@@ -23,6 +23,7 @@ pub struct GoApi_vtable {
         *mut bool,            // found
         *mut u64,             // account_number
         *mut u64,             // sequence
+        *mut u8,              // account_type
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub amount_to_share: extern "C" fn(
@@ -64,11 +65,12 @@ unsafe impl Send for GoApi {}
 
 impl AccountAPI for GoApi {
     // return latest block height and timestamp
-    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64)> {
+    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8)> {
         let mut found = false;
         let addr_bytes = U8SliceView::new(Some(&addr.into_bytes()));
         let mut account_number = 0_u64;
         let mut sequence = 0_u64;
+        let mut account_type: u8 = 0_u8;
         let mut error_msg = UnmanagedVector::default();
 
         let go_error: GoError = (self.vtable.get_account_info)(
@@ -77,6 +79,7 @@ impl AccountAPI for GoApi {
             &mut found,
             &mut account_number,
             &mut sequence,
+            &mut account_type,
             &mut error_msg,
         )
         .into();
@@ -89,7 +92,7 @@ impl AccountAPI for GoApi {
             }
         }
 
-        Ok((found, account_number, sequence))
+        Ok((found, account_number, sequence, account_type))
     }
 }
 

@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 pub struct Account {
     address: AccountAddress,
     account_number: u64,
-    is_object_account: bool,
+    account_type: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Accounts(Vec<(AccountAddress, u64, bool)>);
+pub struct Accounts(Vec<(AccountAddress, u64, u8)>);
 
 impl Default for Accounts {
     fn default() -> Self {
@@ -18,11 +18,11 @@ impl Default for Accounts {
 }
 
 impl Accounts {
-    pub fn new(events: Vec<(AccountAddress, u64, bool)>) -> Accounts {
+    pub fn new(events: Vec<(AccountAddress, u64, u8)>) -> Accounts {
         Self(events)
     }
 
-    pub fn as_ref(&self) -> &Vec<(AccountAddress, u64, bool)> {
+    pub fn as_ref(&self) -> &Vec<(AccountAddress, u64, u8)> {
         &self.0
     }
 
@@ -32,7 +32,7 @@ impl Accounts {
             .map(|v| Account {
                 address: v.0,
                 account_number: v.1,
-                is_object_account: v.2,
+                account_type: v.2,
             })
             .collect()
     }
