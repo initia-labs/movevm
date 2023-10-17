@@ -1,5 +1,16 @@
 use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
+use anyhow::{format_err, Error, Result};
+
+#[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+// TODO: this should be a enum from move-core-types
+pub enum AccountType {
+    BaseAccount = 0,
+    ObjectAccount = 1,
+    TableAccount = 2,
+    ModuleAccount = 3,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
@@ -35,5 +46,28 @@ impl Accounts {
                 account_type: v.2,
             })
             .collect()
+    }
+}
+
+impl AccountType {
+    pub fn is_valid(value: u8) -> bool {
+        match Self::try_from(value) {
+            Ok(_) => true,
+            Err(_) => false,
+        }
+    }
+}
+
+impl TryFrom<u8> for AccountType {
+    type Error = Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value{
+            0 => Ok(AccountType::BaseAccount),
+            1 => Ok(AccountType::ObjectAccount),
+            2 => Ok(AccountType::TableAccount),
+            3 => Ok(AccountType::ModuleAccount),
+            _ => Err(format_err!("Invalid AccountType")),
+        }
     }
 }

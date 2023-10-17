@@ -1,7 +1,7 @@
 use anyhow::Result;
 use better_any::{Tid, TidAble};
 use initia_gas::gas_params::account::*;
-use initia_types::account::Accounts;
+use initia_types::account::{Accounts, AccountType};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::StatusCode;
@@ -124,6 +124,8 @@ fn native_create_account(
     let cost = gas_params.base_cost;
 
     let account_type = pop_arg!(arguments, u8);
+    assert!(AccountType::is_valid(account_type), "invalid account type");
+
     let address = pop_arg!(arguments, AccountAddress);
 
     let account_context = context.extensions_mut().get_mut::<NativeAccountContext>();
