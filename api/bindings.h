@@ -14,6 +14,13 @@
 #include <stdlib.h>
 
 
+typedef enum {
+  BaseAccount = 0,
+  ObjectAccount = 1,
+  TableAccount = 2,
+  ModuleAccount = 3,
+} AccountType;
+
 enum CoverageOption {
   /**
    * Display a coverage summary for all modules in this package
@@ -258,6 +265,7 @@ typedef struct {
                               bool*,
                               uint64_t*,
                               uint64_t*,
+                              uint8_t*,
                               UnmanagedVector*);
   int32_t (*amount_to_share)(const api_t*,
                              U8SliceView,

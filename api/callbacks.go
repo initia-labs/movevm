@@ -296,7 +296,7 @@ func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) 
 /***** GoAPI *******/
 
 type GoAPI interface {
-	GetAccountInfo(types.AccountAddress) (bool /* found */, uint64 /* account number */, uint64 /* sequence */)
+	GetAccountInfo(types.AccountAddress) (bool /* found */, uint64 /* account number */, uint64 /* sequence */, uint8 /* account type */)
 	AmountToShare([]byte, types.AccountAddress, uint64) (uint64, error)
 	ShareToAmount([]byte, types.AccountAddress, uint64) (uint64, error)
 	UnbondTimestamp() uint64
@@ -319,7 +319,7 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cGetAccountInfo
-func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_number *C.uint64_t, sequence *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_number *C.uint64_t, sequence *C.uint64_t, account_type *C.uint8_t, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if found == nil {
@@ -329,6 +329,9 @@ func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_nu
 		return C.GoError_BadArgument
 	}
 	if sequence == nil {
+		return C.GoError_BadArgument
+	}
+	if account_type == nil {
 		return C.GoError_BadArgument
 	}
 	if errOut == nil {
@@ -347,10 +350,11 @@ func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_nu
 		return C.GoError_User
 	}
 
-	f, an, seq := api.GetAccountInfo(accAddr)
+	f, an, seq, accType := api.GetAccountInfo(accAddr)
 	*found = C.bool(f)
 	*account_number = C.uint64_t(an)
 	*sequence = C.uint64_t(seq)
+	*account_type = C.uint8_t(accType)
 
 	return C.GoError_None
 }

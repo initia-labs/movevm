@@ -2,9 +2,9 @@ use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 use anyhow::{format_err, Error, Result};
 
+/// cbindgen:prefix-with-name
 #[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
-// TODO: this should be a enum from move-core-types
 pub enum AccountType {
     BaseAccount = 0,
     ObjectAccount = 1,

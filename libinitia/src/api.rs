@@ -3,6 +3,7 @@ use crate::memory::{U8SliceView, UnmanagedVector};
 
 use anyhow::anyhow;
 use initia_natives::{account::AccountAPI, staking::StakingAPI};
+use initia_types::account;
 use move_core_types::account_address::AccountAddress;
 
 // this represents something passed in from the caller side of FFI
@@ -180,3 +181,33 @@ impl StakingAPI for GoApi {
         Ok(unbond_timestamp)
     }
 }
+
+#[repr(C)]
+pub enum AccountType {
+    BaseAccount = 0,
+    ObjectAccount = 1,
+    TableAccount = 2,
+    ModuleAccount = 3,
+}
+
+impl From<account::AccountType> for AccountType {
+    fn from(ty: account::AccountType) -> Self {
+        match ty {
+            account::AccountType::BaseAccount => AccountType::BaseAccount,
+            account::AccountType::ObjectAccount => AccountType::ObjectAccount,
+            account::AccountType::TableAccount => AccountType::TableAccount,
+            account::AccountType::ModuleAccount => AccountType::ModuleAccount,
+        }
+    }
+}
+
+impl Into<account::AccountType> for AccountType {
+    fn into(self) -> account::AccountType {
+        match self {
+            AccountType::BaseAccount => account::AccountType::BaseAccount,
+            AccountType::ObjectAccount => account::AccountType::ObjectAccount,
+            AccountType::TableAccount => account::AccountType::TableAccount,
+            AccountType::ModuleAccount => account::AccountType::ModuleAccount,
+        }
+    }
+}   
