@@ -1,6 +1,7 @@
 /// Type of large-scale storage tables.
 module minitia_std::table {
     use std::error;
+    use std::account;
     use std::vector;
     use std::bcs;
     use std::option::{Self, Option};
@@ -29,8 +30,10 @@ module minitia_std::table {
 
     /// Create a new Table.
     public fun new<K: copy + drop, V: store>(): Table<K, V> {
+        let handle = new_table_handle<K, V>();
+        account::create_table_account(handle);
         Table {
-            handle: new_table_handle<K, V>(),
+            handle,
             length: 0,
         }
     }

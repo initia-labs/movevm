@@ -89,7 +89,7 @@ func NewMockAPI(blockTime uint64, accountAPI *MockAccountAPI, stakingAPI *MockSt
 	}
 }
 
-func (m MockAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64) {
+func (m MockAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8) {
 	return m.AccountAPI.GetAccountInfo(addr)
 }
 
@@ -116,17 +116,17 @@ func NewMockAccountAPI() MockAccountAPI {
 	}
 }
 
-func (m MockAccountAPI) SetAccountInfo(addr types.AccountAddress, accountNumber, sequence uint64) {
-	m.accounts[addr.String()] = []uint64{accountNumber, sequence}
+func (m MockAccountAPI) SetAccountInfo(addr types.AccountAddress, accountNumber, sequence uint64, accountType uint8) {
+	m.accounts[addr.String()] = []uint64{accountNumber, sequence, uint64(accountType)}
 }
 
-func (m MockAccountAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64) {
+func (m MockAccountAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8) {
 	info, found := m.accounts[addr.String()]
 	if found {
-		return found, info[0], info[1]
+		return found, info[0], info[1], uint8(info[2])
 	}
 
-	return false, 0, 0
+	return false, 0, 0, 0
 }
 
 type ShareAmountRatio struct {

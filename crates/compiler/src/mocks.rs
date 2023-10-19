@@ -55,8 +55,9 @@ impl AccountAPI for BlankAccountAPIImpl {
         bool, /* found */
         u64,  /* account_number */
         u64,  /* sequence */
+        u8,   /* account_type */
     )> {
-        Ok((false, 0, 0))
+        Ok((false, 0, 0, 0))
     }
 }
 

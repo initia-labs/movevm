@@ -60,14 +60,14 @@ func BcsDeserializeAccessPath(input []byte) (AccessPath, error) {
 type Account struct {
 	Address AccountAddress
 	AccountNumber uint64
-	IsObjectAccount bool
+	AccountType uint8
 }
 
 func (obj *Account) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := obj.Address.Serialize(serializer); err != nil { return err }
 	if err := serializer.SerializeU64(obj.AccountNumber); err != nil { return err }
-	if err := serializer.SerializeBool(obj.IsObjectAccount); err != nil { return err }
+	if err := serializer.SerializeU8(obj.AccountType); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -86,7 +86,7 @@ func DeserializeAccount(deserializer serde.Deserializer) (Account, error) {
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Address = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.AccountNumber = val } else { return obj, err }
-	if val, err := deserializer.DeserializeBool(); err == nil { obj.IsObjectAccount = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU8(); err == nil { obj.AccountType = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

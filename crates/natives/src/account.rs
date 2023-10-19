@@ -1,7 +1,7 @@
 use anyhow::Result;
 use better_any::{Tid, TidAble};
 use initia_gas::gas_params::account::*;
-use initia_types::account::Accounts;
+use initia_types::account::{AccountType, Accounts};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::StatusCode;
@@ -25,6 +25,7 @@ pub trait AccountAPI {
         bool, /* found */
         u64,  /* account_number */
         u64,  /* sequence_number */
+        u8,   /* account_type */
     )>;
 }
 
@@ -32,13 +33,7 @@ pub trait AccountAPI {
 #[derive(Tid)]
 pub struct NativeAccountContext<'a> {
     api: &'a dyn AccountAPI,
-    new_accounts: BTreeMap<
-        AccountAddress,
-        (
-            u64,  /* account_number */
-            bool, /* is_object_account */
-        ),
-    >,
+    new_accounts: BTreeMap<AccountAddress, (u64 /* account_number */, u8 /* account_type */)>,
     next_account_number: u64,
 }
 
@@ -56,7 +51,7 @@ impl<'a> NativeAccountContext<'a> {
             self.new_accounts
                 .into_iter()
                 .map(|(k, v)| (k, v.0, v.1))
-                .collect::<Vec<(AccountAddress, u64, bool)>>(),
+                .collect::<Vec<(AccountAddress, u64, u8)>>(),
         )
     }
 }
@@ -81,9 +76,9 @@ fn native_get_account_info(
 
     let address = pop_arg!(arguments, AccountAddress);
     let account_context = context.extensions().get::<NativeAccountContext>();
-    let (found, account_number, sequence) =
-        if let Some(account_number) = account_context.new_accounts.get(&address) {
-            (true, account_number.0, 0)
+    let (found, account_number, sequence, account_type) =
+        if let Some(new_account) = account_context.new_accounts.get(&address) {
+            (true, new_account.0, 0, new_account.1)
         } else {
             account_context
                 .api
@@ -93,12 +88,20 @@ fn native_get_account_info(
                 })?
         };
 
+    if !AccountType::is_valid(account_type) {
+        return Err(partial_extension_error(format!(
+            "got invalid account type: {}",
+            account_type
+        )));
+    }
+
     Ok(NativeResult::ok(
         cost,
         smallvec![
             Value::bool(found),
             Value::u64(account_number),
-            Value::u64(sequence)
+            Value::u64(sequence),
+            Value::u8(account_type)
         ],
     ))
 }
@@ -121,14 +124,18 @@ fn native_create_account(
 
     let cost = gas_params.base_cost;
 
-    let is_object_account = pop_arg!(arguments, bool);
+    let account_type = pop_arg!(arguments, u8);
+    assert!(AccountType::is_valid(account_type), "invalid account type");
+
     let address = pop_arg!(arguments, AccountAddress);
 
     let account_context = context.extensions_mut().get_mut::<NativeAccountContext>();
 
     let account_number = account_context.next_account_number;
     account_context.next_account_number += 1;
-    account_context.new_accounts.insert(address, (account_number, is_object_account));
+    account_context
+        .new_accounts
+        .insert(address, (account_number, account_type));
 
     Ok(NativeResult::ok(
         cost,

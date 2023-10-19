@@ -8,6 +8,13 @@ module minitia_std::account {
 
     friend minitia_std::coin;
     friend minitia_std::object;
+    friend minitia_std::table;
+
+    /// Account Types
+    const ACCOUNT_TYPE_BASE: u8 = 0;
+    const ACCOUNT_TYPE_OBJECT: u8 = 1;
+    const ACCOUNT_TYPE_TABLE: u8 = 2;
+    const ACCOUNT_TYPE_MODULE: u8 = 3;
 
     /// This error type is used in native function.
     const EACCOUNT_ALREADY_EXISTS: u64 = 100;
@@ -18,10 +25,21 @@ module minitia_std::account {
     }
 
     public fun create_account(addr: address): u64 {
-        let (found, _, _) = get_account_info(addr);
+        let (found, _, _, _) = get_account_info(addr);
         assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
 
-        request_create_account(addr, false)
+        request_create_account(addr, ACCOUNT_TYPE_BASE)
+    }
+
+    /// This account is an account without a signer, so even if someone 
+    /// has the private key of the account in the future, they cannot 
+    /// use the account. Therefore, you can maintain a resource-only 
+    /// account without risk of overlapping accounts.
+    public(friend) fun create_table_account(addr: address): u64 {
+        let (found, _, _, _) = get_account_info(addr);
+        assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
+
+        request_create_account(addr, ACCOUNT_TYPE_TABLE)
     }
 
     /// This account is an account without a signer, so even if someone 
@@ -29,21 +47,21 @@ module minitia_std::account {
     /// use the account. Therefore, you can maintain a resource-only 
     /// account without risk of overlapping accounts.
     public(friend) fun create_object_account(addr: address): u64 {
-        let (found, _, _) = get_account_info(addr);
+        let (found, _, _, _) = get_account_info(addr);
         assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
 
-        request_create_account(addr, true)
+        request_create_account(addr, ACCOUNT_TYPE_OBJECT)
     }
 
     #[view]
     public fun exists_at(addr: address): bool {
-        let (found, _, _) = get_account_info(addr);
+        let (found, _, _, _) = get_account_info(addr);
         found
     }
 
     #[view]
     public fun get_account_number(addr: address): u64 {
-        let (found, account_number, _) = get_account_info(addr);
+        let (found, account_number, _, _) = get_account_info(addr);
         assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
 
         account_number
@@ -51,14 +69,46 @@ module minitia_std::account {
 
     #[view]
     public fun get_sequence_number(addr: address): u64 {
-        let (found, _, sequence_number) = get_account_info(addr);
+        let (found, _, sequence_number, _) = get_account_info(addr);
         assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
 
         sequence_number
     }
 
-    native fun request_create_account(addr: address, is_object_account: bool): u64;
-    native public fun get_account_info(addr: address): (bool /* found */, u64 /* account_number */, u64 /* sequence_number */);
+    #[view]
+    public fun is_base_account(addr: address): bool {
+        let (found, _, _, account_type) = get_account_info(addr);
+        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+
+        account_type == ACCOUNT_TYPE_BASE
+    }
+
+    #[view]
+    public fun is_object_account(addr: address): bool {
+        let (found, _, _, account_type) = get_account_info(addr);
+        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+
+        account_type == ACCOUNT_TYPE_OBJECT
+    }
+
+    #[view]
+    public fun is_table_account(addr: address): bool {
+        let (found, _, _, account_type) = get_account_info(addr);
+        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+
+        account_type == ACCOUNT_TYPE_TABLE
+    }
+
+    #[view]
+    public fun is_module_account(addr: address): bool {
+        let (found, _, _, account_type) = get_account_info(addr);
+        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+
+        account_type == ACCOUNT_TYPE_MODULE
+    }
+
+    native fun request_create_account(addr: address, account_type: u8): u64;
+    native public fun get_account_info(addr: address): (bool /* found */, u64 /* account_number */, u64 /* sequence_number */, u8 /* account_type */);
     native public(friend) fun create_address(bytes: vector<u8>): address;
     native public(friend) fun create_signer(addr: address): signer;
 
@@ -84,6 +134,22 @@ module minitia_std::account {
         assert!(bob_account_num+1 == carol_account_num, 6);
         assert!(bob_account_num == get_account_number(bob), 7);
         assert!(carol_account_num == get_account_number(carol), 7);
+
+        // object account
+        let dan = create_address(x"000000000000000000000000000000000000000000000000000000000000da17");
+        assert!(!exists_at(dan), 8);
+        let dan_object_account_num = create_object_account(dan);
+        assert!(dan_object_account_num == get_account_number(dan), 9);
+        assert!(is_object_account(dan), 10);
+        assert!(exists_at(dan), 11);
+
+        // table account
+        let erin = create_address(x"00000000000000000000000000000000000000000000000000000000000e5117");
+        assert!(!exists_at(erin), 12);
+        let erin_table_account_num = create_table_account(erin);
+        assert!(erin_table_account_num == get_account_number(erin), 13);
+        assert!(is_table_account(erin), 14);
+        assert!(exists_at(erin), 15);
     }
 
     #[test]
