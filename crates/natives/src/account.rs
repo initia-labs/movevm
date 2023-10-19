@@ -1,7 +1,7 @@
 use anyhow::Result;
 use better_any::{Tid, TidAble};
 use initia_gas::gas_params::account::*;
-use initia_types::account::{Accounts, AccountType};
+use initia_types::account::{AccountType, Accounts};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::StatusCode;
@@ -33,13 +33,7 @@ pub trait AccountAPI {
 #[derive(Tid)]
 pub struct NativeAccountContext<'a> {
     api: &'a dyn AccountAPI,
-    new_accounts: BTreeMap<
-        AccountAddress,
-        (
-            u64,  /* account_number */
-            u8,   /* account_type */
-        ),
-    >,
+    new_accounts: BTreeMap<AccountAddress, (u64 /* account_number */, u8 /* account_type */)>,
     next_account_number: u64,
 }
 
@@ -94,6 +88,13 @@ fn native_get_account_info(
                 })?
         };
 
+    if !AccountType::is_valid(account_type) {
+        return Err(partial_extension_error(format!(
+            "got invalid account type: {}",
+            account_type
+        )));
+    }
+
     Ok(NativeResult::ok(
         cost,
         smallvec![
@@ -132,7 +133,9 @@ fn native_create_account(
 
     let account_number = account_context.next_account_number;
     account_context.next_account_number += 1;
-    account_context.new_accounts.insert(address, (account_number, account_type));
+    account_context
+        .new_accounts
+        .insert(address, (account_number, account_type));
 
     Ok(NativeResult::ok(
         cost,

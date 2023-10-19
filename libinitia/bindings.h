@@ -14,13 +14,6 @@
 #include <stdlib.h>
 
 
-typedef enum {
-  BaseAccount = 0,
-  ObjectAccount = 1,
-  TableAccount = 2,
-  ModuleAccount = 3,
-} AccountType;
-
 enum CoverageOption {
   /**
    * Display a coverage summary for all modules in this package
