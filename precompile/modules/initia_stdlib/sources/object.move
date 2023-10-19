@@ -45,6 +45,8 @@ module initia_std::object {
     const ERESOURCE_DOES_NOT_EXIST: u64 = 7;
     /// Cannot reclaim objects that weren't burnt.
     const EOBJECT_NOT_BURNT: u64 = 8;
+    /// The Address is not an object address.
+    const ENOT_OBJECT_ADDRESS: u64 = 9;
 
     /// Maximum nesting from one object to another. That is objects can technically have infinte
     /// nesting, but any checks such as transfer will only be evaluated this deep.
@@ -159,6 +161,7 @@ module initia_std::object {
 
     /// Returns true if there exists an object or the remnants of an object.
     public fun is_object(object: address): bool {
+        assert!(account::is_object_account(object), error::not_found(ENOT_OBJECT_ADDRESS));
         exists<ObjectCore>(object)
     }
 
