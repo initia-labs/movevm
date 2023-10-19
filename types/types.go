@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+// AccountType is the type of account. It should be same as the type defined in the crates/types/src/account.rs and libinitia/src/api.rs
+const (
+	AccountType_Base = 0 + iota
+	AccountType_Object
+	AccountType_Table
+	AccountType_Module
+)
+
 // NewModule return module instance
 func NewModule(code []byte) Module {
 	if code == nil {
