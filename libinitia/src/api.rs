@@ -3,7 +3,6 @@ use crate::memory::{U8SliceView, UnmanagedVector};
 
 use anyhow::anyhow;
 use initia_natives::{account::AccountAPI, staking::StakingAPI};
-use initia_types::account;
 use move_core_types::account_address::AccountAddress;
 
 // this represents something passed in from the caller side of FFI
