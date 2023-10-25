@@ -449,6 +449,23 @@ module initia_std::dex {
         weight.timestamp
     }
 
+    public fun unpack_pair_response(pair_response: &PairResponse): (address, address, address, Weights, Decimal128) {
+        (
+            pair_response.coin_a,
+            pair_response.coin_b,
+            pair_response.liquidity_token,
+            pair_response.weights,
+            pair_response.swap_fee_rate
+        )
+    }
+
+    public fun unpack_current_weight_response(current_weight_response: &CurrentWeightResponse): (Decimal128, Decimal128) {
+        (
+            current_weight_response.coin_a_weight,
+            current_weight_response.coin_b_weight,
+        )
+    }
+
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
         assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
