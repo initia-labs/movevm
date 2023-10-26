@@ -190,6 +190,11 @@ module initia_std::nft {
     }
 
     #[view]
+    public fun is_nft(object_address: address): bool {
+        exists<Nft>(object_address)
+    }
+
+    #[view]
     public fun creator<T: key>(nft: Object<T>): address acquires Nft {
         collection::creator(borrow(nft).collection)
     }
