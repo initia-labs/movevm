@@ -21,6 +21,7 @@ codespan-reporting = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 tempfile = { workspace = true }
+once_cell = { workspace = true }
 
 initia-natives = { workspace = true, features = ["testing"] }
 initia-gas = { workspace = true, features = ["testing"] }

@@ -1,5 +1,5 @@
 use crate::mocks::{BlankAPIImpl, BlankTableViewImpl};
-use clap::__macro_refs::once_cell::sync::Lazy;
+use once_cell::sync::Lazy;
 use initia_natives::{
     account::NativeAccountContext, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, staking::NativeStakingContext,
