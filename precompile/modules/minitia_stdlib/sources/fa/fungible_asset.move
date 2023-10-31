@@ -55,7 +55,8 @@ module minitia_std::fungible_asset {
     // Constants
     //
 
-    const MAX_NAME_LENGTH: u64 = 32;
+    /// Increase name length to 128 due to cosmos spec.
+    const MAX_NAME_LENGTH: u64 = 128;
     /// Increase symbol length to 128 due to cosmos spec.
     const MAX_SYMBOL_LENGTH: u64 = 128;
     const MAX_DECIMALS: u8 = 32;
