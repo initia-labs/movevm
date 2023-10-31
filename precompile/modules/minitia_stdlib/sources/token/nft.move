@@ -27,10 +27,13 @@ module minitia_std::nft {
     const EURI_TOO_LONG: u64 = 5;
     /// The description is over the maximum length
     const EDESCRIPTION_TOO_LONG: u64 = 6;
+    /// The query length is over the maximum length
+    const EQUERY_LENGTH_TOO_LONG: u64 = 6;
 
     const MAX_NFT_NAME_LENGTH: u64 = 128;
     const MAX_URI_LENGTH: u64 = 512;
     const MAX_DESCRIPTION_LENGTH: u64 = 2048;
+    const MAX_QUERY_LENGTH: u64 = 30;
 
     /// Represents the common fields to all nfts.
     struct Nft has key {
@@ -68,6 +71,15 @@ module minitia_std::nft {
         mutated_field_name: String,
         old_value: String,
         new_value: String
+    }
+
+    /// Struct for nft info qeury response
+    struct NftInfoResponse has drop {
+        collection: Object<Collection>,
+        index: u64,
+        description: String,
+        name: String,
+        uri: String,
     }
 
     inline fun create_common(
@@ -237,6 +249,33 @@ module minitia_std::nft {
             let collection = object::address_to_object<collection::Collection>(collection_address);
             royalty::get(collection)
         }
+    }
+
+    #[view]
+    public fun nft_info(nft: Object<Nft>): NftInfoResponse acquires Nft {
+        let nft = borrow(nft);
+        NftInfoResponse {
+            collection: nft.collection,
+            index: nft.index,
+            description: nft.description,
+            name: nft.name,
+            uri: nft.uri,
+        }
+    }
+
+    #[view]
+    public fun nft_infos(nfts: vector<Object<Nft>>): vector<NftInfoResponse> acquires Nft {
+        let len = vector::length(&nfts);
+        assert!(len <= MAX_QUERY_LENGTH, error::invalid_argument(EQUERY_LENGTH_TOO_LONG));
+        let index = 0;
+        let res: vector<NftInfoResponse> = vector[];
+        while (index < len) {
+            let nft = vector::borrow(&nfts, index);
+            vector::push_back(&mut res, nft_info(*nft));
+            index = index + 1;
+        };
+
+        res
     }
 
     // Mutators
