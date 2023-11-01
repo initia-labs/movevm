@@ -96,9 +96,6 @@ module minitia_std::object {
         original_owner: address,
     }
 
-    /// A shared resource group for storing object resources together in storage.
-    struct ObjectGroup {}
-
     /// A pointer to an object -- these can only provide guarantees based upon the underlying data
     /// type, that is the validity of T existing at an address is something that cannot be verified
     /// by any other module than the module that defined T. Similarly, the module that defines T
@@ -139,6 +136,12 @@ module minitia_std::object {
     /// Used to create derived objects from a given objects.
     struct DeriveRef has drop, store {
         self: address,
+    }
+
+    /// Emitted at the object creation.
+    struct CreateEvent has drop, store {
+        object: address,
+        owner: address,
     }
 
     /// Emitted whenever the object's owner field is changed.
@@ -249,6 +252,14 @@ module minitia_std::object {
                 allow_ungated_transfer: true,
             },
         );
+
+        event::emit (
+            CreateEvent {
+                owner: creator_address,
+                object,
+            }
+        );
+
         ConstructorRef { self: object, can_delete }
     }
 
@@ -564,6 +575,7 @@ module minitia_std::object {
         };
         true
     }
+
     #[test_only]
     use std::option::{Self, Option};
 
