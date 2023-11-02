@@ -14,6 +14,8 @@ use once_cell::sync::Lazy;
 use std::io::Read;
 use std::{collections::BTreeMap, io::Cursor};
 
+const MAX_RECURSIVE_DEPTH: u64 = 10;
+
 pub(crate) struct FunctionId {
     module_id: ModuleId,
     func_name: &'static IdentStr,
@@ -259,16 +261,17 @@ fn construct_arg(
         Vector(_) | Struct { .. } | StructInstantiation { .. } => {
             let mut cursor = Cursor::new(&arg[..]);
             let mut new_arg = vec![];
-            let mut max_invocations = 10; // Read from config in the future
+
             recursively_construct_arg(
                 session,
                 ty,
                 allowed_structs,
                 &mut cursor,
                 gas_meter,
-                &mut max_invocations,
                 &mut new_arg,
+                1,
             )?;
+
             // Check cursor has parsed everything
             // Unfortunately, is_empty is only enabled in nightly, so we check this way.
             if cursor.position() != arg.len() as u64 {
@@ -301,10 +304,18 @@ pub(crate) fn recursively_construct_arg(
     allowed_structs: &ConstructorMap,
     cursor: &mut Cursor<&[u8]>,
     gas_meter: &mut impl GasMeter,
-    max_invocations: &mut u64,
     arg: &mut Vec<u8>,
+    depth: u64,
 ) -> Result<(), VMStatus> {
     use move_vm_types::loaded_data::runtime_types::Type::*;
+
+    // check recursive depth
+    if depth == MAX_RECURSIVE_DEPTH {
+        return Err(VMStatus::error(
+            StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
+            Some("reached MAX_RECURSIVE_DEPTH".to_string()),
+        ));
+    }
 
     match ty {
         Vector(inner) => {
@@ -318,8 +329,8 @@ pub(crate) fn recursively_construct_arg(
                     allowed_structs,
                     cursor,
                     gas_meter,
-                    max_invocations,
                     arg,
+                    depth + 1,
                 )?;
                 len -= 1;
             }
@@ -331,6 +342,7 @@ pub(crate) fn recursively_construct_arg(
             let constructor = allowed_structs
                 .get(&full_name)
                 .ok_or_else(invalid_signature)?;
+
             // By appending the BCS to the output parameter we construct the correct BCS format
             // of the argument.
             arg.append(&mut validate_and_construct(
@@ -340,7 +352,7 @@ pub(crate) fn recursively_construct_arg(
                 allowed_structs,
                 cursor,
                 gas_meter,
-                max_invocations,
+                depth, // it's not recursive call, so pass current depth.
             )?);
         }
         Bool | U8 => read_n_bytes(1, cursor, arg)?,
@@ -365,15 +377,8 @@ fn validate_and_construct(
     allowed_structs: &ConstructorMap,
     cursor: &mut Cursor<&[u8]>,
     gas_meter: &mut impl GasMeter,
-    max_invocations: &mut u64,
+    depth: u64,
 ) -> Result<Vec<u8>, VMStatus> {
-    if *max_invocations == 0 {
-        return Err(VMStatus::error(
-            StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-            None,
-        ));
-    }
-
     // HACK mitigation of performance attack
     // To maintain compatibility with vector<string> or so on, we need to allow unlimited strings.
     // So we do not count the string constructor against the max_invocations, instead we
@@ -393,15 +398,16 @@ fn validate_and_construct(
         })?;
         return bcs::to_bytes(&arg)
             .map_err(|_| VMStatus::error(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT, None));
-    } else {
-        *max_invocations -= 1;
     }
 
+    // load function for the construction
     let (function, instantiation) = session.load_function_with_type_arg_inference(
         &constructor.module_id,
         constructor.func_name,
         expected_type,
     )?;
+
+    // prepare arguments of construction function
     let mut args = vec![];
     for param_type in &instantiation.parameters {
         let mut arg = vec![];
@@ -411,20 +417,25 @@ fn validate_and_construct(
             allowed_structs,
             cursor,
             gas_meter,
-            max_invocations,
             &mut arg,
+            depth + 1,
         )?;
         args.push(arg);
     }
+
+    // execute construction function
     let serialized_result =
         session.execute_instantiated_function(function, instantiation, args, gas_meter)?;
-    let mut ret_vals = serialized_result.return_values;
+
     // We know ret_vals.len() == 1
-    let deserialize_error = VMStatus::error(
-        StatusCode::INTERNAL_TYPE_ERROR,
-        Some(String::from("Constructor did not return value")),
-    );
-    Ok(ret_vals.pop().ok_or(deserialize_error)?.0)
+    let mut ret_vals = serialized_result.return_values;
+    Ok(ret_vals
+        .pop()
+        .ok_or(VMStatus::error(
+            StatusCode::INTERNAL_TYPE_ERROR,
+            Some(String::from("Constructor did not return value")),
+        ))?
+        .0)
 }
 
 // String is a vector of bytes, so both string and vector carry a length in the serialized format.
