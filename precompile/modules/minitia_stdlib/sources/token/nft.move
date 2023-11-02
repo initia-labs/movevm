@@ -37,7 +37,7 @@ module minitia_std::nft {
 
     /// Represents the common fields to all nfts.
     struct Nft has key {
-        /// The collection from which this nft resides.
+        /// The collection where this nft resides.
         collection: Object<Collection>,
         /// Unique identifier within the collection, optional, 0 means unassigned
         index: u64,
@@ -73,7 +73,7 @@ module minitia_std::nft {
         new_value: String
     }
 
-    /// Struct for nft info qeury response
+    /// Struct for nft info query response
     struct NftInfoResponse has drop {
         collection: Object<Collection>,
         index: u64,
