@@ -31,26 +31,31 @@ module initia_std::account {
         request_create_account(addr, ACCOUNT_TYPE_BASE)
     }
 
-    /// This account is an account without a signer, so even if someone 
-    /// has the private key of the account in the future, they cannot 
-    /// use the account. Therefore, you can maintain a resource-only 
-    /// account without risk of overlapping accounts.
-    public(friend) fun create_object_account(addr: address): u64 {
-        let (found, _, _, _) = get_account_info(addr);
-        assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
-
-        request_create_account(addr, ACCOUNT_TYPE_OBJECT)
-    }
-
-    /// This account is an account without a signer, so even if someone 
-    /// has the private key of the account in the future, they cannot 
-    /// use the account. Therefore, you can maintain a resource-only 
-    /// account without risk of overlapping accounts.
+   /// TableAccount is similar to CosmosSDK's ModuleAccount in concept, 
+    /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_table_account(addr: address): u64 {
         let (found, _, _, _) = get_account_info(addr);
         assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
 
         request_create_account(addr, ACCOUNT_TYPE_TABLE)
+    }
+
+    /// ObjectAccount is similar to CosmosSDK's ModuleAccount in concept, 
+    /// as both cannot have a pubkey, there is no way to use the account externally.
+    public(friend) fun create_object_account(addr: address): u64 {
+        let (found, account_number, _, account_type) = get_account_info(addr);
+        if (found) {
+            // When an Object is deleted, the ObjectAccount in CosmosSDK is designed 
+            // not to be deleted in order to prevent unexpected issues. Therefore, 
+            // in this case, the creation of an account is omitted.
+            if (account_type == ACCOUNT_TYPE_OBJECT) {
+                account_number
+            } else {
+                abort(error::already_exists(EACCOUNT_ALREADY_EXISTS))
+            }
+        } else {
+            request_create_account(addr, ACCOUNT_TYPE_OBJECT)
+        }
     }
 
     #[view]
