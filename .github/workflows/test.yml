@@ -43,6 +43,12 @@ jobs:
             crates/move-test/build/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
+      - name: Rustfmt
+        run: |
+          cargo fmt --all
+      - name: Clippy
+        run: |
+          cargo clippy --all --all-targets -- -D warnings
       - name: Build
         run: |
           make build-rust
