@@ -191,9 +191,7 @@ module initia_std::minit_swap {
         let amount = fungible_asset::amount(&l1_init);
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let total_share = *option::borrow(
-            &fungible_asset::supply(share_token_metadata())
-        );
+        let total_share = total_share();
         let share = if (total_share == 0) {
             amount
         } else {
@@ -212,7 +210,7 @@ module initia_std::minit_swap {
         assert!(share_token_metadata == share_token_metadata(), error::invalid_argument(ENOT_SHARE_TOKEN));
         let amount = fungible_asset::amount(&share_token);
         let total_share = total_share();
-        let return_amount = mul_div(amount,module_store.l1_init_amount, (total_share as u64));
+        let return_amount = mul_div(amount, module_store.l1_init_amount, total_share);
         module_store.l1_init_amount =  module_store.l1_init_amount - return_amount;
 
         coin::burn(&module_store.burn_cap, share_token);
@@ -233,7 +231,10 @@ module initia_std::minit_swap {
         let module_addr = signer::address_of(&module_signer);
         let pool_addr = signer::address_of(&pool_signer);
 
-        let imbalance = decimal128::from_ratio_u64(pool.virtual_l2_balance, pool.pool_size);
+        let imbalance = decimal128::from_ratio_u64(
+            pool.virtual_l2_balance + pool.l2_pool_amount - pool.pool_size, // same with real l2 balance
+            pool.pool_size,
+        );
         // Peg keeper swap
         let r_fr = get_fully_recovered_ratio(&imbalance, &pool.max_ratio, &pool.recover_param);
         let current_ratio = decimal128::from_ratio_u64(pool.l2_pool_amount, pool.l1_pool_amount + pool.l2_pool_amount);
