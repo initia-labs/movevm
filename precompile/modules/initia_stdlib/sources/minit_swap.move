@@ -20,6 +20,7 @@ module initia_std::minit_swap {
     const EINACTIVE: u64 = 5;
     const ENOT_SHARE_TOKEN: u64 = 6;
     const EL2_PRICE_TOO_LOW: u64 = 7;
+    const EMAX_CHANGE: u64 = 8;
 
     const A_PRECISION: u256 = 100;
     const U64_MAX: u128 = 18_446_744_073_709_551_615;
@@ -57,7 +58,7 @@ module initia_std::minit_swap {
         l2_pool_amount: u64,
         ///
         latest_recovered_timestamp: u64,
-        /// L1 INIT balance of peg keeper
+        /// L1 INIT balance of peg keeper (negative value)
         virtual_l1_balance: u64,
         /// L2 INIT balance of peg keeper
         virtual_l2_balance: u64,
@@ -146,6 +147,97 @@ module initia_std::minit_swap {
         let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
         let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
         pool.active = false
+    }
+
+    // TODO: make it an automatic process. Add max increase / decrease size
+    public entry fun change_pool_size(
+        chain: &signer,
+        l2_init_metadata: Object<Metadata>,
+        new_pool_size: u64
+    ) acquires ModuleStore, VirtualPool {
+        assert_is_chain(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+
+        let max_change_rate = decimal128::from_ratio(1, 10); // TODO: make this as param
+        let change_rate = if (new_pool_size > pool.pool_size) {
+            decimal128::from_ratio_u64(new_pool_size - pool.pool_size, pool.pool_size)
+        } else {
+            decimal128::from_ratio_u64(pool.pool_size - new_pool_size, pool.pool_size)
+        };
+
+        assert!(decimal128::val(&max_change_rate) >= decimal128::val(&change_rate), error::invalid_argument(EMAX_CHANGE));
+
+        if (new_pool_size < pool.pool_size) {
+            /*
+                Decrease size process
+                1. Change pool amount as ratio
+                2. Calculate diff, update peg keeper's balances
+
+                Net Effect
+                This action is same with swap L1 > L2 until pool ratio to be 5:5,
+                change pool size and sell some portion of L2 at same price
+                - L1 and L2 balances of peg keepers -> L1 decrease L2 increase,
+                    but L1 decreased amount is smaller than L2 increased amount.
+                - Pool ratio doesn't change (= price not change)
+            */
+            let current_l1_delta = pool.pool_size - pool.l1_pool_amount;
+            let current_l2_delta = pool.l2_pool_amount - pool.pool_size;
+
+            let ratio = decimal128::from_ratio_u64(new_pool_size, pool.pool_size);
+            pool.l1_pool_amount = decimal128::mul_u64(&ratio, pool.l1_pool_amount);
+            pool.l2_pool_amount = decimal128::mul_u64(&ratio, pool.l2_pool_amount);
+            pool.pool_size = new_pool_size;
+
+            let l1_delta = pool.pool_size - pool.l1_pool_amount;
+            let l2_delta = pool.l2_pool_amount - pool.pool_size;
+
+            let net_l1_delta = current_l1_delta - l1_delta;
+            let net_l2_delta = current_l2_delta - l2_delta;
+
+            pool.virtual_l1_balance = pool.virtual_l1_balance + net_l1_delta;
+            pool.virtual_l2_balance = pool.virtual_l2_balance + net_l2_delta;
+        } else {
+            /*
+                Increase size process
+                1. Swap L1 > L2 to make 5:5
+                2. Change pool size
+                3. Swap back L2 > L1
+                    a. If L1 init balance of peg keeper is greater than 0, return it to provider
+
+                Net Effect
+                - L1 and L2 balances of peg keepers -> + for L1 and even for L2
+                - Ratio of pool -> L2 price decrease
+            */
+            
+            // 1. swap to make 5:5
+            let l1_swap_amount = pool.pool_size - pool.l1_pool_amount;
+            let l2_return_amount =  pool.l2_pool_amount - pool.pool_size;
+            // pool.l1_pool_amount = pool.pool_size;
+            // pool.l2_pool_amount = pool.pool_size;
+            pool.virtual_l1_balance = pool.virtual_l1_balance + l1_swap_amount;
+            pool.virtual_l2_balance = pool.virtual_l2_balance + l2_return_amount;
+
+            // 2. change pool size
+            pool.l1_pool_amount = new_pool_size;
+            pool.l2_pool_amount = new_pool_size;
+            pool.pool_size = new_pool_size;
+
+            // 3. swap back 
+            let return_amount = get_return_amount(l2_return_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.amplifier);
+            pool.l2_pool_amount = pool.l2_pool_amount + l2_return_amount;
+            pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
+            pool.virtual_l2_balance = pool.virtual_l2_balance - l2_return_amount;
+
+            if (pool.virtual_l1_balance < return_amount) {
+                let remain = return_amount - pool.virtual_l1_balance;
+                module_store.l1_init_amount = module_store.l1_init_amount + remain;
+                pool.virtual_l1_balance = 0
+            } else {
+                pool.virtual_l1_balance = pool.virtual_l1_balance - return_amount;
+            }
+        }
     }
 
 
@@ -238,9 +330,9 @@ module initia_std::minit_swap {
         // Peg keeper swap
         let r_fr = get_fully_recovered_ratio(&imbalance, &pool.max_ratio, &pool.recover_param);
         let current_ratio = decimal128::from_ratio_u64(pool.l2_pool_amount, pool.l1_pool_amount + pool.l2_pool_amount);
-        if (decimal128::val(&current_ratio) > decimal128::val(&r_fr)) {
+        let time_diff = timestamp - pool.latest_recovered_timestamp;
+        if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
             let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.amplifier);
-            let time_diff = timestamp - pool.latest_recovered_timestamp;
             let max_reocver_amount = pool.pool_size * time_diff / pool.recover_period;
             let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
             let swap_amount = if (swap_amount_to_reach_fr < max_reocver_amount) {
@@ -273,9 +365,9 @@ module initia_std::minit_swap {
             let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.amplifier);
             let fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
             module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
-            let return_amount = return_amount - fee_amount;
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
             pool.l2_pool_amount = pool.l2_pool_amount + offer_amount;
+            let return_amount = return_amount - fee_amount;
             primary_fungible_store::withdraw(&module_signer, return_asset_metadata, return_amount)
         };
 
@@ -293,7 +385,7 @@ module initia_std::minit_swap {
         let fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, amount); // TODO: check fee
         module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
         let offer_amount = amount - fee_amount;
-        assert!(offer_amount < pool.virtual_l1_balance, error::invalid_argument(ENOT_ENOUGH_BALANCE));
+        assert!(offer_amount <= pool.virtual_l1_balance, error::invalid_argument(ENOT_ENOUGH_BALANCE));
         let return_amount = mul_div(offer_amount, pool.virtual_l2_balance, pool.virtual_l1_balance);
 
         pool.virtual_l1_balance = pool.virtual_l1_balance - offer_amount;
@@ -389,7 +481,7 @@ module initia_std::minit_swap {
     }
 
     fun get_return_amount(offer_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, amplifier: u64): u64 {
-        let d = get_d0(pool_size, amplifier); // TODO change this to d0
+        let d = get_d0(pool_size, amplifier);
         let offer_pool_amount_after = offer_pool_amount + offer_amount;
 
         let y = get_y(d, offer_pool_amount_after, amplifier);
@@ -436,12 +528,12 @@ module initia_std::minit_swap {
 
     // R_fr = 0.5 + (R_max - 0.5) * (f * I) ** 3 / (1 + (f * I) ** 3)
     fun get_fully_recovered_ratio(imbalance: &Decimal128, max_ratio: &Decimal128, recover_param: &Decimal128): Decimal128 {
-        let fi = decimal128::mul(recover_param, imbalance);
-        let fi3 = decimal128::mul(&fi, &decimal128::mul(&fi, &fi));
+        let fi = decimal128_safe_mul(recover_param, imbalance);
+        let fi3 = decimal128_safe_mul(&fi, &decimal128_safe_mul(&fi, &fi));
         let half = decimal128::from_ratio(1, 2); // .5
-        let to_sum = decimal128::mul(
+        let to_sum = decimal128_safe_mul(
             &decimal128::sub(max_ratio, &half), // R_max - 0.5
-            &decimal128::from_ratio(
+            &decimal128_safe_from_ratio(
                 decimal128::val(&fi3),
                 decimal128::val(&decimal128::add(&decimal128::one(), &fi3)),
             ) // (f * I) ** 3 / (1 + (f * I) ** 3)
@@ -498,6 +590,22 @@ module initia_std::minit_swap {
             (x * (pool_size as u128) / sim_size as u64),
             (y * (pool_size as u128) / sim_size as u64)
         )
+    }
+
+    fun decimal128_safe_mul(a: &Decimal128, b: &Decimal128): Decimal128 {
+        let a_val = (decimal128::val(a) as u256);
+        let b_val = (decimal128::val(b) as u256);
+        let one = (decimal128::val(&decimal128::one()) as u256);
+        let val = (a_val * b_val / one as u128);
+        decimal128::new(val)
+    }
+
+    fun decimal128_safe_from_ratio(a: u128, b: u128): Decimal128 {
+        let a = (a as u256);
+        let b = (b as u256);
+        let one = (decimal128::val(&decimal128::one()) as u256);
+        let val = (a * one / b as u128);
+        decimal128::new(val)
     }
 
     #[test_only]
@@ -558,7 +666,7 @@ module initia_std::minit_swap {
             10000000,
             3000,
             decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(1, 2),
+            decimal128::from_ratio(2, 1),
         );
 
         createPool(
@@ -568,7 +676,7 @@ module initia_std::minit_swap {
             10000000,
             3000,
             decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(1, 2),
+            decimal128::from_ratio(2, 1),
         );
 
         // print_state(l2_1_metadata);
@@ -593,6 +701,8 @@ module initia_std::minit_swap {
         swap(&chain, init_metadata, l2_1_metadata, 10000);
         print_state(l2_1_metadata);
         rebalance(&chain, l2_1_metadata, 4100000);
+        print_state(l2_1_metadata);
+        change_pool_size(&chain, l2_1_metadata, 9000000);
         print_state(l2_1_metadata);
     }
 }
