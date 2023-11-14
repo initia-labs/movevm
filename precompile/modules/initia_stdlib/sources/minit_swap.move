@@ -131,6 +131,74 @@ module initia_std::minit_swap {
     }
 
     //
+    // View function
+    //
+
+    #[view]
+    public fun swap_simulation(
+        offer_asset_metadata: Object<Metadata>,
+        return_asset_metadata: Object<Metadata>,
+        offer_amount: u64,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let (_, timestamp) = block::get_block_info();
+        let is_l1_init_offered = is_l1_init_metadata(offer_asset_metadata);
+        let (module_store, pool, _, _) = if(is_l1_init_offered) {
+            borrow_all(return_asset_metadata)
+        } else {
+            borrow_all(offer_asset_metadata)
+        };
+        assert!(pool.active, error::invalid_state(EINACTIVE));
+
+        let imbalance = decimal128::from_ratio_u64(
+            pool.virtual_l2_balance + pool.l2_pool_amount - pool.pool_size, // same with real l2 balance
+            pool.pool_size,
+        );
+        // Peg keeper swap
+        let r_fr = get_fully_recovered_ratio(&imbalance, &pool.max_ratio, &pool.recover_param);
+        let current_ratio = decimal128::from_ratio_u64(pool.l2_pool_amount, pool.l1_pool_amount + pool.l2_pool_amount);
+        let time_diff = timestamp - pool.latest_recovered_timestamp;
+        if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
+            let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.amplifier);
+            let max_reocver_amount = decimal128::mul_u64(&pool.recover_velocity, time_diff);
+            let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
+            let swap_amount = if (swap_amount_to_reach_fr < max_reocver_amount) {
+                swap_amount_to_reach_fr
+            } else {
+                max_reocver_amount
+            };
+
+            let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.amplifier);
+            pool.l1_pool_amount = pool.l1_pool_amount + swap_amount;
+            pool.l2_pool_amount = pool.l2_pool_amount - return_amount;
+            pool.virtual_l1_balance = pool.virtual_l1_balance + swap_amount;
+            pool.virtual_l2_balance = pool.virtual_l2_balance + return_amount;
+
+            (swap_amount, return_amount)
+        } else {
+            (0, 0)
+        };
+
+        pool.latest_recovered_timestamp = timestamp;
+
+        // user swap
+        let fee_amount = 0;
+        let return_amount = if (is_l1_init_offered) {
+            // 0 fee for L1 > L2
+            let return_amount = get_return_amount(offer_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.amplifier);
+            pool.l1_pool_amount = pool.l1_pool_amount + offer_amount;
+            pool.l2_pool_amount = pool.l2_pool_amount - return_amount;
+            assert!(pool.l2_pool_amount >= pool.l1_pool_amount, error::invalid_state(EL2_PRICE_TOO_LOW));
+            return_amount
+        } else {
+            let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.amplifier);
+            fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
+            return_amount - fee_amount
+        };
+
+        (return_amount, fee_amount)
+    }
+
+    //
     // Admin functions
     //
 
