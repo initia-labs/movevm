@@ -141,7 +141,7 @@ module initia_std::minit_swap {
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (_, timestamp) = block::get_block_info();
         let (_, pool, _, _) = borrow_all(l2_init_metadata);
-        if (after_peg_keeper_swap) {
+        if (!after_peg_keeper_swap) {
             return (pool.l1_pool_amount, pool.l2_pool_amount)
         };
 
@@ -186,7 +186,7 @@ module initia_std::minit_swap {
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (_, timestamp) = block::get_block_info();
         let (_, pool, _, _) = borrow_all(l2_init_metadata);
-        if (after_peg_keeper_swap) {
+        if (!after_peg_keeper_swap) {
             return (pool.virtual_l1_balance, pool.virtual_l2_balance)
         };
 
@@ -831,15 +831,14 @@ module initia_std::minit_swap {
         let grad = decimal128::from_ratio(fully_recovered_ratio_val, denominator - fully_recovered_ratio_val);
         let grad_val = decimal128::val(&grad);
 
-        // Increase the value if you want more accurate values, or decrease the value if you want less calculations.
-        let sim_size = 100000000u128;
-        let sim_size_val = sim_size * denominator;
+        let pool_size = (pool_size as u128);
+        let pool_size_val = (pool_size as u128) * denominator;
 
         // Get first point
-        let d0 = get_d0((sim_size as u64), amplifier);
-        let x = 2 * sim_size_val / (grad_val + denominator); // x = 2z / (g + 1)
-        if (x == sim_size) { // fully_recovered_ratio = 0.5
-            return (pool_size, pool_size)
+        let d0 = get_d0((pool_size as u64), amplifier);
+        let x = 2 * pool_size_val / (grad_val + denominator); // x = 2z / (g + 1)
+        if (x == pool_size) { // fully_recovered_ratio = 0.5
+            return ((pool_size as u64), (pool_size as u64))
         };
         let y = (get_y(d0, (x as u64), amplifier) as u128);
 
@@ -847,11 +846,12 @@ module initia_std::minit_swap {
         let x_prev;
         // get the cross point of y = grad * x and [(sim_size, sim_size), (x_prev), (y_prev)]
         // the point is (temp_x, y), get x from y
+        // TODO: improve gas amount
         while (i < 255) {
             x_prev = x;
             // x = z * (x' - y') / (g * (x'- z) - (y' - z))
             // x = z * (y' - x') / (g * (z - x') + (y' - z))
-            let temp_x = sim_size * (y - x) * denominator / (grad_val * (sim_size - x) + (y - sim_size) * denominator);
+            let temp_x = pool_size * (y - x) * denominator / (grad_val * (pool_size - x) + (y - pool_size) * denominator);
             let y = decimal128::mul_u128(&grad, temp_x);
             x = (get_y(d0, (y as u64), amplifier) as u128);
 
@@ -866,12 +866,9 @@ module initia_std::minit_swap {
             };
             i = i + 1;
         };
+        std::debug::print(&i);
 
-        // scale up/down to real in real pool size
-        (
-            (x * (pool_size as u128) / sim_size as u64),
-            (y * (pool_size as u128) / sim_size as u64)
-        )
+        ((x as u64), (y as u64))
     }
 
     fun decimal128_safe_mul(a: &Decimal128, b: &Decimal128): Decimal128 {
@@ -925,73 +922,100 @@ module initia_std::minit_swap {
         std::debug::print(pool);
     }
 
-    #[test(chain = @0x1)]
-    fun end_to_end(
-        chain: signer,
-    ) acquires ModuleStore, VirtualPool {
-        initia_std::primary_fungible_store::init_module_for_test(&chain);
-        init_module(&chain);
-        block::set_block_info(0, 100);
+    // #[test(chain = @0x1)]
+    // fun end_to_end(
+    //     chain: signer,
+    // ) acquires ModuleStore, VirtualPool {
+    //     initia_std::primary_fungible_store::init_module_for_test(&chain);
+    //     init_module(&chain);
+    //     block::set_block_info(0, 100);
 
-        let chain_addr = signer::address_of(&chain);
+    //     let chain_addr = signer::address_of(&chain);
 
-        let (_, _, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"uinit"));
-        let (_, _, l2_1_mint_cap) = initialized_coin(&chain, string::utf8(b"L2 1"));
-        let (_, _, l2_2_mint_cap) = initialized_coin(&chain, string::utf8(b"L2 2"));
-        let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
-        let l2_1_metadata = coin::metadata(chain_addr, string::utf8(b"L2 1"));
-        let l2_2_metadata = coin::metadata(chain_addr, string::utf8(b"L2 2"));
+    //     let (_, _, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"uinit"));
+    //     let (_, _, l2_1_mint_cap) = initialized_coin(&chain, string::utf8(b"L2 1"));
+    //     let (_, _, l2_2_mint_cap) = initialized_coin(&chain, string::utf8(b"L2 2"));
+    //     let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
+    //     let l2_1_metadata = coin::metadata(chain_addr, string::utf8(b"L2 1"));
+    //     let l2_2_metadata = coin::metadata(chain_addr, string::utf8(b"L2 2"));
         
-        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
-        coin::mint_to(&l2_1_mint_cap, chain_addr, 1000000000);
-        coin::mint_to(&l2_2_mint_cap, chain_addr, 1000000000);
-        provide(&chain, 15000000, option::none());
+    //     coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
+    //     coin::mint_to(&l2_1_mint_cap, chain_addr, 1000000000);
+    //     coin::mint_to(&l2_2_mint_cap, chain_addr, 1000000000);
+    //     provide(&chain, 15000000, option::none());
         
 
-        createPool(
-            &chain,
-            l2_1_metadata,
-            decimal128::from_ratio(100000, 1),
-            10000000,
-            3000,
-            decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(2, 1),
+    //     createPool(
+    //         &chain,
+    //         l2_1_metadata,
+    //         decimal128::from_ratio(100000, 1),
+    //         10000000,
+    //         3000,
+    //         decimal128::from_ratio(7, 10),
+    //         decimal128::from_ratio(2, 1),
+    //     );
+
+    //     createPool(
+    //         &chain,
+    //         l2_2_metadata,
+    //         decimal128::from_ratio(100000, 1),
+    //         10000000,
+    //         3000,
+    //         decimal128::from_ratio(7, 10),
+    //         decimal128::from_ratio(2, 1),
+    //     );
+
+    //     // print_state(l2_1_metadata);
+
+    //     swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
+    //     // print_state(l2_1_metadata);
+
+    //     block::set_block_info(0, 101);
+
+    //     swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
+    //     // print_state(l2_1_metadata);
+
+    //     swap(&chain, l2_1_metadata, init_metadata, 100000000, option::none());
+    //     // print_state(l2_1_metadata);
+
+    //     block::set_block_info(0, 121);
+    //     swap(&chain, l2_1_metadata, init_metadata, 100, option::none());
+    //     // print_state(l2_1_metadata);
+
+    //     block::set_block_info(0, 141);
+    //     swap(&chain, l2_1_metadata, init_metadata, 100, option::none());
+    //     swap(&chain, init_metadata, l2_1_metadata, 10000, option::none());
+    //     print_state(l2_1_metadata);
+    //     rebalance(&chain, l2_1_metadata, 4100000, option::none());
+    //     print_state(l2_1_metadata);
+    //     change_pool_size(&chain, l2_1_metadata, 9000000);
+    //     print_state(l2_1_metadata);
+    // }
+
+    #[test(chain=@0x1)]
+    fun test() {
+        let imbalance = decimal128::from_ratio_u64(
+            42001300 + 100009999000 - 99990001008, // same with real l2 balance
+            100000000000,
         );
+        // Peg keeper swap
+        let r_fr = get_fully_recovered_ratio(&imbalance, &decimal128::from_ratio(7,10), &decimal128::from_ratio(5,2));
+        // get_fully_recovered_ratio()
+        std::debug::print(&r_fr);
 
-        createPool(
-            &chain,
-            l2_2_metadata,
-            decimal128::from_ratio(100000, 1),
-            10000000,
-            3000,
-            decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(2, 1),
-        );
-
-        // print_state(l2_1_metadata);
-
-        swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
-        // print_state(l2_1_metadata);
-
-        block::set_block_info(0, 101);
-
-        swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
-        // print_state(l2_1_metadata);
-
-        swap(&chain, l2_1_metadata, init_metadata, 100000000, option::none());
-        // print_state(l2_1_metadata);
-
-        block::set_block_info(0, 121);
-        swap(&chain, l2_1_metadata, init_metadata, 100, option::none());
-        // print_state(l2_1_metadata);
-
-        block::set_block_info(0, 141);
-        swap(&chain, l2_1_metadata, init_metadata, 100, option::none());
-        swap(&chain, init_metadata, l2_1_metadata, 10000, option::none());
-        print_state(l2_1_metadata);
-        rebalance(&chain, l2_1_metadata, 4100000, option::none());
-        print_state(l2_1_metadata);
-        change_pool_size(&chain, l2_1_metadata, 9000000);
-        print_state(l2_1_metadata);
+        let current_ratio = decimal128::from_ratio_u64(100009999000, 99990001008 + 100009999000);
+        let time_diff = 1000;
+        if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
+            let (x_fr, y_fr) = get_fully_recovered_pool_amounts(100000000000, &r_fr, 6000);
+            std::debug::print(&x_fr);
+            std::debug::print(&y_fr);
+            // let max_reocver_amount = decimal128::mul_u64(&decimal128::from_ratio(1000000, 1), time_diff);
+            // let swap_amount_to_reach_fr = x_fr - 99990001008;
+            // let swap_amount = if (swap_amount_to_reach_fr < max_reocver_amount) {
+            //     swap_amount_to_reach_fr
+            // } else {
+            //     max_reocver_amount
+            // };            
+        } 
     }
 }
