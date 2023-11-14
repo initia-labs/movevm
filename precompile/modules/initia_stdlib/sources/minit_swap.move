@@ -180,7 +180,7 @@ module initia_std::minit_swap {
     }
 
     #[view]
-    public fun get_keg_keeper_balance(
+    public fun get_peg_keeper_balance(
         l2_init_metadata: Object<Metadata>,
         after_peg_keeper_swap: bool,
     ): (u64, u64) acquires ModuleStore, VirtualPool {
