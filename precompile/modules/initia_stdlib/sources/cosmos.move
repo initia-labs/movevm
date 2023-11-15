@@ -86,15 +86,15 @@ module initia_std::cosmos {
         )
     }
 
-    public entry fun initiate_token_bridge (
-        bridge_id: u64,
+    public entry fun initiate_token_deposit (
         sender: &signer,
+        bridge_id: u64,
         to: address,
         metadata: Object<Metadata>,
         amount: u64,
         data: vector<u8>,
     ) {
-        initiate_token_bridge_internal(
+        initiate_token_deposit_internal(
             bridge_id,
             signer::address_of(sender),
             to,
@@ -142,7 +142,7 @@ module initia_std::cosmos {
         timeout_fee_amount: u64,
     );
 
-    native fun initiate_token_bridge_internal (
+    native fun initiate_token_deposit_internal (
         bridge_id: u64,
         sender: address,
         to: address,
