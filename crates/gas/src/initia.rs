@@ -4,7 +4,7 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.account.get_account_info.base_cost, "account.get_account_info.base", 1000 * SCALING],
     // account creation will be happened after execution finished,
     // so need to charge small gas here.
-    [.account.create_account.base_cost, "account.create_account.base", 6000], 
+    [.account.create_account.base_cost, "account.create_account.base", 6000],
     [.account.create_address.base_cost, "account.create_address.base", 6000],
     [.account.create_signer.base_cost, "account.create_signer.base", 6000],
 
@@ -54,6 +54,8 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.cosmos.fund_community_pool.base, "cosmos.fund_community_pool.base", 1000 * SCALING],
     [.cosmos.transfer.base, "cosmos.transfer.base", 1000 * SCALING],
     [.cosmos.pay_fee.base, "cosmos.pay_fee.base", 1000 * SCALING],
+    [.cosmos.initiate_token_deposit.base, "cosmos.initiate_token_deposit", 1000 * SCALING],
+    [.cosmos.initiate_token_withdrawal.base, "cosmos.initiate_token_withdrawal", 1000 * SCALING],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
@@ -155,6 +157,12 @@ impl GasParameters {
                 fund_community_pool: cosmos::FundCommunityPoolGasParameters { base: 0.into() },
                 transfer: cosmos::TransferGasParameters { base: 0.into() },
                 pay_fee: cosmos::PayFeeGasParameters { base: 0.into() },
+                initiate_token_deposit: cosmos::InitiateTokenDepositGasParameters {
+                    base: 0.into(),
+                },
+                initiate_token_withdrawal: cosmos::InitiateTokenWithdrawalGasParameters {
+                    base: 0.into(),
+                },
             },
             object: object::GasParameters {
                 exists_at: object::ExistsAtGasParameters {

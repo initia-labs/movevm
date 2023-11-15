@@ -2,7 +2,7 @@ use better_any::{Tid, TidAble};
 use initia_gas::gas_params::cosmos::*;
 use initia_types::cosmos::{
     CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
-    StakingMessage,
+    OPinitMessage, StakingMessage,
 };
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
@@ -243,6 +243,64 @@ fn native_pay_fee(
     Ok(NativeResult::ok(gas_params.base, smallvec![]))
 }
 
+fn native_initiate_token_deposit(
+    gas_params: &InitiateTokenDepositGasParameters,
+    context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 0);
+    debug_assert!(args.len() == 6);
+
+    let data = pop_arg!(args, Vector).to_vec_u8()?;
+    let amount = pop_arg!(args, u64);
+    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
+    let to_address: AccountAddress = pop_arg!(args, AccountAddress);
+    let sender_address: AccountAddress = pop_arg!(args, AccountAddress);
+    let bridge_id = pop_arg!(args, u64);
+
+    let message = CosmosMessage::OPinit(OPinitMessage::InitiateTokenDeposit {
+        bridge_id,
+        sender_address,
+        to_address,
+        amount: CosmosCoin { metadata, amount },
+        data,
+    });
+
+    // build cosmos message
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    cosmos_context.messages.borrow_mut().push(message);
+
+    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+}
+
+fn native_initiate_token_withdrawal(
+    gas_params: &InitiateTokenWithdrawalGasParameters,
+    context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 0);
+    debug_assert!(args.len() == 4);
+
+    let amount = pop_arg!(args, u64);
+    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
+    let to_address: AccountAddress = pop_arg!(args, AccountAddress);
+    let sender_address: AccountAddress = pop_arg!(args, AccountAddress);
+
+    let message = CosmosMessage::OPinit(OPinitMessage::InitiateTokenWithdrawal {
+        sender_address,
+        to_address,
+        amount: CosmosCoin { metadata, amount },
+    });
+
+    // build cosmos message
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    cosmos_context.messages.borrow_mut().push(message);
+
+    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+}
+
 /***************************************************************************************************
  * module
  *
@@ -264,6 +322,14 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "pay_fee_internal",
             make_native_from_func(gas_params.pay_fee, native_pay_fee),
+        ),
+        (
+            "initiate_token_deposit_internal",
+            make_native_from_func(gas_params.initiate_token_deposit, native_initiate_token_deposit),
+        ),
+        (
+            "initiate_token_withdrawal_internal",
+            make_native_from_func(gas_params.initiate_token_withdrawal, native_initiate_token_withdrawal),
         ),
     ];
 

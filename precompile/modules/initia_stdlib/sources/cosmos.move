@@ -6,7 +6,7 @@ module initia_std::cosmos {
     use std::object::Object;
     use std::fungible_asset::Metadata;
 
-    public entry fun delegate(
+    public entry fun delegate (
         delegator: &signer, 
         validator: String, 
         metadata: Object<Metadata>,
@@ -20,7 +20,7 @@ module initia_std::cosmos {
         )
     }
 
-    public entry fun fund_community_pool(
+    public entry fun fund_community_pool (
         sender: &signer, 
         metadata: Object<Metadata>,
         amount: u64,
@@ -34,7 +34,7 @@ module initia_std::cosmos {
 
     /// ICS20 ibc transfer
     /// https://github.com/cosmos/ibc/tree/main/spec/app/ics-020-fungible-token-transfer
-    public entry fun transfer(
+    public entry fun transfer (
         sender: &signer,
         receiver: String,
         metadata: Object<Metadata>,
@@ -62,7 +62,7 @@ module initia_std::cosmos {
 
     /// ICS29 ibc relayer fee
     /// https://github.com/cosmos/ibc/tree/main/spec/app/ics-029-fee-payment
-    public entry fun pay_fee(
+    public entry fun pay_fee (
         sender: &signer,
         source_port: String,
         source_channel: String,
@@ -86,21 +86,38 @@ module initia_std::cosmos {
         )
     }
 
+    public entry fun initiate_token_bridge (
+        bridge_id: u64,
+        sender: &signer,
+        to: address,
+        metadata: Object<Metadata>,
+        amount: u64,
+        data: vector<u8>,
+    ) {
+        initiate_token_bridge_internal(
+            bridge_id,
+            signer::address_of(sender),
+            to,
+            &metadata,
+            amount,
+            data,
+        )
+    }
 
-    native fun delegate_internal(
+    native fun delegate_internal (
         delegator: address, 
         validator: vector<u8>, 
         metadata: &Object<Metadata>,
         amount: u64,
     );
 
-    native fun fund_community_pool_internal(
+    native fun fund_community_pool_internal (
         sender: address, 
         metadata: &Object<Metadata>,
         amount: u64,
     );
 
-    native fun transfer_internal(
+    native fun transfer_internal (
         sender: address,
         receiver: vector<u8>,
         metadata: &Object<Metadata>,
@@ -113,7 +130,7 @@ module initia_std::cosmos {
         memo: vector<u8>,
     );
 
-    native fun pay_fee_internal(
+    native fun pay_fee_internal (
         sender: address,
         source_port: vector<u8>,
         source_channel: vector<u8>,
@@ -123,5 +140,14 @@ module initia_std::cosmos {
         ack_fee_amount: u64,
         timeout_fee_metadata: &Object<Metadata>,
         timeout_fee_amount: u64,
+    );
+
+    native fun initiate_token_bridge_internal (
+        bridge_id: u64,
+        sender: address,
+        to: address,
+        metadata: &Object<Metadata>,
+        amount: u64,
+        data: vector<u8>,
     );
 }
