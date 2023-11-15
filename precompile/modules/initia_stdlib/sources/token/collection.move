@@ -505,7 +505,7 @@ module initia_std::collection {
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x80064, location = initia_std::account)]
+    #[expected_failure(abort_code = 0x80001, location = initia_std::object)]
     entry fun test_duplicate_collection(creator: &signer) {
         let collection_name = string::utf8(b"collection name");
         create_collection_helper(creator, collection_name);

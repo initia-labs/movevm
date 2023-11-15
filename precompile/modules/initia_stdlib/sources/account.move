@@ -48,6 +48,8 @@ module initia_std::account {
             // When an Object is deleted, the ObjectAccount in CosmosSDK is designed 
             // not to be deleted in order to prevent unexpected issues. Therefore, 
             // in this case, the creation of an account is omitted.
+            // 
+            // Also object is doing its own already exists check.
             if (account_type == ACCOUNT_TYPE_OBJECT) {
                 account_number
             } else {
