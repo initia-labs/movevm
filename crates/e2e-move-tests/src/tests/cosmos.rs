@@ -171,7 +171,7 @@ fn test_cosmos_transfer() {
     let revision_height = 2u64;
     let timeout_timestamp = 100u64;
     let memo = "memo".to_string();
-    
+
     let test_initialize_coin = (
         AccountAddress::ONE,
         "0x1::managed_coin::initialize",
@@ -325,6 +325,63 @@ fn test_cosmos_pay_fee() {
                     },
                 },
             })]),
+        ),
+    );
+    tests.push(test_pay_fee);
+
+    run_tests(tests);
+}
+
+#[test]
+fn test_initiate_token_deposit() {
+    let mut tests = vec![];
+    let bridge_id = 10u64;
+    let sender = AccountAddress::random();
+    let to = AccountAddress::random();
+    let metadata = staking_metadata();
+    let amount = 100u64;
+    let data = vec![1, 2, 3, 4];
+
+    let test_initialize_coin = (
+        AccountAddress::ONE,
+        "0x1::managed_coin::initialize",
+        vec![],
+        vec![
+            vec![0],
+            bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
+            bcs::to_bytes(STAKING_SYMBOL).unwrap(),
+            6u8.to_le_bytes().to_vec(),
+            bcs::to_bytes(&b"".to_vec()).unwrap(),
+            bcs::to_bytes(&b"".to_vec()).unwrap(),
+        ],
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
+    );
+    tests.push(test_initialize_coin);
+
+    let test_pay_fee = (
+        sender,
+        "0x1::cosmos::initiate_token_deposit",
+        vec![],
+        vec![
+            bridge_id.to_le_bytes().to_vec(),
+            to.to_vec(),
+            metadata.to_vec(),
+            amount.to_le_bytes().to_vec(),
+            bcs::to_bytes(&data.to_vec()).unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::OPinit(
+                initia_types::cosmos::OPinitMessage::InitiateTokenDeposit {
+                    bridge_id,
+                    sender_address: sender,
+                    to_address: to,
+                    amount: CosmosCoin { amount, metadata },
+                    data,
+                },
+            )]),
         ),
     );
     tests.push(test_pay_fee);

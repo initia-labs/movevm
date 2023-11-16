@@ -21,9 +21,21 @@ pub struct PayFeeGasParameters {
 }
 
 #[derive(Debug, Clone)]
+pub struct InitiateTokenDepositGasParameters {
+    pub base: InternalGas,
+}
+
+#[derive(Debug, Clone)]
+pub struct InitiateTokenWithdrawalGasParameters {
+    pub base: InternalGas,
+}
+
+#[derive(Debug, Clone)]
 pub struct GasParameters {
     pub delegate: DelegateGasParameters,
     pub fund_community_pool: FundCommunityPoolGasParameters,
     pub transfer: TransferGasParameters,
     pub pay_fee: PayFeeGasParameters,
+    pub initiate_token_deposit: InitiateTokenDepositGasParameters,
+    pub initiate_token_withdrawal: InitiateTokenWithdrawalGasParameters,
 }

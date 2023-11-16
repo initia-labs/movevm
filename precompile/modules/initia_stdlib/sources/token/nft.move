@@ -444,7 +444,7 @@ module initia_std::nft {
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x80064, location = initia_std::account)]
+    #[expected_failure(abort_code = 0x80001, location = initia_std::object)]
     fun test_duplicate_nfts(creator: &signer) {
         let collection_name = string::utf8(b"collection name");
         let nft_name = string::utf8(b"nft name");

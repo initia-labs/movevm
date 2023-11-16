@@ -29,6 +29,7 @@ pub enum CosmosMessage {
     Staking(StakingMessage),
     IBC(IBCMessage),
     Distribution(DistributionMessage),
+    OPinit(OPinitMessage),
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -65,6 +66,22 @@ pub enum IBCMessage {
         source_port: String,
         source_channel: String,
         signer: AccountAddress,
+    },
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub enum OPinitMessage {
+    InitiateTokenDeposit {
+        bridge_id: u64,
+        sender_address: AccountAddress,
+        to_address: AccountAddress,
+        amount: CosmosCoin,
+        data: Vec<u8>,
+    },
+    InitiateTokenWithdrawal {
+        sender_address: AccountAddress,
+        to_address: AccountAddress,
+        amount: CosmosCoin,
     },
 }
 

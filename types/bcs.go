@@ -219,6 +219,13 @@ func DeserializeCosmosMessage(deserializer serde.Deserializer) (CosmosMessage, e
 			return nil, err
 		}
 
+	case 3:
+		if val, err := load_CosmosMessage__OPinit(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("Unknown variant index for CosmosMessage: %d", index)
 	}
@@ -326,6 +333,37 @@ func load_CosmosMessage__Distribution(deserializer serde.Deserializer) (CosmosMe
 	var obj CosmosMessage__Distribution
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := DeserializeDistributionMessage(deserializer); err == nil { obj.Value = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+type CosmosMessage__OPinit struct {
+	Value OPinitMessage
+}
+
+func (*CosmosMessage__OPinit) isCosmosMessage() {}
+
+func (obj *CosmosMessage__OPinit) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(3)
+	if err := obj.Value.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CosmosMessage__OPinit) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_CosmosMessage__OPinit(deserializer serde.Deserializer) (CosmosMessage__OPinit, error) {
+	var obj CosmosMessage__OPinit
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeOPinitMessage(deserializer); err == nil { obj.Value = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -1215,6 +1253,129 @@ func BcsDeserializeModuleId(input []byte) (ModuleId, error) {
 		return obj, fmt.Errorf("Some input bytes were not read")
 	}
 	return obj, err
+}
+
+type OPinitMessage interface {
+	isOPinitMessage()
+	Serialize(serializer serde.Serializer) error
+	BcsSerialize() ([]byte, error)
+}
+
+func DeserializeOPinitMessage(deserializer serde.Deserializer) (OPinitMessage, error) {
+	index, err := deserializer.DeserializeVariantIndex()
+	if err != nil { return nil, err }
+
+	switch index {
+	case 0:
+		if val, err := load_OPinitMessage__InitiateTokenDeposit(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
+	case 1:
+		if val, err := load_OPinitMessage__InitiateTokenWithdrawal(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf("Unknown variant index for OPinitMessage: %d", index)
+	}
+}
+
+func BcsDeserializeOPinitMessage(input []byte) (OPinitMessage, error) {
+	if input == nil {
+		var obj OPinitMessage
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeOPinitMessage(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type OPinitMessage__InitiateTokenDeposit struct {
+	BridgeId uint64
+	SenderAddress AccountAddress
+	ToAddress AccountAddress
+	Amount CosmosCoin
+	Data []uint8
+}
+
+func (*OPinitMessage__InitiateTokenDeposit) isOPinitMessage() {}
+
+func (obj *OPinitMessage__InitiateTokenDeposit) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(0)
+	if err := serializer.SerializeU64(obj.BridgeId); err != nil { return err }
+	if err := obj.SenderAddress.Serialize(serializer); err != nil { return err }
+	if err := obj.ToAddress.Serialize(serializer); err != nil { return err }
+	if err := obj.Amount.Serialize(serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.Data, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *OPinitMessage__InitiateTokenDeposit) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_OPinitMessage__InitiateTokenDeposit(deserializer serde.Deserializer) (OPinitMessage__InitiateTokenDeposit, error) {
+	var obj OPinitMessage__InitiateTokenDeposit
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.BridgeId = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.SenderAddress = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.ToAddress = val } else { return obj, err }
+	if val, err := DeserializeCosmosCoin(deserializer); err == nil { obj.Amount = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Data = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+type OPinitMessage__InitiateTokenWithdrawal struct {
+	SenderAddress AccountAddress
+	ToAddress AccountAddress
+	Amount CosmosCoin
+}
+
+func (*OPinitMessage__InitiateTokenWithdrawal) isOPinitMessage() {}
+
+func (obj *OPinitMessage__InitiateTokenWithdrawal) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(1)
+	if err := obj.SenderAddress.Serialize(serializer); err != nil { return err }
+	if err := obj.ToAddress.Serialize(serializer); err != nil { return err }
+	if err := obj.Amount.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *OPinitMessage__InitiateTokenWithdrawal) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_OPinitMessage__InitiateTokenWithdrawal(deserializer serde.Deserializer) (OPinitMessage__InitiateTokenWithdrawal, error) {
+	var obj OPinitMessage__InitiateTokenWithdrawal
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.SenderAddress = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.ToAddress = val } else { return obj, err }
+	if val, err := DeserializeCosmosCoin(deserializer); err == nil { obj.Amount = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
 }
 
 type Op interface {
