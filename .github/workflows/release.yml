@@ -12,11 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Make free space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-
       - name: Build
         run: make release-build-linux
 
@@ -32,11 +27,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Make free space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-
       - name: Build
         run: make release-build-alpine
 
@@ -50,10 +40,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Make free space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
 
       - name: Build
         run: make release-build-macos
