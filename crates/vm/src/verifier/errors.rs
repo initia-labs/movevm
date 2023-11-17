@@ -29,6 +29,10 @@ pub enum MalformedError {
     DeserializedError(Vec<u8>, bcs::Error),
     #[error("Duplicate key for metadata")]
     DuplicateKey,
+    #[error("Module too complex")]
+    ModuleTooComplex,
+    #[error("Index out of range")]
+    IndexOutOfRange,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
