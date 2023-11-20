@@ -25,7 +25,6 @@ module initia_std::collection {
     use initia_std::event;
     use initia_std::object::{Self, ConstructorRef, Object};
     use initia_std::table::{Self, Table};
-    use initia_std::table_key;
 
     use initia_std::royalty::{Self, Royalty};
 
@@ -61,7 +60,7 @@ module initia_std::collection {
         /// storage; the URL length will likely need a maximum any suggestions?
         uri: String,
         /// index to object map.
-        nfts: Table<vector<u8>, address>,
+        nfts: Table<String, address>,
     }
 
     /// This enables mutating description and URI by higher level services.
@@ -94,7 +93,7 @@ module initia_std::collection {
     }
 
     struct NftResponse has drop {
-        index: u64,
+        token_id: String,
         nft: address,
     }
 
@@ -106,13 +105,13 @@ module initia_std::collection {
 
     struct BurnEvent has drop, store {
         collection: address,
-        index: u64,
+        token_id: String,
         nft: address,
     }
 
     struct MintEvent has drop, store {
         collection: address,
-        index: u64,
+        token_id: String,
         nft: address,
     }
 
@@ -259,8 +258,9 @@ module initia_std::collection {
     /// Called by nft on mint to increment supply if there's an appropriate Supply struct.
     public(friend) fun increment_supply(
         collection: Object<Collection>,
+        token_id: String,
         nft: address,
-    ): Option<u64> acquires Collection, FixedSupply, UnlimitedSupply {
+    ) acquires Collection, FixedSupply, UnlimitedSupply {
         let collection_addr = object::object_address(collection);
         let collection = borrow_global_mut<Collection>(collection_addr);
         if (exists<FixedSupply>(collection_addr)) {
@@ -271,50 +271,42 @@ module initia_std::collection {
                 supply.current_supply <= supply.max_supply,
                 error::out_of_range(ECOLLECTION_SUPPLY_EXCEEDED),
             );
-            let index = supply.total_minted;
-            table::add(&mut collection.nfts, table_key::encode_u64(index), nft);
+            table::add(&mut collection.nfts, token_id, nft);
             event::emit(
-                MintEvent { collection: collection_addr, index, nft },
+                MintEvent { collection: collection_addr, token_id, nft },
             );
-            option::some(index)
         } else if (exists<UnlimitedSupply>(collection_addr)) {
             let supply = borrow_global_mut<UnlimitedSupply>(collection_addr);
             supply.current_supply = supply.current_supply + 1;
             supply.total_minted = supply.total_minted + 1;
-            let index = supply.total_minted;
-            table::add(&mut collection.nfts, table_key::encode_u64(index), nft);
+            table::add(&mut collection.nfts, token_id, nft);
             event::emit(
-                MintEvent { collection: collection_addr, index, nft },
+                MintEvent { collection: collection_addr, token_id, nft },
             );
-            option::some(index)
-        } else {
-            option::none()
-        }
+        } 
     }
 
     /// Called by nft on burn to decrement supply if there's an appropriate Supply struct.
     public(friend) fun decrement_supply(
         collection: Object<Collection>,
+        token_id: String,
         nft: address,
-        index: Option<u64>,
     ) acquires Collection, FixedSupply, UnlimitedSupply {
         let collection_addr = object::object_address(collection);
         let collection = borrow_global_mut<Collection>(collection_addr);
         if (exists<FixedSupply>(collection_addr)) {
             let supply = borrow_global_mut<FixedSupply>(collection_addr);
             supply.current_supply = supply.current_supply - 1;
-            let index = *option::borrow(&index);
-            table::remove(&mut collection.nfts, table_key::encode_u64(index));
+            table::remove(&mut collection.nfts, token_id);
             event::emit(
-                BurnEvent { collection: collection_addr, index, nft },
+                BurnEvent { collection: collection_addr, token_id, nft },
             );
         } else if (exists<UnlimitedSupply>(collection_addr)) {
             let supply = borrow_global_mut<UnlimitedSupply>(collection_addr);
             supply.current_supply = supply.current_supply - 1;
-            let index = *option::borrow(&index);
-            table::remove(&mut collection.nfts, table_key::encode_u64(index));
+            table::remove(&mut collection.nfts, token_id);
             event::emit(
-                BurnEvent { collection: collection_addr, index, nft },
+                BurnEvent { collection: collection_addr, token_id, nft },
             );
         }
     }
@@ -382,16 +374,10 @@ module initia_std::collection {
     /// if `start_after` is not none, seach nfts in range (start_after, ...]
     public fun nfts<T: key>(
         collection: Object<T>,
-        start_after: Option<u64>,
+        start_after: Option<String>,
         limit: u64,
     ): vector<NftResponse> acquires Collection {
         let collection = borrow(collection);
-        let start_after_bytes: Option<vector<u8>> = if (option::is_none(&start_after)) {
-            option::none()
-        } else {
-            let index = option::extract(&mut start_after);
-            option::some(table_key::encode_u64(index + 1))
-        };
 
         if (limit > MAX_QUERY_LIMIT) {
             limit = MAX_QUERY_LIMIT;
@@ -399,20 +385,20 @@ module initia_std::collection {
 
         let nfts_iter = table::iter(
             &collection.nfts,
-            start_after_bytes,
             option::none(),
-            1,
+            start_after,
+            2,
         );
 
         let res: vector<NftResponse> = vector[];
 
-        while (table::prepare<vector<u8>, address>(&mut nfts_iter) && vector::length(&res) < (limit as u64)) {
-            let (index_bytes, nft) = table::next<vector<u8>, address>(&mut nfts_iter);
+        while (table::prepare<String, address>(&mut nfts_iter) && vector::length(&res) < (limit as u64)) {
+            let (token_id, nft) = table::next<String, address>(&mut nfts_iter);
 
             vector::push_back(
                 &mut res,
                 NftResponse {
-                    index: table_key::decode_u64(index_bytes),
+                    token_id,
                     nft: *nft,
                 },
             );
@@ -421,8 +407,8 @@ module initia_std::collection {
         res
     }
 
-    public fun decompose_nft_response(nft_response: &NftResponse): (u64, address) {
-        (nft_response.index, nft_response.nft)
+    public fun decompose_nft_response(nft_response: &NftResponse): (String, address) {
+        (nft_response.token_id, nft_response.nft)
     }
 
     // Mutators
@@ -470,9 +456,9 @@ module initia_std::collection {
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         assert!(count(collection) == option::some(0), 0);
-        let cid = increment_supply(collection, creator_address);
+        increment_supply(collection, string::utf8(b"token_id"), @0x11111);
         assert!(count(collection) == option::some(1), 0);
-        decrement_supply(collection, creator_address, cid);
+        decrement_supply(collection, string::utf8(b"token_id"), @0x11112);
         assert!(count(collection) == option::some(0), 0);
     }
 
@@ -484,9 +470,9 @@ module initia_std::collection {
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         assert!(count(collection) == option::some(0), 0);
-        let cid = increment_supply(collection, creator_address);
+        increment_supply(collection, string::utf8(b"token_id"), @0x11111);
         assert!(count(collection) == option::some(1), 0);
-        decrement_supply(collection, creator_address, cid);
+        decrement_supply(collection, string::utf8(b"token_id"), @0x11112);
         assert!(count(collection) == option::some(0), 0);
     }
 
@@ -547,25 +533,25 @@ module initia_std::collection {
         create_unlimited_collection(creator, string::utf8(b""), name, option::none(), string::utf8(b""));
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
-        increment_supply(collection, @0x001);
-        increment_supply(collection, @0x002);
-        increment_supply(collection, @0x003);
+        increment_supply(collection, string::utf8(b"1"), @0x001);
+        increment_supply(collection, string::utf8(b"2"), @0x002);
+        increment_supply(collection, string::utf8(b"3"), @0x003);
 
         let nfts = nfts(collection, option::none(), 5);
         assert!(
             nfts == vector[
-                NftResponse { index: 1, nft: @0x001 },
-                NftResponse { index: 2, nft: @0x002 },
-                NftResponse { index: 3, nft: @0x003 },
+                NftResponse { token_id: string::utf8(b"3"), nft: @0x003 },
+                NftResponse { token_id: string::utf8(b"2"), nft: @0x002 },
+                NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },
             ],
             0
         );
 
-        nfts = nfts(collection, option::some(1), 5);
+        nfts = nfts(collection, option::some(string::utf8(b"3")), 5);
         assert!(
             nfts == vector[
-                NftResponse { index: 2, nft: @0x002 },
-                NftResponse { index: 3, nft: @0x003 },
+                NftResponse { token_id: string::utf8(b"2"), nft: @0x002 },
+                NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },
             ],
             1
         )

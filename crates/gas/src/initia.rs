@@ -53,6 +53,8 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.cosmos.delegate.base, "cosmos.delegate.base", 1000 * SCALING],
     [.cosmos.fund_community_pool.base, "cosmos.fund_community_pool.base", 1000 * SCALING],
     [.cosmos.transfer.base, "cosmos.transfer.base", 1000 * SCALING],
+    [.cosmos.nft_transfer.base, "cosmos.nft_transfer.base", 1000 * SCALING],
+    [.cosmos.nft_transfer.per_token, "cosmos.nft_transfer.per_token", 10 * SCALING],
     [.cosmos.pay_fee.base, "cosmos.pay_fee.base", 1000 * SCALING],
     [.cosmos.initiate_token_deposit.base, "cosmos.initiate_token_deposit", 1000 * SCALING],
     [.cosmos.initiate_token_withdrawal.base, "cosmos.initiate_token_withdrawal", 1000 * SCALING],
@@ -156,6 +158,10 @@ impl GasParameters {
                 delegate: cosmos::DelegateGasParameters { base: 0.into() },
                 fund_community_pool: cosmos::FundCommunityPoolGasParameters { base: 0.into() },
                 transfer: cosmos::TransferGasParameters { base: 0.into() },
+                nft_transfer: cosmos::NFTTransferGasParameters {
+                    base: 0.into(),
+                    per_token: 0.into(),
+                },
                 pay_fee: cosmos::PayFeeGasParameters { base: 0.into() },
                 initiate_token_deposit: cosmos::InitiateTokenDepositGasParameters {
                     base: 0.into(),

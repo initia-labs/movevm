@@ -21,16 +21,16 @@ module initia_std::nft {
     const ENOT_CREATOR: u64 = 2;
     /// The field being changed is not mutable
     const EFIELD_NOT_MUTABLE: u64 = 3;
-    /// The nft name is over the maximum length
-    const ENFT_NAME_TOO_LONG: u64 = 4;
+    /// The nft token id is over the maximum length
+    const ENFT_TOKEN_ID_TOO_LONG: u64 = 4;
     /// The URI is over the maximum length
-    const EURI_TOO_LONG: u64 = 5;
+    const EURI_TOO_LONG: u64 = 6;
     /// The description is over the maximum length
-    const EDESCRIPTION_TOO_LONG: u64 = 6;
+    const EDESCRIPTION_TOO_LONG: u64 = 7;
     /// The query length is over the maximum length
-    const EQUERY_LENGTH_TOO_LONG: u64 = 6;
+    const EQUERY_LENGTH_TOO_LONG: u64 = 8;
 
-    const MAX_NFT_NAME_LENGTH: u64 = 128;
+    const MAX_NFT_TOKEN_ID_LENGTH: u64 = 128;
     const MAX_URI_LENGTH: u64 = 512;
     const MAX_DESCRIPTION_LENGTH: u64 = 2048;
     const MAX_QUERY_LENGTH: u64 = 30;
@@ -39,13 +39,11 @@ module initia_std::nft {
     struct Nft has key {
         /// The collection where this nft resides.
         collection: Object<Collection>,
-        /// Unique identifier within the collection, optional, 0 means unassigned
-        index: u64,
         /// A brief description of the nft.
         description: String,
-        /// The name of the nft, which should be unique within the collection; the length of name
-        /// should be smaller than 128, characters
-        name: String,
+        /// The id of the nft, which should be unique within the collection; The length of 
+        /// name should be smaller than 128, characters
+        token_id: String,
         /// The Uniform Resource Identifier (uri) pointing to the JSON file stored in off-chain
         /// storage; the URL length will likely need a maximum any suggestions?
         uri: String,
@@ -76,9 +74,8 @@ module initia_std::nft {
     /// Struct for nft info query response
     struct NftInfoResponse has drop {
         collection: Object<Collection>,
-        index: u64,
         description: String,
-        name: String,
+        token_id: String,
         uri: String,
     }
 
@@ -87,11 +84,11 @@ module initia_std::nft {
         creator_address: address,
         collection_name: String,
         description: String,
-        name: String,
+        token_id: String,
         royalty: Option<Royalty>,
         uri: String,
     ) {
-        assert!(string::length(&name) <= MAX_NFT_NAME_LENGTH, error::out_of_range(ENFT_NAME_TOO_LONG));
+        assert!(string::length(&token_id) <= MAX_NFT_TOKEN_ID_LENGTH, error::out_of_range(ENFT_TOKEN_ID_TOO_LONG));
         assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH, error::out_of_range(EDESCRIPTION_TOO_LONG));
         assert!(string::length(&uri) <= MAX_URI_LENGTH, error::out_of_range(EURI_TOO_LONG));
 
@@ -99,13 +96,12 @@ module initia_std::nft {
 
         let collection_addr = collection::create_collection_address(creator_address, &collection_name);
         let collection = object::address_to_object<Collection>(collection_addr);
-        let id = collection::increment_supply(collection, signer::address_of(&object_signer));
+        collection::increment_supply(collection, token_id, signer::address_of(&object_signer));
 
         let nft = Nft {
             collection,
-            index: option::get_with_default(&mut id, 0),
             description,
-            name,
+            token_id,
             uri,
         };
         move_to(&object_signer, nft);
@@ -115,51 +111,35 @@ module initia_std::nft {
         };
     }
 
-    /// Creates a new nft object with a unique address and returns the ConstructorRef
-    /// for additional specialization.
+    /// Creates a new nft object from a nft name and returns the ConstructorRef for
+    /// additional specialization.
     public fun create(
         creator: &signer,
         collection_name: String,
         description: String,
-        name: String,
+        token_id: String,
         royalty: Option<Royalty>,
         uri: String,
     ): ConstructorRef {
         let creator_address = signer::address_of(creator);
-        let constructor_ref = object::create_object(creator_address);
-        create_common(&constructor_ref, creator_address, collection_name, description, name, royalty, uri);
-        constructor_ref
-    }
-
-    /// Creates a new nft object from a nft name and returns the ConstructorRef for
-    /// additional specialization.
-    public fun create_named_nft(
-        creator: &signer,
-        collection_name: String,
-        description: String,
-        name: String,
-        royalty: Option<Royalty>,
-        uri: String,
-    ): ConstructorRef {
-        let creator_address = signer::address_of(creator);
-        let seed = create_nft_seed(&collection_name, &name);
+        let seed = create_nft_seed(&collection_name, &token_id);
 
         let constructor_ref = object::create_named_object(creator, seed);
-        create_common(&constructor_ref, creator_address, collection_name, description, name, royalty, uri);
+        create_common(&constructor_ref, creator_address, collection_name, description, token_id, royalty, uri);
         constructor_ref
     }
 
-    /// Generates the nft's address based upon the creator's address, the collection's name and the nft's name.
-    public fun create_nft_address(creator: address, collection: &String, name: &String): address {
-        object::create_object_address(creator, create_nft_seed(collection, name))
+    /// Generates the nft's address based upon the creator's address, the collection's name and the nft's token_id.
+    public fun create_nft_address(creator: address, collection: &String, token_id: &String): address {
+        object::create_object_address(creator, create_nft_seed(collection, token_id))
     }
 
-    /// Named objects are derived from a seed, the nft's seed is its name appended to the collection's name.
-    public fun create_nft_seed(collection: &String, name: &String): vector<u8> {
-        assert!(string::length(name) <= MAX_NFT_NAME_LENGTH, error::out_of_range(ENFT_NAME_TOO_LONG));
+    /// Named objects are derived from a seed, the nft's seed is its token_id appended to the collection's name.
+    public fun create_nft_seed(collection: &String, token_id: &String): vector<u8> {
+        assert!(string::length(token_id) <= MAX_NFT_TOKEN_ID_LENGTH, error::out_of_range(ENFT_TOKEN_ID_TOO_LONG));
         let seed = *string::bytes(collection);
         vector::append(&mut seed, b"::");
-        vector::append(&mut seed, *string::bytes(name));
+        vector::append(&mut seed, *string::bytes(token_id));
         seed
     }
 
@@ -227,8 +207,8 @@ module initia_std::nft {
     }
 
     #[view]
-    public fun name<T: key>(nft: Object<T>): String acquires Nft {
-        borrow(nft).name
+    public fun token_id<T: key>(nft: Object<T>): String acquires Nft {
+        borrow(nft).token_id
     }
 
     #[view]
@@ -256,9 +236,8 @@ module initia_std::nft {
         let nft = borrow(nft);
         NftInfoResponse {
             collection: nft.collection,
-            index: nft.index,
             description: nft.description,
-            name: nft.name,
+            token_id: nft.token_id,
             uri: nft.uri,
         }
     }
@@ -304,13 +283,12 @@ module initia_std::nft {
 
         let Nft {
             collection,
-            index,
             description: _,
-            name: _,
+            token_id,
             uri: _,
         } = move_from<Nft>(addr);
 
-        collection::decrement_supply(collection, addr, option::some(index));
+        collection::decrement_supply(collection, token_id, addr);
     }
 
     public fun set_description(mutator_ref: &MutatorRef, description: String) acquires Nft {
@@ -325,20 +303,6 @@ module initia_std::nft {
             },
         );
         nft.description = description;
-    }
-
-    public fun set_name(mutator_ref: &MutatorRef, name: String) acquires Nft {
-        assert!(string::length(&name) <= MAX_NFT_NAME_LENGTH, error::out_of_range(ENFT_NAME_TOO_LONG));
-        let nft = borrow_mut(mutator_ref);
-        event::emit(
-            MutationEvent {
-                nft: mutator_ref.self,
-                mutated_field_name: string::utf8(b"name"),
-                old_value: nft.name,
-                new_value: name
-            },
-        );
-        nft.name = name;
     }
 
     public fun set_uri(mutator_ref: &MutatorRef, uri: String) acquires Nft {
@@ -358,13 +322,13 @@ module initia_std::nft {
     #[test(creator = @0x123, trader = @0x456)]
     fun test_create_and_transfer(creator: &signer, trader: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        create_nft_helper(creator, collection_name, nft_name);
+        create_nft_helper(creator, collection_name, token_id);
 
         let creator_address = signer::address_of(creator);
-        let nft_addr = create_nft_address(creator_address, &collection_name, &nft_name);
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(object::owner(nft) == creator_address, 1);
         object::transfer(creator, nft, signer::address_of(trader));
@@ -377,7 +341,7 @@ module initia_std::nft {
     #[test(creator = @0x123)]
     fun test_collection_royalty(creator: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         let creator_address = signer::address_of(creator);
         let expected_royalty = royalty::create(initia_std::decimal128::from_ratio(10, 1000), creator_address);
@@ -390,16 +354,16 @@ module initia_std::nft {
             string::utf8(b"collection uri"),
         );
 
-        create_named_nft(
+        create(
             creator,
             collection_name,
             string::utf8(b"nft description"),
-            nft_name,
+            token_id,
             option::none(),
             string::utf8(b"nft uri"),
         );
 
-        let nft_addr = create_nft_address(creator_address, &collection_name, &nft_name);
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(option::some(expected_royalty) == royalty(nft), 0);
     }
@@ -407,7 +371,7 @@ module initia_std::nft {
     #[test(creator = @0x123)]
     fun test_no_royalty(creator: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         collection::create_unlimited_collection(
             creator,
@@ -417,17 +381,17 @@ module initia_std::nft {
             string::utf8(b"collection uri"),
         );
 
-        create_named_nft(
+        create(
             creator,
             collection_name,
             string::utf8(b"nft description"),
-            nft_name,
+            token_id,
             option::none(),
             string::utf8(b"nft uri"),
         );
 
         let creator_address = signer::address_of(creator);
-        let nft_addr = create_nft_address(creator_address, &collection_name, &nft_name);
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(option::none() == royalty(nft), 0);
     }
@@ -436,33 +400,34 @@ module initia_std::nft {
     #[expected_failure(abort_code = 0x20002, location = initia_std::collection)]
     fun test_too_many_nfts(creator: &signer) {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
+        let token_id2 = string::utf8(b"nft token_id2");
 
         create_collection_helper(creator, collection_name, 1);
-        create_nft_helper(creator, collection_name, nft_name);
-        create_nft_helper(creator, collection_name, string::utf8(b"bad"));
+        create_nft_helper(creator, collection_name, token_id);
+        create_nft_helper(creator, collection_name, token_id2);
     }
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x80001, location = initia_std::object)]
     fun test_duplicate_nfts(creator: &signer) {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 2);
-        create_nft_helper(creator, collection_name, nft_name);
-        create_nft_helper(creator, collection_name, nft_name);
+        create_nft_helper(creator, collection_name, token_id);
+        create_nft_helper(creator, collection_name, token_id);
     }
 
     #[test(creator = @0x123)]
     fun test_set_description(creator: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, nft_name);
+        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, token_id);
         let nft = object::address_to_object<Nft>(
-            create_nft_address(signer::address_of(creator), &collection_name, &nft_name),
+            create_nft_address(signer::address_of(creator), &collection_name, &token_id),
         );
 
         let description = string::utf8(b"no fail");
@@ -472,31 +437,14 @@ module initia_std::nft {
     }
 
     #[test(creator = @0x123)]
-    fun test_set_name(creator: &signer) acquires Nft {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, 1);
-        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, nft_name);
-        let nft = object::address_to_object<Nft>(
-            create_nft_address(signer::address_of(creator), &collection_name, &nft_name),
-        );
-
-        let name = string::utf8(b"no fail");
-        assert!(name != name(nft), 0);
-        set_name(&mutator_ref, name);
-        assert!(name == name(nft), 2);
-    }
-
-    #[test(creator = @0x123)]
     fun test_set_uri(creator: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, nft_name);
+        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, token_id);
         let nft = object::address_to_object<Nft>(
-            create_nft_address(signer::address_of(creator), &collection_name, &nft_name),
+            create_nft_address(signer::address_of(creator), &collection_name, &token_id),
         );
 
         let uri = string::utf8(b"no fail");
@@ -508,14 +456,14 @@ module initia_std::nft {
     #[test(creator = @0x123)]
     fun test_burn_without_royalty(creator: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let constructor_ref = create_named_nft(
+        let constructor_ref = create(
             creator,
             collection_name,
             string::utf8(b"nft description"),
-            nft_name,
+            token_id,
             option::none(),
             string::utf8(b"nft uri"),
         );
@@ -531,14 +479,14 @@ module initia_std::nft {
     #[test(creator = @0x123)]
     fun test_burn_with_royalty(creator: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let constructor_ref = create_named_nft(
+        let constructor_ref = create(
             creator,
             collection_name,
             string::utf8(b"nft description"),
-            nft_name,
+            token_id,
             option::some(royalty::create(initia_std::decimal128::from_ratio(1, 1), signer::address_of(creator))),
             string::utf8(b"nft uri"),
         );
@@ -565,12 +513,12 @@ module initia_std::nft {
     }
 
     #[test_only]
-    fun create_nft_helper(creator: &signer, collection_name: String, nft_name: String): ConstructorRef {
-        create_named_nft(
+    fun create_nft_helper(creator: &signer, collection_name: String, token_id: String): ConstructorRef {
+        create(
             creator,
             collection_name,
             string::utf8(b"nft description"),
-            nft_name,
+            token_id,
             option::some(royalty::create(initia_std::decimal128::from_ratio(25, 10000), signer::address_of(creator))),
             string::utf8(b"uri"),
         )
@@ -580,9 +528,9 @@ module initia_std::nft {
     fun create_nft_with_mutation_ref(
         creator: &signer,
         collection_name: String,
-        nft_name: String,
+        token_id: String,
     ): MutatorRef {
-        let constructor_ref = create_nft_helper(creator, collection_name, nft_name);
+        let constructor_ref = create_nft_helper(creator, collection_name, token_id);
         generate_mutator_ref(&constructor_ref)
     }
 }

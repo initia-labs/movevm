@@ -1,4 +1,4 @@
-use initia_natives::{staking::StakingAPI, account::AccountAPI};
+use initia_natives::{account::AccountAPI, staking::StakingAPI};
 use initia_storage::state_view::StateView;
 use initia_types::errors::BackendError;
 

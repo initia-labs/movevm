@@ -10,9 +10,8 @@ pub struct GenerateUniqueAddressGasParameters {
     pub base: InternalGas,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct GasParameters {
     pub get_transaction_hash: GetTransactionHashGasParameters,
-    pub generate_unique_address: GenerateUniqueAddressGasParameters
+    pub generate_unique_address: GenerateUniqueAddressGasParameters,
 }

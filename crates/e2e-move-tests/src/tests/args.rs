@@ -280,38 +280,22 @@ fn string_args_bad_utf8() {
 
     // simple strings
     let args = vec![bcs::to_bytes(&vec![0xf0u8, 0x28u8, 0x8cu8, 0xbcu8]).unwrap()];
-    tests.push((
-        "0xcafe::test::hi",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::hi", args, StatusCode::ABORTED));
 
     let args = vec![bcs::to_bytes(&vec![0xc3u8, 0x28u8]).unwrap()];
-    tests.push((
-        "0xcafe::test::hi",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::hi", args, StatusCode::ABORTED));
 
     // vector of strings
     let bad = vec![0xc3u8, 0x28u8];
     let s_vec = vec![&bad[..], "hello".as_bytes(), "world".as_bytes()];
     let i = 0u64;
     let args = vec![bcs::to_bytes(&s_vec).unwrap(), bcs::to_bytes(&i).unwrap()];
-    tests.push((
-        "0xcafe::test::str_vec",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::str_vec", args, StatusCode::ABORTED));
 
     let bad = vec![0xc3u8, 0x28u8];
     let s_vec = vec![&bad[..], "hello".as_bytes(), "world".as_bytes()];
     let args = vec![bcs::to_bytes(&s_vec).unwrap(), bcs::to_bytes(&i).unwrap()];
-    tests.push((
-        "0xcafe::test::str_vec",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::str_vec", args, StatusCode::ABORTED));
 
     // vector of vector of strings
     let i = 0u64;
@@ -336,11 +320,7 @@ fn string_args_bad_utf8() {
         bcs::to_bytes(&i).unwrap(),
         bcs::to_bytes(&j).unwrap(),
     ];
-    tests.push((
-        "0xcafe::test::str_vec_vec",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::str_vec_vec", args, StatusCode::ABORTED));
 
     let bad = vec![0xf0u8, 0x28u8, 0x8cu8, 0x28u8];
     let s_vec = vec![
@@ -361,11 +341,7 @@ fn string_args_bad_utf8() {
         bcs::to_bytes(&i).unwrap(),
         bcs::to_bytes(&j).unwrap(),
     ];
-    tests.push((
-        "0xcafe::test::str_vec_vec",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::str_vec_vec", args, StatusCode::ABORTED));
 
     let bad = vec![0x60u8, 0xffu8];
     let s_vec = vec![
@@ -386,11 +362,7 @@ fn string_args_bad_utf8() {
         bcs::to_bytes(&i).unwrap(),
         bcs::to_bytes(&j).unwrap(),
     ];
-    tests.push((
-        "0xcafe::test::str_vec_vec",
-        args,
-        StatusCode::ABORTED,
-    ));
+    tests.push(("0xcafe::test::str_vec_vec", args, StatusCode::ABORTED));
 
     fail(tests);
 }

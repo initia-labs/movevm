@@ -70,7 +70,10 @@ impl MockState {
 
 impl StateView for MockState {
     fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Bytes>> {
-        Ok(self.map.get(&access_path.to_bytes()?).map(|v| v.clone().into()))
+        Ok(self
+            .map
+            .get(&access_path.to_bytes()?)
+            .map(|v| v.clone().into()))
     }
 }
 
@@ -273,8 +276,15 @@ impl MockAccountAPI {
         }
     }
 
-    pub fn set_account(&mut self, addr: AccountAddress, account_number: u64, sequence: u64, account_type: u8) {
-        self.accounts.insert(addr, (account_number, sequence, account_type));
+    pub fn set_account(
+        &mut self,
+        addr: AccountAddress,
+        account_number: u64,
+        sequence: u64,
+        account_type: u8,
+    ) {
+        self.accounts
+            .insert(addr, (account_number, sequence, account_type));
     }
 }
 

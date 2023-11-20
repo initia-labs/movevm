@@ -16,7 +16,7 @@ use move_vm_types::{
 use smallvec::smallvec;
 use std::{cell::RefCell, collections::VecDeque};
 
-use crate::{helpers::make_module_natives, util::make_native_from_func};
+use crate::{helpers::make_module_natives, pop_vec_arg, util::make_native_from_func};
 
 /***************************************************************************************************
  * native fun create_address
@@ -189,6 +189,77 @@ fn native_transfer(
     Ok(NativeResult::ok(gas_params.base, smallvec![]))
 }
 
+fn native_nft_transfer(
+    gas_params: &NFTTransferGasParameters,
+    context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 0);
+    debug_assert!(args.len() == 10);
+
+    let memo = pop_arg!(args, Vector).to_vec_u8()?;
+    let timeout_timestamp = pop_arg!(args, u64);
+    let revision_height = pop_arg!(args, u64);
+    let revision_number = pop_arg!(args, u64);
+    let source_channel = pop_arg!(args, Vector).to_vec_u8()?;
+    let source_port = pop_arg!(args, Vector).to_vec_u8()?;
+    let token_ids = pop_vec_arg!(args, Vec<u8>);
+    let collection = get_metadata_address(&pop_arg!(args, StructRef))?;
+    let receiver = pop_arg!(args, Vector).to_vec_u8()?;
+    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+
+    // convert to string
+    let memo = std::str::from_utf8(&memo)
+        .map_err(|_| partial_extension_error("failed to deserialize memo"))?
+        .to_string();
+    let source_channel = std::str::from_utf8(&source_channel)
+        .map_err(|_| partial_extension_error("failed to deserialize source_channel"))?
+        .to_string();
+    let source_port = std::str::from_utf8(&source_port)
+        .map_err(|_| partial_extension_error("failed to deserialize source_port"))?
+        .to_string();
+    let receiver = std::str::from_utf8(&receiver)
+        .map_err(|_| partial_extension_error("failed to deserialize receiver"))?
+        .to_string();
+
+    let token_ids = token_ids
+        .iter()
+        .map(|v| {
+            std::str::from_utf8(v)
+                .map(|v| v.to_string())
+                .map_err(|_| partial_extension_error("failed to deserialize receiver"))
+        })
+        .collect::<PartialVMResult<Vec<String>>>()?;
+
+    if memo.len() > 4096 {
+        return Err(partial_extension_error(
+            "memo cannot be greater than 4096 characters",
+        ));
+    }
+
+    // build cosmos message
+    let message = CosmosMessage::IBC(IBCMessage::NFTTransfer {
+        source_port,
+        source_channel,
+        collection,
+        token_ids,
+        sender,
+        receiver,
+        timeout_height: IBCHeight {
+            revision_number,
+            revision_height,
+        },
+        timeout_timestamp,
+        memo,
+    });
+
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    cosmos_context.messages.borrow_mut().push(message);
+
+    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+}
+
 fn native_pay_fee(
     gas_params: &PayFeeGasParameters,
     context: &mut NativeContext,
@@ -320,16 +391,26 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
             make_native_from_func(gas_params.transfer, native_transfer),
         ),
         (
+            "nft_transfer_internal",
+            make_native_from_func(gas_params.nft_transfer, native_nft_transfer),
+        ),
+        (
             "pay_fee_internal",
             make_native_from_func(gas_params.pay_fee, native_pay_fee),
         ),
         (
             "initiate_token_deposit_internal",
-            make_native_from_func(gas_params.initiate_token_deposit, native_initiate_token_deposit),
+            make_native_from_func(
+                gas_params.initiate_token_deposit,
+                native_initiate_token_deposit,
+            ),
         ),
         (
             "initiate_token_withdrawal_internal",
-            make_native_from_func(gas_params.initiate_token_withdrawal, native_initiate_token_withdrawal),
+            make_native_from_func(
+                gas_params.initiate_token_withdrawal,
+                native_initiate_token_withdrawal,
+            ),
         ),
     ];
 

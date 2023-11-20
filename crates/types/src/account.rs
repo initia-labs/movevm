@@ -1,6 +1,6 @@
+use anyhow::{format_err, Error, Result};
 use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
-use anyhow::{format_err, Error, Result};
 
 /// cbindgen:prefix-with-name
 #[derive(PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -62,7 +62,7 @@ impl TryFrom<u8> for AccountType {
     type Error = Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value{
+        match value {
             0 => Ok(AccountType::BaseAccount),
             1 => Ok(AccountType::ObjectAccount),
             2 => Ok(AccountType::TableAccount),

@@ -1,5 +1,4 @@
 use crate::mocks::{BlankAPIImpl, BlankTableViewImpl};
-use once_cell::sync::Lazy;
 use initia_natives::{
     account::NativeAccountContext, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, staking::NativeStakingContext,
@@ -7,6 +6,7 @@ use initia_natives::{
 };
 use move_unit_test;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
+use once_cell::sync::Lazy;
 
 static mut BLANK_TABLE_RESOLVER: BlankTableViewImpl = BlankTableViewImpl;
 static MOCK_API: Lazy<BlankAPIImpl> = Lazy::new(|| BlankAPIImpl::new());

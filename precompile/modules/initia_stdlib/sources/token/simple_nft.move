@@ -44,8 +44,6 @@ module initia_std::simple_nft {
         mutable_uri: bool,
         /// Determines if the creator can mutate nft descriptions
         mutable_nft_description: bool,
-        /// Determines if the creator can mutate nft names
-        mutable_nft_name: bool,
         /// Determines if the creator can mutate nft properties
         mutable_nft_properties: bool,
         /// Determines if the creator can mutate nft uris
@@ -73,7 +71,6 @@ module initia_std::simple_nft {
         mutable_royalty: bool,
         mutable_uri: bool,
         mutable_nft_description: bool,
-        mutable_nft_name: bool,
         mutable_nft_properties: bool,
         mutable_nft_uri: bool,
         royalty: Decimal128,
@@ -88,7 +85,6 @@ module initia_std::simple_nft {
             mutable_royalty,
             mutable_uri,
             mutable_nft_description,
-            mutable_nft_name,
             mutable_nft_properties,
             mutable_nft_uri,
             royalty,
@@ -105,7 +101,6 @@ module initia_std::simple_nft {
         mutable_royalty: bool,
         mutable_uri: bool,
         mutable_nft_description: bool,
-        mutable_nft_name: bool,
         mutable_nft_properties: bool,
         mutable_nft_uri: bool,
         royalty: Decimal128,
@@ -150,7 +145,6 @@ module initia_std::simple_nft {
             mutable_description,
             mutable_uri,
             mutable_nft_description,
-            mutable_nft_name,
             mutable_nft_properties,
             mutable_nft_uri,
         };
@@ -163,15 +157,17 @@ module initia_std::simple_nft {
         creator: &signer,
         collection: String,
         description: String,
-        name: String,
+        token_id: String,
         uri: String,
         property_keys: vector<String>,
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
-        is_named: bool,
         to: Option<address>,
     ) acquires SimpleNftCollection {
-        let nft_object = mint_nft_object(creator, collection, description, name, uri, property_keys, property_types, property_values, is_named);
+        let nft_object = mint_nft_object(
+            creator, collection, description, 
+            token_id, uri, property_keys, property_types, property_values,
+        );
         if (option::is_some(&to)) {
             object::transfer(creator, nft_object, option::extract(&mut to));
         }
@@ -182,23 +178,21 @@ module initia_std::simple_nft {
         creator: &signer,
         collection: String,
         description: String,
-        name: String,
+        token_id: String,
         uri: String,
         property_keys: vector<String>,
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
-        is_named: bool,
     ): Object<SimpleNft> acquires SimpleNftCollection {
         let constructor_ref = mint_internal(
             creator,
             collection,
             description,
-            name,
+            token_id,
             uri,
             property_keys,
             property_types,
             property_values,
-            is_named,
         );
 
         object::object_from_constructor_ref(&constructor_ref)
@@ -208,32 +202,20 @@ module initia_std::simple_nft {
         creator: &signer,
         collection: String,
         description: String,
-        name: String,
+        token_id: String,
         uri: String,
         property_keys: vector<String>,
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
-        is_named: bool,
     ): ConstructorRef acquires SimpleNftCollection {
-        let constructor_ref = if (is_named) {
-            nft::create_named_nft(
+        let constructor_ref = nft::create(
                 creator,
                 collection,
                 description,
-                name,
+                token_id,
                 option::none(),
                 uri,
-            )
-        } else {
-            nft::create(
-                creator,
-                collection,
-                description,
-                name,
-                option::none(),
-                uri,
-            )
-        };
+            );
 
         let object_signer = object::generate_signer(&constructor_ref);
 
@@ -242,7 +224,6 @@ module initia_std::simple_nft {
 
         let mutator_ref = if (
             collection.mutable_nft_description
-                || collection.mutable_nft_name
                 || collection.mutable_nft_uri
         ) {
             option::some(nft::generate_mutator_ref(&constructor_ref))
@@ -285,11 +266,6 @@ module initia_std::simple_nft {
     #[view]
     public fun is_mutable_description<T: key>(nft: Object<T>): bool acquires SimpleNftCollection {
         is_mutable_collection_nft_description(nft::collection_object(nft))
-    }
-
-    #[view]
-    public fun is_mutable_name<T: key>(nft: Object<T>): bool acquires SimpleNftCollection {
-        is_mutable_collection_nft_name(nft::collection_object(nft))
     }
 
     #[view]
@@ -345,19 +321,6 @@ module initia_std::simple_nft {
         );
         let simple_nft = authorized_borrow(nft, creator);
         nft::set_description(option::borrow(&simple_nft.mutator_ref), description);
-    }
-
-    public entry fun set_name<T: key>(
-        creator: &signer,
-        nft: Object<T>,
-        name: String,
-    ) acquires SimpleNftCollection, SimpleNft {
-        assert!(
-            is_mutable_name(nft),
-            error::permission_denied(EFIELD_NOT_MUTABLE),
-        );
-        let simple_nft = authorized_borrow(nft, creator);
-        nft::set_name(option::borrow(&simple_nft.mutator_ref), name);
     }
 
     public entry fun set_uri<T: key>(
@@ -489,12 +452,6 @@ module initia_std::simple_nft {
         borrow_collection(collection).mutable_nft_description
     }
 
-    public fun is_mutable_collection_nft_name<T: key>(
-        collection: Object<T>,
-    ): bool acquires SimpleNftCollection {
-        borrow_collection(collection).mutable_nft_name
-    }
-
     public fun is_mutable_collection_nft_uri<T: key>(
         collection: Object<T>,
     ): bool acquires SimpleNftCollection {
@@ -582,10 +539,10 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_create_and_transfer(creator: &signer) acquires SimpleNftCollection {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         assert!(object::owner(nft) == signer::address_of(creator), 1);
         object::transfer(creator, nft, @0x345);
@@ -595,10 +552,10 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_set_description(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         let description = string::utf8(b"not");
         assert!(nft::description(nft) != description, 0);
@@ -610,10 +567,10 @@ module initia_std::simple_nft {
     #[expected_failure(abort_code = 0x50004, location = Self)]
     fun test_set_immutable_description(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, false);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         set_description(creator, nft, string::utf8(b""));
     }
@@ -625,64 +582,22 @@ module initia_std::simple_nft {
         noncreator: &signer,
     ) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         let description = string::utf8(b"not");
         set_description(noncreator, nft, description);
     }
 
     #[test(creator = @0x123)]
-    fun test_set_name(creator: &signer) acquires SimpleNftCollection, SimpleNft {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
-
-        let name = string::utf8(b"not");
-        assert!(nft::name(nft) != name, 0);
-        set_name(creator, nft, name);
-        assert!(nft::name(nft) == name, 1);
-    }
-
-    #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x50004, location = Self)]
-    fun test_set_immutable_name(creator: &signer) acquires SimpleNftCollection, SimpleNft {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, false);
-        let nft = mint_helper(creator, collection_name, nft_name);
-
-        set_name(creator, nft, string::utf8(b""));
-    }
-
-    #[test(creator = @0x123, noncreator = @0x456)]
-    #[expected_failure(abort_code = 0x50003, location = Self)]
-    fun test_set_name_non_creator(
-        creator: &signer,
-        noncreator: &signer,
-    ) acquires SimpleNftCollection, SimpleNft {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
-
-        let name = string::utf8(b"not");
-        set_name(noncreator, nft, name);
-    }
-
-    #[test(creator = @0x123)]
     fun test_set_uri(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         let uri = string::utf8(b"not");
         assert!(nft::uri(nft) != uri, 0);
@@ -694,10 +609,10 @@ module initia_std::simple_nft {
     #[expected_failure(abort_code = 0x50004, location = Self)]
     fun test_set_immutable_uri(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, false);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         set_uri(creator, nft, string::utf8(b""));
     }
@@ -709,10 +624,10 @@ module initia_std::simple_nft {
         noncreator: &signer,
     ) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         let uri = string::utf8(b"not");
         set_uri(noncreator, nft, uri);
@@ -721,10 +636,10 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_burnable(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
         let nft_addr = object::object_address(nft);
 
         assert!(exists<SimpleNft>(nft_addr), 0);
@@ -739,10 +654,10 @@ module initia_std::simple_nft {
         nonowner: &signer,
     ) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         burn(nonowner, nft);
     }
@@ -808,12 +723,12 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_property_add(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
         let property_name = string::utf8(b"u8");
         let property_type = string::utf8(b"u8");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
         add_property(creator, nft, property_name, property_type, vector [ 0x08 ]);
 
         assert!(property_map::read_u8(nft, &property_name) == 0x8, 0);
@@ -822,11 +737,11 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_property_typed_add(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
         let property_name = string::utf8(b"u8");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
         add_typed_property<SimpleNft, u8>(creator, nft, property_name, 0x8);
 
         assert!(property_map::read_u8(nft, &property_name) == 0x8, 0);
@@ -835,12 +750,12 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_property_update(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
         let property_name = string::utf8(b"bool");
         let property_type = string::utf8(b"bool");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
         update_property(creator, nft, property_name, property_type, vector [ 0x00 ]);
 
         assert!(!property_map::read_bool(nft, &property_name), 0);
@@ -849,11 +764,11 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_property_update_typed(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
         let property_name = string::utf8(b"bool");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
         update_typed_property<SimpleNft, bool>(creator, nft, property_name, false);
 
         assert!(!property_map::read_bool(nft, &property_name), 0);
@@ -862,21 +777,21 @@ module initia_std::simple_nft {
     #[test(creator = @0x123)]
     fun test_property_remove(creator: &signer) acquires SimpleNftCollection, SimpleNft {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
         let property_name = string::utf8(b"bool");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
         remove_property(creator, nft, property_name);
     }
 
     #[test(creator = @0x123)]
     fun test_royalties(creator: &signer) acquires SimpleNftCollection {
         let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
+        let token_id = string::utf8(b"nft name");
 
         let collection = create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name);
+        let nft = mint_helper(creator, collection_name, token_id);
 
         let royalty_before = option::extract(&mut nft::royalty(nft));
         set_collection_royalties_call(creator, collection, decimal128::from_ratio(2, 3), @0x444);
@@ -902,7 +817,6 @@ module initia_std::simple_nft {
             flag,
             flag,
             flag,
-            flag,
             decimal128::from_ratio(1, 100),
         )
     }
@@ -911,18 +825,17 @@ module initia_std::simple_nft {
     fun mint_helper(
         creator: &signer,
         collection_name: String,
-        nft_name: String,
+        token_id: String,
     ): Object<SimpleNft> acquires SimpleNftCollection {
         mint_nft_object(
             creator,
             collection_name,
             string::utf8(b"description"),
-            nft_name,
+            token_id,
             string::utf8(b"uri"),
             vector[string::utf8(b"bool")],
             vector[string::utf8(b"bool")],
             vector[vector[0x01]],
-            false,
         )
     }
 }
