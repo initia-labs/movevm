@@ -99,7 +99,7 @@ fn convert_object_to_serde_value(val: &MoveValue) -> VMResult<Value> {
 pub(crate) fn convert_move_value_to_serde_value(val: &MoveValue) -> VMResult<Value> {
     match val {
         MoveValue::Vector(elems) => {
-            if elems.is_empty() {
+            if !elems.is_empty() {
                 if let MoveValue::U8(_) = elems.get(0).unwrap() {
                     let bytes = elems
                         .iter()
