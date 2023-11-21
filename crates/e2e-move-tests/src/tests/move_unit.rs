@@ -36,7 +36,7 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeBlockContext::new(0, 0));
     exts.add(NativeCodeContext::default());
     exts.add(NativeStakingContext::new(&BLANK_API.staking_api));
-    exts.add(NativeCosmosContext::new());
+    exts.add(NativeCosmosContext::default());
     exts.add(NativeTransactionContext::new([0; 32], [0; 32]));
     exts.add(NativeEventContext::default());
 }

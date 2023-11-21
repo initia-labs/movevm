@@ -61,15 +61,15 @@ impl StorageGasParameters {
                         // treat table new item as write op
                         // to reduce gas cost for table item creation
                         num_items_write += 1.into();
-                        num_bytes_write += Self::write_op_size(&key, data);
+                        num_bytes_write += Self::write_op_size(key, data);
                     } else {
                         num_items_create += 1.into();
-                        num_bytes_create += Self::write_op_size(&key, data);
+                        num_bytes_create += Self::write_op_size(key, data);
                     }
                 }
                 Modify(data) => {
                     num_items_write += 1.into();
-                    num_bytes_write += Self::write_op_size(&key, data);
+                    num_bytes_write += Self::write_op_size(key, data);
                 }
                 Delete => (),
             }

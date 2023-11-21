@@ -297,15 +297,15 @@ impl MoveValue {
 
         Ok(MoveValue::String(
             num_str
-                .trim_end_matches("0")
-                .trim_end_matches(".")
+                .trim_end_matches('0')
+                .trim_end_matches('.')
                 .to_string(),
         ))
     }
 
     pub fn convert_option(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
         if let Some((_, AnnotatedMoveValue::Vector(_, elem))) = v.value.into_iter().next() {
-            if elem.len() == 0 {
+            if elem.is_empty() {
                 Ok(MoveValue::Null)
             } else {
                 Ok(MoveValue::try_from(elem.get(0).unwrap().to_owned())?)
@@ -1081,7 +1081,7 @@ pub struct MoveModuleBytecode {
 
 impl VerifyInput for MoveModuleBytecode {
     fn verify(&self) -> anyhow::Result<()> {
-        if self.bytecode.0.len() == 0 {
+        if self.bytecode.0.is_empty() {
             bail!("Move module bytecode is empty")
         }
 
@@ -1116,7 +1116,7 @@ pub struct MoveScriptBytecode {
 
 impl VerifyInput for MoveScriptBytecode {
     fn verify(&self) -> anyhow::Result<()> {
-        if self.bytecode.0.len() == 0 {
+        if self.bytecode.0.is_empty() {
             bail!("Move script bytecode is empty")
         }
 
@@ -1325,9 +1325,8 @@ mod tests {
                                     U256(
                                         u256::U256::from_str(
                                             &(u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32)
-                                                * 123
-                                                / 1)
-                                            .to_string(),
+                                                * 123)
+                                                .to_string(),
                                         )
                                         .unwrap(), /* 123 */
                                     ),
@@ -1363,7 +1362,7 @@ mod tests {
                                     identifier("val"),
                                     U128(
                                         /* 123 */
-                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123 / 1,
+                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123,
                                     ),
                                 )])),
                                 Struct(annotated_decimal128_struct(vec![(

@@ -1,6 +1,5 @@
 use initia_compiler::{compile, Command};
 use move_cli::{base::build::Build, Move};
-use move_package::BuildConfig;
 use std::{env::current_dir, fs, io, path::PathBuf, str::FromStr};
 
 fn main() {
@@ -81,8 +80,10 @@ fn main() {
 fn build(p: PathBuf) {
     let package_path = Some(p);
 
-    let mut build_config = BuildConfig::default();
-    build_config.install_dir = package_path.clone();
+    let build_config = move_package::BuildConfig {
+        install_dir: package_path.clone(),
+        ..Default::default()
+    };
 
     let arg = Move {
         package_path,

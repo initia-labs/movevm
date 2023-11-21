@@ -195,7 +195,7 @@ pub(crate) fn validate_combine_signer_and_txn_args(
 
 // Return whether the argument is valid/allowed and whether it needs construction.
 pub(crate) fn is_valid_txn_arg(
-    session: &Session,
+    _session: &Session,
     typ: &Type,
     allowed_structs: &ConstructorMap,
 ) -> bool {
@@ -203,7 +203,7 @@ pub(crate) fn is_valid_txn_arg(
 
     match typ {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
-        Vector(inner) => is_valid_txn_arg(session, inner, allowed_structs),
+        Vector(inner) => is_valid_txn_arg(_session, inner, allowed_structs),
         Struct { name, .. } | StructInstantiation { name, .. } => {
             let full_name = format!("{}::{}", name.module.short_str_lossless(), name.name);
             allowed_structs.contains_key(&full_name)

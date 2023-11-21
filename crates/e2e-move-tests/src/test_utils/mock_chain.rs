@@ -18,6 +18,12 @@ pub struct MockChain {
     map: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
+impl Default for MockChain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockChain {
     pub fn new() -> Self {
         Self {
@@ -50,7 +56,7 @@ pub struct MockState {
 type BTreeMapRecordRef<'a> = (&'a Vec<u8>, &'a Vec<u8>);
 
 impl MockState {
-    fn write_op(&mut self, ref ap: AccessPath, ref blob_opt: Op<Vec<u8>>) {
+    fn write_op(&mut self, ap: AccessPath, blob_opt: Op<Vec<u8>>) {
         match blob_opt {
             Op::New(blob) | Op::Modify(blob) => {
                 self.map.insert(ap.to_bytes().unwrap(), blob.clone());
@@ -166,7 +172,7 @@ impl<'r> TableView for MockTableState<'r> {
 }
 
 fn prefix_end_bytes(prefix: Vec<u8>) -> Vec<u8> {
-    if prefix.len() == 0 {
+    if prefix.is_empty() {
         return vec![];
     }
 
@@ -180,7 +186,7 @@ fn prefix_end_bytes(prefix: Vec<u8>) -> Vec<u8> {
 
         end.pop();
 
-        if end.len() == 0 {
+        if end.is_empty() {
             break;
         }
     }
@@ -297,6 +303,11 @@ impl MockAccountAPI {
         }
     }
 }
+impl Default for MockAccountAPI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 pub struct MockStakingAPI {
     pub validators: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, u64)>>,
@@ -331,6 +342,12 @@ impl MockStakingAPI {
                 self.validators.insert(validator, ratios);
             }
         }
+    }
+}
+
+impl Default for MockStakingAPI {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -415,6 +432,18 @@ impl BlankAPIImpl {
             account_api: BlankAccountAPIImpl,
             staking_api: BlankStakingAPIImpl,
         }
+    }
+}
+
+impl Default for BlankAPIImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for BlankTableViewImpl {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

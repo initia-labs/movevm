@@ -12,10 +12,11 @@ const MOVE_TEST_PATH: &str = "../../precompile/modules/tests";
 #[serial]
 fn test_move_test() {
     let package_path = path_in_crate(MOVE_TEST_PATH);
-
-    let mut build_config = BuildConfig::default();
-    build_config.test_mode = true;
-    build_config.install_dir = Some(package_path.join("build-test"));
+    let build_config = BuildConfig {
+        test_mode: true,
+        install_dir: Some(package_path.join("build-test")),
+        ..Default::default()
+    };
 
     let move_args = Move {
         package_path: Some(package_path.canonicalize().unwrap()),
@@ -45,8 +46,10 @@ fn test_move_test() {
 #[serial]
 fn test_move_compile_in_devmode() {
     let package_path = path_in_crate(MOVE_TEST_PATH);
-    let mut build_config = BuildConfig::default();
-    build_config.dev_mode = true;
+    let build_config = BuildConfig {
+        dev_mode: true,
+        ..Default::default()
+    };
     let move_args = Move {
         package_path: Some(package_path.canonicalize().unwrap()),
         verbose: true,
@@ -62,8 +65,11 @@ fn test_move_compile_in_devmode() {
 #[serial] // NOTE: should be run after test_move_test()
 fn test_move_clean() {
     let package_path = path_in_crate(MOVE_TEST_PATH);
-    let mut build_config = BuildConfig::default();
-    build_config.install_dir = Some(package_path.join("build-test"));
+    let build_config = BuildConfig {
+        install_dir: Some(package_path.join("build-test")),
+        ..Default::default()
+    };
+
     let move_args = Move {
         package_path: Some(package_path.canonicalize().unwrap()),
         verbose: true,

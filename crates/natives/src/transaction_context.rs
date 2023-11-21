@@ -88,8 +88,8 @@ fn native_generate_unique_address(
     // produced so far, sha256 this to produce a unique handle. Given the txn hash
     // is unique, this should create a unique and deterministic global id with native prefix.
     let mut digest = Sha3_256::new();
-    Digest::update(&mut digest, UID_PREFIX.to_vec());
-    Digest::update(&mut digest, transaction_context.session_id.clone());
+    Digest::update(&mut digest, UID_PREFIX);
+    Digest::update(&mut digest, transaction_context.session_id);
     Digest::update(&mut digest, transaction_context.uid_counter.to_le_bytes());
     let bytes = digest.finalize().to_vec();
     let unique_address =

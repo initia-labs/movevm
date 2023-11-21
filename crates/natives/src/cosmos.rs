@@ -25,20 +25,12 @@ use crate::{helpers::make_module_natives, pop_vec_arg, util::make_native_from_fu
  *
  **************************************************************************************************/
 /// The native code context.
-#[derive(Tid)]
+#[derive(Default, Tid)]
 pub struct NativeCosmosContext {
     messages: RefCell<Vec<CosmosMessage>>,
 }
 
 impl NativeCosmosContext {
-    /// Create a new instance of a native cosmos context. This must be passed in via an
-    /// extension into VM session functions.
-    pub fn new() -> Self {
-        Self {
-            messages: Default::default(),
-        }
-    }
-
     pub fn into_messages(self) -> CosmosMessages {
         let NativeCosmosContext { messages, .. } = self;
         let messages = messages.into_inner();
@@ -75,7 +67,7 @@ fn native_delegate(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 4);
 
     let amount = pop_arg!(args, u64);
@@ -106,7 +98,7 @@ fn native_fund_community_pool(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
     let amount = pop_arg!(args, u64);
@@ -131,7 +123,7 @@ fn native_transfer(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 10);
 
     let memo = pop_arg!(args, Vector).to_vec_u8()?;
@@ -195,7 +187,7 @@ fn native_nft_transfer(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 10);
 
     let memo = pop_arg!(args, Vector).to_vec_u8()?;
@@ -266,7 +258,7 @@ fn native_pay_fee(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 9);
 
     let timeout_fee_amount = pop_arg!(args, u64);
@@ -320,7 +312,7 @@ fn native_initiate_token_deposit(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 6);
 
     let data = pop_arg!(args, Vector).to_vec_u8()?;
@@ -351,7 +343,7 @@ fn native_initiate_token_withdrawal(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 4);
 
     let amount = pop_arg!(args, u64);

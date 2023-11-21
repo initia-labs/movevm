@@ -24,16 +24,16 @@ fn reward_metadata() -> AccountAddress {
     AccountAddress::from_bytes(hasher.finalize()).unwrap()
 }
 
+type TestInput<'a> = (
+    Vec<AccountAddress>,
+    &'a str,
+    Vec<TypeTag>,
+    Vec<Vec<u8>>,
+    ExpectedOutput,
+);
+
 // (sender, ty_args, args, exp_output)
-fn run_tests(
-    tests: Vec<(
-        Vec<AccountAddress>,
-        &str,
-        Vec<TypeTag>,
-        Vec<Vec<u8>>,
-        ExpectedOutput,
-    )>,
-) {
+fn run_tests(tests: Vec<TestInput>) {
     let mut h = MoveHarness::new();
     let metadata = staking_metadata();
     let val_addr = b"validator".to_vec();
@@ -45,13 +45,13 @@ fn run_tests(
         .set_share_ratio(val_addr.clone(), metadata, 10, 20);
 
     for (senders, entry, ty_args, args, exp_output) in tests {
-        if senders.len() > 0 {
+        if !senders.is_empty() {
             let exec_output =
                 h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
-            if exec_output.is_ok() {
-                h.commit(exec_output.unwrap(), true);
+            if let Ok(output) = exec_output {
+                h.commit(output, true);
             }
         } else {
             let view_fn = h.create_view_function(str::parse(entry).unwrap(), ty_args.clone(), args);
@@ -168,7 +168,7 @@ fn test_simple_staking() {
             None,
             Some(vec![(
                 val_addr.clone(),
-                vec![(staking_metadata.clone(), (1_000_000u64, 0u64))],
+                vec![(staking_metadata, (1_000_000u64, 0u64))],
             )]),
             None,
         ),

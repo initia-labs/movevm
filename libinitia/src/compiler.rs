@@ -58,10 +58,10 @@ pub struct InitiaCompilerArgument {
 
 impl From<InitiaCompilerArgument> for Move {
     fn from(val: InitiaCompilerArgument) -> Self {
-        let package_path = match val.package_path.read() {
-            Some(s) => Some(Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
-            None => None,
-        };
+        let package_path = val
+            .package_path
+            .read()
+            .map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf());
         Self {
             package_path,
             verbose: val.verbose,
@@ -205,10 +205,7 @@ pub struct InitiaCompilerProveOption {
 impl From<InitiaCompilerProveOption> for ProverOptions {
     fn from(val: InitiaCompilerProveOption) -> Self {
         let verbosity_str: Option<String> = val.verbosity.into();
-        let verbosity = match verbosity_str {
-            Some(s) => Some(LevelFilter::from_str(s.as_str()).unwrap()),
-            None => None,
-        };
+        let verbosity = verbosity_str.map(|s| LevelFilter::from_str(s.as_str()).unwrap());
         Self {
             verbosity,
             filter: val.filter.into(),
@@ -220,7 +217,7 @@ impl From<InitiaCompilerProveOption> for ProverOptions {
             vc_timeout: val.vc_timeout,
             check_inconsistency: val.check_inconsistency,
             keep_loops: val.keep_loops,
-            loop_unroll: if val.loop_unroll <= 0 {
+            loop_unroll: if val.loop_unroll == 0 {
                 None
             } else {
                 Some(val.loop_unroll)

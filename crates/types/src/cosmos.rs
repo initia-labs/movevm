@@ -1,14 +1,8 @@
 use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CosmosMessages(Vec<CosmosMessage>);
-
-impl Default for CosmosMessages {
-    fn default() -> Self {
-        Self(Vec::default())
-    }
-}
 
 impl CosmosMessages {
     pub fn new(map: Vec<CosmosMessage>) -> Self {
