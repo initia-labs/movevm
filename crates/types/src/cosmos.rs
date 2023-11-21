@@ -61,6 +61,17 @@ pub enum IBCMessage {
         timeout_timestamp: u64,
         memo: String,
     },
+    NFTTransfer {
+        source_port: String,
+        source_channel: String,
+        collection: AccountAddress,
+        token_ids: Vec<String>,
+        sender: AccountAddress,
+        receiver: String,
+        timeout_height: IBCHeight,
+        timeout_timestamp: u64,
+        memo: String,
+    },
     PayFee {
         fee: IBCFee,
         source_port: String,

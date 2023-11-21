@@ -6,7 +6,9 @@ use serde_reflection::{Tracer, TracerConfig};
 use initia_types::{
     access_path::DataPath,
     account::Account,
-    cosmos::{CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, StakingMessage, OPinitMessage},
+    cosmos::{
+        CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, OPinitMessage, StakingMessage,
+    },
     entry_function::EntryFunction,
     env::Env,
     gas_usage::GasUsage,
