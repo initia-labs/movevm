@@ -15,15 +15,14 @@ fn std_coin_metadata() -> AccountAddress {
     AccountAddress::from_bytes(hasher.finalize()).unwrap()
 }
 
-fn run_tests(
-    tests: Vec<(
-        Vec<AccountAddress>,
-        &str,
-        Vec<TypeTag>,
-        Vec<Vec<u8>>,
-        ExpectedOutput,
-    )>,
-) {
+type TestInput<'a> = (
+    Vec<AccountAddress>,
+    &'a str,
+    Vec<TypeTag>,
+    Vec<Vec<u8>>,
+    ExpectedOutput,
+);
+fn run_tests(tests: Vec<TestInput>) {
     let minter_addr =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
     let path = "src/tests/std_coin.data/pack";
@@ -38,13 +37,13 @@ fn run_tests(
     h.commit(output, true);
 
     for (senders, entry, ty_args, args, exp_output) in tests {
-        if senders.len() > 0 {
+        if !senders.is_empty() {
             let exec_output =
                 h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
-            if exec_output.is_ok() {
-                h.commit(exec_output.unwrap(), true);
+            if let Ok(output) = exec_output {
+                h.commit(output, true);
             }
         } else {
             let view_fn = h.create_view_function(str::parse(entry).unwrap(), ty_args.clone(), args);

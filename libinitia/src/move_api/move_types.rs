@@ -1325,9 +1325,8 @@ mod tests {
                                     U256(
                                         u256::U256::from_str(
                                             &(u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32)
-                                                * 123
-                                                / 1)
-                                            .to_string(),
+                                                * 123)
+                                                .to_string(),
                                         )
                                         .unwrap(), /* 123 */
                                     ),
@@ -1363,7 +1362,7 @@ mod tests {
                                     identifier("val"),
                                     U128(
                                         /* 123 */
-                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123 / 1,
+                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123,
                                     ),
                                 )])),
                                 Struct(annotated_decimal128_struct(vec![(

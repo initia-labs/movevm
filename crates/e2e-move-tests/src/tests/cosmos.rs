@@ -45,15 +45,15 @@ fn collection_addr() -> AccountAddress {
     AccountAddress::from_bytes(hasher.finalize()).unwrap()
 }
 
-fn run_tests(
-    tests: Vec<(
-        AccountAddress,
-        &str,
-        Vec<TypeTag>,
-        Vec<Vec<u8>>,
-        ExpectedOutput,
-    )>,
-) {
+type TestInput<'a> = (
+    AccountAddress,
+    &'a str,
+    Vec<TypeTag>,
+    Vec<Vec<u8>>,
+    ExpectedOutput,
+);
+
+fn run_tests(tests: Vec<TestInput>) {
     let mut h = MoveHarness::new();
 
     h.initialize();

@@ -4,15 +4,15 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
 
-fn run_tests(
-    tests: Vec<(
-        Option<AccountAddress>,
-        &str,
-        Vec<TypeTag>,
-        Vec<Vec<u8>>,
-        ExpectedOutput,
-    )>,
-) {
+type TestInput<'a> = (
+    Option<AccountAddress>,
+    &'a str,
+    Vec<TypeTag>,
+    Vec<Vec<u8>>,
+    ExpectedOutput,
+);
+
+fn run_tests(tests: Vec<TestInput>) {
     let minter_addr =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
     let path = "src/tests/output.data/pack";
@@ -36,8 +36,8 @@ fn run_tests(
             );
             exp_output.check_execute_output(&exec_output);
 
-            if exec_output.is_ok() {
-                h.commit(exec_output.unwrap(), true);
+            if let Ok(output) = exec_output {
+                h.commit(output, true);
             }
         } else {
             let view_fn = h.create_view_function(str::parse(entry).unwrap(), ty_args.clone(), args);

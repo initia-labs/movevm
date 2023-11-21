@@ -10,11 +10,13 @@ struct ModuleData {
     state: Vec<u8>,
 }
 
-fn success(tests: Vec<(&str, Vec<(Vec<Vec<u8>>, &str)>)>) {
+type TestInput<'a> = (&'a str, Vec<(Vec<Vec<u8>>, &'a str)>);
+
+fn success(tests: Vec<TestInput>) {
     success_generic(vec![], tests)
 }
 
-fn success_generic(ty_args: Vec<TypeTag>, tests: Vec<(&str, Vec<(Vec<Vec<u8>>, &str)>)>) {
+fn success_generic(ty_args: Vec<TypeTag>, tests: Vec<TestInput>) {
     let acc = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let path = "src/tests/args.data/pack";
     let mut h = MoveHarness::new();
@@ -286,13 +288,13 @@ fn string_args_bad_utf8() {
     tests.push(("0xcafe::test::hi", args, StatusCode::ABORTED));
 
     // vector of strings
-    let bad = vec![0xc3u8, 0x28u8];
+    let bad = [0xc3u8, 0x28u8];
     let s_vec = vec![&bad[..], "hello".as_bytes(), "world".as_bytes()];
     let i = 0u64;
     let args = vec![bcs::to_bytes(&s_vec).unwrap(), bcs::to_bytes(&i).unwrap()];
     tests.push(("0xcafe::test::str_vec", args, StatusCode::ABORTED));
 
-    let bad = vec![0xc3u8, 0x28u8];
+    let bad = [0xc3u8, 0x28u8];
     let s_vec = vec![&bad[..], "hello".as_bytes(), "world".as_bytes()];
     let args = vec![bcs::to_bytes(&s_vec).unwrap(), bcs::to_bytes(&i).unwrap()];
     tests.push(("0xcafe::test::str_vec", args, StatusCode::ABORTED));
@@ -301,7 +303,7 @@ fn string_args_bad_utf8() {
     let i = 0u64;
     let j = 0u64;
 
-    let bad = vec![0x40u8, 0xfeu8];
+    let bad = [0x40u8, 0xfeu8];
     let s_vec = vec![
         vec![&bad[..], "hello".as_bytes(), "world".as_bytes()],
         vec![
@@ -322,7 +324,7 @@ fn string_args_bad_utf8() {
     ];
     tests.push(("0xcafe::test::str_vec_vec", args, StatusCode::ABORTED));
 
-    let bad = vec![0xf0u8, 0x28u8, 0x8cu8, 0x28u8];
+    let bad = [0xf0u8, 0x28u8, 0x8cu8, 0x28u8];
     let s_vec = vec![
         vec![
             "hi there!".as_bytes(),
@@ -343,7 +345,7 @@ fn string_args_bad_utf8() {
     ];
     tests.push(("0xcafe::test::str_vec_vec", args, StatusCode::ABORTED));
 
-    let bad = vec![0x60u8, 0xffu8];
+    let bad = [0x60u8, 0xffu8];
     let s_vec = vec![
         vec![
             "hi there!".as_bytes(),
@@ -635,7 +637,7 @@ fn string_args_generic_instantiation() {
 }
 
 fn option_arg(mut bz: Vec<u8>) -> Vec<u8> {
-    if bz.len() == 0 {
+    if bz.is_empty() {
         bz.insert(0, 0);
     } else {
         bz.insert(0, 1);
@@ -663,7 +665,7 @@ fn option_string_args_good() {
     // vector of option of strings
     let mut in_out = vec![];
 
-    let mut s_vec = vec![4 as u8];
+    let mut s_vec = vec![4_u8];
     s_vec.append(&mut option_arg(
         bcs::to_bytes("hi there! hello".as_bytes()).unwrap(),
     ));

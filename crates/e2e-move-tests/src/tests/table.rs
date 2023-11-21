@@ -5,16 +5,16 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
 
+type TestInput<'a> = (
+    Vec<AccountAddress>,
+    &'a str,
+    Vec<TypeTag>,
+    Vec<Vec<u8>>,
+    ExpectedOutput,
+);
+
 // (sender, ty_args, args, exp_output)
-fn run_tests(
-    tests: Vec<(
-        Vec<AccountAddress>,
-        &str,
-        Vec<TypeTag>,
-        Vec<Vec<u8>>,
-        ExpectedOutput,
-    )>,
-) {
+fn run_tests(tests: Vec<TestInput>) {
     let test_addr = AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
     let path = "src/tests/table.data/pack";
     let mut h = MoveHarness::new();
@@ -26,13 +26,13 @@ fn run_tests(
     h.commit(output, true);
 
     for (senders, entry, ty_args, args, exp_output) in tests {
-        if senders.len() > 0 {
+        if !senders.is_empty() {
             let exec_output =
                 h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
-            if exec_output.is_ok() {
-                h.commit(exec_output.unwrap(), true);
+            if let Ok(output) = exec_output {
+                h.commit(output, true);
             }
         } else {
             let view_fn = h.create_view_function(str::parse(entry).unwrap(), ty_args.clone(), args);
