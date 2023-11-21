@@ -322,7 +322,7 @@ pub extern "C" fn create_new_move_package(
     let name: Option<String> = name_view.into();
 
     let cmd = Command::New(New {
-        name: name.unwrap_or(String::new()),
+        name: name.unwrap_or_default(),
     });
 
     let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
