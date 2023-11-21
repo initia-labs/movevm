@@ -930,6 +930,13 @@ func DeserializeIBCMessage(deserializer serde.Deserializer) (IBCMessage, error) 
 		}
 
 	case 1:
+		if val, err := load_IBCMessage__NftTransfer(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
+	case 2:
 		if val, err := load_IBCMessage__PayFee(deserializer); err == nil {
 			return &val, nil
 		} else {
@@ -1006,6 +1013,61 @@ func load_IBCMessage__Transfer(deserializer serde.Deserializer) (IBCMessage__Tra
 	return obj, nil
 }
 
+type IBCMessage__NftTransfer struct {
+	SourcePort string
+	SourceChannel string
+	Collection AccountAddress
+	TokenIds []string
+	Sender AccountAddress
+	Receiver string
+	TimeoutHeight IBCHeight
+	TimeoutTimestamp uint64
+	Memo string
+}
+
+func (*IBCMessage__NftTransfer) isIBCMessage() {}
+
+func (obj *IBCMessage__NftTransfer) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(1)
+	if err := serializer.SerializeStr(obj.SourcePort); err != nil { return err }
+	if err := serializer.SerializeStr(obj.SourceChannel); err != nil { return err }
+	if err := obj.Collection.Serialize(serializer); err != nil { return err }
+	if err := serialize_vector_str(obj.TokenIds, serializer); err != nil { return err }
+	if err := obj.Sender.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeStr(obj.Receiver); err != nil { return err }
+	if err := obj.TimeoutHeight.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeU64(obj.TimeoutTimestamp); err != nil { return err }
+	if err := serializer.SerializeStr(obj.Memo); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *IBCMessage__NftTransfer) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_IBCMessage__NftTransfer(deserializer serde.Deserializer) (IBCMessage__NftTransfer, error) {
+	var obj IBCMessage__NftTransfer
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.SourcePort = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.SourceChannel = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Collection = val } else { return obj, err }
+	if val, err := deserialize_vector_str(deserializer); err == nil { obj.TokenIds = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Sender = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Receiver = val } else { return obj, err }
+	if val, err := DeserializeIBCHeight(deserializer); err == nil { obj.TimeoutHeight = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.TimeoutTimestamp = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Memo = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
 type IBCMessage__PayFee struct {
 	Fee IBCFee
 	SourcePort string
@@ -1017,7 +1079,7 @@ func (*IBCMessage__PayFee) isIBCMessage() {}
 
 func (obj *IBCMessage__PayFee) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(1)
+	serializer.SerializeVariantIndex(2)
 	if err := obj.Fee.Serialize(serializer); err != nil { return err }
 	if err := serializer.SerializeStr(obj.SourcePort); err != nil { return err }
 	if err := serializer.SerializeStr(obj.SourceChannel); err != nil { return err }
@@ -2520,6 +2582,24 @@ func deserialize_vector_bytes(deserializer serde.Deserializer) ([][]byte, error)
 	obj := make([][]byte, length)
 	for i := range(obj) {
 		if val, err := deserializer.DeserializeBytes(); err == nil { obj[i] = val } else { return nil, err }
+	}
+	return obj, nil
+}
+
+func serialize_vector_str(value []string, serializer serde.Serializer) error {
+	if err := serializer.SerializeLen(uint64(len(value))); err != nil { return err }
+	for _, item := range(value) {
+		if err := serializer.SerializeStr(item); err != nil { return err }
+	}
+	return nil
+}
+
+func deserialize_vector_str(deserializer serde.Deserializer) ([]string, error) {
+	length, err := deserializer.DeserializeLen()
+	if err != nil { return nil, err }
+	obj := make([]string, length)
+	for i := range(obj) {
+		if val, err := deserializer.DeserializeStr(); err == nil { obj[i] = val } else { return nil, err }
 	}
 	return obj, nil
 }
