@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Env {
     /// Block hash where this message was executed.
     block_height: u64,
@@ -52,15 +52,5 @@ impl Env {
     /// Return session_id
     pub fn session_id(&self) -> &[u8] {
         &self.session_id
-    }
-
-    pub fn default() -> Self {
-        Self {
-            block_height: 0,
-            block_timestamp: 0,
-            next_account_number: 0,
-            tx_hash: [0u8; 32],
-            session_id: [0u8; 32],
-        }
     }
 }

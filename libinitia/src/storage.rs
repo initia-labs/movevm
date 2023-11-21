@@ -86,11 +86,7 @@ impl<'r> Storage for GoStorage<'r> {
                 String::from_utf8_lossy(key)
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return Err(err);
-            }
-        }
+        unsafe { go_error.into_result(error_msg, default)? }
 
         Ok(output)
     }
@@ -111,11 +107,7 @@ impl<'r> Storage for GoStorage<'r> {
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return Err(err);
-            }
-        }
+        unsafe { go_error.into_result(error_msg, default)? }
         Ok(())
     }
 
@@ -133,11 +125,7 @@ impl<'r> Storage for GoStorage<'r> {
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return Err(err);
-            }
-        }
+        unsafe { go_error.into_result(error_msg, default)? }
         Ok(())
     }
 }

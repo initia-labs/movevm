@@ -73,8 +73,8 @@ fn native_test_only_set_block_info(
     let timestamp = pop_arg!(args, u64);
     let height = pop_arg!(args, u64);
 
-    let mut block_context = context.extensions_mut().get_mut::<NativeBlockContext>();
-    NativeBlockContext::set_block_info(&mut block_context, height, timestamp);
+    let block_context = context.extensions_mut().get_mut::<NativeBlockContext>();
+    NativeBlockContext::set_block_info(block_context, height, timestamp);
 
     Ok(NativeResult::ok(InternalGas::zero(), smallvec![]))
 }

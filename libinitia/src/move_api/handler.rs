@@ -16,7 +16,7 @@ pub(crate) fn convert_module_name(
     precompiled: &[u8],
     module_name: &[u8],
 ) -> Result<Vec<u8>, Error> {
-    let mut m = CompiledModule::deserialize(&precompiled)
+    let mut m = CompiledModule::deserialize(precompiled)
         .map_err(|e| Error::backend_failure(e.to_string()))?;
 
     // convert module name
@@ -38,8 +38,8 @@ struct ModuleInfoResponse {
 }
 
 pub(crate) fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, Error> {
-    let m = CompiledModule::deserialize(&compiled)
-        .map_err(|e| Error::backend_failure(e.to_string()))?;
+    let m =
+        CompiledModule::deserialize(compiled).map_err(|e| Error::backend_failure(e.to_string()))?;
 
     let module_info = ModuleInfoResponse {
         address: m.address().to_vec(),
@@ -50,13 +50,13 @@ pub(crate) fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, Error> {
 
 pub(crate) fn struct_tag_to_string(struct_tag: &[u8]) -> Result<Vec<u8>, Error> {
     let struct_tag: StructTag =
-        bcs::from_bytes(&struct_tag).map_err(|e| Error::backend_failure(e.to_string()))?;
+        bcs::from_bytes(struct_tag).map_err(|e| Error::backend_failure(e.to_string()))?;
     Ok(struct_tag.to_string().as_bytes().to_vec())
 }
 
 pub(crate) fn struct_tag_from_string(struct_tag_str: &[u8]) -> Result<Vec<u8>, Error> {
     let struct_tag_str =
-        std::str::from_utf8(&struct_tag_str).map_err(|e| Error::invalid_utf8(e.to_string()))?;
+        std::str::from_utf8(struct_tag_str).map_err(|e| Error::invalid_utf8(e.to_string()))?;
     let struct_tag =
         parse_struct_tag(struct_tag_str).map_err(|e| Error::backend_failure(e.to_string()))?;
     to_vec(&struct_tag)
@@ -68,7 +68,7 @@ pub(crate) fn decode_move_resource(
     blob: &[u8],
 ) -> Result<Vec<u8>, Error> {
     let storage = GoStorage::new(&db_handle);
-    let struct_tag: StructTag = bcs::from_bytes(&struct_tag.to_vec()).unwrap();
+    let struct_tag: StructTag = bcs::from_bytes(struct_tag).unwrap();
 
     let state_view_impl = StateViewImpl::new(&storage);
     let converter = MoveConverter::new(&state_view_impl);
@@ -86,7 +86,7 @@ pub(crate) fn decode_move_value(
     blob: &[u8],
 ) -> Result<Vec<u8>, Error> {
     let storage = GoStorage::new(&db_handle);
-    let type_tag: TypeTag = bcs::from_bytes(&type_tag.to_vec()).unwrap();
+    let type_tag: TypeTag = bcs::from_bytes(type_tag).unwrap();
 
     let state_view_impl = StateViewImpl::new(&storage);
     let converter = MoveConverter::new(&state_view_impl);

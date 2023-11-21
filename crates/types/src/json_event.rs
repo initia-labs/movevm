@@ -8,22 +8,12 @@ pub struct JsonEvent {
     event_data: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct JsonEvents(Vec<(TypeTag, String)>);
-
-impl Default for JsonEvents {
-    fn default() -> Self {
-        Self(vec![])
-    }
-}
 
 impl JsonEvents {
     pub fn new(events: Vec<(TypeTag, String)>) -> JsonEvents {
         Self(events)
-    }
-
-    pub fn as_ref(&self) -> &Vec<(TypeTag, String)> {
-        &self.0
     }
 
     pub fn into_inner(self) -> Vec<JsonEvent> {
@@ -34,5 +24,11 @@ impl JsonEvents {
                 event_data: v.1,
             })
             .collect()
+    }
+}
+
+impl AsRef<Vec<(TypeTag, String)>> for JsonEvents {
+    fn as_ref(&self) -> &Vec<(TypeTag, String)> {
+        &self.0
     }
 }

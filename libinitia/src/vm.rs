@@ -159,14 +159,14 @@ fn write_op(
         .to_bytes()
         .map_err(|_| BackendError::unknown("failed to encode access path"))?;
     match blob_opt {
-        Op::New(blob) | Op::Modify(blob) => go_storage.set(&key, &blob),
+        Op::New(blob) | Op::Modify(blob) => go_storage.set(&key, blob),
         Op::Delete => go_storage.remove(&key),
     }
 }
 
 pub fn push_write_set(go_storage: &mut GoStorage, write_set: &WriteSet) -> BackendResult<()> {
     for (ap, blob_opt) in write_set {
-        write_op(go_storage, &ap, blob_opt)?;
+        write_op(go_storage, ap, blob_opt)?;
     }
 
     Ok(())

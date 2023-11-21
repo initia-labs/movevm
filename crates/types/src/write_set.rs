@@ -8,14 +8,10 @@ use std::collections::{btree_map, BTreeMap};
 
 pub type WriteOp = Op<Vec<u8>>;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WriteSet(BTreeMap<AccessPath, WriteOp>);
 
 impl WriteSet {
-    pub fn default() -> Self {
-        Self(BTreeMap::new())
-    }
-
     pub fn new(change_set: ChangeSet, table_change_set: TableChangeSet) -> anyhow::Result<Self> {
         let mut write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
         for (addr, account_changeset) in change_set.into_inner() {

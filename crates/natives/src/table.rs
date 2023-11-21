@@ -250,9 +250,10 @@ impl Table {
 }
 
 impl TableIter {
-    fn load_next_key<'a>(
+    #[allow(clippy::type_complexity)]
+    fn load_next_key(
         &mut self,
-        resolver: &'a mut dyn TableResolver,
+        resolver: &mut dyn TableResolver,
     ) -> PartialVMResult<(Option<Vec<u8>>, Option<Option<NumBytes>>)> {
         let res = resolver.next_key(self.iterator_id).map_err(|err| {
             partial_extension_error(format!("remote table resolver failure: {}", err))
@@ -267,13 +268,13 @@ impl TableIter {
             None => (None, Some(None)),
         };
 
-        if next_item.is_some() {
-            self.changes.insert(next_item.unwrap());
+        if let Some(next_item) = next_item {
+            self.changes.insert(next_item);
         }
 
         let next_key_bytes = match self.order {
             Order::Ascending => self.changes.iter().next().map(|k| k.to_vec()),
-            Order::Descending => self.changes.iter().rev().next().map(|k| k.to_vec()),
+            Order::Descending => self.changes.iter().next_back().map(|k| k.to_vec()),
         };
 
         Ok((
@@ -381,8 +382,8 @@ fn native_new_table_handle(
     // is unique, this should create a unique and deterministic global id with native prefix.
     let mut digest = Sha3_256::new();
     let table_len = table_data.new_tables.len() as u32; // cast usize to u32 to ensure same length
-    Digest::update(&mut digest, UID_PREFIX.to_vec());
-    Digest::update(&mut digest, table_context.session_id.to_vec());
+    Digest::update(&mut digest, UID_PREFIX);
+    Digest::update(&mut digest, table_context.session_id);
     Digest::update(&mut digest, table_len.to_be_bytes());
     let bytes = digest.finalize().to_vec();
     let handle = AccountAddress::from_bytes(&bytes[0..AccountAddress::LENGTH])
@@ -644,12 +645,12 @@ fn native_new_table_iter(
     let start_bytes = pop_arg!(args, Vector).to_vec_u8()?;
 
     // convert vector start end args into option iterator arguments
-    let start_option: Option<&[u8]> = if start_bytes.len() == 0 {
+    let start_option: Option<&[u8]> = if start_bytes.is_empty() {
         None
     } else {
         Some(start_bytes.as_ref())
     };
-    let end_option: Option<&[u8]> = if end_bytes.len() == 0 {
+    let end_option: Option<&[u8]> = if end_bytes.is_empty() {
         None
     } else {
         Some(end_bytes.as_ref())
@@ -659,7 +660,7 @@ fn native_new_table_iter(
 
     // create iterator and store this to table context
     let changes = iter_table_changes(
-        &context,
+        context,
         handle,
         &ty_args[0],
         &ty_args[2],
@@ -876,6 +877,7 @@ fn set_next(context: &mut NativeContext, iterator_id: usize, next: Option<(Value
     iterator.unwrap().next = next;
 }
 
+#[allow(clippy::type_complexity)]
 fn get_next_key_with_table_handle(
     context: &mut NativeContext,
     iterator_id: usize,
@@ -891,6 +893,7 @@ fn get_next_key_with_table_handle(
     Ok((res, iterator.handle))
 }
 
+#[allow(clippy::type_complexity)]
 fn load_table_entry(
     context: &mut NativeContext,
     handle: TableHandle,

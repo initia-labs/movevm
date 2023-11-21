@@ -61,7 +61,7 @@ pub extern "C" fn initialize(
     module_bundle_payload: ByteSliceView,
     allow_arbitrary: bool,
     errmsg: Option<&mut UnmanagedVector>,
-) -> () {
+) {
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
@@ -167,7 +167,7 @@ pub extern "C" fn execute_view_function(
 pub extern "C" fn mark_loader_cache_as_invalid(
     vm_ptr: *mut vm_t,
     errmsg: Option<&mut UnmanagedVector>,
-) -> () {
+) {
     let res = match to_vm(vm_ptr) {
         Some(vm) => catch_unwind(AssertUnwindSafe(move || {
             vm::mark_loader_cache_as_invalid(vm);
@@ -406,11 +406,11 @@ pub extern "C" fn stringify_struct_tag(
 fn generate_default_move_cli(package_path_slice: Option<ByteSliceView>, verbose: bool) -> Move {
     let package_path = match package_path_slice {
         None => None,
-        Some(slice) => match slice.read() {
-            Some(s) => Some(Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
-            None => None,
-        },
+        Some(slice) => slice
+            .read()
+            .map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
     };
+
     Move {
         package_path,
         verbose,

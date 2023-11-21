@@ -54,6 +54,12 @@ where
     path
 }
 
+impl Default for MoveHarness {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
@@ -119,8 +125,7 @@ impl MoveHarness {
     ) -> Result<MessageOutput, VMStatus> {
         let (module_ids, code) = self.compile_package(path);
         let msg = self.create_publish_message(*acc, module_ids, code);
-        let vm_output = self.run_message(msg);
-        vm_output
+        self.run_message(msg)
     }
 
     pub fn run_entry_function(
@@ -213,7 +218,7 @@ impl MoveHarness {
             vec![
                 bcs::to_bytes(&module_ids).unwrap(),
                 bcs::to_bytes(&modules).unwrap(),
-                bcs::to_bytes(&(1 as u8)).unwrap(), // compatible upgrade policy
+                bcs::to_bytes(&(1_u8)).unwrap(), // compatible upgrade policy
             ],
         );
         Message::execute(vec![sender], ef)

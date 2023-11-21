@@ -108,8 +108,8 @@ fn repeats_vec_of_vec_u8(item: Vec<u8>, n: usize) -> Vec<Vec<u8>> {
             result.extend(item.to_vec());
         }
 
-        i = i >> 1;
-        if i <= 0 {
+        i >>= 1;
+        if i == 0 {
             break;
         }
 
@@ -209,7 +209,7 @@ pub fn native_batch_verify(
 
     match batch.verify(OsRng) {
         Ok(()) => Ok(NativeResult::ok(cost, smallvec![Value::bool(true)])),
-        Err(_) => return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+        Err(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
     }
 }
 

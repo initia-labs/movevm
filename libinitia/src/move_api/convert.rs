@@ -22,15 +22,11 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
         }
     }
 
-    pub fn try_into_resource<'b>(
-        &self,
-        struct_tag: &StructTag,
-        blob: &'b [u8],
-    ) -> Result<MoveResource> {
-        self.inner.view_resource(&struct_tag, blob)?.try_into()
+    pub fn try_into_resource(&self, struct_tag: &StructTag, blob: &[u8]) -> Result<MoveResource> {
+        self.inner.view_resource(struct_tag, blob)?.try_into()
     }
 
-    pub fn try_into_value<'b>(&self, type_tag: &TypeTag, blob: &'b [u8]) -> Result<MoveValue> {
-        self.inner.view_value(&type_tag, blob)?.try_into()
+    pub fn try_into_value(&self, type_tag: &TypeTag, blob: &[u8]) -> Result<MoveValue> {
+        self.inner.view_value(type_tag, blob)?.try_into()
     }
 }
