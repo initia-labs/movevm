@@ -241,7 +241,7 @@ module initia_std::object {
     ): ConstructorRef {
         // create resource account to prevent address overapping.
         account::create_object_account(object);
-        if (exists<ObjectCore>(object)) {std::debug::print(&object)};
+
         assert!(!exists<ObjectCore>(object), error::already_exists(EOBJECT_EXISTS));
         let object_signer = account::create_signer(object);
 
