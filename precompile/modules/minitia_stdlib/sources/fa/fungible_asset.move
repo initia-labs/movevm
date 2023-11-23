@@ -403,7 +403,7 @@ module minitia_std::fungible_asset {
 
         // emit event
         let metadata_addr = object::object_address(metadata);
-        event::emit(BurnEvent { metadata_addr, amount });
+        event::emit(MintEvent { metadata_addr, amount });
 
         FungibleAsset {
             metadata,
