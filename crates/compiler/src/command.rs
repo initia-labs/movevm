@@ -1,6 +1,6 @@
 use std::fmt;
 
-use move_cli::base::{build::Build, test::Test};
+use move_cli::base::{build::Build, coverage::Coverage, test::Test};
 
 use crate::prover::ProverOptions;
 use crate::Clean;
@@ -10,6 +10,7 @@ pub enum Command {
     Build(Build),
     New(New),
     Test(Test),
+    Coverage(Coverage),
     Clean(Clean),
     Prove(ProverOptions),
 }
@@ -20,6 +21,7 @@ impl fmt::Display for Command {
             Command::Build(_) => write!(f, "build"),
             Command::New(_) => write!(f, "new"),
             Command::Test(_) => write!(f, "test"),
+            Command::Coverage(_) => write!(f, "coverage"),
             Command::Clean(_) => write!(f, "clean"),
             Command::Prove(_) => write!(f, "prove"),
         }

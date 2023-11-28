@@ -8,6 +8,7 @@ rust-version = { workspace = true }
 [dependencies]
 move-binary-format = { workspace = true }
 move-core-types = { workspace = true }
+move-compiler = { workspace = true }
 
 anyhow = { workspace = true }
 bcs = { workspace = true }

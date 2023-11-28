@@ -1,4 +1,4 @@
-use initia_compiler::{compile, Command};
+use initia_compiler::{execute, Command};
 use move_cli::{base::build::Build, Move};
 use std::{env::current_dir, fs, io, path::PathBuf, str::FromStr};
 
@@ -90,9 +90,8 @@ fn build(p: PathBuf) {
         verbose: true,
         build_config,
     };
-    let res =
-        compile(arg, Command::Build(Build)).expect("error occurred while compiling contracts");
-    assert!(res == Vec::from("ok"));
+
+    execute(arg, Command::Build(Build)).expect("error occurred while compiling contracts");
 }
 
 fn copy(source: PathBuf, dest: PathBuf) -> io::Result<()> {

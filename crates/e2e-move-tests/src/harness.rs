@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use bytes::Bytes;
-use initia_compiler::built_package::{BuildOptions, BuiltPackage};
+use initia_compiler::built_package::BuiltPackage;
 use initia_types::env::Env;
 use initia_types::view_function::ViewFunction;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
+use move_package::BuildConfig;
 
 use crate::test_utils::mock_chain::{
     MockAPI, MockAccountAPI, MockChain, MockStakingAPI, MockState, MockTableState,
@@ -185,15 +186,13 @@ impl MoveHarness {
         let package_path = path_in_crate(path);
         let package = BuiltPackage::build(
             package_path.clone(),
-            BuildOptions {
+            BuildConfig {
                 install_dir: Some(package_path.clone()),
-                with_docs: false,
-                with_abis: false,
-                with_error_map: false,
-                with_source_maps: false,
-                with_srcs: false,
+                generate_docs: false,
+                generate_abis: false,
                 ..Default::default()
             },
+            None,
         )
         .expect("compile failed");
 
