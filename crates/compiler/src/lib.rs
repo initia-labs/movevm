@@ -9,13 +9,14 @@ pub mod docgen;
 pub mod extended_checks;
 pub mod new;
 pub mod prover;
+pub mod test_package;
 
 pub mod extensions;
 mod mocks;
 
 pub use clean::Clean;
 pub use command::Command;
-pub use compiler::compile;
+pub use compiler::execute;
 pub use new::New;
 
 #[cfg(test)]

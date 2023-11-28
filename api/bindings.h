@@ -195,6 +195,25 @@ typedef struct {
 } InitiaCompilerArgument;
 
 typedef struct {
+  ByteSliceView module_name;
+} InitiaCompilerCoverageBytecodeOption;
+
+typedef struct {
+  ByteSliceView module_name;
+} InitiaCompilerCoverageSourceOption;
+
+typedef struct {
+  /**
+   * Whether function coverage summaries should be displayed
+   */
+  bool functions;
+  /**
+   * Output CSV data of coverage
+   */
+  bool output_csv;
+} InitiaCompilerCoverageSummaryOption;
+
+typedef struct {
   uint8_t _private[0];
 } db_t;
 
@@ -342,22 +361,10 @@ typedef struct {
 
 typedef struct {
   /**
-   * Bound the amount of gas used by any one test.
-   */
-  uint64_t gas_limit;
-  /**
    * A filter string to determine which unit tests to run. A unit test will be run only if it
    * contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
    */
   ByteSliceView filter;
-  /**
-   * List all tests
-   */
-  bool list;
-  /**
-   * Number of threads to use for running tests.
-   */
-  size_t num_threads;
   /**
    * Report test statistics at the end of testing
    */
@@ -370,15 +377,6 @@ typedef struct {
    * Ignore compiler's warning, and continue run tests
    */
   bool ignore_compile_warnings;
-  /**
-   * Use the stackless bytecode interpreter to run the tests and cross check its results with
-   * the execution result from Move VM.
-   */
-  bool check_stackless_vm;
-  /**
-   * Verbose mode
-   */
-  bool verbose_mode;
   /**
    * Collect coverage information for later use with the various `package coverage` subcommands
    */
@@ -398,6 +396,18 @@ UnmanagedVector clean_move_package(UnmanagedVector *errmsg,
 UnmanagedVector convert_module_name(UnmanagedVector *errmsg,
                                     ByteSliceView precompiled,
                                     ByteSliceView module_name);
+
+UnmanagedVector coverage_bytecode_move_package(UnmanagedVector *errmsg,
+                                               InitiaCompilerArgument initia_args,
+                                               InitiaCompilerCoverageBytecodeOption coverage_opt);
+
+UnmanagedVector coverage_source_move_package(UnmanagedVector *errmsg,
+                                             InitiaCompilerArgument initia_args,
+                                             InitiaCompilerCoverageSourceOption coverage_opt);
+
+UnmanagedVector coverage_summary_move_package(UnmanagedVector *errmsg,
+                                              InitiaCompilerArgument initia_args,
+                                              InitiaCompilerCoverageSummaryOption coverage_opt);
 
 UnmanagedVector create_new_move_package(UnmanagedVector *errmsg,
                                         InitiaCompilerArgument initia_args,

@@ -1,19 +1,26 @@
+use log::LevelFilter;
 use std::{path::Path, str::FromStr};
 
 use crate::{error::Error, ByteSliceView};
 
-use initia_compiler::{compile as initia_compile, prover::ProverOptions};
-use log::LevelFilter;
-use move_cli::{base::test::Test, Move};
+use initia_compiler::{self, prover::ProverOptions};
+
+use move_cli::{
+    base::{
+        coverage::{Coverage, CoverageSummaryOptions},
+        test::Test,
+    },
+    Move,
+};
 use move_package::{Architecture, BuildConfig, CompilerConfig};
 
 pub use initia_compiler::Command;
 
-pub fn compile(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
+pub fn execute(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
     let action = cmd.to_string();
     let verbose = move_args.verbose;
 
-    match initia_compile(move_args, cmd) {
+    match initia_compiler::execute(move_args, cmd) {
         Ok(_) => Ok(Vec::from("ok")),
         Err(e) => {
             if verbose {
@@ -122,26 +129,15 @@ impl From<InitiaCompilerBuildConfig> for BuildConfig {
 
 #[repr(C)]
 pub struct InitiaCompilerTestOption {
-    /// Bound the amount of gas used by any one test.
-    pub gas_limit: u64,
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     pub filter: ByteSliceView,
-    /// List all tests
-    pub list: bool,
-    /// Number of threads to use for running tests.
-    pub num_threads: usize,
     /// Report test statistics at the end of testing
     pub report_statistics: bool,
     /// Show the storage state at the end of execution of a failing test
     pub report_storage_on_error: bool,
     /// Ignore compiler's warning, and continue run tests
     pub ignore_compile_warnings: bool,
-    /// Use the stackless bytecode interpreter to run the tests and cross check its results with
-    /// the execution result from Move VM.
-    pub check_stackless_vm: bool,
-    /// Verbose mode
-    pub verbose_mode: bool,
     /// Collect coverage information for later use with the various `package coverage` subcommands
     pub compute_coverage: bool,
 }
@@ -149,19 +145,67 @@ pub struct InitiaCompilerTestOption {
 impl From<InitiaCompilerTestOption> for Test {
     fn from(val: InitiaCompilerTestOption) -> Self {
         Self {
-            gas_limit: match val.gas_limit {
-                0 => None,
-                _ => Some(val.gas_limit),
-            },
             filter: val.filter.into(),
-            list: val.list,
-            num_threads: val.num_threads,
             report_statistics: val.report_statistics,
             report_storage_on_error: val.report_storage_on_error,
             ignore_compile_warnings: val.ignore_compile_warnings,
-            check_stackless_vm: val.check_stackless_vm,
-            verbose_mode: val.verbose_mode,
             compute_coverage: val.compute_coverage,
+            check_stackless_vm: false,
+            gas_limit: None,
+            list: false,
+            num_threads: 8,
+            verbose_mode: false,
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerCoverageSummaryOption {
+    /// Whether function coverage summaries should be displayed
+    functions: bool,
+    /// Output CSV data of coverage
+    output_csv: bool,
+}
+
+impl From<InitiaCompilerCoverageSummaryOption> for Coverage {
+    fn from(val: InitiaCompilerCoverageSummaryOption) -> Self {
+        Self {
+            options: CoverageSummaryOptions::Summary {
+                functions: val.functions,
+                output_csv: val.output_csv,
+            },
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerCoverageSourceOption {
+    module_name: ByteSliceView,
+}
+
+impl From<InitiaCompilerCoverageSourceOption> for Coverage {
+    fn from(val: InitiaCompilerCoverageSourceOption) -> Self {
+        let module_name: Option<String> = val.module_name.into();
+        Self {
+            options: CoverageSummaryOptions::Source {
+                module_name: module_name.unwrap(),
+            },
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerCoverageBytecodeOption {
+    module_name: ByteSliceView,
+}
+
+impl From<InitiaCompilerCoverageBytecodeOption> for Coverage {
+    fn from(val: InitiaCompilerCoverageBytecodeOption) -> Self {
+        let module_name: Option<String> = val.module_name.into();
+        Self {
+            options: CoverageSummaryOptions::Bytecode {
+                module_name: module_name.unwrap(),
+            },
         }
     }
 }
