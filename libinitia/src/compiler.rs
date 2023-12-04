@@ -1,4 +1,5 @@
 use log::LevelFilter;
+use move_docgen::DocgenOptions;
 use std::{path::Path, str::FromStr};
 
 use crate::{error::Error, ByteSliceView};
@@ -269,6 +270,59 @@ impl From<InitiaCompilerProveOption> for ProverOptions {
             stable_test_output: val.stable_test_output,
             dump: val.dump,
             for_test: val.for_test,
+            ..Default::default()
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerDocgenOption {
+    /// Whether to include private declarations and implementations into the generated
+    /// documentation. Defaults to false.
+    pub include_impl: bool,
+
+    /// Whether to include specifications in the generated documentation. Defaults to false.
+    pub include_specs: bool,
+
+    /// Whether specifications should be put side-by-side with declarations or into a separate
+    /// section. Defaults to false.
+    pub specs_inlined: bool,
+
+    /// Whether to include a dependency diagram. Defaults to false.
+    pub include_dep_diagram: bool,
+
+    /// Whether details should be put into collapsed sections. This is not supported by
+    /// all markdown, but the github dialect. Defaults to false.
+    pub collapsed_sections: bool,
+
+    /// Package-relative path to an optional markdown template which is a used to create a
+    /// landing page. Placeholders in this file are substituted as follows: `> {{move-toc}}` is
+    /// replaced by a table of contents of all modules; `> {{move-index}}` is replaced by an index,
+    /// and `> {{move-include NAME_OF_MODULE_OR_SCRIP}}` is replaced by the the full
+    /// documentation of the named entity. (The given entity will not longer be placed in
+    /// its own file, so this can be used to create a single manually populated page for
+    /// the package.)
+    pub landing_page_template: ByteSliceView,
+
+    /// Package-relative path to a file whose content is added to each generated markdown file.
+    /// This can contain common markdown references fpr this package (e.g. `[move-book]: <url>`).
+    pub references_file: ByteSliceView,
+}
+
+impl From<InitiaCompilerDocgenOption> for DocgenOptions {
+    fn from(val: InitiaCompilerDocgenOption) -> Self {
+        let landing_page_template: Option<String> = val.landing_page_template.into();
+
+        Self {
+            include_private_fun: val.include_impl,
+            include_specs: val.include_specs,
+            specs_inlined: val.specs_inlined,
+            collapsed_sections: val.collapsed_sections,
+            root_doc_templates: landing_page_template
+                .as_ref()
+                .map(|s| vec![s.clone()])
+                .unwrap_or_default(),
+            references_file: val.references_file.into(),
             ..Default::default()
         }
     }

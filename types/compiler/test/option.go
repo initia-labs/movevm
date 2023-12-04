@@ -4,7 +4,7 @@ package test
 type TestConfig struct {
 	// A filter string to determine which unit tests to run. A unit test will be run only if it
 	// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
-	Filter []byte
+	Filter string
 
 	// Report test statistics at the end of testing
 	ReportStatistics bool
@@ -35,7 +35,7 @@ func NewTestConfig(options ...func(*TestConfig)) TestConfig {
 
 func WithFilter(filter string) func(*TestConfig) {
 	return func(tc *TestConfig) {
-		tc.Filter = []byte(filter)
+		tc.Filter = filter
 	}
 }
 

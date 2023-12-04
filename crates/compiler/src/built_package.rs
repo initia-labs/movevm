@@ -1,4 +1,4 @@
-use crate::{docgen::DocgenOptions, extended_checks};
+use crate::{docgen::DocgenPackage, extended_checks};
 use anyhow::bail;
 use codespan_reporting::{
     diagnostic::Severity,
@@ -14,6 +14,7 @@ use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_core_types::{
     account_address::AccountAddress, language_storage::ModuleId, metadata::Metadata,
 };
+use move_docgen::DocgenOptions;
 use move_model::model::GlobalEnv;
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
@@ -68,7 +69,7 @@ impl BuiltPackage {
         docgen_options: Option<DocgenOptions>,
     ) -> anyhow::Result<Self> {
         eprintln!("Compiling, may take a little while to download git dependencies...");
-        let generate_docs = config.generate_docs;
+        let generate_docs = config.generate_docs || docgen_options.is_some();
         let bytecode_version = config.compiler_config.bytecode_version;
 
         // customize config
@@ -131,7 +132,12 @@ impl BuiltPackage {
                 })
                 .unique()
                 .collect::<Vec<_>>();
-            docgen.run(package_path.display().to_string(), dep_paths, model)?
+
+            DocgenPackage {
+                docgen_options: docgen,
+                build_config: config.clone(),
+                package_path: package_path.clone(),
+            }.generate_docs(dep_paths, model)?
         }
 
         Ok(Self {
