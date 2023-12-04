@@ -35,6 +35,7 @@ module initia_std::primary_fungible_store {
         user_stores: Table<address /* user */, Table<address /* metadata */, address /* store */>>,
     }
 
+    #[event]
     struct PrimaryStoreCreatedEvent has drop, store {
         owner_addr: address,
         store_addr: address,

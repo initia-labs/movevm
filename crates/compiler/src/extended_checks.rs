@@ -155,20 +155,18 @@ impl<'a> ExtendedChecker<'a> {
     }
 
     fn is_allowed_input_struct(&self, qid: QualifiedId<StructId>) -> bool {
-        let st = self.env.get_struct(qid);
-        let name = st.get_full_name_with_address();
-        if name.as_str() == "0x1::string::String" {
-            true
-        } else if name.as_str() == "0x1::option::Option" {
-            if st.get_fields().count() != 1 {
-                false
-            } else {
-                let field = st.get_fields().next().unwrap();
-                self.is_valid_transaction_input_type(&field.get_type())
-            }
-        } else {
-            false
-        }
+        let name = self.env.get_struct(qid).get_full_name_with_address();
+        // TODO(gerben) find a nice way to keep this in sync with allowed_structs in initia-vm
+        matches!(
+            name.as_str(),
+            "0x1::string::String"
+                | "0x1::object::Object"
+                | "0x1::option::Option"
+                | "0x1::fixed_point32::FixedPoint32"
+                | "0x1::fixed_point64::FixedPoint64"
+                | "0x1::decimal128::Decimal128"
+                | "0x1::decimal256::Decimal256"
+        )
     }
 }
 

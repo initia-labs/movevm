@@ -20,6 +20,7 @@ module minitia_std::coin {
     /// ManagingRefs is not found.
     const ERR_MANAGING_REFS_NOT_FOUND: u64 = 2;
 
+    #[event]
     struct CoinCreatedEvent has drop, store {
         metadata_addr: address,
     }

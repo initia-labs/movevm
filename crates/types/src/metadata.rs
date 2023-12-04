@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub const ERROR_PREFIX: &str = "E";
 pub const VIEW_FUN_ATTRIBUTE: &str = "view";
-pub const EVENT_STRUCT_ATTRIBUTE: &str = "view";
+pub const EVENT_STRUCT_ATTRIBUTE: &str = "event";
 pub const INIT_MODULE_FUNCTION_NAME: &str = "init_module";
 pub const METADATA_V0_MIN_FILE_FORMAT_VERSION: u32 = 6;
 

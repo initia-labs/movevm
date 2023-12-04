@@ -68,6 +68,7 @@ module minitia_std::collection {
         self: address,
     }
 
+    #[event]
     /// Contains the mutated fields name. This makes the life of indexers easier, so that they can
     /// directly understand the behavior in a writeset.
     struct MutationEvent has drop, store {
@@ -97,18 +98,21 @@ module minitia_std::collection {
         nft: address,
     }
 
+    #[event]
     struct CreateCollectionEvent has drop, store {
         collection: address,
         creator: address,
         name: String,
     }
 
+    #[event]
     struct BurnEvent has drop, store {
         collection: address,
         token_id: String,
         nft: address,
     }
 
+    #[event]
     struct MintEvent has drop, store {
         collection: address,
         token_id: String,

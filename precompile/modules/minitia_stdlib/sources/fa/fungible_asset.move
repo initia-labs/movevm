@@ -122,6 +122,7 @@ module minitia_std::fungible_asset {
         metadata: Object<Metadata>
     }
 
+    #[event]
     /// Emitted when fungible assets are deposited into a store.
     struct DepositEvent has drop, store {
         store_addr: address,
@@ -129,6 +130,7 @@ module minitia_std::fungible_asset {
         amount: u64,
     }
 
+    #[event]
     /// Emitted when fungible assets are withdrawn from a store.
     struct WithdrawEvent has drop, store {
         store_addr: address,
@@ -136,6 +138,7 @@ module minitia_std::fungible_asset {
         amount: u64,
     }
 
+    #[event]
     /// Emitted when a store's frozen status is updated.
     struct FrozenEvent has drop, store {
         store_addr: address,
