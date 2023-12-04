@@ -59,6 +59,7 @@ module initia_std::dex {
         mint_cap: coin::MintCapability,
     }
 
+    #[event]
     /// Event emitted when provide liquidity.
     struct ProvideEvent has drop, store {
         account: address,
@@ -70,6 +71,7 @@ module initia_std::dex {
         liquidity: u64,
     }
 
+    #[event]
     /// Event emitted when withdraw liquidity.
     struct WithdrawEvent has drop, store {
         account: address,
@@ -81,6 +83,7 @@ module initia_std::dex {
         liquidity: u64,
     }
 
+    #[event]
     /// Event emitted when swap token.
     struct SwapEvent has drop, store {
         account: address,
@@ -92,6 +95,7 @@ module initia_std::dex {
         fee_amount: u64,
     }
 
+    #[event]
     struct SingleAssetProvideEvent has drop, store {
         account: address,
         coin_a: address,
@@ -119,6 +123,7 @@ module initia_std::dex {
         coin_b_weight: Decimal128,
     }
 
+    #[event]
     struct CreatePairEvent has drop, store {
         coin_a: address,
         coin_b: address,
@@ -127,6 +132,7 @@ module initia_std::dex {
         swap_fee_rate: Decimal128,
     }
 
+    #[event]
     struct SwapFeeUpdateEvent has drop, store {
         coin_a: address,
         coin_b: address,

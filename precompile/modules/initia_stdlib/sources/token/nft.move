@@ -62,6 +62,7 @@ module initia_std::nft {
         self: address,
     }
 
+    #[event]
     /// Contains the mutated fields name. This makes the life of indexers easier, so that they can
     /// directly understand the behavior in a writeset.
     struct MutationEvent has drop, store {
