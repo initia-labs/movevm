@@ -5,7 +5,7 @@ use crate::args::VM_ARG;
 use crate::compiler::{
     self, InitiaCompilerArgument, InitiaCompilerCoverageBytecodeOption,
     InitiaCompilerCoverageSourceOption, InitiaCompilerCoverageSummaryOption,
-    InitiaCompilerProveOption, InitiaCompilerTestOption,
+    InitiaCompilerDocgenOption, InitiaCompilerProveOption, InitiaCompilerTestOption,
 };
 use crate::error::handle_c_error_default;
 use crate::error::{handle_c_error_binary, Error};
@@ -362,6 +362,23 @@ pub extern "C" fn coverage_bytecode_move_package(
     let cmd = Command::Coverage(coverage_opt.into());
 
     let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn docgen_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    docgen_opt: InitiaCompilerDocgenOption,
+) -> UnmanagedVector {
+    let cmd = Command::Document(docgen_opt.into());
+
+    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
         compiler::execute(initia_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));

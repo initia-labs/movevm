@@ -16,10 +16,10 @@ pub fn execute(move_args: Move, cmd: Command) -> anyhow::Result<()> {
         .execute(),
         Command::Coverage(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Build(_c) => {
-            BuiltPackage::build(
+            _ = BuiltPackage::build(
                 reroot_path(move_args.package_path)?,
                 move_args.build_config,
-                None, // TODO - receive docgen options from the client
+                None,
             )?;
             Ok(())
         }
@@ -30,5 +30,13 @@ pub fn execute(move_args: Move, cmd: Command) -> anyhow::Result<()> {
         ),
         Command::New(c) => c.execute_with_defaults(move_args.package_path),
         Command::Clean(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Document(c) => {
+            _ = BuiltPackage::build(
+                reroot_path(move_args.package_path)?,
+                move_args.build_config,
+                Some(c),
+            )?;
+            Ok(())
+        }
     }
 }

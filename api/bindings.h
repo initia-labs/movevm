@@ -268,6 +268,47 @@ typedef struct {
 } Db;
 
 typedef struct {
+  /**
+   * Whether to include private declarations and implementations into the generated
+   * documentation. Defaults to false.
+   */
+  bool include_impl;
+  /**
+   * Whether to include specifications in the generated documentation. Defaults to false.
+   */
+  bool include_specs;
+  /**
+   * Whether specifications should be put side-by-side with declarations or into a separate
+   * section. Defaults to false.
+   */
+  bool specs_inlined;
+  /**
+   * Whether to include a dependency diagram. Defaults to false.
+   */
+  bool include_dep_diagram;
+  /**
+   * Whether details should be put into collapsed sections. This is not supported by
+   * all markdown, but the github dialect. Defaults to false.
+   */
+  bool collapsed_sections;
+  /**
+   * Package-relative path to an optional markdown template which is a used to create a
+   * landing page. Placeholders in this file are substituted as follows: `> {{move-toc}}` is
+   * replaced by a table of contents of all modules; `> {{move-index}}` is replaced by an index,
+   * and `> {{move-include NAME_OF_MODULE_OR_SCRIP}}` is replaced by the the full
+   * documentation of the named entity. (The given entity will not longer be placed in
+   * its own file, so this can be used to create a single manually populated page for
+   * the package.)
+   */
+  ByteSliceView landing_page_template;
+  /**
+   * Package-relative path to a file whose content is added to each generated markdown file.
+   * This can contain common markdown references fpr this package (e.g. `[move-book]: <url>`).
+   */
+  ByteSliceView references_file;
+} InitiaCompilerDocgenOption;
+
+typedef struct {
   uint8_t _private[0];
 } api_t;
 
@@ -428,6 +469,10 @@ UnmanagedVector decode_move_value(Db db,
 UnmanagedVector decode_script_bytes(UnmanagedVector *errmsg, ByteSliceView script_bytes);
 
 void destroy_unmanaged_vector(UnmanagedVector v);
+
+UnmanagedVector docgen_move_package(UnmanagedVector *errmsg,
+                                    InitiaCompilerArgument initia_args,
+                                    InitiaCompilerDocgenOption docgen_opt);
 
 UnmanagedVector execute_contract(vm_t *vm_ptr,
                                  Db db,

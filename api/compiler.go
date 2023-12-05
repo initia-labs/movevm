@@ -10,6 +10,7 @@ import (
 
 	compiler "github.com/initia-labs/initiavm/types/compiler"
 	coveragetypes "github.com/initia-labs/initiavm/types/compiler/coverage"
+	docgentypes "github.com/initia-labs/initiavm/types/compiler/docgen"
 	provetypes "github.com/initia-labs/initiavm/types/compiler/prove"
 	testtypes "github.com/initia-labs/initiavm/types/compiler/test"
 )
@@ -279,6 +280,58 @@ func ProveContract(arg compiler.InitiaCompilerArgument, proveConfig provetypes.P
 	res, err := C.prove_move_package(&errmsg,
 		compArg,
 		proveOpt,
+	)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return copyAndDestroyUnmanagedVector(res), err
+}
+
+func Docgen(arg compiler.InitiaCompilerArgument, docgenOption docgentypes.DocgenConfig) ([]byte, error) {
+	var err error
+
+	errmsg := newUnmanagedVector(nil)
+	buildConfig := arg.BuildConfig
+
+	pathBytesView := makeView([]byte(arg.PackagePath))
+	defer runtime.KeepAlive(pathBytesView)
+	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
+	defer runtime.KeepAlive(installDirBytesView)
+	landingPageTemplateBytesView := makeView([]byte(docgenOption.LandingPageTemplate))
+	defer runtime.KeepAlive(landingPageTemplateBytesView)
+	referencesFileBytesView := makeView([]byte(docgenOption.ReferencesFile))
+	defer runtime.KeepAlive(referencesFileBytesView)
+
+	compArg := C.InitiaCompilerArgument{
+		package_path: pathBytesView,
+		verbose:      cbool(arg.Verbose),
+		build_config: C.InitiaCompilerBuildConfig{
+			dev_mode:                   cbool(buildConfig.DevMode),
+			test_mode:                  cbool(buildConfig.TestMode),
+			generate_docs:              cbool(buildConfig.GenerateDocs),
+			generate_abis:              cbool(buildConfig.GenerateABIs),
+			install_dir:                installDirBytesView,
+			force_recompilation:        cbool(buildConfig.ForceRecompilation),
+			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
+			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
+			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+		},
+	}
+	docgenOpt := C.InitiaCompilerDocgenOption{
+		include_impl:          cbool(docgenOption.IncludeImpl),
+		include_specs:         cbool(docgenOption.IncludeSpecs),
+		specs_inlined:         cbool(docgenOption.SpecsInlined),
+		include_dep_diagram:   cbool(docgenOption.IncludeDepDiagram),
+		collapsed_sections:    cbool(docgenOption.CollapsedSections),
+		landing_page_template: landingPageTemplateBytesView,
+		references_file:       referencesFileBytesView,
+	}
+
+	res, err := C.docgen_move_package(&errmsg,
+		compArg,
+		docgenOpt,
 	)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
