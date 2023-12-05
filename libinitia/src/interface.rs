@@ -3,15 +3,17 @@ use std::path::Path;
 
 use crate::args::VM_ARG;
 use crate::compiler::{
-    InitiaCompilerArgument, InitiaCompilerProveOption, InitiaCompilerTestOption,
+    self, InitiaCompilerArgument, InitiaCompilerCoverageBytecodeOption,
+    InitiaCompilerCoverageSourceOption, InitiaCompilerCoverageSummaryOption,
+    InitiaCompilerDocgenOption, InitiaCompilerProveOption, InitiaCompilerTestOption,
 };
 use crate::error::handle_c_error_default;
 use crate::error::{handle_c_error_binary, Error};
 use crate::move_api::handler as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
 
-use crate::compiler::{compile, Command};
-use initia_compiler::New;
+use crate::compiler::Command;
+use initia_compiler::{self, New};
 use initia_types::entry_function::EntryFunction;
 use initia_types::env::Env;
 use initia_types::message::Message;
@@ -291,8 +293,10 @@ pub extern "C" fn build_move_package(
 ) -> UnmanagedVector {
     let cmd = Command::Build(Build);
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -306,8 +310,78 @@ pub extern "C" fn test_move_package(
 ) -> UnmanagedVector {
     let cmd = Command::Test(test_opt.into());
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn coverage_summary_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    coverage_opt: InitiaCompilerCoverageSummaryOption,
+) -> UnmanagedVector {
+    let cmd = Command::Coverage(coverage_opt.into());
+
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn coverage_source_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    coverage_opt: InitiaCompilerCoverageSourceOption,
+) -> UnmanagedVector {
+    let cmd = Command::Coverage(coverage_opt.into());
+
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn coverage_bytecode_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    coverage_opt: InitiaCompilerCoverageBytecodeOption,
+) -> UnmanagedVector {
+    let cmd = Command::Coverage(coverage_opt.into());
+
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn docgen_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    docgen_opt: InitiaCompilerDocgenOption,
+) -> UnmanagedVector {
+    let cmd = Command::Document(docgen_opt.into());
+
+    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -325,8 +399,10 @@ pub extern "C" fn create_new_move_package(
         name: name.unwrap_or_default(),
     });
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -346,8 +422,10 @@ pub extern "C" fn clean_move_package(
         force,
     });
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -361,8 +439,10 @@ pub extern "C" fn prove_move_package(
 ) -> UnmanagedVector {
     let cmd = Command::Prove(prove_opt.into());
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))

@@ -138,12 +138,14 @@ module minitia_std::object {
         self: address,
     }
 
+    #[event]
     /// Emitted at the object creation.
     struct CreateEvent has drop, store {
         object: address,
         owner: address,
     }
 
+    #[event]
     /// Emitted whenever the object's owner field is changed.
     struct TransferEvent has drop, store {
         object: address,

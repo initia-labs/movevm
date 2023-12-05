@@ -68,6 +68,7 @@ module initia_std::staking {
 
     // Events
 
+    #[event]
     /// Event emitted when some amount of reward is claimed by entry function.
     struct RewardEvent has drop, store {
         account: address,
@@ -75,6 +76,7 @@ module initia_std::staking {
         amount: u64,
     }
 
+    #[event]
     /// Event emitted when a Delegation is deposited to an account.
     struct DelegationDepositEvent has drop, store {
         account: address,
@@ -83,6 +85,7 @@ module initia_std::staking {
         share: u64,
     }
 
+    #[event]
     /// Event emitted when a Delegation is withdrawn from an account.
     struct DelegationWithdrawEvent has drop, store {
         account: address,
@@ -91,6 +94,7 @@ module initia_std::staking {
         share: u64,
     }
 
+    #[event]
     /// Event emitted when a Unbonding is deposited from an account.
     struct UnbondingDepositEvent has drop, store {
         account: address,
@@ -100,6 +104,7 @@ module initia_std::staking {
         release_time: u64,
     }
 
+    #[event]
     /// Event emitted when a Unbonding is withdrawn from an account.
     struct UnbondingWithdrawEvent has drop, store {
         account: address,

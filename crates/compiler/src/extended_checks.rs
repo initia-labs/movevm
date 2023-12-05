@@ -1,6 +1,6 @@
 use initia_types::metadata::{
-    KnownAttribute, RuntimeModuleMetadataV0, ERROR_PREFIX, INIT_MODULE_FUNCTION_NAME,
-    VIEW_FUN_ATTRIBUTE,
+    KnownAttribute, RuntimeModuleMetadataV0, ERROR_PREFIX, EVENT_STRUCT_ATTRIBUTE,
+    INIT_MODULE_FUNCTION_NAME, VIEW_FUN_ATTRIBUTE,
 };
 use move_binary_format::file_format::Visibility;
 use move_core_types::{
@@ -12,10 +12,16 @@ use move_core_types::{
 use move_model::{
     ast::{Attribute, Value},
     model::{
-        FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, Parameter, QualifiedId, StructId,
+        FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, NamedConstantEnv, Parameter, QualifiedId,
+        StructId,
     },
     symbol::Symbol,
     ty::{PrimitiveType, ReferenceKind, Type},
+};
+use move_stackless_bytecode::{
+    function_target::{FunctionData, FunctionTarget},
+    stackless_bytecode::{AttrId, Bytecode, Operation},
+    stackless_bytecode_generator::StacklessBytecodeGenerator,
 };
 use std::{collections::BTreeMap, rc::Rc};
 
@@ -54,6 +60,7 @@ impl<'a> ExtendedChecker<'a> {
             if module.is_target() {
                 self.check_and_record_view_functions(module);
                 self.check_entry_functions(module);
+                self.check_and_record_events(module);
                 self.check_init_module(module);
                 self.build_error_map(module)
             }
@@ -148,20 +155,18 @@ impl<'a> ExtendedChecker<'a> {
     }
 
     fn is_allowed_input_struct(&self, qid: QualifiedId<StructId>) -> bool {
-        let st = self.env.get_struct(qid);
-        let name = st.get_full_name_with_address();
-        if name.as_str() == "0x1::string::String" {
-            true
-        } else if name.as_str() == "0x1::option::Option" {
-            if st.get_fields().count() != 1 {
-                false
-            } else {
-                let field = st.get_fields().next().unwrap();
-                self.is_valid_transaction_input_type(&field.get_type())
-            }
-        } else {
-            false
-        }
+        let name = self.env.get_struct(qid).get_full_name_with_address();
+        // TODO(gerben) find a nice way to keep this in sync with allowed_structs in initia-vm
+        matches!(
+            name.as_str(),
+            "0x1::string::String"
+                | "0x1::object::Object"
+                | "0x1::option::Option"
+                | "0x1::fixed_point32::FixedPoint32"
+                | "0x1::fixed_point64::FixedPoint64"
+                | "0x1::decimal128::Decimal128"
+                | "0x1::decimal256::Decimal256"
+        )
     }
 }
 
@@ -188,6 +193,87 @@ impl<'a> ExtendedChecker<'a> {
                 .entry(fun.get_simple_name_string().to_string())
                 .or_default()
                 .push(KnownAttribute::view_function());
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------------
+// Events
+
+impl<'a> ExtendedChecker<'a> {
+    fn check_and_record_events(&mut self, module: &ModuleEnv) {
+        for ref struct_ in module.get_structs() {
+            if self.has_attribute_iter(struct_.get_attributes().iter(), EVENT_STRUCT_ATTRIBUTE) {
+                let module_id = self.get_runtime_module_id(module);
+                // Remember the runtime info that this is a event struct.
+                self.output
+                    .entry(module_id)
+                    .or_default()
+                    .struct_attributes
+                    .entry(
+                        self.env
+                            .symbol_pool()
+                            .string(struct_.get_name())
+                            .to_string(),
+                    )
+                    .or_default()
+                    .push(KnownAttribute::event());
+            }
+        }
+        for fun in module.get_functions() {
+            if fun.is_inline() || fun.is_native() {
+                continue;
+            }
+            // Holder for stackless function data
+            let data = self.get_stackless_data(&fun);
+            // Handle to work with stackless functions -- function targets.
+            let target = FunctionTarget::new(&fun, &data);
+            // Now check for event emit calls.
+            for bc in target.get_bytecode() {
+                if let Bytecode::Call(attr_id, _, Operation::Function(mid, fid, type_inst), _, _) =
+                    bc
+                {
+                    self.check_emit_event_call(
+                        &module.get_id(),
+                        &target,
+                        *attr_id,
+                        mid.qualified(*fid),
+                        type_inst,
+                    );
+                }
+            }
+        }
+    }
+
+    fn check_emit_event_call(
+        &mut self,
+        module_id: &move_model::model::ModuleId,
+        target: &FunctionTarget,
+        attr_id: AttrId,
+        callee: QualifiedId<FunId>,
+        type_inst: &[Type],
+    ) {
+        if !self.is_function(callee, "0x1::event::emit") {
+            return;
+        }
+        // We are looking at `0x1::event::emit<T>` and extracting the `T`
+        let event_type = &type_inst[0];
+        // Now check whether this type has the event attribute
+        let type_ok = match event_type {
+            Type::Struct(mid, sid, _) => {
+                let struct_ = self.env.get_struct(mid.qualified(*sid));
+                // The struct must be defined in the current module.
+                module_id == mid
+                    && self
+                        .has_attribute_iter(struct_.get_attributes().iter(), EVENT_STRUCT_ATTRIBUTE)
+            }
+            _ => false,
+        };
+        if !type_ok {
+            let loc = target.get_bytecode_loc(attr_id);
+            self.env.error(&loc,
+                           &format!("`0x1::event::emit` called with type `{}` which is not a struct type defined in the same module with `#[event]` attribute",
+                                    event_type.display(&self.env.get_type_display_ctx())));
         }
     }
 }
@@ -249,6 +335,20 @@ impl<'a> ExtendedChecker<'a> {
         })
     }
 
+    fn has_attribute_iter(
+        &self,
+        mut attrs: impl Iterator<Item = &'a Attribute>,
+        attr_name: &str,
+    ) -> bool {
+        attrs.any(|attr| {
+            if let Attribute::Apply(_, name, _) = attr {
+                self.env.symbol_pool().string(*name).as_str() == attr_name
+            } else {
+                false
+            }
+        })
+    }
+
     fn get_runtime_module_id(&self, module: &ModuleEnv<'_>) -> ModuleId {
         let name = module.get_name();
         let addr =
@@ -260,5 +360,14 @@ impl<'a> ExtendedChecker<'a> {
 
     fn name_string(&self, symbol: Symbol) -> Rc<String> {
         self.env.symbol_pool().string(symbol)
+    }
+
+    fn get_stackless_data(&self, fun: &FunctionEnv) -> FunctionData {
+        StacklessBytecodeGenerator::new(fun).generate_function()
+    }
+
+    fn is_function(&self, id: QualifiedId<FunId>, full_name_str: &str) -> bool {
+        let fun = &self.env.get_function(id);
+        fun.get_full_name_with_address() == full_name_str
     }
 }

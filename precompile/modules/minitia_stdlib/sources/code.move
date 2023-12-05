@@ -23,6 +23,7 @@ module minitia_std::code {
         upgrade_policy: u8
     }
 
+    #[event]
     struct ModulePublishedEvent has store, drop {
         module_id: String,
         upgrade_policy: u8,

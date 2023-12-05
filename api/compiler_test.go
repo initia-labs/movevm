@@ -27,7 +27,6 @@ func Test_TestContract(t *testing.T) {
 		buildtypes.WithTestMode(),
 	)
 	testConfig := testtypes.NewTestConfig(
-		testtypes.WithVerboseTestConfig(),
 		testtypes.WithReportStatistics(),
 		testtypes.WithReportStorageOnError(),
 	)
