@@ -146,6 +146,20 @@ module minitia_std::fungible_asset {
         frozen: bool,
     }
 
+    #[event]
+    /// Emitted when fungible assets are burnt.
+    struct BurnEvent has drop, store {
+        metadata_addr: address,
+        amount: u64,
+    }
+
+    #[event]
+    /// Emitted when fungible assets are minted.
+    struct MintEvent has drop, store {
+        metadata_addr: address,
+        amount: u64,
+    }
+
     /// Make an existing object fungible by adding the Metadata resource.
     /// This returns the capabilities to mint, burn, and transfer.
     /// maximum_supply defines the behavior of maximum supply when monitoring:
@@ -392,6 +406,10 @@ module minitia_std::fungible_asset {
 
         increase_supply(metadata, amount);
 
+        // emit event
+        let metadata_addr = object::object_address(metadata);
+        event::emit(MintEvent { metadata_addr, amount });
+
         FungibleAsset {
             metadata,
             amount
@@ -431,6 +449,10 @@ module minitia_std::fungible_asset {
         } = fa;
         assert!(ref.metadata == metadata, error::invalid_argument(EBURN_REF_AND_FUNGIBLE_ASSET_MISMATCH));
         decrease_supply(metadata, amount);
+
+        // emit event
+        let metadata_addr = object::object_address(metadata);
+        event::emit(BurnEvent { metadata_addr, amount });
     }
 
     /// Burn the `amount` of the fungible asset from the given store.
