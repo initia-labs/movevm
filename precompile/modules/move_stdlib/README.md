@@ -1,6 +1,6 @@
 # Move Standard Library
 
-This is the reference documentation of the Move standard library.
+The Move Standard Library modules are basic modules for move language.
 
 ## Documents
 
