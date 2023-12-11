@@ -16,11 +16,7 @@ pub struct DocgenPackage {
 }
 
 impl DocgenPackage {
-    pub fn generate_docs(
-        &self,
-        doc_path: Vec<String>,
-        model: &GlobalEnv,
-    ) -> anyhow::Result<()> {
+    pub fn generate_docs(&self, doc_path: Vec<String>, model: &GlobalEnv) -> anyhow::Result<()> {
         // To get relative paths right, we need to run docgen with relative paths. To this
         // end we need to set the current directory of the process. This in turn is not thread
         // safe, so we need to make a critical section out of the entire generation process.

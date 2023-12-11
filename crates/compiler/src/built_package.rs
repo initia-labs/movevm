@@ -137,7 +137,8 @@ impl BuiltPackage {
                 docgen_options: docgen,
                 build_config: config.clone(),
                 package_path: package_path.clone(),
-            }.generate_docs(dep_paths, model)?
+            }
+            .generate_docs(dep_paths, model)?
         }
 
         Ok(Self {

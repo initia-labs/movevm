@@ -147,6 +147,7 @@ impl InitiaVM {
         self.move_vm.mark_loader_cache_as_invalid()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
         &mut self,
         api: &A,
