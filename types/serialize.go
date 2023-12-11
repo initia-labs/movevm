@@ -98,15 +98,15 @@ func DeserializeUint128(bz []byte) (uint64, uint64, error) {
 }
 
 // SerializeAddressVector serialize address vector to BCS bytes
-func SerializeAddressVector(bz [][]byte) ([]byte, error) {
+func SerializeAddressVector(addrs []AccountAddress) ([]byte, error) {
 	s := NewSerializer()
-	if err := s.SerializeLen(uint64(len(bz))); err != nil {
+	if err := s.SerializeLen(uint64(len(addrs))); err != nil {
 		return nil, err
 	}
 
 	bcsBz := s.GetBytes()
-	for _, item := range bz {
-		bcsBz = append(bcsBz, item...)
+	for _, item := range addrs {
+		bcsBz = append(bcsBz, item[:]...)
 	}
 
 	return bcsBz, nil

@@ -19,6 +19,7 @@ use initia_types::{message::Message, module::ModuleBundle};
 use initia_vm::BackendResult;
 use initia_vm::InitiaVM;
 
+use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
 
 pub(crate) fn initialize_vm(
@@ -28,6 +29,7 @@ pub(crate) fn initialize_vm(
     env: Env,
     module_bundle: ModuleBundle,
     allow_arbitrary: bool,
+    allowed_publishers: Vec<AccountAddress>,
 ) -> Result<(), Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
@@ -41,6 +43,7 @@ pub(crate) fn initialize_vm(
         &mut table_view_impl,
         module_bundle,
         allow_arbitrary,
+        allowed_publishers,
     )?;
 
     // write state change to storage

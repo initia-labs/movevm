@@ -24,13 +24,19 @@ func (vm *VM) Initialize(
 	env types.Env,
 	moduleBundle types.ModuleBundle,
 	allowArbitrary bool,
+	allowedPublishers []types.AccountAddress,
 ) error {
 	envBz, err := env.BcsSerialize()
 	if err != nil {
 		return err
 	}
 
-	bz, err := moduleBundle.BcsSerialize()
+	moduleBundleBz, err := moduleBundle.BcsSerialize()
+	if err != nil {
+		return err
+	}
+
+	allowedPublishersBz, err := types.SerializeAddressVector(allowedPublishers)
 	if err != nil {
 		return err
 	}
@@ -40,8 +46,9 @@ func (vm *VM) Initialize(
 		kvStore,
 		goApi,
 		envBz,
-		bz,
+		moduleBundleBz,
 		allowArbitrary,
+		allowedPublishersBz,
 	)
 
 	return err
@@ -92,7 +99,7 @@ func (vm *VM) ExecuteEntryFunction(
 	goApi api.GoAPI,
 	env types.Env,
 	gasLimit uint64,
-	senders [][]byte,
+	senders []types.AccountAddress,
 	payload types.EntryFunction,
 ) (types.ExecutionResult, error) {
 	envBz, err := env.BcsSerialize()
@@ -103,16 +110,6 @@ func (vm *VM) ExecuteEntryFunction(
 	bz, err := payload.BcsSerialize()
 	if err != nil {
 		return types.ExecutionResult{}, err
-	}
-
-	// normalize bytes to address
-	for i, sender := range senders {
-		addr, err := types.NewAccountAddressFromBytes(sender)
-		if err != nil {
-			return types.ExecutionResult{}, err
-		}
-
-		senders[i] = addr[:]
 	}
 
 	sendersBz, err := types.SerializeAddressVector(senders)
@@ -145,7 +142,7 @@ func (vm *VM) ExecuteScript(
 	goApi api.GoAPI,
 	env types.Env,
 	gasLimit uint64,
-	senders [][]byte,
+	senders []types.AccountAddress,
 	payload types.Script,
 ) (types.ExecutionResult, error) {
 	envBz, err := env.BcsSerialize()
@@ -156,16 +153,6 @@ func (vm *VM) ExecuteScript(
 	bz, err := payload.BcsSerialize()
 	if err != nil {
 		return types.ExecutionResult{}, err
-	}
-
-	// normalize bytes to address
-	for i, sender := range senders {
-		addr, err := types.NewAccountAddressFromBytes(sender)
-		if err != nil {
-			return types.ExecutionResult{}, err
-		}
-
-		senders[i] = addr[:]
 	}
 
 	sendersBz, err := types.SerializeAddressVector(senders)

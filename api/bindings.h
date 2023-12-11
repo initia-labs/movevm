@@ -506,6 +506,7 @@ void initialize(vm_t *vm_ptr,
                 ByteSliceView env_payload,
                 ByteSliceView module_bundle_payload,
                 bool allow_arbitrary,
+                ByteSliceView allowed_publishers_payload,
                 UnmanagedVector *errmsg);
 
 void mark_loader_cache_as_invalid(vm_t *vm_ptr, UnmanagedVector *errmsg);

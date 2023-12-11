@@ -68,6 +68,7 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 		},
 		types.NewModuleBundle(stdlibFiles...),
 		false,
+		[]types.AccountAddress{},
 	)
 	require.NoError(t, err)
 
@@ -130,7 +131,7 @@ func publishModuleBundle(
 			SessionId:         [32]uint8(generateRandomHash()),
 		},
 		100000000,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		types.EntryFunction{
 			Module: types.ModuleId{
 				Address: types.StdAddress,
@@ -191,7 +192,7 @@ func mintCoin(
 			SessionId:         [32]uint8(generateRandomHash()),
 		},
 		100000000,
-		[][]byte{minter[:]},
+		[]types.AccountAddress{minter},
 		payload,
 	)
 	require.NoError(t, err)
@@ -278,7 +279,7 @@ func Test_FailOnExecute(t *testing.T) {
 		_api,
 		env,
 		100000000,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NotNil(t, err)
@@ -326,7 +327,7 @@ func Test_OutOfGas(t *testing.T) {
 		_api,
 		env,
 		1,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NotNil(t, err)
@@ -465,7 +466,7 @@ func Test_ExecuteScript(t *testing.T) {
 		_api,
 		env,
 		200000,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		payload,
 	)
 
@@ -523,7 +524,7 @@ func Test_TableIterator(t *testing.T) {
 		_api,
 		env,
 		100000000,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NoError(t, err)
@@ -544,7 +545,7 @@ func Test_TableIterator(t *testing.T) {
 		_api,
 		env,
 		100000000,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NoError(t, err)
@@ -565,7 +566,7 @@ func Test_TableIterator(t *testing.T) {
 		_api,
 		env,
 		100000000,
-		[][]byte{testAccount[:]},
+		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NoError(t, err)
