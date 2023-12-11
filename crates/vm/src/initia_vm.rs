@@ -147,6 +147,7 @@ impl InitiaVM {
         self.move_vm.mark_loader_cache_as_invalid()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
         &mut self,
         api: &A,
@@ -155,6 +156,7 @@ impl InitiaVM {
         table_view_impl: &mut TableViewImpl<'_, T>,
         module_bundle: ModuleBundle,
         allow_arbitrary: bool,
+        allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
         let gas_limit = Gas::new(u64::MAX);
         let gas_params = self.gas_params.clone();
@@ -187,6 +189,7 @@ impl InitiaVM {
                     .unwrap(),
                 bcs::to_bytes(&published_module_ids).unwrap(),
                 bcs::to_bytes(&allow_arbitrary).unwrap(),
+                bcs::to_bytes(&allowed_publishers).unwrap(),
             ];
 
             // ignore the output

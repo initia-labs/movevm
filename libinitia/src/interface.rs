@@ -62,15 +62,26 @@ pub extern "C" fn initialize(
     env_payload: ByteSliceView,
     module_bundle_payload: ByteSliceView,
     allow_arbitrary: bool,
+    allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) {
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
+    let allowed_publishers: Vec<AccountAddress> =
+        bcs::from_bytes(allowed_publishers_payload.read().unwrap()).unwrap();
 
     let res = match to_vm(vm_ptr) {
         Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::initialize_vm(vm, db, api, env, module_bundle, allow_arbitrary)
+            vm::initialize_vm(
+                vm,
+                db,
+                api,
+                env,
+                module_bundle,
+                allow_arbitrary,
+                allowed_publishers,
+            )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(VM_ARG)),

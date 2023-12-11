@@ -99,6 +99,7 @@ impl MoveHarness {
                 self.load_precompiled_stdlib()
                     .expect("Failed to load precompiles"),
                 false,
+                vec![],
             )
             .expect("Module must load");
         self.commit(output, true);

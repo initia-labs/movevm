@@ -35,6 +35,7 @@ func Initialize(
 	env []byte,
 	moduleBundle []byte,
 	allowArbitrary bool,
+	allowedPublishers []byte,
 ) error {
 	var err error
 
@@ -51,9 +52,12 @@ func Initialize(
 	mb := makeView(moduleBundle)
 	defer runtime.KeepAlive(mb)
 
+	ap := makeView(allowedPublishers)
+	defer runtime.KeepAlive(ap)
+
 	errmsg := newUnmanagedVector(nil)
 
-	_, err = C.initialize(vm.ptr, db, _api, e, mb, cbool(allowArbitrary), &errmsg)
+	_, err = C.initialize(vm.ptr, db, _api, e, mb, cbool(allowArbitrary), ap, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return errorWithMessage(err, errmsg)
