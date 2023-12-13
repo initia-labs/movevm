@@ -485,6 +485,37 @@ module initia_std::nft {
         assert!(!object::is_object(nft_addr), 4);
     }
 
+    #[test(creator = @0x123)]
+    fun test_burn_and_mint(creator: &signer) acquires Nft {
+        let collection_name = string::utf8(b"collection name");
+        let token_id = string::utf8(b"nft token_id");
+
+        create_collection_helper(creator, collection_name, 1);
+        let constructor_ref = create(
+            creator,
+            collection_name,
+            string::utf8(b"nft description"),
+            token_id,
+            option::none(),
+            string::utf8(b"nft uri"),
+        );
+        let burn_ref = generate_burn_ref(&constructor_ref);
+        let nft_addr = object::address_from_constructor_ref(&constructor_ref);
+        assert!(exists<Nft>(nft_addr), 0);
+        burn(burn_ref);
+        assert!(!exists<Nft>(nft_addr), 1);
+        // mint again
+        create(
+            creator,
+            collection_name,
+            string::utf8(b"nft description"),
+            token_id,
+            option::none(),
+            string::utf8(b"nft uri"),
+        );
+        assert!(exists<Nft>(nft_addr), 2);
+    }
+
     #[test_only]
     fun create_collection_helper(creator: &signer, collection_name: String, max_supply: u64) {
         collection::create_fixed_collection(
