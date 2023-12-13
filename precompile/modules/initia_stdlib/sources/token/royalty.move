@@ -87,14 +87,14 @@ module initia_std::royalty {
 
     #[test(creator = @0x123)]
     fun test_none(creator: &signer) acquires Royalty {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         assert!(option::none() == get(object), 0);
     }
 
     #[test(creator = @0x123)]
     fun test_init_and_update(creator: &signer) acquires Royalty {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         let init_royalty = create(decimal128::from_ratio(1,2), @0x123);
         init(&constructor_ref, init_royalty);
@@ -112,7 +112,7 @@ module initia_std::royalty {
 
     #[test(creator = @0x123)]
     fun test_update_only(creator: &signer) acquires Royalty {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         assert!(option::none() == get(object), 0);
 

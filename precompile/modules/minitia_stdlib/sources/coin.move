@@ -71,7 +71,7 @@ module minitia_std::coin {
         project_uri: String,
     ): (MintCapability, BurnCapability, FreezeCapability, ExtendRef) {
         // create object for fungible asset metadata
-        let constructor_ref = &object::create_named_object(creator, *string::bytes(&symbol));
+        let constructor_ref = &object::create_named_object(creator, *string::bytes(&symbol), false);
 
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
             constructor_ref,

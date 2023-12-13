@@ -53,8 +53,7 @@ module initia_std::nft {
     /// in inner and self occupies 32-bytes each, rather than have both, this data structure makes
     /// a small optimization to support either and take a fixed amount of 34-bytes.
     struct BurnRef has drop, store {
-        inner: Option<object::DeleteRef>,
-        self: Option<address>,
+        delete_ref: object::DeleteRef,
     }
 
     /// This enables mutating descritpion and URI by higher level services.
@@ -125,7 +124,7 @@ module initia_std::nft {
         let creator_address = signer::address_of(creator);
         let seed = create_nft_seed(&collection_name, &token_id);
 
-        let constructor_ref = object::create_named_object(creator, seed);
+        let constructor_ref = object::create_named_object(creator, seed, true);
         create_common(&constructor_ref, creator_address, collection_name, description, token_id, royalty, uri);
         constructor_ref
     }
@@ -152,23 +151,13 @@ module initia_std::nft {
 
     /// Creates a BurnRef, which gates the ability to burn the given nft.
     public fun generate_burn_ref(ref: &ConstructorRef): BurnRef {
-        let (inner, self) = if (object::can_generate_delete_ref(ref)) {
-            let delete_ref = object::generate_delete_ref(ref);
-            (option::some(delete_ref), option::none())
-        } else {
-            let addr = object::address_from_constructor_ref(ref);
-            (option::none(), option::some(addr))
-        };
-        BurnRef { self, inner }
+        let delete_ref = object::generate_delete_ref(ref);
+        BurnRef { delete_ref }
     }
 
     /// Extracts the nfts address from a BurnRef.
     public fun address_from_burn_ref(ref: &BurnRef): address {
-        if (option::is_some(&ref.inner)) {
-            object::address_from_delete_ref(option::borrow(&ref.inner))
-        } else {
-            *option::borrow(&ref.self)
-        }
+        object::address_from_delete_ref(&ref.delete_ref)
     }
 
     // Accessors
@@ -269,14 +258,9 @@ module initia_std::nft {
     }
 
     public fun burn(burn_ref: BurnRef) acquires Nft {
-        let addr = if (option::is_some(&burn_ref.inner)) {
-            let delete_ref = option::extract(&mut burn_ref.inner);
-            let addr = object::address_from_delete_ref(&delete_ref);
-            object::delete(delete_ref);
-            addr
-        } else {
-            option::extract(&mut burn_ref.self)
-        };
+        let BurnRef { delete_ref } = burn_ref;
+        let addr = object::address_from_delete_ref(&delete_ref);
+        object::delete(delete_ref);
 
         if (royalty::exists_at(addr)) {
             royalty::delete(addr)
@@ -498,7 +482,38 @@ module initia_std::nft {
         burn(burn_ref);
         assert!(!exists<Nft>(nft_addr), 2);
         assert!(!royalty::exists_at(nft_addr), 3);
-        assert!(object::is_object(nft_addr), 4);
+        assert!(!object::is_object(nft_addr), 4);
+    }
+
+    #[test(creator = @0x123)]
+    fun test_burn_and_mint(creator: &signer) acquires Nft {
+        let collection_name = string::utf8(b"collection name");
+        let token_id = string::utf8(b"nft token_id");
+
+        create_collection_helper(creator, collection_name, 1);
+        let constructor_ref = create(
+            creator,
+            collection_name,
+            string::utf8(b"nft description"),
+            token_id,
+            option::none(),
+            string::utf8(b"nft uri"),
+        );
+        let burn_ref = generate_burn_ref(&constructor_ref);
+        let nft_addr = object::address_from_constructor_ref(&constructor_ref);
+        assert!(exists<Nft>(nft_addr), 0);
+        burn(burn_ref);
+        assert!(!exists<Nft>(nft_addr), 1);
+        // mint again
+        create(
+            creator,
+            collection_name,
+            string::utf8(b"nft description"),
+            token_id,
+            option::none(),
+            string::utf8(b"nft uri"),
+        );
+        assert!(exists<Nft>(nft_addr), 2);
     }
 
     #[test_only]

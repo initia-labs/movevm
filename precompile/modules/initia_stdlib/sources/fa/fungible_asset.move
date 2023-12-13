@@ -629,7 +629,7 @@ module initia_std::fungible_asset {
 
     #[test_only]
     public fun create_test_token(creator: &signer): (ConstructorRef, Object<TestToken>) {
-        let creator_ref = object::create_named_object(creator, b"TEST");
+        let creator_ref = object::create_named_object(creator, b"TEST", false);
         let object_signer = object::generate_signer(&creator_ref);
         move_to(&object_signer, TestToken {});
 
@@ -666,7 +666,7 @@ module initia_std::fungible_asset {
     #[test_only]
     public fun create_test_store<T: key>(owner: &signer, metadata: Object<T>): Object<FungibleStore> {
         let owner_addr = signer::address_of(owner);
-        create_store(&object::create_object(owner_addr), metadata)
+        create_store(&object::create_object(owner_addr, true), metadata)
     }
 
     #[test(creator = @0xcafe)]
@@ -696,7 +696,7 @@ module initia_std::fungible_asset {
     #[test(creator = @0xcafe)]
     fun test_create_and_remove_store(creator: &signer) acquires FungibleStore {
         let (_, _, _, metadata) = create_fungible_asset(creator);
-        let creator_ref = object::create_object(signer::address_of(creator));
+        let creator_ref = object::create_object(signer::address_of(creator), true);
         create_store(&creator_ref, metadata);
         let delete_ref = object::generate_delete_ref(&creator_ref);
         remove_store(&delete_ref);
@@ -785,7 +785,7 @@ module initia_std::fungible_asset {
     #[test(creator = @0xcafe)]
     #[expected_failure(abort_code = 0x10012, location = Self)]
     fun test_add_fungibility_to_deletable_object(creator: &signer) {
-        let creator_ref = &object::create_object(signer::address_of(creator));
+        let creator_ref = &object::create_object(signer::address_of(creator), true);
         init_test_metadata(creator_ref);
     }
 

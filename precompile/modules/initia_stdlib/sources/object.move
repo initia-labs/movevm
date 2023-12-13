@@ -45,6 +45,8 @@ module initia_std::object {
     const ERESOURCE_DOES_NOT_EXIST: u64 = 7;
     /// Cannot reclaim objects that weren't burnt.
     const EOBJECT_NOT_BURNT: u64 = 8;
+    /// The version of ref does not match with object core version.
+    const EVERSION_MISMATCH: u64 = 9;
 
     /// Maximum nesting from one object to another. That is objects can technically have infinte
     /// nesting, but any checks such as transfer will only be evaluated this deep.
@@ -78,8 +80,10 @@ module initia_std::object {
     /// derivation to produce an object address.
     const OBJECT_FROM_SEED_ADDRESS_SCHEME: u8 = 0xFE;
 
-    /// Address where unwanted objects can be forcefully transferred to.
-    const BURN_ADDRESS: address = @0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    /// Tombstone is version store for deleted objects with version
+    struct Tombstone has key {
+        version: u64,
+    }
 
     /// The core of the object model that defines ownership, transferability, and events.
     struct ObjectCore has key {
@@ -88,12 +92,8 @@ module initia_std::object {
         /// Object transferring is a common operation, this allows for disabling and enabling
         /// transfers bypassing the use of a TransferRef.
         allow_ungated_transfer: bool,
-    }
-
-    /// This is added to objects that are burnt (ownership transferred to BURN_ADDRESS).
-    struct TombStone has key {
-        /// Track the previous owner before the object is burnt so they can reclaim later if so desired.
-        original_owner: address,
+        /// The version is to invalidate the refs, which are generated for previously burnt object.
+        version: u64,
     }
 
     /// A pointer to an object -- these can only provide guarantees based upon the underlying data
@@ -109,21 +109,25 @@ module initia_std::object {
         self: address,
         /// True if the object can be deleted. Named objects are not deletable.
         can_delete: bool,
+        version: u64,
     }
 
     /// Used to remove an object from storage.
     struct DeleteRef has drop, store {
         self: address,
+        version: u64,
     }
 
     /// Used to create events or move additional resources into object storage.
     struct ExtendRef has drop, store {
         self: address,
+        version: u64,
     }
 
     /// Used to create LinearTransferRef, hence ownership transfer.
     struct TransferRef has drop, store {
         self: address,
+        version: u64,
     }
 
     /// Used to perform transfers. This locks transferring ability to a single time use bound to
@@ -131,11 +135,13 @@ module initia_std::object {
     struct LinearTransferRef has drop {
         self: address,
         owner: address,
+        version: u64,
     }
 
     /// Used to create derived objects from a given objects.
     struct DeriveRef has drop, store {
         self: address,
+        version: u64,
     }
 
     #[event]
@@ -143,6 +149,7 @@ module initia_std::object {
     struct CreateEvent has drop, store {
         object: address,
         owner: address,
+        version: u64,
     }
 
     #[event]
@@ -151,11 +158,6 @@ module initia_std::object {
         object: address,
         from: address,
         to: address,
-    }
-
-    #[view]
-    public fun is_burnt<T: key>(object: Object<T>): bool {
-        exists<TombStone>(object.inner)
     }
 
     /// Produces an ObjectId from the given address. This is not verified.
@@ -208,50 +210,49 @@ module initia_std::object {
 
     /// Create a new named object and return the ConstructorRef. Named objects can be queried globally
     /// by knowing the user generated seed used to create them. Named objects cannot be deleted.
-    public fun create_named_object(creator: &signer, seed: vector<u8>): ConstructorRef {
+    public fun create_named_object(creator: &signer, seed: vector<u8>, can_delete: bool): ConstructorRef acquires Tombstone {
         let creator_address = signer::address_of(creator);
         let obj_addr = create_object_address(creator_address, seed);
-        create_object_internal(creator_address, obj_addr, false)
+        create_object_internal(creator_address, obj_addr, can_delete)
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.
     /// Derivde objects, similar to named objects, cannot be deleted.
-    public(friend) fun create_user_derived_object(creator_address: address, derive_ref: &DeriveRef): ConstructorRef {
+    public(friend) fun create_user_derived_object(creator_address: address, derive_ref: &DeriveRef, can_delete: bool): ConstructorRef acquires Tombstone {
         let obj_addr = create_user_derived_object_address(creator_address, derive_ref.self);
-        create_object_internal(creator_address, obj_addr, false)
+        create_object_internal(creator_address, obj_addr, can_delete)
     }
 
     /// Create a new object by generating a random unique address based on transaction hash.
     /// The unique address is computed sha3_256([transaction hash | auid counter | 0xFB]).
-    /// The created object is deletable as we can guarantee the same unique address can
-    /// never be regenerated with future txs.
-    public fun create_object(owner_address: address): ConstructorRef {
+    public fun create_object(owner_address: address, can_delete: bool): ConstructorRef acquires Tombstone {
         let unique_address = transaction_context::generate_unique_address();
-        create_object_internal(owner_address, unique_address, true)
-    }
-
-    /// Same as `create_object` except the object to be created will be undeletable.
-    public fun create_sticky_object(owner_address: address): ConstructorRef {
-        let unique_address = transaction_context::generate_unique_address();
-        create_object_internal(owner_address, unique_address, false)
+        create_object_internal(owner_address, unique_address, can_delete)
     }
 
     fun create_object_internal(
         creator_address: address,
         object: address,
         can_delete: bool,
-    ): ConstructorRef {
+    ): ConstructorRef acquires Tombstone {
         // create resource account to prevent address overapping.
         account::create_object_account(object);
 
         assert!(!exists<ObjectCore>(object), error::already_exists(EOBJECT_EXISTS));
         let object_signer = account::create_signer(object);
+        let version = if (exists<Tombstone>(object)) {
+            let Tombstone { version } = move_from<Tombstone>(object);
+            (version+1)
+        } else {
+            1
+        };
 
         move_to(
             &object_signer,
             ObjectCore {
                 owner: creator_address,
                 allow_ungated_transfer: true,
+                version,
             },
         );
 
@@ -259,10 +260,11 @@ module initia_std::object {
             CreateEvent {
                 owner: creator_address,
                 object,
+                version,
             }
         );
 
-        ConstructorRef { self: object, can_delete }
+        ConstructorRef { self: object, version, can_delete }
     }
 
     // Creation helpers
@@ -270,22 +272,22 @@ module initia_std::object {
     /// Generates the DeleteRef, which can be used to remove ObjectCore from global storage.
     public fun generate_delete_ref(ref: &ConstructorRef): DeleteRef {
         assert!(ref.can_delete, error::permission_denied(ECANNOT_DELETE));
-        DeleteRef { self: ref.self }
+        DeleteRef { self: ref.self, version: ref.version }
     }
 
     /// Generates the ExtendRef, which can be used to add new events and resources to the object.
     public fun generate_extend_ref(ref: &ConstructorRef): ExtendRef {
-        ExtendRef { self: ref.self }
+        ExtendRef { self: ref.self, version: ref.version }
     }
 
     /// Generates the TransferRef, which can be used to manage object transfers.
     public fun generate_transfer_ref(ref: &ConstructorRef): TransferRef {
-        TransferRef { self: ref.self }
+        TransferRef { self: ref.self, version: ref.version }
     }
 
     /// Generates the DeriveRef, which can be used to create determnistic derived objects from the current object.
     public fun generate_derive_ref(ref: &ConstructorRef): DeriveRef {
-        DeriveRef { self: ref.self }
+        DeriveRef { self: ref.self, version: ref.version }
     }
 
     /// Create a signer for the ConstructorRef
@@ -323,16 +325,27 @@ module initia_std::object {
     /// Removes from the specified Object from global storage.
     public fun delete(ref: DeleteRef) acquires ObjectCore {
         let object_core = move_from<ObjectCore>(ref.self);
+        assert!(ref.version == object_core.version, error::permission_denied(EVERSION_MISMATCH));
+
         let ObjectCore {
             owner: _,
             allow_ungated_transfer: _,
+            version,
         } = object_core;
+
+        // set tombstone 
+        move_to<Tombstone>(&account::create_signer(ref.self), Tombstone {
+            version,
+        });
     }
 
     // Extension helpers
 
     /// Create a signer for the ExtendRef
-    public fun generate_signer_for_extending(ref: &ExtendRef): signer {
+    public fun generate_signer_for_extending(ref: &ExtendRef): signer acquires ObjectCore {
+        let object_core = borrow_global<ObjectCore>(ref.self);
+        assert!(ref.version == object_core.version, error::permission_denied(EVERSION_MISMATCH));
+
         account::create_signer(ref.self)
     }
 
@@ -345,41 +358,48 @@ module initia_std::object {
 
     /// Disable direct transfer, transfers can only be triggered via a TransferRef
     public fun disable_ungated_transfer(ref: &TransferRef) acquires ObjectCore {
-        let object = borrow_global_mut<ObjectCore>(ref.self);
-        object.allow_ungated_transfer = false;
+        let object_core = borrow_global_mut<ObjectCore>(ref.self);
+        assert!(ref.version == object_core.version, error::permission_denied(EVERSION_MISMATCH));
+
+        object_core.allow_ungated_transfer = false;
     }
 
     /// Enable direct transfer.
     public fun enable_ungated_transfer(ref: &TransferRef) acquires ObjectCore {
-        let object = borrow_global_mut<ObjectCore>(ref.self);
-        object.allow_ungated_transfer = true;
+        let object_core = borrow_global_mut<ObjectCore>(ref.self);
+        assert!(ref.version == object_core.version, error::permission_denied(EVERSION_MISMATCH));
+
+        object_core.allow_ungated_transfer = true;
     }
 
     /// Create a LinearTransferRef for a one-time transfer. This requires that the owner at the
     /// time of generation is the owner at the time of transferring.
     public fun generate_linear_transfer_ref(ref: &TransferRef): LinearTransferRef acquires ObjectCore {
-        let owner = owner(Object<ObjectCore> { inner: ref.self });
+        let object_core = borrow_global<ObjectCore>(ref.self);
+        assert!(ref.version == object_core.version, error::permission_denied(EVERSION_MISMATCH));
+
         LinearTransferRef {
             self: ref.self,
-            owner,
+            owner: object_core.owner,
+            version: object_core.version,
         }
     }
 
     /// Transfer to the destination address using a LinearTransferRef.
     public fun transfer_with_ref(ref: LinearTransferRef, to: address) acquires ObjectCore {
-        let object = borrow_global_mut<ObjectCore>(ref.self);
-        assert!(
-            object.owner == ref.owner,
-            error::permission_denied(ENOT_OBJECT_OWNER),
-        );
+        let object_core = borrow_global_mut<ObjectCore>(ref.self);
+        assert!(ref.version == object_core.version, error::permission_denied(EVERSION_MISMATCH));
+        assert!(object_core.owner == ref.owner, error::permission_denied(ENOT_OBJECT_OWNER));
+
         event::emit(
             TransferEvent {
                 object: ref.self,
-                from: object.owner,
+                from: object_core.owner,
                 to,
             },
         );
-        object.owner = to;
+
+        object_core.owner = to;
     }
 
     /// Entry function that can be used to transfer, if allow_ungated_transfer is set true.
@@ -476,50 +496,6 @@ module initia_std::object {
         };
     }
 
-    /// Forcefully transfer an unwanted object to BURN_ADDRESS, ignoring whether ungated_transfer is allowed.
-    /// This only works for objects directly owned and for simplicity does not apply to indirectly owned objects.
-    /// Original owners can reclaim burnt objects any time in the future by calling unburn.
-    public entry fun burn<T: key>(owner: &signer, object: Object<T>) acquires ObjectCore {
-        let original_owner = signer::address_of(owner);
-        assert!(owner(object) == original_owner, error::permission_denied(ENOT_OBJECT_OWNER));
-        let object_addr = object.inner;
-        move_to(&account::create_signer(object_addr), TombStone { original_owner });
-        let object = borrow_global_mut<ObjectCore>(object_addr);
-        object.owner = BURN_ADDRESS;
-
-        // Burn should still emit event to make sure ownership is upgrade correctly in indexing.
-        event::emit(
-            TransferEvent {
-                object: object_addr,
-                from: original_owner,
-                to: BURN_ADDRESS,
-            },
-        );
-    }
-
-    /// Allow origin owners to reclaim any objects they previous burnt.
-    public entry fun unburn<T: key>(
-        original_owner: &signer,
-        object: Object<T>,
-    ) acquires ObjectCore, TombStone {
-        let object_addr = object.inner;
-        assert!(exists<TombStone>(object_addr), error::invalid_argument(EOBJECT_NOT_BURNT));
-
-        let TombStone { original_owner: original_owner_addr } = move_from<TombStone>(object_addr);
-        assert!(original_owner_addr == signer::address_of(original_owner), error::permission_denied(ENOT_OBJECT_OWNER));
-        let object = borrow_global_mut<ObjectCore>(object_addr);
-        object.owner = original_owner_addr;
-
-        // Unburn reclaims should still emit event to make sure ownership is upgrade correctly in indexing.
-        event::emit(
-            TransferEvent {
-                object: object_addr,
-                from: BURN_ADDRESS,
-                to: original_owner_addr,
-            },
-        );
-    }
-
     // Accessors
 
     #[view] 
@@ -600,8 +576,8 @@ module initia_std::object {
     struct Weapon has key {}
 
     #[test_only]
-    public fun create_hero(creator: &signer): (ConstructorRef, Object<Hero>) {
-        let hero_constructor_ref = create_named_object(creator, b"hero");
+    public fun create_hero(creator: &signer): (ConstructorRef, Object<Hero>) acquires Tombstone {
+        let hero_constructor_ref = create_named_object(creator, b"hero", true);
         let hero_signer = generate_signer(&hero_constructor_ref);
         move_to(
             &hero_signer,
@@ -615,8 +591,14 @@ module initia_std::object {
     }
 
     #[test_only]
-    public fun create_weapon(creator: &signer): (ConstructorRef, Object<Weapon>) {
-        let weapon_constructor_ref = create_named_object(creator, b"weapon");
+    public fun delete_hero(delete_ref: DeleteRef) acquires Hero, ObjectCore {
+        let Hero { weapon: _ } = move_from<Hero>(delete_ref.self);
+        delete(delete_ref);
+    }
+
+    #[test_only]
+    public fun create_weapon(creator: &signer): (ConstructorRef, Object<Weapon>) acquires Tombstone {
+        let weapon_constructor_ref = create_named_object(creator, b"weapon", true);
         let weapon_signer = generate_signer(&weapon_constructor_ref);
         move_to(&weapon_signer, Weapon {});
         let weapon = object_from_constructor_ref<Weapon>(&weapon_constructor_ref);
@@ -652,7 +634,7 @@ module initia_std::object {
     }
 
     #[test(creator = @0x123)]
-    fun test_object(creator: &signer) acquires Hero, ObjectCore {
+    fun test_object(creator: &signer) acquires Tombstone, Hero, ObjectCore {
         let (_, hero) = create_hero(creator);
         let (_, weapon) = create_weapon(creator);
 
@@ -663,7 +645,7 @@ module initia_std::object {
     }
 
     #[test(creator = @0x123)]
-    fun test_linear_transfer(creator: &signer) acquires ObjectCore {
+    fun test_linear_transfer(creator: &signer) acquires Tombstone, ObjectCore {
         let (hero_constructor, hero) = create_hero(creator);
         let transfer_ref = generate_transfer_ref(&hero_constructor);
         let linear_transfer_ref = generate_linear_transfer_ref(&transfer_ref);
@@ -674,7 +656,7 @@ module initia_std::object {
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x50004, location = Self)]
-    fun test_bad_linear_transfer(creator: &signer) acquires ObjectCore {
+    fun test_bad_linear_transfer(creator: &signer) acquires Tombstone, ObjectCore {
         let (hero_constructor, hero) = create_hero(creator);
         let transfer_ref = generate_transfer_ref(&hero_constructor);
         let linear_transfer_ref_good = generate_linear_transfer_ref(&transfer_ref);
@@ -686,41 +668,91 @@ module initia_std::object {
     }
 
     #[test(creator = @0x123)]
-    fun test_burn_and_unburn(creator: &signer) acquires ObjectCore, TombStone {
-        let (hero_constructor, hero) = create_hero(creator);
-        // Freeze the object.
+    fun test_delete_and_create(creator: &signer) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
+        delete_hero(delete_ref);
+
+        let (_, _) = create_hero(creator);
+    }
+
+    #[test(creator = @0x123, receiver = @0x456)]
+    #[expected_failure(abort_code = 0x50009, location = Self)]
+    fun test_cannot_use_linear_transfer_ref_with_old_version(creator: &signer, receiver: address) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
         let transfer_ref = generate_transfer_ref(&hero_constructor);
+        let linear_transfer_ref = generate_linear_transfer_ref(&transfer_ref);
+
+        delete_hero(delete_ref);
+        
+        let (_, _) = create_hero(creator);
+        transfer_with_ref(linear_transfer_ref, receiver);
+    }
+
+    #[test(creator = @0x123)]
+    #[expected_failure(abort_code = 0x50009, location = Self)]
+    fun test_cannot_use_transfer_ref_with_old_version(creator: &signer) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
+        let transfer_ref = generate_transfer_ref(&hero_constructor);
+        
+        delete_hero(delete_ref);
+
+        let (_, _) = create_hero(creator);
+        let _ = generate_linear_transfer_ref(&transfer_ref);
+    }
+
+    #[test(creator = @0x123)]
+    #[expected_failure(abort_code = 0x50009, location = Self)]
+    fun test_cannot_use_transfer_ref_with_old_version2(creator: &signer) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
+        let transfer_ref = generate_transfer_ref(&hero_constructor);
+        
+        delete_hero(delete_ref);
+        
+
+        let (_, _) = create_hero(creator);
         disable_ungated_transfer(&transfer_ref);
-
-        // Owner should be able to burn, despite ungated transfer disallowed.
-        burn(creator, hero);
-        assert!(owner(hero) == BURN_ADDRESS, 0);
-        assert!(!ungated_transfer_allowed(hero), 0);
-
-        // Owner should be able to reclaim.
-        unburn(creator, hero);
-        assert!(owner(hero) == signer::address_of(creator), 0);
-        // Object still frozen.
-        assert!(!ungated_transfer_allowed(hero), 0);
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x50004, location = Self)]
-    fun test_burn_indirectly_owned_should_fail(creator: &signer) acquires ObjectCore {
-        let (_, hero) = create_hero(creator);
-        let (_, weapon) = create_weapon(creator);
-        transfer_to_object(creator, weapon, hero);
+    #[expected_failure(abort_code = 0x50009, location = Self)]
+    fun test_cannot_use_transfer_ref_with_old_version3(creator: &signer) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
+        let transfer_ref = generate_transfer_ref(&hero_constructor);
+        
+        delete_hero(delete_ref);
 
-        // Owner should be not be able to burn weapon directly.
-        assert!(owner(weapon) == object_address(hero), 0);
-        assert!(owns(weapon, signer::address_of(creator)), 0);
-        burn(creator, weapon);
+        let (_, _) = create_hero(creator);
+        enable_ungated_transfer(&transfer_ref);
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x10008, location = Self)]
-    fun test_unburn_object_not_burnt_should_fail(creator: &signer) acquires ObjectCore, TombStone {
-        let (_, hero) = create_hero(creator);
-        unburn(creator, hero);
+    #[expected_failure(abort_code = 0x50009, location = Self)]
+    fun test_cannot_use_delete_ref_with_old_version(creator: &signer) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
+        let delete_ref2 = generate_delete_ref(&hero_constructor);
+        
+        delete_hero(delete_ref);
+
+        let (_, _) = create_hero(creator);
+        delete_hero(delete_ref2);
+    }
+
+    #[test(creator = @0x123)]
+    #[expected_failure(abort_code = 0x50009, location = Self)]
+    fun test_cannot_use_extend_ref_with_old_version(creator: &signer) acquires Tombstone, ObjectCore, Hero {
+        let (hero_constructor, _) = create_hero(creator);
+        let delete_ref = generate_delete_ref(&hero_constructor);
+        let extend_ref = generate_extend_ref(&hero_constructor);
+        
+        delete_hero(delete_ref);
+
+        let (_, _) = create_hero(creator);
+        generate_signer_for_extending(&extend_ref);
     }
 }

@@ -341,7 +341,7 @@ module initia_std::property_map {
     // Tests
     #[test(creator = @0x123)]
     fun test_end_to_end(creator: &signer) acquires PropertyMap {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
 
         let input = prepare_input(
@@ -550,7 +550,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10001, location = initia_std::from_bcs)]
     fun test_invalid_init(creator: &signer) {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
 
         let input = prepare_input(
             vector[string::utf8(b"bool")],
@@ -563,7 +563,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
     fun test_init_wrong_values(creator: &signer) {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
 
         let input = prepare_input(
             vector[string::utf8(b"bool"), string::utf8(b"u8")],
@@ -576,7 +576,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
     fun test_init_wrong_types(creator: &signer) {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
 
         let input = prepare_input(
             vector[string::utf8(b"bool"), string::utf8(b"u8")],
@@ -589,7 +589,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10001, location = initia_std::from_bcs)]
     fun test_invalid_add(creator: &signer) acquires PropertyMap {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
 
         let input = prepare_input(
             vector[string::utf8(b"bool")],
@@ -605,7 +605,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10001, location = initia_std::from_bcs)]
     fun test_invalid_update(creator: &signer) acquires PropertyMap {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
 
         let input = prepare_input(
             vector[string::utf8(b"bool")],
@@ -621,7 +621,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10006, location = Self)]
     fun test_invalid_read(creator: &signer) acquires PropertyMap {
-        let constructor_ref = object::create_named_object(creator, b"");
+        let constructor_ref = object::create_named_object(creator, b"", false);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
 
         let input = prepare_input(

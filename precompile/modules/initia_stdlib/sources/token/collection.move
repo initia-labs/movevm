@@ -134,7 +134,7 @@ module initia_std::collection {
     ): ConstructorRef {
         assert!(max_supply != 0, error::invalid_argument(EMAX_SUPPLY_CANNOT_BE_ZERO));
         let collection_seed = create_collection_seed(&name);
-        let constructor_ref = object::create_named_object(creator, collection_seed);
+        let constructor_ref = object::create_named_object(creator, collection_seed, false);
 
         let supply = FixedSupply {
             current_supply: 0,
@@ -163,7 +163,7 @@ module initia_std::collection {
         uri: String,
     ): ConstructorRef {
         let collection_seed = create_collection_seed(&name);
-        let constructor_ref = object::create_named_object(creator, collection_seed);
+        let constructor_ref = object::create_named_object(creator, collection_seed, false);
 
         let supply = UnlimitedSupply {
             current_supply: 0,
@@ -192,7 +192,7 @@ module initia_std::collection {
         uri: String,
     ): ConstructorRef {
         let collection_seed = create_collection_seed(&name);
-        let constructor_ref = object::create_named_object(creator, collection_seed);
+        let constructor_ref = object::create_named_object(creator, collection_seed, false);
 
         create_collection_internal<FixedSupply>(
             creator,
