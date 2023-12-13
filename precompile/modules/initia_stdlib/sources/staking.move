@@ -668,8 +668,8 @@ module initia_std::staking {
         let states = table::borrow_mut(&mut module_store.staking_states, metadata);
 
         if (!table::contains(states, validator)) {
-            let reward_coin_store_ref = &object::create_object(@initia_std);
-            let unbonding_coin_store_ref = &object::create_object(@initia_std);
+            let reward_coin_store_ref = &object::create_object(@initia_std, false);
+            let unbonding_coin_store_ref = &object::create_object(@initia_std, false);
 
             let reward_coin_store_address = object::address_from_constructor_ref(reward_coin_store_ref);
             let reward_coin_store = primary_fungible_store::create_primary_store(reward_coin_store_address, reward_metadata());
