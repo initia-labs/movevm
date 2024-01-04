@@ -82,7 +82,7 @@ fn convert_option_to_serde_value(val: &MoveValue) -> VMResult<Value> {
             if elem.is_empty() {
                 Value::Null
             } else {
-                convert_move_value_to_serde_value(elem.get(0).unwrap())?
+                convert_move_value_to_serde_value(elem.first().unwrap())?
             }
         }
         _ => unreachable!(),
@@ -100,7 +100,7 @@ pub(crate) fn convert_move_value_to_serde_value(val: &MoveValue) -> VMResult<Val
     match val {
         MoveValue::Vector(elems) => {
             if !elems.is_empty() {
-                if let MoveValue::U8(_) = elems.get(0).unwrap() {
+                if let MoveValue::U8(_) = elems.first().unwrap() {
                     let bytes = elems
                         .iter()
                         .map(|e| {

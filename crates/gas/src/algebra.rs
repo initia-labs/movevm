@@ -1,7 +1,7 @@
 use move_core_types::gas_algebra::{GasQuantity, InternalGasUnit, UnitDiv};
 
 pub use crate::{
-    AbstractValueSize, AbstractValueSizePerArg, AbstractValueUnit, InternalGasPerAbstractValueUnit,
+    AbstractValueSize, AbstractValueSizePerArg, InternalGasPerAbstractValueUnit,
 };
 
 /// Unit of (external) gas.

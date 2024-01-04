@@ -62,6 +62,8 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
 
+    [.code.request_publish.base_cost, "code.request_publish.base", 1000 * SCALING],
+    [.code.request_publish.per_byte, "code.request_publish.per_byte", 1000 * SCALING],
 ]);
 
 use crate::gas_params::*;

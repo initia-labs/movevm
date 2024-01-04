@@ -159,7 +159,7 @@ impl<'r> TableView for MockTableState<'r> {
 
     fn next_key(&mut self, iterator_id: u32) -> anyhow::Result<Option<Vec<u8>>> {
         match self.iterators.get_mut(iterator_id as usize) {
-            Some(iterator) => Ok(match iterator.get(0).map(|v| v.to_vec()) {
+            Some(iterator) => Ok(match iterator.first().map(|v| v.to_vec()) {
                 Some(key_bytes) => {
                     iterator.remove(0);
                     Some(key_bytes)

@@ -308,7 +308,7 @@ impl MoveValue {
             if elem.is_empty() {
                 Ok(MoveValue::Null)
             } else {
-                Ok(MoveValue::try_from(elem.get(0).unwrap().to_owned())?)
+                Ok(MoveValue::try_from(elem.first().unwrap().to_owned())?)
             }
         } else {
             bail!("expect decimal::Decimal, but failed to decode struct value");
@@ -1098,7 +1098,7 @@ impl MoveModuleBytecode {
 
     pub fn try_parse_abi(self) -> anyhow::Result<MoveModule> {
         let module = CompiledModule::deserialize(self.bytecode.inner())?;
-        Ok(module.try_into()?)
+        Ok(module.into())
     }
 }
 
