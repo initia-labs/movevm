@@ -1,6 +1,8 @@
 use move_core_types::gas_algebra::{GasQuantity, InternalGasUnit, UnitDiv};
 
-pub use crate::{AbstractValueSize, AbstractValueSizePerArg, InternalGasPerAbstractValueUnit};
+pub use crate::{
+    AbstractValueSize, AbstractValueSizePerArg, InternalGasPerAbstractValueUnit,
+};
 
 /// Unit of (external) gas.
 pub enum GasUnit {}
