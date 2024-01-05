@@ -211,6 +211,7 @@ module initia_std::soul_bound_token {
             option::none(),
             uri,
         );
+        let s = object::generate_signer(&constructor_ref);
 
         let object_signer = object::generate_signer(&constructor_ref);
 
@@ -229,12 +230,12 @@ module initia_std::soul_bound_token {
 
         let soul_bound_token = SoulBoundToken {
             mutator_ref,
-            property_mutator_ref: property_map::generate_mutator_ref(&constructor_ref),
+            property_mutator_ref: property_map::generate_mutator_ref(&s),
         };
         move_to(&object_signer, soul_bound_token);
 
         let properties = property_map::prepare_input(property_keys, property_types, property_values);
-        property_map::init(&constructor_ref, properties);
+        property_map::init(&s, properties);
 
         constructor_ref
     }

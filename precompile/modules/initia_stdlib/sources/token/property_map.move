@@ -6,10 +6,11 @@ module initia_std::property_map {
     use std::vector;
     use std::error;
     use std::string::{Self, String};
+    use std::signer;
     use initia_std::from_bcs;
     use initia_std::simple_map::{Self, SimpleMap};
     use initia_std::type_info;
-    use initia_std::object::{Self, ConstructorRef, Object};
+    use initia_std::object::{Self, Object};
 
     // Errors
     /// The property map does not exist
@@ -66,9 +67,8 @@ module initia_std::property_map {
         self: address,
     }
 
-    public fun init(ref: &ConstructorRef, container: PropertyMap) {
-        let signer = object::generate_signer(ref);
-        move_to(&signer, container);
+    public fun init(s: &signer, container: PropertyMap) {
+        move_to(s, container);
     }
 
     /// Burns the entire property map
@@ -195,8 +195,8 @@ module initia_std::property_map {
         };
     }
 
-    public fun generate_mutator_ref(ref: &ConstructorRef): MutatorRef {
-        MutatorRef { self: object::address_from_constructor_ref(ref) }
+    public fun generate_mutator_ref(s: &signer): MutatorRef {
+        MutatorRef { self: signer::address_of(s) }
     }
 
     // Accessors
@@ -342,6 +342,7 @@ module initia_std::property_map {
     #[test(creator = @0x123)]
     fun test_end_to_end(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
 
         let input = prepare_input(
@@ -379,8 +380,8 @@ module initia_std::property_map {
                 bcs::to_bytes<String>(&string::utf8(b"a")),
             ],
         );
-        init(&constructor_ref, input);
-        let mutator = generate_mutator_ref(&constructor_ref);
+        init(&s, input);
+        let mutator = generate_mutator_ref(&s);
 
         assert!(read_bool(object, &string::utf8(b"bool")), 0);
         assert!(read_u8(object, &string::utf8(b"u8")) == 0x12, 1);
@@ -551,53 +552,57 @@ module initia_std::property_map {
     #[expected_failure(abort_code = 0x10001, location = initia_std::from_bcs)]
     fun test_invalid_init(creator: &signer) {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
 
         let input = prepare_input(
             vector[string::utf8(b"bool")],
             vector[string::utf8(b"u16")],
             vector[bcs::to_bytes<bool>(&true)],
         );
-        init(&constructor_ref, input);
+        init(&s, input);
     }
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
     fun test_init_wrong_values(creator: &signer) {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
 
         let input = prepare_input(
             vector[string::utf8(b"bool"), string::utf8(b"u8")],
             vector[string::utf8(b"bool"), string::utf8(b"u8")],
             vector[bcs::to_bytes<bool>(&true)],
         );
-        init(&constructor_ref, input);
+        init(&s, input);
     }
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
     fun test_init_wrong_types(creator: &signer) {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
 
         let input = prepare_input(
             vector[string::utf8(b"bool"), string::utf8(b"u8")],
             vector[string::utf8(b"bool")],
             vector[bcs::to_bytes<bool>(&true), bcs::to_bytes<u8>(&0x2)],
         );
-        init(&constructor_ref, input);
+        init(&s, input);
     }
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x10001, location = initia_std::from_bcs)]
     fun test_invalid_add(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
 
         let input = prepare_input(
             vector[string::utf8(b"bool")],
             vector[string::utf8(b"bool")],
             vector[bcs::to_bytes<bool>(&true)],
         );
-        init(&constructor_ref, input);
-        let mutator = generate_mutator_ref(&constructor_ref);
+        init(&s, input);
+        let mutator = generate_mutator_ref(&s);
 
         update(&mutator, &string::utf8(b"u16"), string::utf8(b"bool"), bcs::to_bytes<u16>(&0x1234));
     }
@@ -606,14 +611,15 @@ module initia_std::property_map {
     #[expected_failure(abort_code = 0x10001, location = initia_std::from_bcs)]
     fun test_invalid_update(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
 
         let input = prepare_input(
             vector[string::utf8(b"bool")],
             vector[string::utf8(b"bool")],
             vector[bcs::to_bytes<bool>(&true)],
         );
-        init(&constructor_ref, input);
-        let mutator = generate_mutator_ref(&constructor_ref);
+        init(&s, input);
+        let mutator = generate_mutator_ref(&s);
 
         update(&mutator, &string::utf8(b"bool"), string::utf8(b"bool"), bcs::to_bytes<u16>(&0x1234));
     }
@@ -622,6 +628,7 @@ module initia_std::property_map {
     #[expected_failure(abort_code = 0x10006, location = Self)]
     fun test_invalid_read(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
+        let s = object::generate_signer(&constructor_ref);
         let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
 
         let input = prepare_input(
@@ -629,7 +636,7 @@ module initia_std::property_map {
             vector[string::utf8(b"bool")],
             vector[bcs::to_bytes<bool>(&true)],
         );
-        init(&constructor_ref, input);
+        init(&s, input);
         read_u8(object, &string::utf8(b"bool"));
     }
 }
