@@ -4,42 +4,45 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.account.get_account_info.base_cost, "account.get_account_info.base", 1000 * SCALING],
     // account creation will be happened after execution finished,
     // so need to charge small gas here.
-    [.account.create_account.base_cost, "account.create_account.base", 6000],
-    [.account.create_address.base_cost, "account.create_address.base", 6000],
-    [.account.create_signer.base_cost, "account.create_signer.base", 6000],
+    [.account.create_account.base_cost, "account.create_account.base", 1102],
+    [.account.create_address.base_cost, "account.create_address.base", 1102],
+    [.account.create_signer.base_cost, "account.create_signer.base", 1102],
 
-    [.type_info.type_of.base, "type_info.type_of.base", 6000],
-    [.type_info.type_of.unit, "type_info.type_of.unit", 100],
-    [.type_info.type_name.base, "type_info.type_name.base", 6000],
-    [.type_info.type_name.unit, "type_info.type_name.unit", 100],
+    [.code.request_publish.base_cost, "code.request_publish.base", 1838],
+    [.code.request_publish.per_byte, "code.request_publish.per_byte", 7],
 
-    [.from_bcs.from_bytes.base, "from_bcs.from_bytes.base", 6000],
-    [.from_bcs.from_bytes.unit, "from_bcs.from_bytes.unit", 100],
+    [.type_info.type_of.base, "type_info.type_of.base", 1102],
+    [.type_info.type_of.unit, "type_info.type_of.unit", 18],
+    [.type_info.type_name.base, "type_info.type_name.base", 1102],
+    [.type_info.type_name.unit, "type_info.type_name.unit", 18],
 
-    [.crypto.ed25519.base, "crypto.ed25519.base", 3000],
-    [.crypto.ed25519.per_sig_verify, "crypto.ed25519.per_sig_verify", 5_340_000],
-    [.crypto.ed25519.per_pubkey_deserialize, "crypto.ed25519.per_pubkey_deserialize", 760_000],
-    [.crypto.ed25519.per_sig_deserialize, "crypto.ed25519.per_sig_deserialize", 7_500],
-    [.crypto.ed25519.per_msg_hashing_base, "crypto.ed25519.per_msg_hashing_base", 64_800],
-    [.crypto.ed25519.per_msg_byte_hashing, "crypto.ed25519.per_msg_byte_hashing", 1200],
+    [.from_bcs.from_bytes.base, "from_bcs.from_bytes.base", 1102],
+    [.from_bcs.from_bytes.unit, "from_bcs.from_bytes.unit", 18],
 
-    [.crypto.secp256k1.base, "crypto.secp256k1.base", 3000],
-    [.crypto.secp256k1.per_ecdsa_recover, "crypto.secp256k1.per_ecdsa_recover", 32_200_000],
-    [.crypto.secp256k1.per_sig_verify, "crypto.secp256k1.per_sig_verify", 5_340_000],
-    [.crypto.secp256k1.per_pubkey_deserialize, "crypto.secp256k1.per_pubkey_deserialize", 760_000],
-    [.crypto.secp256k1.per_sig_deserialize, "crypto.secp256k1.per_sig_deserialize", 7_500],
+    [.crypto.ed25519.base, "crypto.ed25519.base", 551],
+    [.crypto.ed25519.per_sig_verify, "crypto.ed25519.per_sig_verify", 981492],
+    [.crypto.ed25519.per_pubkey_deserialize, "crypto.ed25519.per_pubkey_deserialize", 139688],
+    [.crypto.ed25519.per_sig_deserialize, "crypto.ed25519.per_sig_deserialize", 1378],
+    [.crypto.ed25519.per_msg_hashing_base, "crypto.ed25519.per_msg_hashing_base", 11910],
+    [.crypto.ed25519.per_msg_byte_hashing, "crypto.ed25519.per_msg_byte_hashing", 220],
+
+    [.crypto.secp256k1.base, "crypto.secp256k1.base", 551],
+    [.crypto.secp256k1.per_ecdsa_recover, "crypto.secp256k1.per_ecdsa_recover", 5918360],
+    [.crypto.secp256k1.per_sig_verify, "crypto.secp256k1.per_sig_verify", 981492],
+    [.crypto.secp256k1.per_pubkey_deserialize, "crypto.secp256k1.per_pubkey_deserialize", 139688],
+    [.crypto.secp256k1.per_sig_deserialize, "crypto.secp256k1.per_sig_deserialize", 1378],
 
     // Note(Gas): These are storage operations so the values should not be multiplied.
-    [.event.write_module_event_to_store.base, "event.write_module_event_to_store.base", 300_000],
+    [.event.write_module_event_to_store.base, "event.write_module_event_to_store.base", 20006],
     // TODO(Gas): the on-chain name is wrong...
-    [.event.write_module_event_to_store.per_abstract_value_unit, "event.write_module_event_to_store.per_abstract_memory_unit", 5_000],
+    [.event.write_module_event_to_store.per_abstract_value_unit, "event.write_module_event_to_store.per_abstract_memory_unit", 61],
 
-    [.object.exists_at.base, "object.exists_at.base", 5_000],
-    [.object.exists_at.per_byte_loaded, "object.exists_at.per_byte_loaded", 1_000],
-    [.object.exists_at.per_item_loaded, "object.exists_at.per_item_loaded", 8_000],
+    [.object.exists_at.base, "object.exists_at.base", 919],
+    [.object.exists_at.per_byte_loaded, "object.exists_at.per_byte_loaded", 183],
+    [.object.exists_at.per_item_loaded, "object.exists_at.per_item_loaded", 1470],
 
-    [.transaction_context.get_transaction_hash.base, "transaction_context.get_transaction_hash.base", 4_000],
-    [.transaction_context.generate_unique_address.base, "transaction_context.generate_unique_address.base", 80_000],
+    [.transaction_context.get_transaction_hash.base, "transaction_context.get_transaction_hash.base", 735],
+    [.transaction_context.generate_unique_address.base, "transaction_context.generate_unique_address.base", 735],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.staking.delegate.base, "staking.delegate.base", 50_000 * SCALING],
@@ -61,9 +64,6 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
-
-    [.code.request_publish.base_cost, "code.request_publish.base", 1000 * SCALING],
-    [.code.request_publish.per_byte, "code.request_publish.per_byte", 1000 * SCALING],
 ]);
 
 use crate::gas_params::*;

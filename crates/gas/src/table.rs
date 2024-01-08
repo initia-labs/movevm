@@ -3,36 +3,36 @@ use crate::gas_params::table::*;
 crate::natives::define_gas_parameters_for_natives!(GasParameters, "table", [
     // Note(Gas): These are legacy parameters for loading from storage so they do not
     //            need to be multiplied.
-    [.common.load_base, "common.load.base", 8000],
-    [.common.load_per_byte, "common.load.per_byte", 1000],
+    [.common.load_base, "common.load.base", 302385],
+    [.common.load_per_byte, "common.load.per_byte", 151],
     [.common.load_failure, "common.load.failure", 0],
 
-    [.new_table_handle.base, "new_table_handle.base", 20000],
+    [.new_table_handle.base, "new_table_handle.base", 3676],
 
-    [.add_box.base, "add_box.base", 24000],
-    [.add_box.per_byte_serialized, "add_box.per_byte_serialized", 200],
+    [.add_box.base, "add_box.base", 4411],
+    [.add_box.per_byte_serialized, "add_box.per_byte_serialized", 36],
 
-    [.borrow_box.base, "borrow_box.base", 2],
-    [.borrow_box.per_byte_serialized, "borrow_box.per_byte_serialized", 200],
+    [.borrow_box.base, "borrow_box.base", 4411],
+    [.borrow_box.per_byte_serialized, "borrow_box.per_byte_serialized", 36],
 
-    [.contains_box.base, "contains_box.base", 24000],
-    [.contains_box.per_byte_serialized, "contains_box.per_byte_serialized", 200],
+    [.contains_box.base, "contains_box.base", 4411],
+    [.contains_box.per_byte_serialized, "contains_box.per_byte_serialized", 36],
 
-    [.remove_box.base, "remove_box.base", 24000],
-    [.remove_box.per_byte_serialized, "remove_box.per_byte_serialized", 200],
+    [.remove_box.base, "remove_box.base", 4411],
+    [.remove_box.per_byte_serialized, "remove_box.per_byte_serialized", 36],
 
-    [.destroy_empty_box.base, "destroy_empty_box.base", 24000],
+    [.destroy_empty_box.base, "destroy_empty_box.base", 4411],
 
-    [.drop_unchecked_box.base, "drop_unchecked_box.base", 2000],
+    [.drop_unchecked_box.base, "drop_unchecked_box.base", 367],
 
     // for iterators
-    [.new_table_iter.base, "new_table_iter.base", 20000],
-    [.new_table_iter.per_item_sorted, "new_table_iter.per_item_sorted", 2000],
+    [.new_table_iter.base, "new_table_iter.base", 3676],
+    [.new_table_iter.per_item_sorted, "new_table_iter.per_item_sorted", 367],
 
-    [.prepare_box.base, "prepare_box.base", 20000],
-    [.prepare_box.per_byte_serialized, "prepare_box.per_byte_serialized", 200],
+    [.prepare_box.base, "prepare_box.base", 4411],
+    [.prepare_box.per_byte_serialized, "prepare_box.per_byte_serialized", 36],
 
-    [.next_box.base, "next_box.base", 20000],
+    [.next_box.base, "next_box.base", 4411],
 ]);
 
 #[derive(Debug, Clone)]
