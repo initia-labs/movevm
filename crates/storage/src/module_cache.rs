@@ -21,7 +21,7 @@ impl ModuleStorage for ModuleCache {
         let _ = self
             .modules
             .write()
-            .put(checksum.clone(), arc_module.clone());
+            .put(*checksum, arc_module.clone());
         arc_module.clone()
     }
 
