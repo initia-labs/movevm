@@ -144,11 +144,6 @@ pub(crate) fn execute_view_function(
     to_vec(&return_val)
 }
 
-// mark loader cache as invalid
-pub(crate) fn mark_loader_cache_as_invalid(vm: &InitiaVM) {
-    vm.mark_loader_cache_as_invalid()
-}
-
 /////////////////////////////////////////
 /// Storage Operation ///////////////////
 /////////////////////////////////////////

@@ -36,8 +36,8 @@ use initia_natives::{
     table::{NativeTableContext, TableResolver},
 };
 use initia_storage::{
-    state_view::StateView, state_view_impl::StateViewImpl, table_view::TableView,
-    table_view_impl::TableViewImpl,
+    module_cache::ModuleCache, state_view::StateView, state_view_impl::StateViewImpl,
+    table_view::TableView, table_view_impl::TableViewImpl,
 };
 use initia_types::{
     account::Accounts,
@@ -72,17 +72,18 @@ pub struct InitiaVM {
     gas_params: InitiaGasParameters,
 }
 
+const DEFAULT_CACHE_CAPACITY: usize = 100;
 impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new()
+        Self::new(DEFAULT_CACHE_CAPACITY)
     }
 }
 
 impl InitiaVM {
-    pub fn new() -> Self {
+    pub fn new(cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
         let abs_val_size_gas_params = AbstractValueSizeGasParameters::initial();
-        let inner = MoveVM::new_with_config(
+        let inner = MoveVM::new_with_config_modules(
             all_natives(
                 gas_params.move_stdlib,
                 gas_params.initia_stdlib,
@@ -93,6 +94,7 @@ impl InitiaVM {
                 verifier: verifier_config(true),
                 ..Default::default()
             },
+            Arc::new(ModuleCache::new(cache_capacity)),
         )
         .expect("should be able to create Move VM; check if there are duplicated natives");
 
@@ -102,7 +104,12 @@ impl InitiaVM {
         }
     }
 
-    fn create_session<'r, A: AccountAPI + StakingAPI, S: MoveResolver, T: TableResolver>(
+    fn create_session<
+        'r,
+        A: AccountAPI + StakingAPI,
+        S: MoveResolver<PartialVMError>,
+        T: TableResolver,
+    >(
         &self,
         api: &'r A,
         env: &Env,
@@ -131,20 +138,14 @@ impl InitiaVM {
         extensions.add(NativeTransactionContext::new(tx_hash, session_id));
         extensions.add(NativeEventContext::default());
 
-        // The MoveVM code loader mark the internal cache as `invalid` whenever a module republished.
-        // The deletion of loader cache is not supported yet....
-        //
-        // After a module upgrade, the internal cache needs to be flushed.
+        // Loader cache always flushed at the beginning of a session.
+        self.move_vm.mark_loader_cache_as_invalid();
         self.move_vm.flush_loader_cache_if_invalidated();
 
         SessionExt::new(
             self.move_vm
                 .new_session_with_extensions(resolver, extensions),
         )
-    }
-
-    pub fn mark_loader_cache_as_invalid(&self) {
-        self.move_vm.mark_loader_cache_as_invalid()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -260,7 +261,8 @@ impl InitiaVM {
 
         let func_inst =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
-        let metadata = get_vm_metadata(&self.move_vm, view_fn.module());
+        let checksum = session.load_module_checksum(view_fn.module())?;
+        let metadata = get_vm_metadata(&self.move_vm, &checksum);
         let args = validate_view_function(
             &mut session,
             view_fn.args().to_vec(),

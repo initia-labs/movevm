@@ -48,8 +48,8 @@ pub extern "C" fn release_vm(vm: *mut vm_t) {
 }
 
 #[no_mangle]
-pub extern "C" fn allocate_vm() -> *mut vm_t {
-    let vm = Box::into_raw(Box::new(InitiaVM::new()));
+pub extern "C" fn allocate_vm(cache_capacity: usize) -> *mut vm_t {
+    let vm = Box::into_raw(Box::new(InitiaVM::new(cache_capacity)));
     vm as *mut vm_t
 }
 
@@ -174,23 +174,6 @@ pub extern "C" fn execute_view_function(
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn mark_loader_cache_as_invalid(
-    vm_ptr: *mut vm_t,
-    errmsg: Option<&mut UnmanagedVector>,
-) {
-    let res = match to_vm(vm_ptr) {
-        Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::mark_loader_cache_as_invalid(vm);
-            Ok(())
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::unset_arg(VM_ARG)),
-    };
-
-    handle_c_error_default(res, errmsg);
 }
 
 #[no_mangle]

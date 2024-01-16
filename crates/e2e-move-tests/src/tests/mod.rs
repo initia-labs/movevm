@@ -2,7 +2,7 @@ mod args;
 mod common;
 mod cosmos;
 mod infinite_loop;
-mod loader;
+mod cache;
 mod max_loop_depth;
 mod memory_quota;
 mod output;

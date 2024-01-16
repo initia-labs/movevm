@@ -55,7 +55,7 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
 
-	vm := vm.NewVM()
+	vm := vm.NewVM(100)
 	err = vm.Initialize(
 		kvStore,
 		api.NewMockAPI(blockTime, &accountAPI, &stakingAPI),
@@ -570,71 +570,4 @@ func Test_TableIterator(t *testing.T) {
 		payload,
 	)
 	require.NoError(t, err)
-}
-
-func Test_loaderCache(t *testing.T) {
-	vm, kvStore1 := initializeVM(t, true)
-	defer vm.Destroy()
-
-	// create second kv store to test loader cache
-	kvStore2 := api.NewLookup()
-
-	publishModuleBundle(t, vm, kvStore1)
-
-	testAccount, err := types.NewAccountAddress("0x2")
-	require.NoError(t, err)
-
-	// vm has loader cache, so view function should be succeed with kvStore2
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
-	blockTime := uint64(time.Now().Unix())
-
-	_api := api.NewMockAPI(blockTime, &accountAPI, &stakingAPI)
-	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
-	}
-
-	res, err := vm.ExecuteViewFunction(kvStore2,
-		_api,
-		env,
-		1_000_000,
-		types.ViewFunction{
-			Module: types.ModuleId{
-				Address: testAccount,
-				Name:    "TestCoin",
-			},
-			Function: "number",
-			TyArgs:   []types.TypeTag{},
-			Args:     [][]byte{},
-		},
-	)
-	require.NoError(t, err)
-	require.Equal(t, res, "\"123\"")
-
-	// After mark loader cache invalid,
-	// cache will be flushed.
-	err = vm.MarkLoaderCacheAsInvalid()
-	require.NoError(t, err)
-
-	// Then the view function should be failed.
-	_, err = vm.ExecuteViewFunction(kvStore2,
-		_api,
-		env,
-		1_000_000,
-		types.ViewFunction{
-			Module: types.ModuleId{
-				Address: testAccount,
-				Name:    "TestCoin",
-			},
-			Function: "number",
-			TyArgs:   []types.TypeTag{},
-			Args:     [][]byte{},
-		},
-	)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "LINKER_ERROR")
 }

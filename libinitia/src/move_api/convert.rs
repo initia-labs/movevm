@@ -3,7 +3,7 @@ use crate::move_api::move_types::{MoveResource, MoveValue};
 use anyhow::Result;
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
-    resolver::MoveResolver,
+    resolver::ModuleResolver,
 };
 use move_resource_viewer::MoveValueAnnotator;
 
@@ -15,7 +15,7 @@ pub struct MoveConverter<'a, R: ?Sized> {
     inner: MoveValueAnnotator<'a, R>,
 }
 
-impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
+impl<'a, R: ModuleResolver + ?Sized> MoveConverter<'a, R> {
     pub fn new(inner: &'a R) -> Self {
         Self {
             inner: MoveValueAnnotator::new(inner),

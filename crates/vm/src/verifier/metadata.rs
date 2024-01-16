@@ -1,6 +1,6 @@
 use initia_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
 use move_binary_format::CompiledModule;
-use move_core_types::{language_storage::ModuleId, metadata::Metadata};
+use move_core_types::metadata::Metadata;
 /// Extract metadata from the VM, upgrading V0 to V1 representation as needed
 use move_vm_runtime::move_vm::MoveVM;
 
@@ -13,11 +13,8 @@ pub fn get_metadata(md: &[Metadata]) -> Option<RuntimeModuleMetadataV0> {
     }
 }
 
-pub(crate) fn get_vm_metadata(
-    vm: &MoveVM,
-    module_id: &ModuleId,
-) -> Option<RuntimeModuleMetadataV0> {
-    vm.with_module_metadata(module_id, get_metadata)
+pub(crate) fn get_vm_metadata(vm: &MoveVM, checksum: &[u8; 32]) -> Option<RuntimeModuleMetadataV0> {
+    vm.with_module_metadata(checksum, get_metadata)
 }
 
 /// Extract metadata from a compiled module, upgrading V0 to V1 representation as needed.
