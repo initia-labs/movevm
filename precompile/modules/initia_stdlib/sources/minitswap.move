@@ -109,7 +109,7 @@ module initia_std::minitswap {
     }
 
     fun init_module(chain: &signer) {
-        let constructor_ref = object::create_object(@initia_std);
+        let constructor_ref = object::create_object(@initia_std, false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
 
         let (mint_cap, burn_cap, _) = coin::initialize(
@@ -147,7 +147,7 @@ module initia_std::minitswap {
         recover_param: Decimal128,
     ) acquires ModuleStore {
         assert_is_chain(chain);
-        let constructor_ref = object::create_object(@initia_std);
+        let constructor_ref = object::create_object(@initia_std, false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let pool_signer = object::generate_signer(&constructor_ref);
         let (_, timestamp) = block::get_block_info();
