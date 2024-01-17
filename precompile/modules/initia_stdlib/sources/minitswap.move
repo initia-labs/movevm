@@ -126,8 +126,8 @@ module initia_std::minitswap {
             extend_ref,
             pools: table::new(),
             l1_init_amount: 0,
-            swap_fee_rate: decimal128::from_ratio(5, 10000), // 0.05% TODO: check initial value
-            max_change_rate: decimal128::from_ratio(1, 10), // 0.10% TODO: check initial value
+            swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1% 
+            max_change_rate: decimal128::from_ratio(1, 10), // 10% 
             mint_cap,
             burn_cap,
         });
