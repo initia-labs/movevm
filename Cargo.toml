@@ -63,8 +63,9 @@ initia-compiler = { path = "crates/compiler" }
 # External crate dependencies.
 # Please do not add any test features here: they should be declared by the individual crate.
 anyhow = "1.0.41"
-bcs = "0.1.4"
+bcs = "0.1.5"
 better_any = "0.1.1"
+clru = "0.6"
 cbindgen = "0.24.5"
 clap = { version = "4.3.9", features = ["derive", "env", "suggestions"] }
 codespan-reporting = "0.11.1"
@@ -81,14 +82,14 @@ log = { version = "0.4.17", features = [
 once_cell = "1.18.0"
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["getrandom"] }
-serde = { version = "1.0.155", default-features = false, features = [
+serde = { version = "1.0.188", default-features = false, features = [
     "derive",
     "rc",
 ] }
 serde_bytes = "0.11.9"
 serde_json = { version = "1.0.94", features = ["preserve_order"] }
-serde-generate = "0.25.0"
-serde-reflection = "0.3.6"
+serde-generate = { git = "https://github.com/aptos-labs/serde-reflection", rev = "73b6bbf748334b71ff6d7d09d06a29e3062ca075" }
+serde-reflection = { git = "https://github.com/aptos-labs/serde-reflection", rev = "73b6bbf748334b71ff6d7d09d06a29e3062ca075" }
 sha3 = "0.10.6"
 smallvec = "1.6.1"
 tempfile = "3.2.0"
@@ -96,38 +97,39 @@ serial_test = "1.0.0"
 thiserror = "1.0.34"
 tsu = "1.0.1"
 bytes = "1.4.0"
+parking_lot = "0.12.1"
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES
 
-# move-abigen = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# move-bytecode-utils = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# move-errmapgen = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# move-ir-compiler = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# move-prover-test-utils = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# move-stackless-bytecode-interpreter = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# move-transactional-test-runner = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# read-write-set = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-# read-write-set-dynamic = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-binary-format = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-bytecode-verifier = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-cli = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-command-line-common = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-compiler = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-core-types = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-docgen = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-model = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-package = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-prover = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-prover-boogie-backend = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-prover-bytecode-pipeline = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-resource-viewer = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-stackless-bytecode = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-stdlib = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-symbol-pool = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-unit-test = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-vm-runtime = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-vm-test-utils = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
-move-vm-types = { git = "https://github.com/initia-labs/move.git", rev = "fa1038c2034f277543c0ad109ba040e28baf8ce3" }
+# move-abigen = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# move-bytecode-utils = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# move-errmapgen = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# move-ir-compiler = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# move-prover-test-utils = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# move-stackless-bytecode-interpreter = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# move-transactional-test-runner = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# read-write-set = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+# read-write-set-dynamic = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-binary-format = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-bytecode-verifier = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-cli = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-command-line-common = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-compiler = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-core-types = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-docgen = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-model = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-package = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-prover = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-prover-boogie-backend = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-prover-bytecode-pipeline = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-resource-viewer = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-stackless-bytecode = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-stdlib = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-symbol-pool = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-unit-test = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-vm-runtime = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-vm-test-utils = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
+move-vm-types = { git = "https://github.com/initia-labs/move.git", rev = "da6b12021dd7b17d9214cc4291edfd58bb358f06" }
 
 # END MOVE DEPENDENCIES

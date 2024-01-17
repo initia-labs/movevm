@@ -11,8 +11,8 @@ type VM struct {
 }
 
 // NewVm return VM instance
-func NewVM() VM {
-	inner := api.AllocateVM()
+func NewVM(cache_capacity uint64) VM {
+	inner := api.AllocateVM(cache_capacity)
 	return VM{inner}
 }
 
@@ -176,9 +176,4 @@ func (vm *VM) ExecuteScript(
 
 	execRes, err := types.BcsDeserializeExecutionResult(res)
 	return execRes, err
-}
-
-// MarkLoaderCacheAsInvalid discard loader cache
-func (vm *VM) MarkLoaderCacheAsInvalid() error {
-	return api.MarkLoaderCacheAsInvalid(vm.inner)
 }

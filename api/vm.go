@@ -19,9 +19,9 @@ func ReleaseVM(vm VM) {
 }
 
 // AllocateVM call ffi(`allocate_vm`) to allocate vm instance
-func AllocateVM() VM {
+func AllocateVM(cacheCapacity uint64) VM {
 	return VM{
-		ptr: C.allocate_vm(),
+		ptr: C.allocate_vm(cusize(cacheCapacity)),
 	}
 }
 
@@ -174,23 +174,4 @@ func ExecuteViewFunction(
 	}
 
 	return copyAndDestroyUnmanagedVector(res), err
-}
-
-// MarkLoaderCacheAsInvalid clear loader cache.
-// It should be executed whenever new module published but tx failed.
-func MarkLoaderCacheAsInvalid(vm VM) error {
-	var err error
-
-	callID := startCall()
-	defer endCall(callID)
-
-	errmsg := newUnmanagedVector(nil)
-
-	_, err = C.mark_loader_cache_as_invalid(vm.ptr, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
-		return errorWithMessage(err, errmsg)
-	}
-
-	return err
 }

@@ -424,7 +424,7 @@ typedef struct {
   bool compute_coverage;
 } InitiaCompilerTestOption;
 
-vm_t *allocate_vm(void);
+vm_t *allocate_vm(size_t cache_capacity);
 
 UnmanagedVector build_move_package(UnmanagedVector *errmsg, InitiaCompilerArgument initia_args);
 
@@ -508,8 +508,6 @@ void initialize(vm_t *vm_ptr,
                 bool allow_arbitrary,
                 ByteSliceView allowed_publishers_payload,
                 UnmanagedVector *errmsg);
-
-void mark_loader_cache_as_invalid(vm_t *vm_ptr, UnmanagedVector *errmsg);
 
 UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, size_t length);
 

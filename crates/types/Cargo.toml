@@ -18,3 +18,4 @@ hex = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
 move-model = { workspace = true }
+sha3 = { workspace = true }
