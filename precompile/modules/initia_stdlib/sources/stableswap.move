@@ -1,4 +1,4 @@
-module initia_std::stable_swap {
+module initia_std::stableswap {
     use std::event::Self;
     use std::signer;
     use std::error;
@@ -233,16 +233,14 @@ module initia_std::stable_swap {
         primary_fungible_store::deposit(signer::address_of(creator), liquidity_token);
     }
 
-    // TODO: check who can execute this. Creator? Chain?
     public entry fun update_swap_fee_rate(account: &signer, pair: Object<Pool>, new_swap_fee_rate: Decimal128) acquires Pool {
-        check_creator(account, pair);
+        check_chain_permission(account);
         let pool = borrow_pool_mut(pair);
         pool.swap_fee_rate = new_swap_fee_rate;
     }
 
-    // TODO: check who can execute this. Creator? Chain?
     public entry fun update_a(account: &signer, pair: Object<Pool>, a_after: u64, timestamp_after: u64) acquires Pool {
-        check_creator(account, pair);
+        check_chain_permission(account);
         let (_, timestamp) = block::get_block_info();
         let pool = borrow_pool_mut(pair);
         pool.amplifier.amplifier_before = get_current_a(&pool.amplifier);
@@ -772,9 +770,8 @@ module initia_std::stable_swap {
         return ((a as u256) * (b as u256) / (c as u256) as u128)
     }
 
-    fun check_creator(account: &signer, pair: Object<Pool>) {
-        let symbol = fungible_asset::symbol(pair);
-        let addr = coin::metadata_address(signer::address_of(account), symbol);
-        assert!(addr == object::object_address(pair), error::permission_denied(EUNAUTHORIZED));
+    /// Check signer is chain
+    fun check_chain_permission(chain: &signer) {
+        assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
     }
 }
