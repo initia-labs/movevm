@@ -36,7 +36,7 @@ use initia_natives::{
     table::{NativeTableContext, TableResolver},
 };
 use initia_storage::{
-    module_cache::ModuleCache, state_view::StateView, state_view_impl::StateViewImpl,
+    state_view::StateView, state_view_impl::StateViewImpl,
     table_view::TableView, table_view_impl::TableViewImpl,
 };
 use initia_types::{
@@ -80,10 +80,10 @@ impl Default for InitiaVM {
 }
 
 impl InitiaVM {
-    pub fn new(cache_capacity: usize) -> Self {
+    pub fn new(_cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
         let abs_val_size_gas_params = AbstractValueSizeGasParameters::initial();
-        let inner = MoveVM::new_with_config_modules(
+        let inner = MoveVM::new_with_config(
             all_natives(
                 gas_params.move_stdlib,
                 gas_params.initia_stdlib,
@@ -94,7 +94,6 @@ impl InitiaVM {
                 verifier: verifier_config(true),
                 ..Default::default()
             },
-            Arc::new(ModuleCache::new(cache_capacity)),
         )
         .expect("should be able to create Move VM; check if there are duplicated natives");
 
@@ -137,10 +136,6 @@ impl InitiaVM {
         extensions.add(NativeCosmosContext::default());
         extensions.add(NativeTransactionContext::new(tx_hash, session_id));
         extensions.add(NativeEventContext::default());
-
-        // Loader cache always flushed at the beginning of a session.
-        self.move_vm.mark_loader_cache_as_invalid();
-        self.move_vm.flush_loader_cache_if_invalidated();
 
         SessionExt::new(
             self.move_vm
@@ -261,8 +256,7 @@ impl InitiaVM {
 
         let func_inst =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
-        let checksum = session.load_module_checksum(view_fn.module())?;
-        let metadata = get_vm_metadata(&self.move_vm, &checksum);
+        let metadata = get_vm_metadata(&session, view_fn.module());
         let args = validate_view_function(
             &mut session,
             view_fn.args().to_vec(),
