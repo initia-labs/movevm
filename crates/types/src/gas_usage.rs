@@ -3,14 +3,8 @@ use std::collections::BTreeMap;
 use move_core_types::language_storage::ModuleId;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct GasUsageSet(BTreeMap<ModuleId, u64>);
-
-impl Default for GasUsageSet {
-    fn default() -> Self {
-        Self(BTreeMap::default())
-    }
-}
 
 impl GasUsageSet {
     pub fn new(map: BTreeMap<ModuleId, u64>) -> GasUsageSet {

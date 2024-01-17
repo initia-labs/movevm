@@ -51,8 +51,7 @@ impl Clean {
         }
         .join("build")
         .canonicalize();
-        if install_dir.is_ok() {
-            let idir = install_dir.unwrap();
+        if let Ok(idir) = install_dir {
             targets.push(idir);
         }
 
@@ -103,7 +102,7 @@ fn validate_manifest(base_path: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    if !(build_path.join(&package_name).is_dir()) {
+    if !(build_path.join(package_name).is_dir()) {
         bail!(
             "built package {} not found in {}",
             package_name,

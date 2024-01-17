@@ -15,7 +15,7 @@ pub struct StakingDelta {
     undelegation: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct StakingChangeSet(
     BTreeMap<
         Vec<u8>,
@@ -28,12 +28,6 @@ pub struct StakingChangeSet(
         >,
     >,
 );
-
-impl Default for StakingChangeSet {
-    fn default() -> Self {
-        Self(BTreeMap::default())
-    }
-}
 
 impl StakingChangeSet {
     pub fn new(map: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, u64)>>) -> StakingChangeSet {

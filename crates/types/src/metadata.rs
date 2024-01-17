@@ -1,10 +1,13 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
+use move_compiler::shared::known_attributes;
 use move_core_types::errmap::ErrorDescription;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 pub const ERROR_PREFIX: &str = "E";
 pub const VIEW_FUN_ATTRIBUTE: &str = "view";
+pub const EVENT_STRUCT_ATTRIBUTE: &str = "event";
 pub const INIT_MODULE_FUNCTION_NAME: &str = "init_module";
 pub const METADATA_V0_MIN_FILE_FORMAT_VERSION: u32 = 6;
 
@@ -46,6 +49,7 @@ pub struct KnownAttribute {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum KnownAttributeKind {
     ViewFunction = 1,
+    Event = 4,
 }
 
 impl KnownAttribute {
@@ -59,4 +63,35 @@ impl KnownAttribute {
     pub fn is_view_function(&self) -> bool {
         self.kind == (KnownAttributeKind::ViewFunction as u8)
     }
+
+    pub fn event() -> Self {
+        Self {
+            kind: KnownAttributeKind::Event as u8,
+            args: vec![],
+        }
+    }
+
+    pub fn is_event(&self) -> bool {
+        self.kind == KnownAttributeKind::Event as u8
+    }
+}
+
+// top-level attribute names, only.
+pub fn get_all_attribute_names() -> &'static BTreeSet<String> {
+    const ALL_ATTRIBUTE_NAMES: [&str; 2] = [VIEW_FUN_ATTRIBUTE, EVENT_STRUCT_ATTRIBUTE];
+
+    fn extended_attribute_names() -> BTreeSet<String> {
+        ALL_ATTRIBUTE_NAMES
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<BTreeSet<String>>()
+    }
+
+    static KNOWN_ATTRIBUTES_SET: Lazy<BTreeSet<String>> = Lazy::new(|| {
+        use known_attributes::AttributeKind;
+        let mut attributes = extended_attribute_names();
+        known_attributes::KnownAttribute::add_attribute_names(&mut attributes);
+        attributes
+    });
+    &KNOWN_ATTRIBUTES_SET
 }

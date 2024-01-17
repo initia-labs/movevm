@@ -72,6 +72,12 @@ pub struct InitiaVM {
     gas_params: InitiaGasParameters,
 }
 
+impl Default for InitiaVM {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InitiaVM {
     pub fn new() -> Self {
         let gas_params = NativeGasParameters::initial();
@@ -121,7 +127,7 @@ impl InitiaVM {
         ));
         extensions.add(NativeCodeContext::default());
         extensions.add(NativeStakingContext::new(api));
-        extensions.add(NativeCosmosContext::new());
+        extensions.add(NativeCosmosContext::default());
         extensions.add(NativeTransactionContext::new(tx_hash, session_id));
         extensions.add(NativeEventContext::default());
 
@@ -141,6 +147,7 @@ impl InitiaVM {
         self.move_vm.mark_loader_cache_as_invalid()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
         &mut self,
         api: &A,
@@ -149,6 +156,7 @@ impl InitiaVM {
         table_view_impl: &mut TableViewImpl<'_, T>,
         module_bundle: ModuleBundle,
         allow_arbitrary: bool,
+        allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
         let gas_limit = Gas::new(u64::MAX);
         let gas_params = self.gas_params.clone();
@@ -181,6 +189,7 @@ impl InitiaVM {
                     .unwrap(),
                 bcs::to_bytes(&published_module_ids).unwrap(),
                 bcs::to_bytes(&allow_arbitrary).unwrap(),
+                bcs::to_bytes(&allowed_publishers).unwrap(),
             ];
 
             // ignore the output
@@ -276,6 +285,7 @@ impl InitiaVM {
         Ok(output)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn execute_script_or_entry_function<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
         &self,
         api: &A,
@@ -334,7 +344,7 @@ impl InitiaVM {
             }
         }?;
 
-        if res.return_values.len() > 0 || res.mutable_reference_outputs.len() > 0 {
+        if !res.return_values.is_empty() || !res.mutable_reference_outputs.is_empty() {
             return Err(VMStatus::error(
                 StatusCode::RET_TYPE_MISMATCH_ERROR,
                 Some("entry_function or script are not allowed to return any value".to_string()),
@@ -572,13 +582,13 @@ fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Opti
         let mut serde_vals = vec![];
         for return_val in response.return_values.iter() {
             let (blob, type_layout) = return_val;
-            let move_val = MoveValue::simple_deserialize(&blob, type_layout).map_err(|_| {
+            let move_val = MoveValue::simple_deserialize(blob, type_layout).map_err(|_| {
                 PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
             })?;
             let serde_value = convert_move_value_to_serde_value(&move_val)?;
             serde_vals.push(serde_value);
         }
-        if serde_vals.len() == 0 {
+        if serde_vals.is_empty() {
             Ok(None)
         } else if serde_vals.len() == 1 {
             Ok(Some(serde_vals.first().unwrap().to_string()))
@@ -588,6 +598,7 @@ fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Opti
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn get_message_output(
     events: JsonEvents,
     write_set: WriteSet,

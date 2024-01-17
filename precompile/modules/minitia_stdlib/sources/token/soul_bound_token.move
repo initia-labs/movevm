@@ -211,6 +211,7 @@ module minitia_std::soul_bound_token {
             option::none(),
             uri,
         );
+        let s = object::generate_signer(&constructor_ref);
 
         let object_signer = object::generate_signer(&constructor_ref);
 
@@ -229,12 +230,12 @@ module minitia_std::soul_bound_token {
 
         let soul_bound_token = SoulBoundToken {
             mutator_ref,
-            property_mutator_ref: property_map::generate_mutator_ref(&constructor_ref),
+            property_mutator_ref: property_map::generate_mutator_ref(&s),
         };
         move_to(&object_signer, soul_bound_token);
 
         let properties = property_map::prepare_input(property_keys, property_types, property_values);
-        property_map::init(&constructor_ref, properties);
+        property_map::init(&s, properties);
 
         constructor_ref
     }
@@ -298,19 +299,6 @@ module minitia_std::soul_bound_token {
         );
         let soul_bound_token = authorized_borrow(nft, creator);
         nft::set_description(option::borrow(&soul_bound_token.mutator_ref), description);
-    }
-
-    public entry fun set_name<T: key>(
-        creator: &signer,
-        nft: Object<T>,
-        name: String,
-    ) acquires SoulBoundTokenCollection, SoulBoundToken {
-        assert!(
-            is_mutable_name(nft),
-            error::permission_denied(EFIELD_NOT_MUTABLE),
-        );
-        let soul_bound_token = authorized_borrow(nft, creator);
-        nft::set_name(option::borrow(&soul_bound_token.mutator_ref), name);
     }
 
     public entry fun set_uri<T: key>(
@@ -572,48 +560,6 @@ module minitia_std::soul_bound_token {
 
         let description = string::utf8(b"not");
         set_description(noncreator, nft, description);
-    }
-
-    #[test(creator = @0x123)]
-    fun test_set_name(creator: &signer) acquires SoulBoundTokenCollection, SoulBoundToken {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
-
-        let name = string::utf8(b"not");
-        assert!(nft::name(nft) != name, 0);
-        set_name(creator, nft, name);
-        assert!(nft::name(nft) == name, 1);
-    }
-
-    #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x50004, location = Self)]
-    fun test_set_immutable_name(creator: &signer) acquires SoulBoundTokenCollection, SoulBoundToken {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, false);
-        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
-
-        set_name(creator, nft, string::utf8(b""));
-    }
-
-    #[test(creator = @0x123, noncreator = @0x456)]
-    #[expected_failure(abort_code = 0x50003, location = Self)]
-    fun test_set_name_non_creator(
-        creator: &signer,
-        noncreator: &signer,
-    ) acquires SoulBoundTokenCollection, SoulBoundToken {
-        let collection_name = string::utf8(b"collection name");
-        let nft_name = string::utf8(b"nft name");
-
-        create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
-
-        let name = string::utf8(b"not");
-        set_name(noncreator, nft, name);
     }
 
     #[test(creator = @0x123)]

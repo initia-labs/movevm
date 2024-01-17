@@ -70,8 +70,8 @@ fn convert_decimal_to_serde_value(val: &MoveValue) -> VMResult<Value> {
 
     Ok(Value::String(
         num_str
-            .trim_end_matches("0")
-            .trim_end_matches(".")
+            .trim_end_matches('0')
+            .trim_end_matches('.')
             .to_string(),
     ))
 }
@@ -79,10 +79,10 @@ fn convert_decimal_to_serde_value(val: &MoveValue) -> VMResult<Value> {
 fn convert_option_to_serde_value(val: &MoveValue) -> VMResult<Value> {
     Ok(match val {
         MoveValue::Vector(elem) => {
-            if elem.len() == 0 {
+            if elem.is_empty() {
                 Value::Null
             } else {
-                convert_move_value_to_serde_value(elem.get(0).unwrap())?
+                convert_move_value_to_serde_value(elem.first().unwrap())?
             }
         }
         _ => unreachable!(),
@@ -99,8 +99,8 @@ fn convert_object_to_serde_value(val: &MoveValue) -> VMResult<Value> {
 pub(crate) fn convert_move_value_to_serde_value(val: &MoveValue) -> VMResult<Value> {
     match val {
         MoveValue::Vector(elems) => {
-            if elems.len() > 0 {
-                if let MoveValue::U8(_) = elems.get(0).unwrap() {
+            if !elems.is_empty() {
+                if let MoveValue::U8(_) = elems.first().unwrap() {
                     let bytes = elems
                         .iter()
                         .map(|e| {
@@ -112,14 +112,14 @@ pub(crate) fn convert_move_value_to_serde_value(val: &MoveValue) -> VMResult<Val
                         })
                         .collect::<Vec<u8>>();
 
-                    return Ok(Value::String(hex::encode(&bytes)));
+                    return Ok(Value::String(hex::encode(bytes)));
                 }
             }
 
             Ok(Value::Array(
                 elems
                     .iter()
-                    .map(|e| convert_move_value_to_serde_value(e))
+                    .map(convert_move_value_to_serde_value)
                     .collect::<VMResult<Vec<Value>>>()?,
             ))
         }
@@ -173,7 +173,7 @@ pub(crate) fn convert_move_value_to_serde_value(val: &MoveValue) -> VMResult<Val
         MoveValue::Signer(_) => {
             Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined))
         }
-        _ => serde_json::to_value(&val).map_err(|_| {
+        _ => serde_json::to_value(val).map_err(|_| {
             PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR).finish(Location::Undefined)
         }),
     }

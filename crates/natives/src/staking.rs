@@ -8,7 +8,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
-    values::{Value, Vector, StructRef, Reference},
+    values::{Reference, StructRef, Value, Vector},
 };
 use smallvec::smallvec;
 use std::sync::Arc;
@@ -146,7 +146,7 @@ fn native_delegate(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
@@ -162,12 +162,12 @@ fn native_delegate(
                 dels.0 += amount;
             }
             None => {
-                val.insert(metadata.clone(), (amount, 0));
+                val.insert(metadata, (amount, 0));
             }
         },
         None => {
             let mut ratios = BTreeMap::new();
-            ratios.insert(metadata.clone(), (amount, 0));
+            ratios.insert(metadata, (amount, 0));
             staking_data.changes.insert(validator.clone(), ratios);
         }
     }
@@ -205,7 +205,7 @@ fn native_undelegate(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
@@ -221,12 +221,12 @@ fn native_undelegate(
                 ratio.1 += share;
             }
             None => {
-                val.insert(metadata.clone(), (0, share));
+                val.insert(metadata, (0, share));
             }
         },
         None => {
             let mut ratios = BTreeMap::new();
-            ratios.insert(metadata.clone(), (0, share));
+            ratios.insert(metadata, (0, share));
             staking_data.changes.insert(validator.clone(), ratios);
         }
     }
@@ -277,7 +277,7 @@ fn native_share_to_amount(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
@@ -321,7 +321,7 @@ fn native_amount_to_share(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
@@ -417,7 +417,7 @@ fn native_test_only_set_staking_share_ratio(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.len() == 0);
+    debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 4);
 
     let amount = pop_arg!(args, u64);
@@ -425,8 +425,8 @@ fn native_test_only_set_staking_share_ratio(
     let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
     let validator = pop_arg!(args, Vector).to_vec_u8()?;
 
-    let mut staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
-    NativeStakingContext::set_share_ratio(&mut staking_context, validator, metadata, share, amount);
+    let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
+    NativeStakingContext::set_share_ratio(staking_context, validator, metadata, share, amount);
 
     Ok(NativeResult::ok(InternalGas::zero(), smallvec![]))
 }

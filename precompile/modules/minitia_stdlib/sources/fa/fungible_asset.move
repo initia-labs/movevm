@@ -122,6 +122,7 @@ module minitia_std::fungible_asset {
         metadata: Object<Metadata>
     }
 
+    #[event]
     /// Emitted when fungible assets are deposited into a store.
     struct DepositEvent has drop, store {
         store_addr: address,
@@ -129,6 +130,7 @@ module minitia_std::fungible_asset {
         amount: u64,
     }
 
+    #[event]
     /// Emitted when fungible assets are withdrawn from a store.
     struct WithdrawEvent has drop, store {
         store_addr: address,
@@ -136,11 +138,26 @@ module minitia_std::fungible_asset {
         amount: u64,
     }
 
+    #[event]
     /// Emitted when a store's frozen status is updated.
     struct FrozenEvent has drop, store {
         store_addr: address,
         metadata_addr: address,
         frozen: bool,
+    }
+
+    #[event]
+    /// Emitted when fungible assets are burnt.
+    struct BurnEvent has drop, store {
+        metadata_addr: address,
+        amount: u64,
+    }
+
+    #[event]
+    /// Emitted when fungible assets are minted.
+    struct MintEvent has drop, store {
+        metadata_addr: address,
+        amount: u64,
     }
 
     /// Make an existing object fungible by adding the Metadata resource.
@@ -389,6 +406,10 @@ module minitia_std::fungible_asset {
 
         increase_supply(metadata, amount);
 
+        // emit event
+        let metadata_addr = object::object_address(metadata);
+        event::emit(MintEvent { metadata_addr, amount });
+
         FungibleAsset {
             metadata,
             amount
@@ -428,6 +449,10 @@ module minitia_std::fungible_asset {
         } = fa;
         assert!(ref.metadata == metadata, error::invalid_argument(EBURN_REF_AND_FUNGIBLE_ASSET_MISMATCH));
         decrease_supply(metadata, amount);
+
+        // emit event
+        let metadata_addr = object::object_address(metadata);
+        event::emit(BurnEvent { metadata_addr, amount });
     }
 
     /// Burn the `amount` of the fungible asset from the given store.
@@ -604,7 +629,7 @@ module minitia_std::fungible_asset {
 
     #[test_only]
     public fun create_test_token(creator: &signer): (ConstructorRef, Object<TestToken>) {
-        let creator_ref = object::create_named_object(creator, b"TEST");
+        let creator_ref = object::create_named_object(creator, b"TEST", false);
         let object_signer = object::generate_signer(&creator_ref);
         move_to(&object_signer, TestToken {});
 
@@ -641,7 +666,7 @@ module minitia_std::fungible_asset {
     #[test_only]
     public fun create_test_store<T: key>(owner: &signer, metadata: Object<T>): Object<FungibleStore> {
         let owner_addr = signer::address_of(owner);
-        create_store(&object::create_object(owner_addr), metadata)
+        create_store(&object::create_object(owner_addr, true), metadata)
     }
 
     #[test(creator = @0xcafe)]
@@ -671,7 +696,7 @@ module minitia_std::fungible_asset {
     #[test(creator = @0xcafe)]
     fun test_create_and_remove_store(creator: &signer) acquires FungibleStore {
         let (_, _, _, metadata) = create_fungible_asset(creator);
-        let creator_ref = object::create_object(signer::address_of(creator));
+        let creator_ref = object::create_object(signer::address_of(creator), true);
         create_store(&creator_ref, metadata);
         let delete_ref = object::generate_delete_ref(&creator_ref);
         remove_store(&delete_ref);
@@ -760,7 +785,7 @@ module minitia_std::fungible_asset {
     #[test(creator = @0xcafe)]
     #[expected_failure(abort_code = 0x10012, location = Self)]
     fun test_add_fungibility_to_deletable_object(creator: &signer) {
-        let creator_ref = &object::create_object(signer::address_of(creator));
+        let creator_ref = &object::create_object(signer::address_of(creator), true);
         init_test_metadata(creator_ref);
     }
 

@@ -6,7 +6,7 @@ use move_core_types::{identifier::IdentStr, metadata::Metadata};
 pub(crate) fn get_metadata_from_compiled_module(
     module: &CompiledModule,
 ) -> Option<RuntimeModuleMetadataV0> {
-    if let Some(data) = find_metadata(module, &INITIA_METADATA_KEY_V0) {
+    if let Some(data) = find_metadata(module, INITIA_METADATA_KEY_V0) {
         bcs::from_bytes::<RuntimeModuleMetadataV0>(&data.value).ok()
     } else {
         None

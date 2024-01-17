@@ -114,9 +114,14 @@ impl ProverOptions {
     ) -> anyhow::Result<()> {
         let now = Instant::now();
         let for_test = self.for_test;
-        let mut build_config = BuildConfig::default();
-        build_config.additional_named_addresses = named_addresses.clone();
-        build_config.compiler_config.bytecode_version = bytecode_version;
+        let build_config = BuildConfig {
+            additional_named_addresses: named_addresses.clone(),
+            compiler_config: move_package::CompilerConfig {
+                bytecode_version,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let model = build_model(package_path, build_config)?;
         let mut options = self.convert_options();
         // Need to ensure a distinct output.bpl file for concurrent execution. In non-test

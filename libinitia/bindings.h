@@ -195,6 +195,25 @@ typedef struct {
 } InitiaCompilerArgument;
 
 typedef struct {
+  ByteSliceView module_name;
+} InitiaCompilerCoverageBytecodeOption;
+
+typedef struct {
+  ByteSliceView module_name;
+} InitiaCompilerCoverageSourceOption;
+
+typedef struct {
+  /**
+   * Whether function coverage summaries should be displayed
+   */
+  bool functions;
+  /**
+   * Output CSV data of coverage
+   */
+  bool output_csv;
+} InitiaCompilerCoverageSummaryOption;
+
+typedef struct {
   uint8_t _private[0];
 } db_t;
 
@@ -247,6 +266,47 @@ typedef struct {
   db_t *state;
   Db_vtable vtable;
 } Db;
+
+typedef struct {
+  /**
+   * Whether to include private declarations and implementations into the generated
+   * documentation. Defaults to false.
+   */
+  bool include_impl;
+  /**
+   * Whether to include specifications in the generated documentation. Defaults to false.
+   */
+  bool include_specs;
+  /**
+   * Whether specifications should be put side-by-side with declarations or into a separate
+   * section. Defaults to false.
+   */
+  bool specs_inlined;
+  /**
+   * Whether to include a dependency diagram. Defaults to false.
+   */
+  bool include_dep_diagram;
+  /**
+   * Whether details should be put into collapsed sections. This is not supported by
+   * all markdown, but the github dialect. Defaults to false.
+   */
+  bool collapsed_sections;
+  /**
+   * Package-relative path to an optional markdown template which is a used to create a
+   * landing page. Placeholders in this file are substituted as follows: `> {{move-toc}}` is
+   * replaced by a table of contents of all modules; `> {{move-index}}` is replaced by an index,
+   * and `> {{move-include NAME_OF_MODULE_OR_SCRIP}}` is replaced by the the full
+   * documentation of the named entity. (The given entity will not longer be placed in
+   * its own file, so this can be used to create a single manually populated page for
+   * the package.)
+   */
+  ByteSliceView landing_page_template;
+  /**
+   * Package-relative path to a file whose content is added to each generated markdown file.
+   * This can contain common markdown references fpr this package (e.g. `[move-book]: <url>`).
+   */
+  ByteSliceView references_file;
+} InitiaCompilerDocgenOption;
 
 typedef struct {
   uint8_t _private[0];
@@ -342,22 +402,10 @@ typedef struct {
 
 typedef struct {
   /**
-   * Bound the amount of gas used by any one test.
-   */
-  uint64_t gas_limit;
-  /**
    * A filter string to determine which unit tests to run. A unit test will be run only if it
    * contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
    */
   ByteSliceView filter;
-  /**
-   * List all tests
-   */
-  bool list;
-  /**
-   * Number of threads to use for running tests.
-   */
-  size_t num_threads;
   /**
    * Report test statistics at the end of testing
    */
@@ -370,15 +418,6 @@ typedef struct {
    * Ignore compiler's warning, and continue run tests
    */
   bool ignore_compile_warnings;
-  /**
-   * Use the stackless bytecode interpreter to run the tests and cross check its results with
-   * the execution result from Move VM.
-   */
-  bool check_stackless_vm;
-  /**
-   * Verbose mode
-   */
-  bool verbose_mode;
   /**
    * Collect coverage information for later use with the various `package coverage` subcommands
    */
@@ -399,6 +438,18 @@ UnmanagedVector convert_module_name(UnmanagedVector *errmsg,
                                     ByteSliceView precompiled,
                                     ByteSliceView module_name);
 
+UnmanagedVector coverage_bytecode_move_package(UnmanagedVector *errmsg,
+                                               InitiaCompilerArgument initia_args,
+                                               InitiaCompilerCoverageBytecodeOption coverage_opt);
+
+UnmanagedVector coverage_source_move_package(UnmanagedVector *errmsg,
+                                             InitiaCompilerArgument initia_args,
+                                             InitiaCompilerCoverageSourceOption coverage_opt);
+
+UnmanagedVector coverage_summary_move_package(UnmanagedVector *errmsg,
+                                              InitiaCompilerArgument initia_args,
+                                              InitiaCompilerCoverageSummaryOption coverage_opt);
+
 UnmanagedVector create_new_move_package(UnmanagedVector *errmsg,
                                         InitiaCompilerArgument initia_args,
                                         ByteSliceView name_view);
@@ -418,6 +469,10 @@ UnmanagedVector decode_move_value(Db db,
 UnmanagedVector decode_script_bytes(UnmanagedVector *errmsg, ByteSliceView script_bytes);
 
 void destroy_unmanaged_vector(UnmanagedVector v);
+
+UnmanagedVector docgen_move_package(UnmanagedVector *errmsg,
+                                    InitiaCompilerArgument initia_args,
+                                    InitiaCompilerDocgenOption docgen_opt);
 
 UnmanagedVector execute_contract(vm_t *vm_ptr,
                                  Db db,
@@ -451,6 +506,7 @@ void initialize(vm_t *vm_ptr,
                 ByteSliceView env_payload,
                 ByteSliceView module_bundle_payload,
                 bool allow_arbitrary,
+                ByteSliceView allowed_publishers_payload,
                 UnmanagedVector *errmsg);
 
 void mark_loader_cache_as_invalid(vm_t *vm_ptr, UnmanagedVector *errmsg);

@@ -9,6 +9,8 @@ import (
 	"syscall"
 
 	compiler "github.com/initia-labs/initiavm/types/compiler"
+	coveragetypes "github.com/initia-labs/initiavm/types/compiler/coverage"
+	docgentypes "github.com/initia-labs/initiavm/types/compiler/docgen"
 	provetypes "github.com/initia-labs/initiavm/types/compiler/prove"
 	testtypes "github.com/initia-labs/initiavm/types/compiler/test"
 )
@@ -78,21 +80,147 @@ func TestContract(arg compiler.InitiaCompilerArgument, testConfig testtypes.Test
 		},
 	}
 	testOpt := C.InitiaCompilerTestOption{
-		gas_limit:               cu64(testConfig.GasLimit),
 		filter:                  filterBytesView,
-		list:                    cbool(testConfig.List),
-		num_threads:             cusize(testConfig.NumThreads),
 		report_statistics:       cbool(testConfig.ReportStatistics),
 		report_storage_on_error: cbool(testConfig.ReportStorageOnError),
 		ignore_compile_warnings: cbool(testConfig.IgnoreCompileWarnings),
-		check_stackless_vm:      cbool(testConfig.CheckStacklessVM),
-		verbose_mode:            cbool(testConfig.VerboseMode),
 		compute_coverage:        cbool(testConfig.ComputeCoverage),
 	}
 
 	res, err := C.test_move_package(&errmsg,
 		compArg,
 		testOpt,
+	)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return copyAndDestroyUnmanagedVector(res), err
+}
+
+func CoverageSummary(arg compiler.InitiaCompilerArgument, coverageSummaryConfig coveragetypes.CoverageSummaryConfig) ([]byte, error) {
+	var err error
+
+	errmsg := newUnmanagedVector(nil)
+	buildConfig := arg.BuildConfig
+
+	pathBytesView := makeView([]byte(arg.PackagePath))
+	defer runtime.KeepAlive(pathBytesView)
+	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
+	defer runtime.KeepAlive(installDirBytesView)
+
+	compArg := C.InitiaCompilerArgument{
+		package_path: pathBytesView,
+		verbose:      cbool(arg.Verbose),
+		build_config: C.InitiaCompilerBuildConfig{
+			dev_mode:                   cbool(buildConfig.DevMode),
+			test_mode:                  cbool(buildConfig.TestMode),
+			generate_docs:              cbool(buildConfig.GenerateDocs),
+			generate_abis:              cbool(buildConfig.GenerateABIs),
+			install_dir:                installDirBytesView,
+			force_recompilation:        cbool(buildConfig.ForceRecompilation),
+			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
+			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
+			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+		},
+	}
+	coverageSummaryOpt := C.InitiaCompilerCoverageSummaryOption{
+		functions:  cbool(coverageSummaryConfig.Functions),
+		output_csv: cbool(coverageSummaryConfig.OutputCSV),
+	}
+
+	res, err := C.coverage_summary_move_package(&errmsg,
+		compArg,
+		coverageSummaryOpt,
+	)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return copyAndDestroyUnmanagedVector(res), err
+}
+
+func CoverageSource(arg compiler.InitiaCompilerArgument, coverageSourceConfig coveragetypes.CoverageSourceConfig) ([]byte, error) {
+	var err error
+
+	errmsg := newUnmanagedVector(nil)
+	buildConfig := arg.BuildConfig
+
+	pathBytesView := makeView([]byte(arg.PackagePath))
+	defer runtime.KeepAlive(pathBytesView)
+	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
+	defer runtime.KeepAlive(installDirBytesView)
+	moduleNameBytesView := makeView([]byte(coverageSourceConfig.ModuleName))
+	defer runtime.KeepAlive(moduleNameBytesView)
+
+	compArg := C.InitiaCompilerArgument{
+		package_path: pathBytesView,
+		verbose:      cbool(arg.Verbose),
+		build_config: C.InitiaCompilerBuildConfig{
+			dev_mode:                   cbool(buildConfig.DevMode),
+			test_mode:                  cbool(buildConfig.TestMode),
+			generate_docs:              cbool(buildConfig.GenerateDocs),
+			generate_abis:              cbool(buildConfig.GenerateABIs),
+			install_dir:                installDirBytesView,
+			force_recompilation:        cbool(buildConfig.ForceRecompilation),
+			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
+			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
+			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+		},
+	}
+	coverageSourceOpt := C.InitiaCompilerCoverageSourceOption{
+		module_name: moduleNameBytesView,
+	}
+
+	res, err := C.coverage_source_move_package(&errmsg,
+		compArg,
+		coverageSourceOpt,
+	)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return copyAndDestroyUnmanagedVector(res), err
+}
+
+func CoverageBytecode(arg compiler.InitiaCompilerArgument, coverageBytecodeConfig coveragetypes.CoverageBytecodeConfig) ([]byte, error) {
+	var err error
+
+	errmsg := newUnmanagedVector(nil)
+	buildConfig := arg.BuildConfig
+
+	pathBytesView := makeView([]byte(arg.PackagePath))
+	defer runtime.KeepAlive(pathBytesView)
+	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
+	defer runtime.KeepAlive(installDirBytesView)
+	moduleNameBytesView := makeView([]byte(coverageBytecodeConfig.ModuleName))
+	defer runtime.KeepAlive(moduleNameBytesView)
+
+	compArg := C.InitiaCompilerArgument{
+		package_path: pathBytesView,
+		verbose:      cbool(arg.Verbose),
+		build_config: C.InitiaCompilerBuildConfig{
+			dev_mode:                   cbool(buildConfig.DevMode),
+			test_mode:                  cbool(buildConfig.TestMode),
+			generate_docs:              cbool(buildConfig.GenerateDocs),
+			generate_abis:              cbool(buildConfig.GenerateABIs),
+			install_dir:                installDirBytesView,
+			force_recompilation:        cbool(buildConfig.ForceRecompilation),
+			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
+			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
+			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+		},
+	}
+	coverageBytecodeOpt := C.InitiaCompilerCoverageBytecodeOption{
+		module_name: moduleNameBytesView,
+	}
+
+	res, err := C.coverage_bytecode_move_package(&errmsg,
+		compArg,
+		coverageBytecodeOpt,
 	)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
@@ -152,6 +280,58 @@ func ProveContract(arg compiler.InitiaCompilerArgument, proveConfig provetypes.P
 	res, err := C.prove_move_package(&errmsg,
 		compArg,
 		proveOpt,
+	)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return copyAndDestroyUnmanagedVector(res), err
+}
+
+func Docgen(arg compiler.InitiaCompilerArgument, docgenOption docgentypes.DocgenConfig) ([]byte, error) {
+	var err error
+
+	errmsg := newUnmanagedVector(nil)
+	buildConfig := arg.BuildConfig
+
+	pathBytesView := makeView([]byte(arg.PackagePath))
+	defer runtime.KeepAlive(pathBytesView)
+	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
+	defer runtime.KeepAlive(installDirBytesView)
+	landingPageTemplateBytesView := makeView([]byte(docgenOption.LandingPageTemplate))
+	defer runtime.KeepAlive(landingPageTemplateBytesView)
+	referencesFileBytesView := makeView([]byte(docgenOption.ReferencesFile))
+	defer runtime.KeepAlive(referencesFileBytesView)
+
+	compArg := C.InitiaCompilerArgument{
+		package_path: pathBytesView,
+		verbose:      cbool(arg.Verbose),
+		build_config: C.InitiaCompilerBuildConfig{
+			dev_mode:                   cbool(buildConfig.DevMode),
+			test_mode:                  cbool(buildConfig.TestMode),
+			generate_docs:              cbool(buildConfig.GenerateDocs),
+			generate_abis:              cbool(buildConfig.GenerateABIs),
+			install_dir:                installDirBytesView,
+			force_recompilation:        cbool(buildConfig.ForceRecompilation),
+			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
+			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
+			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+		},
+	}
+	docgenOpt := C.InitiaCompilerDocgenOption{
+		include_impl:          cbool(docgenOption.IncludeImpl),
+		include_specs:         cbool(docgenOption.IncludeSpecs),
+		specs_inlined:         cbool(docgenOption.SpecsInlined),
+		include_dep_diagram:   cbool(docgenOption.IncludeDepDiagram),
+		collapsed_sections:    cbool(docgenOption.CollapsedSections),
+		landing_page_template: landingPageTemplateBytesView,
+		references_file:       referencesFileBytesView,
+	}
+
+	res, err := C.docgen_move_package(&errmsg,
+		compArg,
+		docgenOpt,
 	)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,

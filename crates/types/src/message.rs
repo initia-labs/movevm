@@ -114,7 +114,7 @@ impl From<MessagePayloadType> for u8 {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct MessageOutput {
     events: JsonEvents,
     write_set: WriteSet,
@@ -130,22 +130,8 @@ pub struct MessageOutput {
     new_published_modules_loaded: bool,
 }
 
-impl Default for MessageOutput {
-    fn default() -> Self {
-        MessageOutput {
-            events: JsonEvents::default(),
-            write_set: WriteSet::default(),
-            staking_change_set: StakingChangeSet::default(),
-            cosmos_messages: CosmosMessages::default(),
-            new_accounts: Accounts::default(),
-            gas_used: 0,
-            gas_usage_set: GasUsageSet::default(),
-            new_published_modules_loaded: false,
-        }
-    }
-}
-
 impl MessageOutput {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         events: JsonEvents,
         write_set: WriteSet,
@@ -181,11 +167,11 @@ impl MessageOutput {
     }
 
     pub fn cosmos_messages(&self) -> &CosmosMessages {
-        &&self.cosmos_messages
+        &self.cosmos_messages
     }
 
     pub fn new_accounts(&self) -> &Accounts {
-        &&self.new_accounts
+        &self.new_accounts
     }
 
     pub fn gas_used(&self) -> u64 {

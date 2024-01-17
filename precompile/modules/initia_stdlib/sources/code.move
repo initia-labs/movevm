@@ -11,7 +11,10 @@ module initia_std::code {
     // Code Publishing
 
     struct ModuleStore has key {
-        allow_arbitrary: bool
+        allow_arbitrary: bool,
+        /// It is a list of addresses with permission to distribute contracts, 
+        /// and an empty list is interpreted as allowing anyone to distribute.
+        allowed_publishers: vector<address>,
     }
 
     struct MetadataStore has key {
@@ -23,6 +26,7 @@ module initia_std::code {
         upgrade_policy: u8
     }
 
+    #[event]
     struct ModulePublishedEvent has store, drop {
         module_id: String,
         upgrade_policy: u8,
@@ -42,6 +46,9 @@ module initia_std::code {
 
     /// The operation is expected to be executed by chain signer.
     const EINVALID_CHAIN_OPERATOR: u64 = 0x5;
+
+    /// allowed_publishers argument is invalid.
+    const EINVALID_ALLOWED_PUBLISHERS: u64 = 0x6;
 
     /// Whether unconditional code upgrade with no compatibility check is allowed. This
     /// publication mode should only be used for modules which aren't shared with user others.
@@ -65,12 +72,18 @@ module initia_std::code {
     fun init_module(chain: &signer) {
         move_to(chain, ModuleStore {
             allow_arbitrary: false,
+            allowed_publishers: vector[],
         });
     } 
 
-    public entry fun init_genesis(chain: &signer, module_ids: vector<String>, allow_arbitrary: bool) acquires ModuleStore {
+    public entry fun init_genesis(
+        chain: &signer, 
+        module_ids: vector<String>, 
+        allow_arbitrary: bool,
+        allowed_publishers: vector<address>,
+    ) acquires ModuleStore {
         assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EINVALID_CHAIN_OPERATOR));
-        
+
         let metadata_table = table::new<String, ModuleMetadata>();
         vector::for_each_ref(&module_ids, 
             |module_id| {
@@ -84,12 +97,30 @@ module initia_std::code {
             metadata: metadata_table,
         });
 
-        set_allow_arbitrary(allow_arbitrary);
+        set_allow_arbitrary(chain, allow_arbitrary);
+        set_allowed_publishers(chain, allowed_publishers);
     }
 
-    public entry fun set_allow_arbitrary(allow_arbitrary: bool) acquires ModuleStore {
+    public entry fun set_allow_arbitrary(chain: &signer, allow_arbitrary: bool) acquires ModuleStore {
+        assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EINVALID_CHAIN_OPERATOR));
+
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.allow_arbitrary = allow_arbitrary;
+    }
+
+    public entry fun set_allowed_publishers(chain: &signer, allowed_publishers: vector<address>) acquires ModuleStore {
+        assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EINVALID_CHAIN_OPERATOR));
+        assert_allowed(&allowed_publishers, @initia_std);
+
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.allowed_publishers = allowed_publishers;
+    }
+
+    fun assert_allowed(allowed_publishers: &vector<address>, addr: address) {
+        assert!(
+            vector::is_empty(allowed_publishers) || vector::contains(allowed_publishers, &addr), 
+            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
+        )
     }
 
     /// Publishes a package at the given signer's address. The caller must provide package metadata describing the
@@ -111,6 +142,8 @@ module initia_std::code {
         );
 
         let addr = signer::address_of(owner);
+        assert_allowed(&module_store.allowed_publishers, addr);
+
         if (!exists<MetadataStore>(addr)) {
             move_to<MetadataStore>(owner, MetadataStore {
                 metadata: table::new(),

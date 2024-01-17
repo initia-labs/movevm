@@ -18,6 +18,12 @@ pub struct MockChain {
     map: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
+impl Default for MockChain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockChain {
     pub fn new() -> Self {
         Self {
@@ -50,7 +56,7 @@ pub struct MockState {
 type BTreeMapRecordRef<'a> = (&'a Vec<u8>, &'a Vec<u8>);
 
 impl MockState {
-    fn write_op(&mut self, ref ap: AccessPath, ref blob_opt: Op<Vec<u8>>) {
+    fn write_op(&mut self, ap: AccessPath, blob_opt: Op<Vec<u8>>) {
         match blob_opt {
             Op::New(blob) | Op::Modify(blob) => {
                 self.map.insert(ap.to_bytes().unwrap(), blob.clone());
@@ -70,7 +76,10 @@ impl MockState {
 
 impl StateView for MockState {
     fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Bytes>> {
-        Ok(self.map.get(&access_path.to_bytes()?).map(|v| v.clone().into()))
+        Ok(self
+            .map
+            .get(&access_path.to_bytes()?)
+            .map(|v| v.clone().into()))
     }
 }
 
@@ -150,7 +159,7 @@ impl<'r> TableView for MockTableState<'r> {
 
     fn next_key(&mut self, iterator_id: u32) -> anyhow::Result<Option<Vec<u8>>> {
         match self.iterators.get_mut(iterator_id as usize) {
-            Some(iterator) => Ok(match iterator.get(0).map(|v| v.to_vec()) {
+            Some(iterator) => Ok(match iterator.first().map(|v| v.to_vec()) {
                 Some(key_bytes) => {
                     iterator.remove(0);
                     Some(key_bytes)
@@ -163,7 +172,7 @@ impl<'r> TableView for MockTableState<'r> {
 }
 
 fn prefix_end_bytes(prefix: Vec<u8>) -> Vec<u8> {
-    if prefix.len() == 0 {
+    if prefix.is_empty() {
         return vec![];
     }
 
@@ -177,7 +186,7 @@ fn prefix_end_bytes(prefix: Vec<u8>) -> Vec<u8> {
 
         end.pop();
 
-        if end.len() == 0 {
+        if end.is_empty() {
             break;
         }
     }
@@ -273,8 +282,15 @@ impl MockAccountAPI {
         }
     }
 
-    pub fn set_account(&mut self, addr: AccountAddress, account_number: u64, sequence: u64, account_type: u8) {
-        self.accounts.insert(addr, (account_number, sequence, account_type));
+    pub fn set_account(
+        &mut self,
+        addr: AccountAddress,
+        account_number: u64,
+        sequence: u64,
+        account_type: u8,
+    ) {
+        self.accounts
+            .insert(addr, (account_number, sequence, account_type));
     }
 }
 
@@ -285,6 +301,11 @@ impl MockAccountAPI {
         } else {
             Ok((false, 0, 0, 0))
         }
+    }
+}
+impl Default for MockAccountAPI {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -321,6 +342,12 @@ impl MockStakingAPI {
                 self.validators.insert(validator, ratios);
             }
         }
+    }
+}
+
+impl Default for MockStakingAPI {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -405,6 +432,18 @@ impl BlankAPIImpl {
             account_api: BlankAccountAPIImpl,
             staking_api: BlankStakingAPIImpl,
         }
+    }
+}
+
+impl Default for BlankAPIImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for BlankTableViewImpl {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

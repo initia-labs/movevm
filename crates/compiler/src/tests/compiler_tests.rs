@@ -4,7 +4,7 @@ use serial_test::serial;
 use std::env;
 use std::{env::temp_dir, path::PathBuf};
 
-use crate::{compile, Clean, Command, New};
+use crate::{execute, Clean, Command, New};
 
 const MOVE_TEST_PATH: &str = "../../precompile/modules/tests";
 
@@ -12,10 +12,11 @@ const MOVE_TEST_PATH: &str = "../../precompile/modules/tests";
 #[serial]
 fn test_move_test() {
     let package_path = path_in_crate(MOVE_TEST_PATH);
-
-    let mut build_config = BuildConfig::default();
-    build_config.test_mode = true;
-    build_config.install_dir = Some(package_path.join("build-test"));
+    let build_config = BuildConfig {
+        test_mode: true,
+        install_dir: Some(package_path.join("build-test")),
+        ..Default::default()
+    };
 
     let move_args = Move {
         package_path: Some(package_path.canonicalize().unwrap()),
@@ -37,33 +38,35 @@ fn test_move_test() {
     };
     let cmd = Command::Test(test_arg);
 
-    let res = compile(move_args, cmd).expect("compiler err");
-    assert!(res == Vec::from("ok"));
+    execute(move_args, cmd).expect("compiler err");
 }
 
 #[test]
 #[serial]
 fn test_move_compile_in_devmode() {
     let package_path = path_in_crate(MOVE_TEST_PATH);
-    let mut build_config = BuildConfig::default();
-    build_config.dev_mode = true;
+    let build_config = BuildConfig {
+        dev_mode: true,
+        ..Default::default()
+    };
     let move_args = Move {
         package_path: Some(package_path.canonicalize().unwrap()),
         verbose: true,
         build_config,
     };
 
-    let res =
-        compile(move_args, Command::Build(move_cli::base::build::Build)).expect("compiler err");
-    assert!(res == Vec::from("ok"));
+    execute(move_args, Command::Build(move_cli::base::build::Build)).expect("compiler err");
 }
 
 #[test]
 #[serial] // NOTE: should be run after test_move_test()
 fn test_move_clean() {
     let package_path = path_in_crate(MOVE_TEST_PATH);
-    let mut build_config = BuildConfig::default();
-    build_config.install_dir = Some(package_path.join("build-test"));
+    let build_config = BuildConfig {
+        install_dir: Some(package_path.join("build-test")),
+        ..Default::default()
+    };
+
     let move_args = Move {
         package_path: Some(package_path.canonicalize().unwrap()),
         verbose: true,
@@ -76,8 +79,7 @@ fn test_move_clean() {
         force: true,
     };
 
-    let res = compile(move_args, Command::Clean(c)).expect("compiler err");
-    assert!(res == Vec::from("ok"));
+    execute(move_args, Command::Clean(c)).expect("compiler err");
 }
 
 #[test]
@@ -91,9 +93,7 @@ fn test_move_compile() {
         build_config,
     };
 
-    let res =
-        compile(move_args, Command::Build(move_cli::base::build::Build)).expect("compiler err");
-    assert!(res == Vec::from("ok"));
+    execute(move_args, Command::Build(move_cli::base::build::Build)).expect("compiler err");
 }
 
 /* it requires 3rd party executables like boogie and one of z4 or cvc5
@@ -132,14 +132,13 @@ fn test_move_new() {
         build_config,
     };
 
-    let res = compile(
+    execute(
         move_args,
         Command::New(New {
             name: String::from("test_move_package"),
         }),
     )
     .expect("compiler err");
-    assert!(res == Vec::from("ok"));
 
     // remove temporary package
     assert!(std::fs::remove_dir_all(temp_package_path).is_ok());

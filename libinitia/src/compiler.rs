@@ -1,19 +1,27 @@
+use log::LevelFilter;
+use move_docgen::DocgenOptions;
 use std::{path::Path, str::FromStr};
 
 use crate::{error::Error, ByteSliceView};
 
-use initia_compiler::{compile as initia_compile, prover::ProverOptions};
-use log::LevelFilter;
-use move_cli::{base::test::Test, Move};
+use initia_compiler::{self, prover::ProverOptions};
+
+use move_cli::{
+    base::{
+        coverage::{Coverage, CoverageSummaryOptions},
+        test::Test,
+    },
+    Move,
+};
 use move_package::{Architecture, BuildConfig, CompilerConfig};
 
 pub use initia_compiler::Command;
 
-pub fn compile(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
+pub fn execute(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
     let action = cmd.to_string();
     let verbose = move_args.verbose;
 
-    match initia_compile(move_args, cmd) {
+    match initia_compiler::execute(move_args, cmd) {
         Ok(_) => Ok(Vec::from("ok")),
         Err(e) => {
             if verbose {
@@ -58,10 +66,10 @@ pub struct InitiaCompilerArgument {
 
 impl From<InitiaCompilerArgument> for Move {
     fn from(val: InitiaCompilerArgument) -> Self {
-        let package_path = match val.package_path.read() {
-            Some(s) => Some(Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
-            None => None,
-        };
+        let package_path = val
+            .package_path
+            .read()
+            .map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf());
         Self {
             package_path,
             verbose: val.verbose,
@@ -122,26 +130,15 @@ impl From<InitiaCompilerBuildConfig> for BuildConfig {
 
 #[repr(C)]
 pub struct InitiaCompilerTestOption {
-    /// Bound the amount of gas used by any one test.
-    pub gas_limit: u64,
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     pub filter: ByteSliceView,
-    /// List all tests
-    pub list: bool,
-    /// Number of threads to use for running tests.
-    pub num_threads: usize,
     /// Report test statistics at the end of testing
     pub report_statistics: bool,
     /// Show the storage state at the end of execution of a failing test
     pub report_storage_on_error: bool,
     /// Ignore compiler's warning, and continue run tests
     pub ignore_compile_warnings: bool,
-    /// Use the stackless bytecode interpreter to run the tests and cross check its results with
-    /// the execution result from Move VM.
-    pub check_stackless_vm: bool,
-    /// Verbose mode
-    pub verbose_mode: bool,
     /// Collect coverage information for later use with the various `package coverage` subcommands
     pub compute_coverage: bool,
 }
@@ -149,19 +146,67 @@ pub struct InitiaCompilerTestOption {
 impl From<InitiaCompilerTestOption> for Test {
     fn from(val: InitiaCompilerTestOption) -> Self {
         Self {
-            gas_limit: match val.gas_limit {
-                0 => None,
-                _ => Some(val.gas_limit),
-            },
             filter: val.filter.into(),
-            list: val.list,
-            num_threads: val.num_threads,
             report_statistics: val.report_statistics,
             report_storage_on_error: val.report_storage_on_error,
             ignore_compile_warnings: val.ignore_compile_warnings,
-            check_stackless_vm: val.check_stackless_vm,
-            verbose_mode: val.verbose_mode,
             compute_coverage: val.compute_coverage,
+            check_stackless_vm: false,
+            gas_limit: None,
+            list: false,
+            num_threads: 8,
+            verbose_mode: false,
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerCoverageSummaryOption {
+    /// Whether function coverage summaries should be displayed
+    functions: bool,
+    /// Output CSV data of coverage
+    output_csv: bool,
+}
+
+impl From<InitiaCompilerCoverageSummaryOption> for Coverage {
+    fn from(val: InitiaCompilerCoverageSummaryOption) -> Self {
+        Self {
+            options: CoverageSummaryOptions::Summary {
+                functions: val.functions,
+                output_csv: val.output_csv,
+            },
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerCoverageSourceOption {
+    module_name: ByteSliceView,
+}
+
+impl From<InitiaCompilerCoverageSourceOption> for Coverage {
+    fn from(val: InitiaCompilerCoverageSourceOption) -> Self {
+        let module_name: Option<String> = val.module_name.into();
+        Self {
+            options: CoverageSummaryOptions::Source {
+                module_name: module_name.unwrap(),
+            },
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerCoverageBytecodeOption {
+    module_name: ByteSliceView,
+}
+
+impl From<InitiaCompilerCoverageBytecodeOption> for Coverage {
+    fn from(val: InitiaCompilerCoverageBytecodeOption) -> Self {
+        let module_name: Option<String> = val.module_name.into();
+        Self {
+            options: CoverageSummaryOptions::Bytecode {
+                module_name: module_name.unwrap(),
+            },
         }
     }
 }
@@ -205,10 +250,7 @@ pub struct InitiaCompilerProveOption {
 impl From<InitiaCompilerProveOption> for ProverOptions {
     fn from(val: InitiaCompilerProveOption) -> Self {
         let verbosity_str: Option<String> = val.verbosity.into();
-        let verbosity = match verbosity_str {
-            Some(s) => Some(LevelFilter::from_str(s.as_str()).unwrap()),
-            None => None,
-        };
+        let verbosity = verbosity_str.map(|s| LevelFilter::from_str(s.as_str()).unwrap());
         Self {
             verbosity,
             filter: val.filter.into(),
@@ -220,7 +262,7 @@ impl From<InitiaCompilerProveOption> for ProverOptions {
             vc_timeout: val.vc_timeout,
             check_inconsistency: val.check_inconsistency,
             keep_loops: val.keep_loops,
-            loop_unroll: if val.loop_unroll <= 0 {
+            loop_unroll: if val.loop_unroll == 0 {
                 None
             } else {
                 Some(val.loop_unroll)
@@ -228,6 +270,59 @@ impl From<InitiaCompilerProveOption> for ProverOptions {
             stable_test_output: val.stable_test_output,
             dump: val.dump,
             for_test: val.for_test,
+            ..Default::default()
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InitiaCompilerDocgenOption {
+    /// Whether to include private declarations and implementations into the generated
+    /// documentation. Defaults to false.
+    pub include_impl: bool,
+
+    /// Whether to include specifications in the generated documentation. Defaults to false.
+    pub include_specs: bool,
+
+    /// Whether specifications should be put side-by-side with declarations or into a separate
+    /// section. Defaults to false.
+    pub specs_inlined: bool,
+
+    /// Whether to include a dependency diagram. Defaults to false.
+    pub include_dep_diagram: bool,
+
+    /// Whether details should be put into collapsed sections. This is not supported by
+    /// all markdown, but the github dialect. Defaults to false.
+    pub collapsed_sections: bool,
+
+    /// Package-relative path to an optional markdown template which is a used to create a
+    /// landing page. Placeholders in this file are substituted as follows: `> {{move-toc}}` is
+    /// replaced by a table of contents of all modules; `> {{move-index}}` is replaced by an index,
+    /// and `> {{move-include NAME_OF_MODULE_OR_SCRIP}}` is replaced by the the full
+    /// documentation of the named entity. (The given entity will not longer be placed in
+    /// its own file, so this can be used to create a single manually populated page for
+    /// the package.)
+    pub landing_page_template: ByteSliceView,
+
+    /// Package-relative path to a file whose content is added to each generated markdown file.
+    /// This can contain common markdown references fpr this package (e.g. `[move-book]: <url>`).
+    pub references_file: ByteSliceView,
+}
+
+impl From<InitiaCompilerDocgenOption> for DocgenOptions {
+    fn from(val: InitiaCompilerDocgenOption) -> Self {
+        let landing_page_template: Option<String> = val.landing_page_template.into();
+
+        Self {
+            include_private_fun: val.include_impl,
+            include_specs: val.include_specs,
+            specs_inlined: val.specs_inlined,
+            collapsed_sections: val.collapsed_sections,
+            root_doc_templates: landing_page_template
+                .as_ref()
+                .map(|s| vec![s.clone()])
+                .unwrap_or_default(),
+            references_file: val.references_file.into(),
             ..Default::default()
         }
     }

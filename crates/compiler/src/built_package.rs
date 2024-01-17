@@ -1,12 +1,11 @@
-use crate::{docgen::DocgenOptions, extended_checks};
+use crate::{docgen::DocgenPackage, extended_checks};
 use anyhow::bail;
-use clap::Parser;
 use codespan_reporting::{
     diagnostic::Severity,
     term::termcolor::{ColorChoice, StandardStream},
 };
 use initia_types::metadata::{
-    RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0, METADATA_V0_MIN_FILE_FORMAT_VERSION,
+    self, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0, METADATA_V0_MIN_FILE_FORMAT_VERSION,
 };
 use itertools::Itertools;
 use move_binary_format::CompiledModule;
@@ -15,6 +14,7 @@ use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_core_types::{
     account_address::AccountAddress, language_storage::ModuleId, metadata::Metadata,
 };
+use move_docgen::DocgenOptions;
 use move_model::model::GlobalEnv;
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
@@ -27,65 +27,23 @@ use std::{
     path::{Path, PathBuf},
 };
 
-// TODO - new compiler option
-
 /// Represents a set of options for building artifacts from Move.
-#[derive(Debug, Clone, Parser, Serialize, Deserialize)]
-pub struct BuildOptions {
-    #[clap(long)]
-    pub with_srcs: bool,
-    #[clap(long)]
-    pub with_abis: bool,
-    #[clap(long)]
-    pub with_source_maps: bool,
-    #[clap(long, default_value = "true")]
-    pub with_error_map: bool,
-    #[clap(long)]
-    pub with_docs: bool,
-    /// Installation directory for compiled artifacts. Defaults to <package>/build.
-    #[clap(long, value_parser)]
-    pub install_dir: Option<PathBuf>,
-    #[clap(skip)] // TODO: have a parser for this; there is one in the CLI buts its  downstream
-    pub named_addresses: BTreeMap<String, AccountAddress>,
-    #[clap(skip)]
-    pub docgen_options: Option<DocgenOptions>,
-    #[clap(long)]
-    pub skip_fetch_latest_git_deps: bool,
-    #[clap(long)]
-    pub bytecode_version: Option<u32>,
-    #[clap(long)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitiaBuildOptions {
     pub dev_mode: bool,
-    #[clap(long)]
-    pub test_mode: bool,
-}
-
-// Because named_addresses has no parser, we can't use clap's default impl. This must be aligned
-// with defaults above.
-impl Default for BuildOptions {
-    fn default() -> Self {
-        Self {
-            with_srcs: false,
-            with_abis: false,
-            with_source_maps: false,
-            with_error_map: true,
-            with_docs: false,
-            install_dir: None,
-            named_addresses: Default::default(),
-            docgen_options: None,
-            // This is false by default, because it could accidentally pull new dependencies
-            // while in a test (and cause some havoc)
-            skip_fetch_latest_git_deps: false,
-            bytecode_version: None,
-            dev_mode: false,
-            test_mode: false,
-        }
-    }
+    pub with_docs: bool,
+    pub with_abis: bool,
+    pub install_dir: Option<PathBuf>,
+    pub named_addresses: BTreeMap<String, AccountAddress>,
+    pub docgen_options: Option<DocgenOptions>,
+    pub skip_fetch_latest_git_deps: bool,
+    pub bytecode_version: Option<u32>,
 }
 
 /// Represents a built package.  It allows to extract `PackageMetadata`. Can also be used to
 /// just build Move code and related artifacts.
 pub struct BuiltPackage {
-    options: BuildOptions,
+    config: BuildConfig,
     package_path: PathBuf,
     package: CompiledPackage,
 }
@@ -105,25 +63,24 @@ impl BuiltPackage {
     ///
     /// This function currently reports all Move compilation errors and warnings to stdout,
     /// and is not `Ok` if there was an error among those.
-    pub fn build(package_path: PathBuf, options: BuildOptions) -> anyhow::Result<Self> {
-        let build_config = BuildConfig {
-            dev_mode: options.dev_mode,
-            additional_named_addresses: options.named_addresses.clone(),
-            architecture: None,
-            generate_abis: options.with_abis,
-            generate_docs: options.with_docs,
-            generate_move_model: true,
-            install_dir: options.install_dir.clone(),
-            test_mode: options.test_mode,
-            force_recompilation: false,
-            fetch_deps_only: false,
-            skip_fetch_latest_git_deps: options.skip_fetch_latest_git_deps,
-            ..Default::default()
-        };
-
+    pub fn build(
+        package_path: PathBuf,
+        config: BuildConfig,
+        docgen_options: Option<DocgenOptions>,
+    ) -> anyhow::Result<Self> {
         eprintln!("Compiling, may take a little while to download git dependencies...");
+        let generate_docs = config.generate_docs || docgen_options.is_some();
+        let bytecode_version = config.compiler_config.bytecode_version;
+
+        // customize config
+        let mut new_config = config.clone();
+        new_config.architecture = None;
+        new_config.generate_docs = false;
+        new_config.generate_move_model = true;
+        new_config.compiler_config.known_attributes = metadata::get_all_attribute_names().clone();
+
         let (mut package, model_opt) =
-            build_config.compile_package_no_exit(&package_path, &mut stderr())?;
+            new_config.compile_package_no_exit(&package_path, &mut stderr())?;
 
         // Run extended checks as well derive runtime metadata
         let model = &model_opt.expect("move model");
@@ -149,16 +106,17 @@ impl BuiltPackage {
             compiled_pkg_path,
             &mut package,
             runtime_metadata,
-            options.bytecode_version,
+            bytecode_version,
         )?;
 
         // If enabled generate docs.
-        if options.with_docs {
-            let docgen = if let Some(opts) = options.docgen_options.clone() {
+        if generate_docs {
+            let docgen = if let Some(opts) = docgen_options {
                 opts
             } else {
                 DocgenOptions::default()
             };
+
             let dep_paths = package
                 .deps_compiled_units
                 .iter()
@@ -174,11 +132,17 @@ impl BuiltPackage {
                 })
                 .unique()
                 .collect::<Vec<_>>();
-            docgen.run(package_path.display().to_string(), dep_paths, model)?
+
+            DocgenPackage {
+                docgen_options: docgen,
+                build_config: config.clone(),
+                package_path: package_path.clone(),
+            }
+            .generate_docs(dep_paths, model)?
         }
 
         Ok(Self {
-            options,
+            config,
             package_path,
             package,
         })
@@ -206,7 +170,7 @@ impl BuiltPackage {
             .map(|unit_with_source| {
                 unit_with_source
                     .unit
-                    .serialize(self.options.bytecode_version)
+                    .serialize(self.config.compiler_config.bytecode_version)
             })
             .collect()
     }
@@ -233,7 +197,7 @@ impl BuiltPackage {
             .map(|unit_with_source| {
                 unit_with_source
                     .unit
-                    .serialize(self.options.bytecode_version)
+                    .serialize(self.config.compiler_config.bytecode_version)
             })
             .collect()
     }

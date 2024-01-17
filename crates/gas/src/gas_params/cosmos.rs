@@ -1,4 +1,4 @@
-use move_core_types::gas_algebra::InternalGas;
+use move_core_types::gas_algebra::{InternalGas, InternalGasPerArg};
 
 #[derive(Debug, Clone)]
 pub struct DelegateGasParameters {
@@ -16,7 +16,23 @@ pub struct TransferGasParameters {
 }
 
 #[derive(Debug, Clone)]
+pub struct NFTTransferGasParameters {
+    pub base: InternalGas,
+    pub per_token: InternalGasPerArg,
+}
+
+#[derive(Debug, Clone)]
 pub struct PayFeeGasParameters {
+    pub base: InternalGas,
+}
+
+#[derive(Debug, Clone)]
+pub struct InitiateTokenDepositGasParameters {
+    pub base: InternalGas,
+}
+
+#[derive(Debug, Clone)]
+pub struct InitiateTokenWithdrawalGasParameters {
     pub base: InternalGas,
 }
 
@@ -25,5 +41,8 @@ pub struct GasParameters {
     pub delegate: DelegateGasParameters,
     pub fund_community_pool: FundCommunityPoolGasParameters,
     pub transfer: TransferGasParameters,
+    pub nft_transfer: NFTTransferGasParameters,
     pub pay_fee: PayFeeGasParameters,
+    pub initiate_token_deposit: InitiateTokenDepositGasParameters,
+    pub initiate_token_withdrawal: InitiateTokenWithdrawalGasParameters,
 }

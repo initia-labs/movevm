@@ -1,5 +1,4 @@
 use crate::mocks::{BlankAPIImpl, BlankTableViewImpl};
-use once_cell::sync::Lazy;
 use initia_natives::{
     account::NativeAccountContext, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, staking::NativeStakingContext,
@@ -7,9 +6,10 @@ use initia_natives::{
 };
 use move_unit_test;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
+use once_cell::sync::Lazy;
 
 static mut BLANK_TABLE_RESOLVER: BlankTableViewImpl = BlankTableViewImpl;
-static MOCK_API: Lazy<BlankAPIImpl> = Lazy::new(|| BlankAPIImpl::new());
+static MOCK_API: Lazy<BlankAPIImpl> = Lazy::new(BlankAPIImpl::new);
 
 pub fn configure_for_unit_test() {
     move_unit_test::extensions::set_extension_hook(Box::new(unit_test_extensions_hook))
@@ -23,7 +23,7 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeBlockContext::new(0, 0));
     exts.add(NativeCodeContext::default());
     exts.add(NativeStakingContext::new(&MOCK_API.staking_api));
-    exts.add(NativeCosmosContext::new());
+    exts.add(NativeCosmosContext::default());
     exts.add(NativeTransactionContext::new([0; 32], [0; 32]));
     exts.add(NativeEventContext::default());
 }

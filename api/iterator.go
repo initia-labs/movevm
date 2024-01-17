@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	dbm "github.com/cometbft/cometbft-db"
+	dbm "github.com/cosmos/cosmos-db"
 )
 
 // frame stores all Iterators for one contract call

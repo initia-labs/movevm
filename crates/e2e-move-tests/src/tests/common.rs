@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use move_core_types::{account_address::AccountAddress, vm_status::VMStatus};
 
 type VMOutput = (VMStatus, MessageOutput, Option<String>);
+type StakingDelta = (Vec<u8>, Vec<(AccountAddress, (u64, u64))>);
 
 pub struct ExpectedOutput(pub Vec<ExpectedOutputItem>);
 
@@ -12,7 +13,7 @@ impl ExpectedOutput {
     pub fn new(
         vm_status: VMStatus,
         response: Option<String>,
-        staking_delta: Option<Vec<(Vec<u8>, Vec<(AccountAddress, (u64, u64))>)>>,
+        staking_delta: Option<Vec<StakingDelta>>,
         cosmos_messages: Option<Vec<CosmosMessage>>,
     ) -> Self {
         let mut items = vec![ExpectedOutputItem::VMStatusReturn(vm_status)];

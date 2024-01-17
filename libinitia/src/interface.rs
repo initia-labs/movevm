@@ -3,15 +3,17 @@ use std::path::Path;
 
 use crate::args::VM_ARG;
 use crate::compiler::{
-    InitiaCompilerArgument, InitiaCompilerProveOption, InitiaCompilerTestOption,
+    self, InitiaCompilerArgument, InitiaCompilerCoverageBytecodeOption,
+    InitiaCompilerCoverageSourceOption, InitiaCompilerCoverageSummaryOption,
+    InitiaCompilerDocgenOption, InitiaCompilerProveOption, InitiaCompilerTestOption,
 };
 use crate::error::handle_c_error_default;
 use crate::error::{handle_c_error_binary, Error};
 use crate::move_api::handler as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
 
-use crate::compiler::{compile, Command};
-use initia_compiler::New;
+use crate::compiler::Command;
+use initia_compiler::{self, New};
 use initia_types::entry_function::EntryFunction;
 use initia_types::env::Env;
 use initia_types::message::Message;
@@ -60,15 +62,26 @@ pub extern "C" fn initialize(
     env_payload: ByteSliceView,
     module_bundle_payload: ByteSliceView,
     allow_arbitrary: bool,
+    allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
-) -> () {
+) {
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
+    let allowed_publishers: Vec<AccountAddress> =
+        bcs::from_bytes(allowed_publishers_payload.read().unwrap()).unwrap();
 
     let res = match to_vm(vm_ptr) {
         Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::initialize_vm(vm, db, api, env, module_bundle, allow_arbitrary)
+            vm::initialize_vm(
+                vm,
+                db,
+                api,
+                env,
+                module_bundle,
+                allow_arbitrary,
+                allowed_publishers,
+            )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(VM_ARG)),
@@ -167,7 +180,7 @@ pub extern "C" fn execute_view_function(
 pub extern "C" fn mark_loader_cache_as_invalid(
     vm_ptr: *mut vm_t,
     errmsg: Option<&mut UnmanagedVector>,
-) -> () {
+) {
     let res = match to_vm(vm_ptr) {
         Some(vm) => catch_unwind(AssertUnwindSafe(move || {
             vm::mark_loader_cache_as_invalid(vm);
@@ -291,8 +304,10 @@ pub extern "C" fn build_move_package(
 ) -> UnmanagedVector {
     let cmd = Command::Build(Build);
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -306,8 +321,78 @@ pub extern "C" fn test_move_package(
 ) -> UnmanagedVector {
     let cmd = Command::Test(test_opt.into());
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn coverage_summary_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    coverage_opt: InitiaCompilerCoverageSummaryOption,
+) -> UnmanagedVector {
+    let cmd = Command::Coverage(coverage_opt.into());
+
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn coverage_source_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    coverage_opt: InitiaCompilerCoverageSourceOption,
+) -> UnmanagedVector {
+    let cmd = Command::Coverage(coverage_opt.into());
+
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn coverage_bytecode_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    coverage_opt: InitiaCompilerCoverageBytecodeOption,
+) -> UnmanagedVector {
+    let cmd = Command::Coverage(coverage_opt.into());
+
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+#[no_mangle]
+pub extern "C" fn docgen_move_package(
+    errmsg: Option<&mut UnmanagedVector>,
+    initia_args: InitiaCompilerArgument,
+    docgen_opt: InitiaCompilerDocgenOption,
+) -> UnmanagedVector {
+    let cmd = Command::Document(docgen_opt.into());
+
+    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -322,11 +407,13 @@ pub extern "C" fn create_new_move_package(
     let name: Option<String> = name_view.into();
 
     let cmd = Command::New(New {
-        name: name.unwrap_or(String::new()),
+        name: name.unwrap_or_default(),
     });
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -346,8 +433,10 @@ pub extern "C" fn clean_move_package(
         force,
     });
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -361,8 +450,10 @@ pub extern "C" fn prove_move_package(
 ) -> UnmanagedVector {
     let cmd = Command::Prove(prove_opt.into());
 
-    let res = catch_unwind(AssertUnwindSafe(move || compile(initia_args.into(), cmd)))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        compiler::execute(initia_args.into(), cmd)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -406,11 +497,11 @@ pub extern "C" fn stringify_struct_tag(
 fn generate_default_move_cli(package_path_slice: Option<ByteSliceView>, verbose: bool) -> Move {
     let package_path = match package_path_slice {
         None => None,
-        Some(slice) => match slice.read() {
-            Some(s) => Some(Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
-            None => None,
-        },
+        Some(slice) => slice
+            .read()
+            .map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
     };
+
     Move {
         package_path,
         verbose,

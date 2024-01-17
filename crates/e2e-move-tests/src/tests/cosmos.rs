@@ -11,6 +11,7 @@ use sha3::{Digest, Sha3_256};
 const STAKING_SYMBOL: &[u8] = b"ustake";
 const FEE_A_SYMBOL: &[u8] = b"ufoo";
 const FEE_B_SYMBOL: &[u8] = b"ubar";
+const COLLECTION_NAME: &[u8] = b"collection";
 
 fn staking_metadata() -> AccountAddress {
     let mut hasher = Sha3_256::new();
@@ -36,15 +37,23 @@ fn fee_b_metadata() -> AccountAddress {
     AccountAddress::from_bytes(hasher.finalize()).unwrap()
 }
 
-fn run_tests(
-    tests: Vec<(
-        AccountAddress,
-        &str,
-        Vec<TypeTag>,
-        Vec<Vec<u8>>,
-        ExpectedOutput,
-    )>,
-) {
+fn collection_addr() -> AccountAddress {
+    let mut hasher = Sha3_256::new();
+    hasher.update(AccountAddress::ONE.to_vec());
+    hasher.update(COLLECTION_NAME);
+    hasher.update(vec![0xFE]);
+    AccountAddress::from_bytes(hasher.finalize()).unwrap()
+}
+
+type TestInput<'a> = (
+    AccountAddress,
+    &'a str,
+    Vec<TypeTag>,
+    Vec<Vec<u8>>,
+    ExpectedOutput,
+);
+
+fn run_tests(tests: Vec<TestInput>) {
     let mut h = MoveHarness::new();
 
     h.initialize();
@@ -79,7 +88,7 @@ fn test_cosmos_delegate() {
         vec![
             vec![0],
             bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
-            bcs::to_bytes(STAKING_SYMBOL).unwrap(),
+            bcs::to_bytes(&STAKING_SYMBOL.to_vec()).unwrap(),
             6u8.to_le_bytes().to_vec(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
@@ -127,7 +136,7 @@ fn test_cosmos_fund_community_pool() {
         vec![
             vec![0],
             bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
-            bcs::to_bytes(STAKING_SYMBOL).unwrap(),
+            bcs::to_bytes(&STAKING_SYMBOL.to_vec()).unwrap(),
             6u8.to_le_bytes().to_vec(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
@@ -171,7 +180,7 @@ fn test_cosmos_transfer() {
     let revision_height = 2u64;
     let timeout_timestamp = 100u64;
     let memo = "memo".to_string();
-    
+
     let test_initialize_coin = (
         AccountAddress::ONE,
         "0x1::managed_coin::initialize",
@@ -179,7 +188,7 @@ fn test_cosmos_transfer() {
         vec![
             vec![0],
             bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
-            bcs::to_bytes(STAKING_SYMBOL).unwrap(),
+            bcs::to_bytes(&STAKING_SYMBOL.to_vec()).unwrap(),
             6u8.to_le_bytes().to_vec(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
@@ -228,6 +237,81 @@ fn test_cosmos_transfer() {
 }
 
 #[test]
+fn test_cosmos_nft_transfer() {
+    let mut tests = vec![];
+    let sender = AccountAddress::random();
+    let receiver = "receiver".to_string();
+    let collection = collection_addr();
+    let token_ids = vec!["id1".to_string(), "id2".to_string()];
+    let source_port = "port".to_string();
+    let source_channel = "channel".to_string();
+    let revision_number = 1u64;
+    let revision_height = 2u64;
+    let timeout_timestamp = 100u64;
+    let memo = "memo".to_string();
+
+    let test_create_collection = (
+        AccountAddress::ONE,
+        "0x1::simple_nft::create_collection",
+        vec![],
+        vec![
+            bcs::to_bytes(&b"Test Collection".to_vec()).unwrap(),
+            vec![0],
+            bcs::to_bytes(&COLLECTION_NAME.to_vec()).unwrap(),
+            bcs::to_bytes(&b"".to_vec()).unwrap(),
+            bcs::to_bytes(&true).unwrap(),
+            bcs::to_bytes(&true).unwrap(),
+            bcs::to_bytes(&true).unwrap(),
+            bcs::to_bytes(&true).unwrap(),
+            bcs::to_bytes(&true).unwrap(),
+            bcs::to_bytes(&true).unwrap(),
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ],
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
+    );
+    tests.push(test_create_collection);
+
+    let test_nft_transfer = (
+        sender,
+        "0x1::cosmos::nft_transfer",
+        vec![],
+        vec![
+            bcs::to_bytes(receiver.as_bytes()).unwrap(),
+            collection.to_vec(),
+            bcs::to_bytes(&token_ids).unwrap(),
+            bcs::to_bytes(source_port.as_bytes()).unwrap(),
+            bcs::to_bytes(source_channel.as_bytes()).unwrap(),
+            revision_number.to_le_bytes().to_vec(),
+            revision_height.to_le_bytes().to_vec(),
+            timeout_timestamp.to_le_bytes().to_vec(),
+            bcs::to_bytes(memo.as_bytes()).unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::IBC(IBCMessage::NFTTransfer {
+                source_port,
+                source_channel,
+                collection,
+                token_ids,
+                sender,
+                receiver,
+                timeout_height: IBCHeight {
+                    revision_height,
+                    revision_number,
+                },
+                timeout_timestamp,
+                memo,
+            })]),
+        ),
+    );
+    tests.push(test_nft_transfer);
+
+    run_tests(tests);
+}
+
+#[test]
 fn test_cosmos_pay_fee() {
     let mut tests = vec![];
     let sender = AccountAddress::random();
@@ -247,7 +331,7 @@ fn test_cosmos_pay_fee() {
         vec![
             vec![0],
             bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
-            bcs::to_bytes(STAKING_SYMBOL).unwrap(),
+            bcs::to_bytes(&STAKING_SYMBOL.to_vec()).unwrap(),
             6u8.to_le_bytes().to_vec(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
             bcs::to_bytes(&b"".to_vec()).unwrap(),
@@ -325,6 +409,63 @@ fn test_cosmos_pay_fee() {
                     },
                 },
             })]),
+        ),
+    );
+    tests.push(test_pay_fee);
+
+    run_tests(tests);
+}
+
+#[test]
+fn test_initiate_token_deposit() {
+    let mut tests = vec![];
+    let bridge_id = 10u64;
+    let sender = AccountAddress::random();
+    let to = AccountAddress::random();
+    let metadata = staking_metadata();
+    let amount = 100u64;
+    let data = vec![1, 2, 3, 4];
+
+    let test_initialize_coin = (
+        AccountAddress::ONE,
+        "0x1::managed_coin::initialize",
+        vec![],
+        vec![
+            vec![0],
+            bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
+            bcs::to_bytes(&STAKING_SYMBOL.to_vec()).unwrap(),
+            6u8.to_le_bytes().to_vec(),
+            bcs::to_bytes(&b"".to_vec()).unwrap(),
+            bcs::to_bytes(&b"".to_vec()).unwrap(),
+        ],
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
+    );
+    tests.push(test_initialize_coin);
+
+    let test_pay_fee = (
+        sender,
+        "0x1::cosmos::initiate_token_deposit",
+        vec![],
+        vec![
+            bridge_id.to_le_bytes().to_vec(),
+            to.to_vec(),
+            metadata.to_vec(),
+            amount.to_le_bytes().to_vec(),
+            bcs::to_bytes(&data.to_vec()).unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::OPinit(
+                initia_types::cosmos::OPinitMessage::InitiateTokenDeposit {
+                    bridge_id,
+                    sender_address: sender,
+                    to_address: to,
+                    amount: CosmosCoin { amount, metadata },
+                    data,
+                },
+            )]),
         ),
     );
     tests.push(test_pay_fee);

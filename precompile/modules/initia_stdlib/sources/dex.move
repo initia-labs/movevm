@@ -59,9 +59,9 @@ module initia_std::dex {
         mint_cap: coin::MintCapability,
     }
 
+    #[event]
     /// Event emitted when provide liquidity.
     struct ProvideEvent has drop, store {
-        account: address,
         coin_a: address,
         coin_b: address,
         liquidity_token: address,
@@ -70,9 +70,9 @@ module initia_std::dex {
         liquidity: u64,
     }
 
+    #[event]
     /// Event emitted when withdraw liquidity.
     struct WithdrawEvent has drop, store {
-        account: address,
         coin_a: address,
         coin_b: address,
         liquidity_token: address,
@@ -81,9 +81,9 @@ module initia_std::dex {
         liquidity: u64,
     }
 
+    #[event]
     /// Event emitted when swap token.
     struct SwapEvent has drop, store {
-        account: address,
         offer_coin: address,
         return_coin: address,
         liquidity_token: address,
@@ -92,8 +92,8 @@ module initia_std::dex {
         fee_amount: u64,
     }
 
+    #[event]
     struct SingleAssetProvideEvent has drop, store {
-        account: address,
         coin_a: address,
         coin_b: address,
         liquidity_token: address,
@@ -119,6 +119,7 @@ module initia_std::dex {
         coin_b_weight: Decimal128,
     }
 
+    #[event]
     struct CreatePairEvent has drop, store {
         coin_a: address,
         coin_b: address,
@@ -127,6 +128,7 @@ module initia_std::dex {
         swap_fee_rate: Decimal128,
     }
 
+    #[event]
     struct SwapFeeUpdateEvent has drop, store {
         coin_a: address,
         coin_b: address,
@@ -643,7 +645,6 @@ module initia_std::dex {
         };
 
         let liquidity_token = provide_liquidity(
-            account,
             pair,
             coin_a,
             coin_b,
@@ -669,7 +670,6 @@ module initia_std::dex {
         let addr = signer::address_of(account);
         let liquidity_token = coin::withdraw(account, object::convert<Config, Metadata>(pair), liquidity);
         let (coin_a, coin_b) = withdraw_liquidity(
-            account,
             liquidity_token,
             min_coin_a_amount,
             min_coin_b_amount,
@@ -688,7 +688,7 @@ module initia_std::dex {
         min_return: Option<u64>,
     ) acquires Config, Pool {
         let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
-        let return_coin = swap(account, pair, offer_coin);
+        let return_coin = swap(pair, offer_coin);
 
         assert!(
             option::is_none(&min_return) || *option::borrow(&min_return) <= fungible_asset::amount(&return_coin),
@@ -709,7 +709,6 @@ module initia_std::dex {
         let addr = signer::address_of(account);
         let provide_coin = coin::withdraw(account, provide_coin, amount_in);
         let liquidity_token = single_asset_provide_liquidity(
-            account,
             pair,
             provide_coin,
             min_liquidity,
@@ -721,7 +720,6 @@ module initia_std::dex {
     /// Withdraw liquidity directly
     /// CONTRACT: not allow until LBP is ended
     public fun withdraw_liquidity(
-        account: &signer,
         lp_token: FungibleAsset,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>,
@@ -757,7 +755,6 @@ module initia_std::dex {
         let pair_key = generate_pair_key(object::address_to_object<Config>(pair_addr));
         event::emit<WithdrawEvent>(
             WithdrawEvent {
-                account: signer::address_of(account),
                 coin_a: pair_key.coin_a,
                 coin_b: pair_key.coin_b,
                 liquidity_token: pair_addr,
@@ -780,7 +777,6 @@ module initia_std::dex {
     /// CONTRACT: cannot provide more than the pool amount to prevent huge price impact
     /// CONTRACT: not allow until LBP is ended
     public fun single_asset_provide_liquidity(
-        account: &signer,
         pair: Object<Config>,
         provide_coin: FungibleAsset,
         min_liquidity_amount: Option<u64>,
@@ -857,7 +853,6 @@ module initia_std::dex {
         // emit events        
         event::emit<SingleAssetProvideEvent>(
             SingleAssetProvideEvent {
-                account: signer::address_of(account),
                 coin_a: pair_key.coin_a,
                 coin_b: pair_key.coin_b,
                 provide_coin: provide_coin_addr,
@@ -875,7 +870,6 @@ module initia_std::dex {
 
     /// Swap directly
     public fun swap(
-        account: &signer,
         pair: Object<Config>,
         offer_coin: FungibleAsset,
     ): FungibleAsset acquires Config, Pool {
@@ -920,7 +914,6 @@ module initia_std::dex {
         // emit events
         event::emit<SwapEvent>(
             SwapEvent {
-                account: signer::address_of(account),
                 offer_coin: offer_coin_addr,
                 return_coin: return_coin_addr,
                 liquidity_token: pair_addr,
@@ -1001,7 +994,6 @@ module initia_std::dex {
         );
 
         let liquidity_token = provide_liquidity(
-            creator,
             object::address_to_object<Config>(pair_address),
             coin_a,
             coin_b,
@@ -1051,7 +1043,6 @@ module initia_std::dex {
     /// Provide liquidity directly
     /// CONTRACT: not allow until LBP is ended
     public fun provide_liquidity(
-        account: &signer,
         pair: Object<Config>,
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
@@ -1091,7 +1082,6 @@ module initia_std::dex {
 
         event::emit<ProvideEvent>(
             ProvideEvent {
-                account: signer::address_of(account), 
                 coin_a: coin_address(&coin_a),
                 coin_b: coin_address(&coin_b),
                 liquidity_token: pool_addr,

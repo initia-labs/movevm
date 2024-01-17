@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 
-	dbm "github.com/cometbft/cometbft-db"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/initia-labs/initiavm/types"
 )
 

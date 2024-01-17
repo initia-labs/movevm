@@ -19,7 +19,6 @@ use move_core_types::{
     language_storage::ModuleId,
     vm_status::StatusCode,
 };
-use move_stdlib;
 use move_vm_types::{
     gas::{GasMeter, SimpleInstruction},
     views::{TypeView, ValueView},
@@ -190,7 +189,7 @@ impl InitiaGasMeter {
     pub fn new(gas_params: InitiaGasParameters, balance: impl Into<Gas>) -> Self {
         let memory_quota = gas_params.txn.memory_quota;
         let balance = balance.into().to_unit_with_params(&gas_params.txn);
-        let gas_limit = balance.clone();
+        let gas_limit = balance;
 
         Self {
             gas_params,
@@ -261,7 +260,7 @@ impl InitiaGasMeter {
 
         self.call_stack.push(Frame {
             module_id,
-            start_gas: self.balance.clone(),
+            start_gas: self.balance,
             call_gas: 0.into(),
         });
     }

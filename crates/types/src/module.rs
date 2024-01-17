@@ -82,7 +82,7 @@ impl ModuleBundle {
             .collect::<BTreeMap<_, _>>();
         let mut order = vec![];
         for id in map.keys() {
-            self.sort_by_deps(&map, &mut order, id.clone());
+            sort_by_deps(&map, &mut order, id.clone());
         }
         let mut modules = vec![];
         for id in order {
@@ -96,27 +96,26 @@ impl ModuleBundle {
             .collect::<Vec<_>>();
         Self::new(sorted_codes)
     }
+}
 
-    pub fn sort_by_deps(
-        &self,
-        map: &BTreeMap<ModuleId, (&[u8], CompiledModule)>,
-        order: &mut Vec<ModuleId>,
-        id: ModuleId,
-    ) {
-        if order.contains(&id) {
-            return;
-        }
-        let compiled = &map.get(&id).unwrap().1;
-        for dep in compiled.immediate_dependencies() {
-            // Only consider deps which are actually in this package. Deps for outside
-            // packages are considered fine because of package deployment order. Note
-            // that because of this detail, we can't use existing topsort from Move utils.
-            if map.contains_key(&dep) {
-                self.sort_by_deps(map, order, dep);
-            }
-        }
-        order.push(id)
+pub fn sort_by_deps(
+    map: &BTreeMap<ModuleId, (&[u8], CompiledModule)>,
+    order: &mut Vec<ModuleId>,
+    id: ModuleId,
+) {
+    if order.contains(&id) {
+        return;
     }
+    let compiled = &map.get(&id).unwrap().1;
+    for dep in compiled.immediate_dependencies() {
+        // Only consider deps which are actually in this package. Deps for outside
+        // packages are considered fine because of package deployment order. Note
+        // that because of this detail, we can't use existing topsort from Move utils.
+        if map.contains_key(&dep) {
+            sort_by_deps(map, order, dep);
+        }
+    }
+    order.push(id)
 }
 
 impl fmt::Debug for ModuleBundle {

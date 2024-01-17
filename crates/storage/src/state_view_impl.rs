@@ -9,6 +9,7 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::StructTag;
 use move_core_types::metadata::Metadata;
 use move_core_types::resolver::resource_size;
+use move_core_types::value::MoveTypeLayout;
 use move_core_types::{
     language_storage::ModuleId, resolver::ModuleResolver, resolver::ResourceResolver,
 };
@@ -52,11 +53,12 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
 }
 
 impl<'block, S: StateView> ResourceResolver for StateViewImpl<'block, S> {
-    fn get_resource_with_metadata(
+    fn get_resource_bytes_with_metadata_and_layout(
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-        _metadata: &[Metadata], // not supporting resource group
+        _metadata: &[Metadata],           // not supporting resource group
+        _layout: Option<&MoveTypeLayout>, // not supporting resource group
     ) -> Result<(Option<Bytes>, usize)> {
         let ap = AccessPath::resource_access_path(*address, struct_tag.clone());
         let buf = self.get(&ap)?;

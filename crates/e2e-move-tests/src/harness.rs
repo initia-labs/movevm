@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use bytes::Bytes;
-use initia_compiler::built_package::{BuildOptions, BuiltPackage};
+use initia_compiler::built_package::BuiltPackage;
 use initia_types::env::Env;
 use initia_types::view_function::ViewFunction;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
+use move_package::BuildConfig;
 
 use crate::test_utils::mock_chain::{
     MockAPI, MockAccountAPI, MockChain, MockStakingAPI, MockState, MockTableState,
@@ -54,6 +55,12 @@ where
     path
 }
 
+impl Default for MoveHarness {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
@@ -92,6 +99,7 @@ impl MoveHarness {
                 self.load_precompiled_stdlib()
                     .expect("Failed to load precompiles"),
                 false,
+                vec![],
             )
             .expect("Module must load");
         self.commit(output, true);
@@ -119,8 +127,7 @@ impl MoveHarness {
     ) -> Result<MessageOutput, VMStatus> {
         let (module_ids, code) = self.compile_package(path);
         let msg = self.create_publish_message(*acc, module_ids, code);
-        let vm_output = self.run_message(msg);
-        vm_output
+        self.run_message(msg)
     }
 
     pub fn run_entry_function(
@@ -180,15 +187,13 @@ impl MoveHarness {
         let package_path = path_in_crate(path);
         let package = BuiltPackage::build(
             package_path.clone(),
-            BuildOptions {
+            BuildConfig {
                 install_dir: Some(package_path.clone()),
-                with_docs: false,
-                with_abis: false,
-                with_error_map: false,
-                with_source_maps: false,
-                with_srcs: false,
+                generate_docs: false,
+                generate_abis: false,
                 ..Default::default()
             },
+            None,
         )
         .expect("compile failed");
 
@@ -213,7 +218,7 @@ impl MoveHarness {
             vec![
                 bcs::to_bytes(&module_ids).unwrap(),
                 bcs::to_bytes(&modules).unwrap(),
-                bcs::to_bytes(&(1 as u8)).unwrap(), // compatible upgrade policy
+                bcs::to_bytes(&(1_u8)).unwrap(), // compatible upgrade policy
             ],
         );
         Message::execute(vec![sender], ef)

@@ -1,6 +1,5 @@
-use initia_compiler::{compile, Command};
+use initia_compiler::{execute, Command};
 use move_cli::{base::build::Build, Move};
-use move_package::BuildConfig;
 use std::{env::current_dir, fs, io, path::PathBuf, str::FromStr};
 
 fn main() {
@@ -81,17 +80,18 @@ fn main() {
 fn build(p: PathBuf) {
     let package_path = Some(p);
 
-    let mut build_config = BuildConfig::default();
-    build_config.install_dir = package_path.clone();
+    let build_config = move_package::BuildConfig {
+        install_dir: package_path.clone(),
+        ..Default::default()
+    };
 
     let arg = Move {
         package_path,
         verbose: true,
         build_config,
     };
-    let res =
-        compile(arg, Command::Build(Build)).expect("error occurred while compiling contracts");
-    assert!(res == Vec::from("ok"));
+
+    execute(arg, Command::Build(Build)).expect("error occurred while compiling contracts");
 }
 
 fn copy(source: PathBuf, dest: PathBuf) -> io::Result<()> {
