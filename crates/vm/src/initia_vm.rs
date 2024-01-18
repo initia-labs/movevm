@@ -12,7 +12,10 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{StatusCode, VMStatus},
 };
-use move_vm_runtime::{config::VMConfig, native_extensions::NativeContextExtensions};
+use move_vm_runtime::{
+    config::VMConfig, data_cache::TransactionDataCache, loader::Loader,
+    native_extensions::NativeContextExtensions,
+};
 use move_vm_runtime::{move_vm::MoveVM, session::SerializedReturnValues};
 
 use std::{collections::BTreeSet, sync::Arc};
@@ -36,8 +39,8 @@ use initia_natives::{
     table::{NativeTableContext, TableResolver},
 };
 use initia_storage::{
-    state_view::StateView, state_view_impl::StateViewImpl,
-    table_view::TableView, table_view_impl::TableViewImpl,
+    state_view::StateView, state_view_impl::StateViewImpl, table_view::TableView,
+    table_view_impl::TableViewImpl,
 };
 use initia_types::{
     account::Accounts,
@@ -202,13 +205,12 @@ impl InitiaVM {
         }
 
         // session cleanup
-        let session_output = session.finish()?;
-        let output = self.success_message_cleanup(
-            api,
+        let (session_output, loader) = session.finish()?;
+        let output: MessageOutput = self.success_message_cleanup(
+            loader,
             session_output,
             &mut gas_meter,
             state_view_impl,
-            table_view_impl,
             new_published_modules_loaded,
         )?;
 
@@ -356,16 +358,15 @@ impl InitiaVM {
             )?;
         }
 
-        let session_output = session.finish()?;
+        let (session_output, loader) = session.finish()?;
 
         // Charge for gas cost for write set ops
         gas_meter.charge_write_set_gas(&session_output.1)?;
         let output = self.success_message_cleanup(
-            api,
+            loader,
             session_output,
             gas_meter,
             state_view_impl,
-            table_view_impl,
             *new_published_modules_loaded,
         )?;
 
@@ -497,13 +498,12 @@ impl InitiaVM {
         Ok(())
     }
 
-    fn success_message_cleanup<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
+    fn success_message_cleanup<S: StateView>(
         &self,
-        api: &A,
+        loader: Loader,
         session_output: SessionOutput,
         gas_meter: &mut InitiaGasMeter,
         state_view_impl: &StateViewImpl<'_, S>,
-        table_view_impl: &mut TableViewImpl<'_, T>,
         new_published_modules_loaded: bool,
     ) -> VMResult<MessageOutput> {
         let gas_limit = gas_meter.gas_limit();
@@ -511,8 +511,7 @@ impl InitiaVM {
         let gas_usage_set = gas_meter.into_usage_set();
 
         let (events, write_set, staking_change_set, cosmos_messages, new_accounts) = session_output;
-        let json_events =
-            self.serialize_events_to_json(api, events, state_view_impl, table_view_impl)?;
+        let json_events = self.serialize_events_to_json(loader, events, state_view_impl)?;
 
         Ok(get_message_output(
             json_events,
@@ -543,18 +542,19 @@ impl InitiaVM {
         Ok(result)
     }
 
-    pub fn serialize_events_to_json<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
+    pub fn serialize_events_to_json<S: StateView>(
         &self,
-        api: &A,
+        loader: Loader,
         events: Vec<ContractEvent>,
         state_view_impl: &StateViewImpl<'_, S>,
-        table_view_impl: &mut TableViewImpl<'_, T>,
     ) -> VMResult<JsonEvents> {
-        let session = self.create_session(api, &Env::default(), state_view_impl, table_view_impl);
+        // create data cache for lookup
+        let data_cache = TransactionDataCache::new(state_view_impl);
 
         let mut res = vec![];
         for event in events.into_iter() {
-            let ty_layout = session.get_fully_annotated_type_layout(event.type_tag())?;
+            let ty_layout =
+                loader.get_fully_annotated_type_layout(event.type_tag(), &data_cache)?;
             let move_val =
                 MoveValue::simple_deserialize(event.event_data(), &ty_layout).map_err(|_| {
                     PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)

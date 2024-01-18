@@ -15,7 +15,7 @@ use initia_types::{
 
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::vm_status::StatusCode;
-use move_vm_runtime::session::Session;
+use move_vm_runtime::{session::Session, loader::Loader};
 
 pub type SessionOutput = (
     Vec<ContractEvent>,
@@ -34,8 +34,9 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Self { inner }
     }
 
-    pub fn finish(self) -> VMResult<SessionOutput> {
-        let (change_set, mut extensions) = self.inner.finish_with_extensions()?;
+    pub fn finish(self) -> VMResult<(SessionOutput, Loader)> {
+        let (change_set, mut extensions, loader) =
+            self.inner.finish_with_extensions_with_loader()?;
         let event_context: NativeEventContext = extensions.remove::<NativeEventContext>();
         let events = event_context.into_events();
 
@@ -61,11 +62,14 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         })?;
 
         Ok((
-            events,
-            write_set,
-            staking_change_set,
-            cosmos_messages,
-            new_accounts,
+            (
+                events,
+                write_set,
+                staking_change_set,
+                cosmos_messages,
+                new_accounts,
+            ),
+            loader,
         ))
     }
 
