@@ -104,14 +104,18 @@ impl StakingAPI for GoApi {
         amount: u64,
     ) -> anyhow::Result<u64> {
         let mut share = 0_u64;
+
+        // DO NOT DELETE; same reason with KeepAlive in go
+        let metadata_bytes = metadata.into_bytes();
+
         let validator = U8SliceView::new(Some(validator));
-        let metadata_bytes = U8SliceView::new(Some(&metadata.into_bytes()));
+        let metadata = U8SliceView::new(Some(&metadata_bytes));
         let mut error_msg = UnmanagedVector::default();
 
         let go_error: GoError = (self.vtable.amount_to_share)(
             self.state,
             validator,
-            metadata_bytes,
+            metadata,
             amount,
             &mut share,
             &mut error_msg,
@@ -136,14 +140,18 @@ impl StakingAPI for GoApi {
         share: u64,
     ) -> anyhow::Result<u64> {
         let mut amount = 0_u64;
+
+        // DO NOT DELETE; same reason with KeepAlive in go
+        let metadata_bytes = metadata.into_bytes();
+
         let validator = U8SliceView::new(Some(validator));
-        let metadata_bytes = U8SliceView::new(Some(&metadata.into_bytes()));
+        let metadata = U8SliceView::new(Some(&metadata_bytes));
         let mut error_msg = UnmanagedVector::default();
 
         let go_error: GoError = (self.vtable.share_to_amount)(
             self.state,
             validator,
-            metadata_bytes,
+            metadata,
             share,
             &mut amount,
             &mut error_msg,

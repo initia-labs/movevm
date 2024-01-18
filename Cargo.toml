@@ -66,7 +66,7 @@ anyhow = "1.0.41"
 bcs = "0.1.5"
 better_any = "0.1.1"
 clru = "0.6"
-cbindgen = "0.24.5"
+cbindgen = "0.26.0"
 clap = { version = "4.3.9", features = ["derive", "env", "suggestions"] }
 codespan-reporting = "0.11.1"
 dialoguer = "0.10.2"
