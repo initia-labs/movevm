@@ -4,18 +4,18 @@ on:
   pull_request:
     paths:
       - "**.go"
-      - "**.rs"
-      - "**.mv"
-      - "**.move"
+      - "crates/**"
+      - "!crates/e2e-move-tests/**"
+      - "precompile/**"
   push:
     branches:
       - main
       - "release/*"
     paths:
       - "**.go"
-      - "**.rs"
-      - "**.mv"
-      - "**.move"
+      - "crates/**"
+      - "!crates/e2e-move-tests/**"
+      - "precompile/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,7 +39,7 @@ jobs:
           toolchain: stable
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: "1.20"
       - uses: actions/cache@v3
         with:
           path: |

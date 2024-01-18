@@ -7,6 +7,7 @@ on:
       - "release/*"
     paths:
       - "crates/**"
+      - '!crates/e2e-move-tests/**'
       - "libinitia/**"
 
 concurrency:
