@@ -66,8 +66,11 @@ unsafe impl Send for GoApi {}
 impl AccountAPI for GoApi {
     // return latest block height and timestamp
     fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8)> {
+        // DO NOT DELETE; same reason with KeepAlive in go
+        let addr_bytes = addr.into_bytes();
+
         let mut found = false;
-        let addr_bytes = U8SliceView::new(Some(&addr.into_bytes()));
+        let addr = U8SliceView::new(Some(&addr_bytes));
         let mut account_number = 0_u64;
         let mut sequence = 0_u64;
         let mut account_type: u8 = 0_u8;
@@ -75,7 +78,7 @@ impl AccountAPI for GoApi {
 
         let go_error: GoError = (self.vtable.get_account_info)(
             self.state,
-            addr_bytes,
+            addr,
             &mut found,
             &mut account_number,
             &mut sequence,
