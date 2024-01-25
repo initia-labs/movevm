@@ -1,7 +1,8 @@
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
 use initia_types::cosmos::{
-    CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, StakingMessage,
+    CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage,
+    StakingMessage,
 };
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
@@ -469,6 +470,84 @@ fn test_initiate_token_deposit() {
         ),
     );
     tests.push(test_pay_fee);
+
+    run_tests(tests);
+}
+
+#[test]
+fn test_cosmos_move_execute() {
+    let mut tests = vec![];
+    let sender = AccountAddress::random();
+    let module_address = AccountAddress::random();
+    let module_name = "module_name".to_string();
+    let function_name = "function_name".to_string();
+    let type_arg1 = "type_arg1".to_string();
+    let type_arg2 = "type_arg2".to_string();
+    let arg1 = vec![1, 2, 3];
+    let arg2 = vec![4, 5, 6];
+
+    let test_move_execute = (
+        sender,
+        "0x1::cosmos::move_execute",
+        vec![],
+        vec![
+            module_address.to_vec(),
+            bcs::to_bytes(module_name.as_bytes()).unwrap(),
+            bcs::to_bytes(function_name.as_bytes()).unwrap(),
+            bcs::to_bytes(&vec![type_arg1.as_bytes(), type_arg2.as_bytes()]).unwrap(),
+            bcs::to_bytes(&vec![arg1.to_vec(), arg2.to_vec()]).unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::Move(MoveMessage::Execute {
+                sender,
+                module_address,
+                module_name,
+                function_name,
+                type_args: vec![type_arg1, type_arg2],
+                args: vec![arg1, arg2],
+            })]),
+        ),
+    );
+    tests.push(test_move_execute);
+
+    run_tests(tests);
+}
+
+#[test]
+fn test_cosmos_move_script() {
+    let mut tests = vec![];
+    let sender = AccountAddress::random();
+    let code_bytes = vec![1, 2, 3, 4, 5];
+    let type_arg1 = "type_arg1".to_string();
+    let type_arg2 = "type_arg2".to_string();
+    let arg1 = vec![1, 2, 3];
+    let arg2 = vec![4, 5, 6];
+
+    let test_move_script = (
+        sender,
+        "0x1::cosmos::move_script",
+        vec![],
+        vec![
+            bcs::to_bytes(&code_bytes.to_vec()).unwrap(),
+            bcs::to_bytes(&vec![type_arg1.as_bytes(), type_arg2.as_bytes()]).unwrap(),
+            bcs::to_bytes(&vec![arg1.to_vec(), arg2.to_vec()]).unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::Move(MoveMessage::Script {
+                sender,
+                code_bytes,
+                type_args: vec![type_arg1, type_arg2],
+                args: vec![arg1, arg2],
+            })]),
+        ),
+    );
+    tests.push(test_move_script);
 
     run_tests(tests);
 }

@@ -8,6 +8,38 @@ module initia_std::cosmos {
     use std::fungible_asset::Metadata;
     use std::collection::{Collection};
 
+    public entry fun move_execute (
+        sender: &signer,
+        module_address: address,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<vector<u8>>,
+    ) {
+        move_execute_internal(
+            signer::address_of(sender),
+            module_address,
+            *string::bytes(&module_name),
+            *string::bytes(&function_name),
+            vector::map_ref(&type_args, |v| *string::bytes(v)),
+            args,
+        )
+    }
+
+    public entry fun move_script (
+        sender: &signer,
+        code_bytes: vector<u8>,
+        type_args: vector<String>,
+        args: vector<vector<u8>>,
+    ) {
+        move_script_internal(
+            signer::address_of(sender),
+            code_bytes,
+            vector::map_ref(&type_args, |v| *string::bytes(v)),
+            args,
+        )
+    }
+
     public entry fun delegate (
         delegator: &signer, 
         validator: String, 
@@ -133,6 +165,22 @@ module initia_std::cosmos {
             data,
         )
     }
+
+    native fun move_execute_internal (
+        sender: address,
+        module_address: address,
+        module_name: vector<u8>,
+        function_name: vector<u8>,
+        type_args: vector<vector<u8>>,
+        args: vector<vector<u8>>,
+    );
+
+    native fun move_script_internal (
+        sender: address,
+        code_bytes: vector<u8>,
+        type_args: vector<vector<u8>>,
+        args: vector<vector<u8>>,
+    );
 
     native fun delegate_internal (
         delegator: address, 

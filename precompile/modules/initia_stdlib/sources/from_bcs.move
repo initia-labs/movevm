@@ -52,6 +52,14 @@ module initia_std::from_bcs {
         from_bytes<vector<u8>>(v)
     }
 
+    public fun to_vector_bytes(v: vector<u8>): vector<vector<u8>> {
+        from_bytes<vector<vector<u8>>>(v)
+    }
+
+    public fun to_vector_string(v: vector<u8>): vector<String> {
+        from_bytes<vector<String>>(v)
+    }
+
     public fun to_string(v: vector<u8>): String {
         // To make this safe, we need to evaluate the utf8 invariant.
         let s = from_bytes<String>(v);

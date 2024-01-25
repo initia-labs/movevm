@@ -98,6 +98,7 @@ thiserror = "1.0.34"
 tsu = "1.0.1"
 bytes = "1.4.0"
 parking_lot = "0.12.1"
+base64 = "0.21.7"
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES

@@ -15,7 +15,7 @@ use initia_types::{
 
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::vm_status::StatusCode;
-use move_vm_runtime::{session::Session, loader::Loader};
+use move_vm_runtime::{loader::Loader, session::Session};
 
 pub type SessionOutput = (
     Vec<ContractEvent>,

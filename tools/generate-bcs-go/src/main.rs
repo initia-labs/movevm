@@ -7,7 +7,8 @@ use initia_types::{
     access_path::DataPath,
     account::Account,
     cosmos::{
-        CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, OPinitMessage, StakingMessage,
+        CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, OPinitMessage,
+        StakingMessage,
     },
     entry_function::EntryFunction,
     env::Env,
@@ -39,6 +40,7 @@ fn main() {
     tracer.trace_simple_type::<IBCHeight>().unwrap();
     tracer.trace_simple_type::<IBCMessage>().unwrap();
     tracer.trace_simple_type::<IBCFee>().unwrap();
+    tracer.trace_simple_type::<MoveMessage>().unwrap();
     tracer.trace_simple_type::<StakingMessage>().unwrap();
     tracer.trace_simple_type::<OPinitMessage>().unwrap();
     tracer.trace_simple_type::<CosmosMessage>().unwrap();

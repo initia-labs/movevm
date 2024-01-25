@@ -2,7 +2,7 @@ use better_any::{Tid, TidAble};
 use initia_gas::gas_params::cosmos::*;
 use initia_types::cosmos::{
     CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
-    OPinitMessage, StakingMessage,
+    MoveMessage, OPinitMessage, StakingMessage,
 };
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
@@ -60,6 +60,96 @@ fn partial_extension_error(msg: impl ToString) -> PartialVMError {
 
 // =========================================================================================
 // Implementations
+
+fn native_move_execute(
+    gas_params: &MoveExecuteGasParameters,
+    context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(args.len() == 6);
+
+    let mut msg_args: Vec<Vec<u8>> = vec![];
+    for msg_arg in pop_vec_arg!(args, Vec<u8>) {
+        msg_args.push(msg_arg);
+    }
+
+    let mut msg_type_args: Vec<String> = vec![];
+    for msg_type_arg in pop_vec_arg!(args, Vec<u8>) {
+        let msg_type_arg = std::str::from_utf8(&msg_type_arg)
+            .map_err(|_| partial_extension_error("failed to deserialize type args"))?
+            .to_string();
+        msg_type_args.push(msg_type_arg);
+    }
+
+    let function_name = pop_arg!(args, Vector).to_vec_u8()?;
+    let module_name = pop_arg!(args, Vector).to_vec_u8()?;
+    let module_address = pop_arg!(args, AccountAddress);
+    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+
+    let function_name = std::str::from_utf8(&function_name)
+        .map_err(|_| partial_extension_error("failed to deserialize function_name"))?
+        .to_string();
+
+    let module_name = std::str::from_utf8(&module_name)
+        .map_err(|_| partial_extension_error("failed to deserialize module_name"))?
+        .to_string();
+
+    let message = CosmosMessage::Move(MoveMessage::Execute {
+        sender,
+        module_address,
+        module_name,
+        function_name,
+        type_args: msg_type_args,
+        args: msg_args,
+    });
+
+    // build cosmos message
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    cosmos_context.messages.borrow_mut().push(message);
+
+    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+}
+
+fn native_move_script(
+    gas_params: &MoveScriptGasParameters,
+    context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(args.len() == 4);
+
+    let mut msg_args: Vec<Vec<u8>> = vec![];
+    for msg_arg in pop_vec_arg!(args, Vec<u8>) {
+        msg_args.push(msg_arg);
+    }
+
+    let mut msg_type_args: Vec<String> = vec![];
+    for msg_type_arg in pop_vec_arg!(args, Vec<u8>) {
+        let msg_type_arg = std::str::from_utf8(&msg_type_arg)
+            .map_err(|_| partial_extension_error("failed to deserialize type args"))?
+            .to_string();
+        msg_type_args.push(msg_type_arg);
+    }
+
+    let code_bytes = pop_arg!(args, Vector).to_vec_u8()?;
+    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+
+    let message = CosmosMessage::Move(MoveMessage::Script {
+        sender,
+        code_bytes,
+        type_args: msg_type_args,
+        args: msg_args,
+    });
+
+    // build cosmos message
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    cosmos_context.messages.borrow_mut().push(message);
+
+    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+}
 
 fn native_delegate(
     gas_params: &DelegateGasParameters,
@@ -370,6 +460,14 @@ fn native_initiate_token_withdrawal(
  **************************************************************************************************/
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
     let natives = vec![
+        (
+            "move_execute_internal",
+            make_native_from_func(gas_params.move_execute, native_move_execute),
+        ),
+        (
+            "move_script_internal",
+            make_native_from_func(gas_params.move_script, native_move_script),
+        ),
         (
             "delegate_internal",
             make_native_from_func(gas_params.delegate, native_delegate),

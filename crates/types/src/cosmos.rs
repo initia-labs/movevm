@@ -24,6 +24,25 @@ pub enum CosmosMessage {
     IBC(IBCMessage),
     Distribution(DistributionMessage),
     OPinit(OPinitMessage),
+    Move(MoveMessage),
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub enum MoveMessage {
+    Execute {
+        sender: AccountAddress,
+        module_address: AccountAddress,
+        module_name: String,
+        function_name: String,
+        type_args: Vec<String>,
+        args: Vec<Vec<u8>>,
+    },
+    Script {
+        sender: AccountAddress,
+        code_bytes: Vec<u8>,
+        type_args: Vec<String>,
+        args: Vec<Vec<u8>>,
+    },
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]

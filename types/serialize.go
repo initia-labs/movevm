@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/novifinancial/serde-reflection/serde-generate/runtime/golang/bcs"
-	"github.com/novifinancial/serde-reflection/serde-generate/runtime/golang/serde"
+	"github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang/bcs"
+	"github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang/serde"
 )
 
 var NewSerializer = bcs.NewSerializer

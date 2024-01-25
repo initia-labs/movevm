@@ -1,8 +1,8 @@
 mod args;
+mod cache;
 mod common;
 mod cosmos;
 mod infinite_loop;
-mod cache;
 mod max_loop_depth;
 mod memory_quota;
 mod output;

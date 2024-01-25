@@ -3,8 +3,8 @@ module github.com/initia-labs/initiavm
 go 1.19
 
 require (
+	github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang v0.0.0-20231213012317-73b6bbf74833
 	github.com/cosmos/cosmos-db v1.0.0
-	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20220519162058-e5cd3c3b3f3a
 	github.com/stretchr/testify v1.8.4
 )
 

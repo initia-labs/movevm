@@ -5,6 +5,7 @@ mod helpers;
 
 pub mod account;
 pub mod any;
+pub mod base64;
 pub mod block;
 pub mod code;
 pub mod cosmos;
@@ -69,6 +70,7 @@ pub fn initia_natives(
     );
     add_natives_from_module!("type_info", type_info::make_all(gas_params.type_info));
     add_natives_from_module!("from_bcs", from_bcs::make_all(gas_params.from_bcs));
+    add_natives_from_module!("base64", base64::make_all(gas_params.base64));
     add_natives_from_module!(
         "event",
         event::make_all(gas_params.event, calc_abstract_val_size)

@@ -32,6 +32,7 @@ fn native_from_bytes(
     let base_cost: u64 = gas_params.base.into();
     let unit_cost: u64 = gas_params.unit.into();
     let cost = base_cost + unit_cost * bytes.len() as u64;
+
     let val = match Value::simple_deserialize(&bytes, &layout) {
         Some(val) => val,
         None => return Ok(NativeResult::err(cost.into(), EFROM_BYTES)),

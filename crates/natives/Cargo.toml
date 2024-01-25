@@ -28,6 +28,8 @@ move-vm-runtime = { workspace = true }
 move-vm-types = { workspace = true }
 move-stdlib = { workspace = true }
 
+base64 = { workspace = true }
+
 [dev-dependencies]
 serial_test = { workspace = true }
 

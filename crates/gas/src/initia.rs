@@ -19,6 +19,11 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.from_bcs.from_bytes.base, "from_bcs.from_bytes.base", 1102],
     [.from_bcs.from_bytes.unit, "from_bcs.from_bytes.unit", 18],
 
+    [.base64.encode.base, "base64.encode.base", 1102],
+    [.base64.encode.unit, "base64.encode.unit", 18],
+    [.base64.decode.base, "base64.decode.base", 1102],
+    [.base64.decode.unit, "base64.decode.unit", 18],
+
     [.crypto.ed25519.base, "crypto.ed25519.base", 551],
     [.crypto.ed25519.per_sig_verify, "crypto.ed25519.per_sig_verify", 981492],
     [.crypto.ed25519.per_pubkey_deserialize, "crypto.ed25519.per_pubkey_deserialize", 139688],
@@ -53,6 +58,8 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     // These functions will consume gas after move execution finished,
     // so don't need to charge a lot here.
+    [.cosmos.move_execute.base, "cosmos.move_execute.base", 1000 * SCALING],
+    [.cosmos.move_script.base, "cosmos.move_script.base", 1000 * SCALING],
     [.cosmos.delegate.base, "cosmos.delegate.base", 1000 * SCALING],
     [.cosmos.fund_community_pool.base, "cosmos.fund_community_pool.base", 1000 * SCALING],
     [.cosmos.transfer.base, "cosmos.transfer.base", 1000 * SCALING],
@@ -75,6 +82,7 @@ pub struct GasParameters {
     pub code: code::GasParameters,
     pub type_info: type_info::GasParameters,
     pub from_bcs: from_bcs::GasParameters,
+    pub base64: base64::GasParameters,
     pub crypto: crypto::GasParameters,
     pub event: event::GasParameters,
     pub object: object::GasParameters,
@@ -127,6 +135,16 @@ impl GasParameters {
                     unit: 0.into(),
                 },
             },
+            base64: base64::GasParameters {
+                encode: base64::EncodeGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                decode: base64::DecodeGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+            },
             event: event::GasParameters {
                 write_module_event_to_store: event::WriteModuleEventToStoreGasParameters {
                     base: 0.into(),
@@ -157,6 +175,8 @@ impl GasParameters {
                 },
             },
             cosmos: cosmos::GasParameters {
+                move_execute: cosmos::MoveExecuteGasParameters { base: 0.into() },
+                move_script: cosmos::MoveScriptGasParameters { base: 0.into() },
                 delegate: cosmos::DelegateGasParameters { base: 0.into() },
                 fund_community_pool: cosmos::FundCommunityPoolGasParameters { base: 0.into() },
                 transfer: cosmos::TransferGasParameters { base: 0.into() },
