@@ -16,6 +16,13 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.type_info.type_name.base, "type_info.type_name.base", 1102],
     [.type_info.type_name.unit, "type_info.type_name.unit", 18],
 
+    [.json.get_array.base, "json.get_array.base", 1102],
+    [.json.get_array.unit, "json.get_array.unit", 18],
+    [.json.get_number.base, "json.get_number.base", 1102],
+    [.json.get_number.unit, "json.get_number.unit", 18],
+    [.json.object_to_simple_map.base, "json.object_to_simple_map.base", 1102],
+    [.json.object_to_simple_map.unit, "json.object_to_simple_map.unit", 18],
+
     [.from_bcs.from_bytes.base, "from_bcs.from_bytes.base", 1102],
     [.from_bcs.from_bytes.unit, "from_bcs.from_bytes.unit", 18],
 
@@ -89,6 +96,7 @@ pub struct GasParameters {
     pub transaction_context: transaction_context::GasParameters,
     pub staking: staking::GasParameters,
     pub cosmos: cosmos::GasParameters,
+    pub json: json::GasParameters,
 }
 
 impl GasParameters {
@@ -131,6 +139,20 @@ impl GasParameters {
             },
             from_bcs: from_bcs::GasParameters {
                 from_bytes: from_bcs::FromBytesGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+            },
+            json: json::GasParameters {
+                get_array: json::GetArrayGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                get_number: json::GetNumberGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                object_to_simple_map: json::ObjectToSimpleMapGasParameters {
                     base: 0.into(),
                     unit: 0.into(),
                 },

@@ -9,7 +9,7 @@ module initia_std::dex {
     use initia_std::block::get_block_info;
     use initia_std::fungible_asset::{Self, Metadata, FungibleAsset, FungibleStore};
     use initia_std::primary_fungible_store;
-    use initia_std::decimal128::{Self, Decimal128};
+    use initia_std::decimal256::{Self, Decimal256};
     use initia_std::string::{Self, String};
     use initia_std::table::{Self, Table};
     use initia_std::coin;
@@ -18,7 +18,7 @@ module initia_std::dex {
     struct Config has key {
         extend_ref: ExtendRef,
         weights: Weights,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     }
 
     struct Pool has key {
@@ -32,8 +32,8 @@ module initia_std::dex {
     }
 
     struct Weight has copy, drop, store {
-        coin_a_weight: Decimal128,
-        coin_b_weight: Decimal128,
+        coin_a_weight: Decimal256,
+        coin_b_weight: Decimal256,
         timestamp: u64,
     }
 
@@ -49,7 +49,7 @@ module initia_std::dex {
         coin_b: address,
         liquidity_token: address,
         weights: Weights,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     }
 
     /// Coin capabilities
@@ -111,12 +111,12 @@ module initia_std::dex {
 
     struct ConfigResponse has drop {
         weights: Weights,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     }
 
     struct CurrentWeightResponse has drop {
-        coin_a_weight: Decimal128,
-        coin_b_weight: Decimal128,
+        coin_a_weight: Decimal256,
+        coin_b_weight: Decimal256,
     }
 
     #[event]
@@ -125,7 +125,7 @@ module initia_std::dex {
         coin_b: address,
         liquidity_token: address,
         weights: Weights,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     }
 
     #[event]
@@ -133,7 +133,7 @@ module initia_std::dex {
         coin_a: address,
         coin_b: address,
         liquidity_token: address,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     }
 
     /// Module store for storing pair infos
@@ -193,10 +193,10 @@ module initia_std::dex {
 
     // TODO - find the resonable percision
     /// Result Precision of `pow` and `ln` function
-    const PRECISION: u128 = 100000;
+    const PRECISION: u256 = 100000;
 
     #[view]
-    public fun pool_info(pair: Object<Config>, lbp_assertion: bool): (u64, u64, Decimal128, Decimal128, Decimal128) acquires Config, Pool {
+    public fun pool_info(pair: Object<Config>, lbp_assertion: bool): (u64, u64, Decimal256, Decimal256, Decimal256) acquires Config, Pool {
         let pair_addr = object::object_address(pair);
         let config = borrow_global<Config>(pair_addr);
         if (lbp_assertion) {
@@ -223,7 +223,7 @@ module initia_std::dex {
     public fun get_spot_price(
         pair: Object<Config>,
         base_coin: Object<Metadata>,
-    ): Decimal128 acquires Config, Pool {
+    ): Decimal256 acquires Config, Pool {
         let (coin_a_pool, coin_b_pool, coin_a_weight, coin_b_weight, _) = pool_info(pair, false);
 
         let pair_key = generate_pair_key(pair);
@@ -239,9 +239,9 @@ module initia_std::dex {
             (coin_b_pool, coin_a_pool, coin_b_weight, coin_a_weight)
         };
 
-        decimal128::from_ratio_u64(
-            decimal128::mul_u64(&base_weight, quote_pool), 
-            decimal128::mul_u64(&quote_weight, base_pool),
+        decimal256::from_ratio_u64(
+            decimal256::mul_u64(&base_weight, quote_pool), 
+            decimal256::mul_u64(&quote_weight, base_pool),
         )
     }
 
@@ -459,7 +459,7 @@ module initia_std::dex {
         res.total_share
     }
 
-    public fun get_swap_fee_rate_from_config_response(res: &ConfigResponse): Decimal128 {
+    public fun get_swap_fee_rate_from_config_response(res: &ConfigResponse): Decimal256 {
         res.swap_fee_rate
     }
 
@@ -471,11 +471,11 @@ module initia_std::dex {
         res.weights.weights_after
     }
 
-    public fun get_coin_a_weight_from_weight(weight: &Weight): Decimal128 {
+    public fun get_coin_a_weight_from_weight(weight: &Weight): Decimal256 {
         weight.coin_a_weight
     }
 
-    public fun get_coin_b_weight_from_weight(weight: &Weight): Decimal128 {
+    public fun get_coin_b_weight_from_weight(weight: &Weight): Decimal256 {
         weight.coin_b_weight
     }
 
@@ -483,7 +483,7 @@ module initia_std::dex {
         weight.timestamp
     }
 
-    public fun unpack_pair_response(pair_response: &PairResponse): (address, address, address, Weights, Decimal128) {
+    public fun unpack_pair_response(pair_response: &PairResponse): (address, address, address, Weights, Decimal256) {
         (
             pair_response.coin_a,
             pair_response.coin_b,
@@ -493,7 +493,7 @@ module initia_std::dex {
         )
     }
 
-    public fun unpack_current_weight_response(current_weight_response: &CurrentWeightResponse): (Decimal128, Decimal128) {
+    public fun unpack_current_weight_response(current_weight_response: &CurrentWeightResponse): (Decimal256, Decimal256) {
         (
             current_weight_response.coin_a_weight,
             current_weight_response.coin_b_weight,
@@ -516,9 +516,9 @@ module initia_std::dex {
         creator: &signer,
         name: String,
         symbol: String,
-        swap_fee_rate: Decimal128,
-        coin_a_weight: Decimal128,
-        coin_b_weight: Decimal128,
+        swap_fee_rate: Decimal256,
+        coin_a_weight: Decimal256,
+        coin_b_weight: Decimal256,
         coin_a_metadata: Object<Metadata>,
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
@@ -552,13 +552,13 @@ module initia_std::dex {
         creator: &signer,
         name: String,
         symbol: String,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
         start_time: u64,
-        coin_a_start_weight: Decimal128,
-        coin_b_start_weight: Decimal128,
+        coin_a_start_weight: Decimal256,
+        coin_b_start_weight: Decimal256,
         end_time: u64,
-        coin_a_end_weight: Decimal128,
-        coin_b_end_weight: Decimal128,
+        coin_a_end_weight: Decimal256,
+        coin_b_end_weight: Decimal256,
         coin_a_metadata: Object<Metadata>,
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
@@ -591,13 +591,13 @@ module initia_std::dex {
     public entry fun update_swap_fee_rate(
         chain: &signer,
         pair: Object<Config>,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     ) acquires Config, Pool, ModuleStore {
         check_chain_permission(chain);
 
         let config = borrow_global_mut<Config>(object::object_address(pair));
         assert!(
-            decimal128::val(&swap_fee_rate) < decimal128::val(&decimal128::one()),
+            decimal256::val(&swap_fee_rate) < decimal256::val(&decimal256::one()),
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
         );
 
@@ -662,12 +662,12 @@ module initia_std::dex {
                 coin::withdraw(account, fungible_asset::store_metadata(pool.coin_b_store), coin_b_amount_in),
             )
         } else {
-            let coin_a_share_ratio = decimal128::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-            let coin_b_share_ratio = decimal128::from_ratio_u64(coin_b_amount_in, coin_b_amount);
-            if (decimal128::val(&coin_a_share_ratio) > decimal128::val(&coin_b_share_ratio)) {
-                coin_a_amount_in = decimal128::mul_u64(&coin_b_share_ratio, coin_a_amount);
+            let coin_a_share_ratio = decimal256::from_ratio_u64(coin_a_amount_in, coin_a_amount);
+            let coin_b_share_ratio = decimal256::from_ratio_u64(coin_b_amount_in, coin_b_amount);
+            if (decimal256::val(&coin_a_share_ratio) > decimal256::val(&coin_b_share_ratio)) {
+                coin_a_amount_in = decimal256::mul_u64(&coin_b_share_ratio, coin_a_amount);
             } else {
-                coin_b_amount_in = decimal128::mul_u64(&coin_a_share_ratio, coin_b_amount);
+                coin_b_amount_in = decimal256::mul_u64(&coin_a_share_ratio, coin_b_amount);
             };
 
             (
@@ -765,9 +765,9 @@ module initia_std::dex {
         let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
         let given_token_amount = fungible_asset::amount(&lp_token);
         let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
-        let given_share_ratio = decimal128::from_ratio((given_token_amount as u128), total_share);
-        let coin_a_amount_out = decimal128::mul_u64(&given_share_ratio, coin_a_amount);
-        let coin_b_amount_out = decimal128::mul_u64(&given_share_ratio, coin_b_amount);
+        let given_share_ratio = decimal256::from_ratio_u128((given_token_amount as u128), total_share);
+        let coin_a_amount_out = decimal256::mul_u64(&given_share_ratio, coin_a_amount);
+        let coin_b_amount_out = decimal256::mul_u64(&given_share_ratio, coin_b_amount);
         check_lbp_ended(&config.weights);
 
         assert!(
@@ -835,9 +835,9 @@ module initia_std::dex {
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
         let pool = borrow_global_mut<Pool>(pair_addr);
         let (normalized_weight, pool_amount_in, provide_coin_addr) = if (is_provide_a) {
-            let normalized_weight = decimal128::from_ratio(
-                decimal128::val(&coin_a_weight),
-                decimal128::val(&coin_a_weight) + decimal128::val(&coin_b_weight)
+            let normalized_weight = decimal256::from_ratio(
+                decimal256::val(&coin_a_weight),
+                decimal256::val(&coin_a_weight) + decimal256::val(&coin_b_weight)
             );
 
             let pool_amount_in = fungible_asset::balance(pool.coin_a_store);
@@ -845,9 +845,9 @@ module initia_std::dex {
 
             (normalized_weight, pool_amount_in, pair_key.coin_a)
         } else {
-            let normalized_weight = decimal128::from_ratio(
-                decimal128::val(&coin_b_weight),
-                decimal128::val(&coin_a_weight) + decimal128::val(&coin_b_weight)
+            let normalized_weight = decimal256::from_ratio(
+                decimal256::val(&coin_b_weight),
+                decimal256::val(&coin_a_weight) + decimal256::val(&coin_b_weight)
             );
 
             let pool_amount_in = fungible_asset::balance(pool.coin_b_store);
@@ -860,19 +860,19 @@ module initia_std::dex {
         assert!(pool_amount_in > amount_in, error::invalid_argument(EPRICE_IMPACT));
 
         // compute fee amount with the assumption that we will swap (1 - normalized_weight) of amount_in
-        let adjusted_swap_amount = decimal128::mul_u64(
-            &decimal128::sub(&decimal128::one(), &normalized_weight),
+        let adjusted_swap_amount = decimal256::mul_u64(
+            &decimal256::sub(&decimal256::one(), &normalized_weight),
             amount_in
         );
-        let fee_amount = decimal128::mul_u64(&config.swap_fee_rate, adjusted_swap_amount);
+        let fee_amount = decimal256::mul_u64(&config.swap_fee_rate, adjusted_swap_amount);
 
         // actual amount in after deducting fee amount
         let adjusted_amount_in = amount_in - fee_amount;
 
         // calculate new total share and new liquidity
-        let base = decimal128::from_ratio_u64(adjusted_amount_in + pool_amount_in, pool_amount_in);
+        let base = decimal256::from_ratio_u64(adjusted_amount_in + pool_amount_in, pool_amount_in);
         let pool_ratio = pow(&base, &normalized_weight);
-        let new_total_share = decimal128::mul_u128(&pool_ratio, total_share);
+        let new_total_share = decimal256::mul_u128(&pool_ratio, total_share);
         let liquidity = (new_total_share - total_share as u64);
 
         // check min liquidity assertion
@@ -962,7 +962,7 @@ module initia_std::dex {
         creator: &signer,
         name: String,
         symbol: String,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         weights: Weights,
@@ -978,7 +978,7 @@ module initia_std::dex {
         );
 
         assert!(
-            decimal128::val(&swap_fee_rate) < decimal128::val(&decimal128::one()),
+            decimal256::val(&swap_fee_rate) < decimal256::val(&decimal256::one()),
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
         );
 
@@ -1011,13 +1011,13 @@ module initia_std::dex {
                 // temp weights for initial provide
                 weights: Weights {
                     weights_before: Weight {
-                        coin_a_weight: decimal128::one(),
-                        coin_b_weight: decimal128::one(),
+                        coin_a_weight: decimal256::one(),
+                        coin_b_weight: decimal256::one(),
                         timestamp: 0,
                     },
                     weights_after: Weight {
-                        coin_a_weight: decimal128::one(),
-                        coin_b_weight: decimal128::one(),
+                        coin_a_weight: decimal256::one(),
+                        coin_b_weight: decimal256::one(),
                         timestamp: 0,
                     }
                 },
@@ -1098,12 +1098,12 @@ module initia_std::dex {
                 coin_b_amount_in
             }
         } else {
-            let coin_a_share_ratio = decimal128::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-            let coin_b_share_ratio = decimal128::from_ratio_u64(coin_b_amount_in, coin_b_amount);
-            if (decimal128::val(&coin_a_share_ratio) > decimal128::val(&coin_b_share_ratio)) {
-                (decimal128::mul_u128(&coin_b_share_ratio, total_share) as u64)
+            let coin_a_share_ratio = decimal256::from_ratio_u64(coin_a_amount_in, coin_a_amount);
+            let coin_b_share_ratio = decimal256::from_ratio_u64(coin_b_amount_in, coin_b_amount);
+            if (decimal256::val(&coin_a_share_ratio) > decimal256::val(&coin_b_share_ratio)) {
+                (decimal256::mul_u128(&coin_b_share_ratio, total_share) as u64)
             } else {
-                (decimal128::mul_u128(&coin_a_share_ratio, total_share) as u64)
+                (decimal256::mul_u128(&coin_a_share_ratio, total_share) as u64)
             }
         };
 
@@ -1154,14 +1154,14 @@ module initia_std::dex {
     }
 
     /// return (coin_a_weight, coin_b_weight)
-    fun get_weight(weights: &Weights): (Decimal128, Decimal128) {
+    fun get_weight(weights: &Weights): (Decimal256, Decimal256) {
         let (_, timestamp) = get_block_info();
         if (timestamp <= weights.weights_before.timestamp) {
             (weights.weights_before.coin_a_weight, weights.weights_before.coin_b_weight)
         } else if (timestamp < weights.weights_after.timestamp) {
-            let interval = (weights.weights_after.timestamp - weights.weights_before.timestamp as u128);
-            let time_diff_after = (weights.weights_after.timestamp - timestamp as u128);
-            let time_diff_before = (timestamp - weights.weights_before.timestamp as u128);
+            let interval = (weights.weights_after.timestamp - weights.weights_before.timestamp as u256);
+            let time_diff_after = (weights.weights_after.timestamp - timestamp as u256);
+            let time_diff_before = (timestamp - weights.weights_before.timestamp as u256);
 
             // when timestamp_before < timestamp < timestamp_after
             // weight = a * timestamp + b
@@ -1171,14 +1171,14 @@ module initia_std::dex {
             //   = a * t_a * t - a * t_a * t_b + b * t - b * t_b
             // l = m + n = a * t * (t_a - t_b) + b * (t_a - t_b)
             // weight = l / (t_a - t_b)
-            let coin_a_m = decimal128::new(decimal128::val(&weights.weights_after.coin_a_weight) * time_diff_before);
-            let coin_a_n = decimal128::new(decimal128::val(&weights.weights_before.coin_a_weight) * time_diff_after);
-            let coin_a_l = decimal128::add(&coin_a_m, &coin_a_n);
+            let coin_a_m = decimal256::new(decimal256::val(&weights.weights_after.coin_a_weight) * time_diff_before);
+            let coin_a_n = decimal256::new(decimal256::val(&weights.weights_before.coin_a_weight) * time_diff_after);
+            let coin_a_l = decimal256::add(&coin_a_m, &coin_a_n);
 
-            let coin_b_m = decimal128::new(decimal128::val(&weights.weights_after.coin_b_weight) * time_diff_before);
-            let coin_b_n = decimal128::new(decimal128::val(&weights.weights_before.coin_b_weight) * time_diff_after);
-            let coin_b_l = decimal128::add(&coin_b_m, &coin_b_n);
-            (decimal128::div(&coin_a_l, interval), decimal128::div(&coin_b_l, interval))
+            let coin_b_m = decimal256::new(decimal256::val(&weights.weights_after.coin_b_weight) * time_diff_before);
+            let coin_b_n = decimal256::new(decimal256::val(&weights.weights_before.coin_b_weight) * time_diff_after);
+            let coin_b_l = decimal256::add(&coin_b_m, &coin_b_n);
+            (decimal256::div(&coin_a_l, interval), decimal256::div(&coin_b_l, interval))
         } else {
             (weights.weights_after.coin_a_weight, weights.weights_after.coin_b_weight)
         }
@@ -1190,37 +1190,37 @@ module initia_std::dex {
     public fun swap_simulation(
         pool_amount_in: u64,
         pool_amount_out: u64,
-        weight_in: Decimal128,
-        weight_out: Decimal128,
+        weight_in: Decimal256,
+        weight_out: Decimal256,
         amount_in: u64,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     ): (u64, u64) {
-        let one = decimal128::one();
-        let exp = decimal128::from_ratio(decimal128::val(&weight_in), decimal128::val(&weight_out));
-        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        let one = decimal256::one();
+        let exp = decimal256::from_ratio(decimal256::val(&weight_in), decimal256::val(&weight_out));
+        let fee_amount = decimal256::mul_u64(&swap_fee_rate, amount_in);
         let adjusted_amount_in = amount_in - fee_amount;
-        let base = decimal128::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
+        let base = decimal256::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
         let sub_amount = pow(&base, &exp);
-        (decimal128::mul_u64(&decimal128::sub(&one, &sub_amount), pool_amount_out), fee_amount)
+        (decimal256::mul_u64(&decimal256::sub(&one, &sub_amount), pool_amount_out), fee_amount)
     }
 
     public fun swap_simulation_given_out(
         pool_amount_in: u64,
         pool_amount_out: u64,
-        weight_in: Decimal128,
-        weight_out: Decimal128,
+        weight_in: Decimal256,
+        weight_out: Decimal256,
         amount_out: u64,
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: Decimal256,
     ): (u64, u64) {
-        let one = decimal128::one();
-        let exp = decimal128::from_ratio(decimal128::val(&weight_out), decimal128::val(&weight_in));
-        let base = decimal128::from_ratio_u64(pool_amount_out, pool_amount_out - amount_out);
+        let one = decimal256::one();
+        let exp = decimal256::from_ratio(decimal256::val(&weight_out), decimal256::val(&weight_in));
+        let base = decimal256::from_ratio_u64(pool_amount_out, pool_amount_out - amount_out);
         let base_exp = pow(&base, &exp);
-        let adjusted_amount_in = decimal128::val(&decimal128::sub(&base_exp, &one)) * (pool_amount_in as u128) ;
-        let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);                                                                                                                                                                                
+        let adjusted_amount_in = decimal256::val(&decimal256::sub(&base_exp, &one)) * (pool_amount_in as u256) ;
+        let sub_one_fee = decimal256::sub(&one, &swap_fee_rate);                                                                                                                                                                                
 
-        let amount_in = ( adjusted_amount_in / decimal128::val(&sub_one_fee) as u64);
-        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        let amount_in = ( adjusted_amount_in / decimal256::val(&sub_one_fee) as u64);
+        let fee_amount = decimal256::mul_u64(&swap_fee_rate, amount_in);
 
         (amount_in, fee_amount)
     }
@@ -1233,33 +1233,33 @@ module initia_std::dex {
 
     /// a^x = 1 + sigma[(k^n)/n!]
     /// k = x * ln(a)
-    fun pow(base: &Decimal128, exp: &Decimal128): Decimal128 {
+    fun pow(base: &Decimal256, exp: &Decimal256): Decimal256 {
         assert!(
-            decimal128::val(base) != 0 && decimal128::val(base) < 2000000000000000000,
+            decimal256::val(base) != 0 && decimal256::val(base) < 2000000000000000000,
             error::invalid_argument(EOUT_OF_BASE_RANGE),
         );
 
-        let res = decimal128::one();
+        let res = decimal256::one();
         let (ln_a, neg) = ln(base);
-        let k = mul_decimal128s(&ln_a, exp);
+        let k = mul_decimal256s(&ln_a, exp);
         let comp = k;
         let index = 1;
-        let subs: vector<Decimal128> = vector[];
-        while (decimal128::val(&comp) > PRECISION) {
+        let subs: vector<Decimal256> = vector[];
+        while (decimal256::val(&comp) > PRECISION) {
             if (index & 1 == 1 && neg) {
                 vector::push_back(&mut subs, comp)
             } else {
-                res = decimal128::add(&res, &comp)
+                res = decimal256::add(&res, &comp)
             };
 
-            comp = decimal128::div(&mul_decimal128s(&comp, &k), index + 1);
+            comp = decimal256::div(&mul_decimal256s(&comp, &k), index + 1);
             index = index + 1;
         };
 
         let index = 0;
         while (index < vector::length(&subs)) {
             let comp = vector::borrow(&subs, index);
-            res = decimal128::sub(&res, comp);
+            res = decimal256::sub(&res, comp);
             index = index + 1;
         };
 
@@ -1268,30 +1268,30 @@ module initia_std::dex {
 
     /// ln(1 + a) = sigma[(-1) ^ (n + 1) * (a ^ n / n)]
     /// https://en.wikipedia.org/wiki/Taylor_series#Natural_logarithm
-    fun ln(num: &Decimal128): (Decimal128, bool) {
-        let one = decimal128::val(&decimal128::one());
-        let num_val = decimal128::val(num);
+    fun ln(num: &Decimal256): (Decimal256, bool) {
+        let one = decimal256::val(&decimal256::one());
+        let num_val = decimal256::val(num);
         let (a, a_neg) = if (num_val >= one) {
-            (decimal128::sub(num, &decimal128::one()), false)
+            (decimal256::sub(num, &decimal256::one()), false)
         } else {
-            (decimal128::sub(&decimal128::one(), num), true)
+            (decimal256::sub(&decimal256::one(), num), true)
         };
 
-        let res = decimal128::zero();
+        let res = decimal256::zero();
         let comp = a;
         let index = 1;
 
-        while (decimal128::val(&comp) > PRECISION) {
+        while (decimal256::val(&comp) > PRECISION) {
             if (index & 1 == 0 && !a_neg) {
-                res = decimal128::sub(&res, &comp);
+                res = decimal256::sub(&res, &comp);
             } else {
-                res = decimal128::add(&res, &comp);
+                res = decimal256::add(&res, &comp);
             };
 
             // comp(old) = a ^ n / n
             // comp(new) = comp(old) * a * n / (n + 1) = a ^ (n + 1) / (n + 1)
-            comp = decimal128::div(
-                &decimal128::new(decimal128::val(&mul_decimal128s(&comp, &a)) * index), // comp * a * index
+            comp = decimal256::div(
+                &decimal256::new(decimal256::val(&mul_decimal256s(&comp, &a)) * index), // comp * a * index
                 index + 1,
             );
 
@@ -1301,10 +1301,10 @@ module initia_std::dex {
         (res, a_neg)
     }
 
-    fun mul_decimal128s(decimal128_0: &Decimal128, decimal128_1: &Decimal128): Decimal128 {
-        let one = (decimal128::val(&decimal128::one()) as u256);
-        let val_mul = (decimal128::val(decimal128_0) as u256) * (decimal128::val(decimal128_1) as u256);
-        decimal128::new((val_mul / one as u128))
+    fun mul_decimal256s(decimal256_0: &Decimal256, decimal256_1: &Decimal256): Decimal256 {
+        let one = (decimal256::val(&decimal256::one()) as u256);
+        let val_mul = (decimal256::val(decimal256_0) as u256) * (decimal256::val(decimal256_1) as u256);
+        decimal256::new((val_mul / one as u256))
     }
 
     #[test_only]
@@ -1371,9 +1371,9 @@ module initia_std::dex {
             &chain,
             std::string::utf8(b"name"),
             std::string::utf8(b"SYMBOL"),
-            decimal128::from_ratio(3, 1000),
-            decimal128::from_ratio(8, 10),
-            decimal128::from_ratio(2, 10),
+            decimal256::from_ratio(3, 1000),
+            decimal256::from_ratio(8, 10),
+            decimal256::from_ratio(2, 10),
             coin::metadata(chain_addr, string::utf8(b"INIT")),
             coin::metadata(chain_addr, string::utf8(b"USDC")),
             80000000,
@@ -1448,13 +1448,13 @@ module initia_std::dex {
             &chain,
             std::string::utf8(b"name"),
             std::string::utf8(b"SYMBOL"),
-            decimal128::from_ratio(3, 1000),
+            decimal256::from_ratio(3, 1000),
             2000,
-            decimal128::from_ratio(99, 100),
-            decimal128::from_ratio(1, 100),
+            decimal256::from_ratio(99, 100),
+            decimal256::from_ratio(1, 100),
             3000,
-            decimal128::from_ratio(61, 100),
-            decimal128::from_ratio(39, 100),
+            decimal256::from_ratio(61, 100),
+            decimal256::from_ratio(39, 100),
             init_metadata,
             usdc_metadata,
             80000000,
@@ -1465,7 +1465,7 @@ module initia_std::dex {
 
         assert!(
             get_spot_price(pair, init_metadata) ==
-            decimal128::from_string(&string::utf8(b"24.75")),
+            decimal256::from_string(&string::utf8(b"24.75")),
             0,
         );
 
@@ -1473,7 +1473,7 @@ module initia_std::dex {
         set_block_info(11, 2500);
         assert!(
             get_spot_price(pair, init_metadata) ==
-            decimal128::from_string(&string::utf8(b"1")),
+            decimal256::from_string(&string::utf8(b"1")),
             1,
         );
 
@@ -1481,7 +1481,7 @@ module initia_std::dex {
         set_block_info(12, 3500);
         assert!(
             get_spot_price(pair, init_metadata) ==
-            decimal128::from_string(&string::utf8(b"0.391025641025641025")),
+            decimal256::from_string(&string::utf8(b"0.391025641025641025")),
             2,
         );
 
@@ -1519,13 +1519,13 @@ module initia_std::dex {
     fun get_weight_test() {
         let weights = Weights {
             weights_before: Weight {
-                coin_a_weight: decimal128::from_ratio(2, 10),
-                coin_b_weight: decimal128::from_ratio(8, 10),
+                coin_a_weight: decimal256::from_ratio(2, 10),
+                coin_b_weight: decimal256::from_ratio(8, 10),
                 timestamp: 1000,
             },
             weights_after: Weight {
-                coin_a_weight: decimal128::from_ratio(8, 10),
-                coin_b_weight: decimal128::from_ratio(2, 10),
+                coin_a_weight: decimal256::from_ratio(8, 10),
+                coin_b_weight: decimal256::from_ratio(2, 10),
                 timestamp: 2000,
             },
         };
@@ -1533,32 +1533,32 @@ module initia_std::dex {
         set_block_info(10, 1000);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(2, 10)
-                && coin_b_weight == decimal128::from_ratio(8, 10),
+            coin_a_weight == decimal256::from_ratio(2, 10)
+                && coin_b_weight == decimal256::from_ratio(8, 10),
             0,
         );
 
         set_block_info(15, 1500);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(5, 10)
-                && coin_b_weight == decimal128::from_ratio(5, 10),
+            coin_a_weight == decimal256::from_ratio(5, 10)
+                && coin_b_weight == decimal256::from_ratio(5, 10),
             1,
         );
 
         set_block_info(20, 2000);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(8, 10)
-                && coin_b_weight == decimal128::from_ratio(2, 10),
+            coin_a_weight == decimal256::from_ratio(8, 10)
+                && coin_b_weight == decimal256::from_ratio(2, 10),
             2,
         );
 
         set_block_info(30, 3000);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(8, 10)
-                && coin_b_weight == decimal128::from_ratio(2, 10),
+            coin_a_weight == decimal256::from_ratio(8, 10)
+                && coin_b_weight == decimal256::from_ratio(2, 10),
             3,
         );
     }
@@ -1590,9 +1590,9 @@ module initia_std::dex {
             &chain,
             std::string::utf8(b"name"),
             std::string::utf8(b"SYMBOL1"),
-            decimal128::from_ratio(3, 1000),
-            decimal128::from_ratio(5, 10),
-            decimal128::from_ratio(5, 10),
+            decimal256::from_ratio(3, 1000),
+            decimal256::from_ratio(5, 10),
+            decimal256::from_ratio(5, 10),
             a_metadata,
             b_metadata,
             1,
@@ -1606,9 +1606,9 @@ module initia_std::dex {
             &chain,
             std::string::utf8(b"name"),
             std::string::utf8(b"SYMBOL2"),
-            decimal128::from_ratio(3, 1000),
-            decimal128::from_ratio(5, 10),
-            decimal128::from_ratio(5, 10),
+            decimal256::from_ratio(3, 1000),
+            decimal256::from_ratio(5, 10),
+            decimal256::from_ratio(5, 10),
             a_metadata,
             b_metadata,
             1,
@@ -1622,9 +1622,9 @@ module initia_std::dex {
             &chain,
             std::string::utf8(b"name"),
             std::string::utf8(b"SYMBOL3"),
-            decimal128::from_ratio(3, 1000),
-            decimal128::from_ratio(5, 10),
-            decimal128::from_ratio(5, 10),
+            decimal256::from_ratio(3, 1000),
+            decimal256::from_ratio(5, 10),
+            decimal256::from_ratio(5, 10),
             a_metadata,
             c_metadata,
             1,
@@ -1639,9 +1639,9 @@ module initia_std::dex {
             &chain,
             std::string::utf8(b"name"),
             std::string::utf8(b"SYMBOL4"),
-            decimal128::from_ratio(3, 1000),
-            decimal128::from_ratio(5, 10),
-            decimal128::from_ratio(5, 10),
+            decimal256::from_ratio(3, 1000),
+            decimal256::from_ratio(5, 10),
+            decimal256::from_ratio(5, 10),
             a_metadata,
             c_metadata,
             1,
@@ -1652,8 +1652,8 @@ module initia_std::dex {
         let pair_4_addr = object::object_address(pair_4);
 
         let (_, timestamp) = get_block_info();
-        let weight = decimal128::from_ratio(5, 10);
-        let swap_fee_rate = decimal128::from_ratio(3, 1000);
+        let weight = decimal256::from_ratio(5, 10);
+        let swap_fee_rate = decimal256::from_ratio(3, 1000);
         let weights = Weights {
             weights_before: Weight {
                 coin_a_weight: weight,

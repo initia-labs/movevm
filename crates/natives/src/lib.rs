@@ -12,6 +12,7 @@ pub mod cosmos;
 pub mod crypto;
 pub mod event;
 pub mod from_bcs;
+pub mod json;
 pub mod object;
 pub mod staking;
 pub mod table;
@@ -78,6 +79,7 @@ pub fn initia_natives(
     add_natives_from_module!("staking", staking::make_all(gas_params.staking));
     add_natives_from_module!("cosmos", cosmos::make_all(gas_params.cosmos));
     add_natives_from_module!("object", object::make_all(gas_params.object));
+    add_natives_from_module!("json", json::make_all(gas_params.json));
     add_natives_from_module!(
         "transaction_context",
         transaction_context::make_all(gas_params.transaction_context)
