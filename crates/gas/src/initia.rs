@@ -78,6 +78,7 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
+    [.oracle.get_price.base_cost, "oracle.get_prices.base_cost", 1500 * SCALING],
 ]);
 
 use crate::gas_params::*;
@@ -97,6 +98,7 @@ pub struct GasParameters {
     pub staking: staking::GasParameters,
     pub cosmos: cosmos::GasParameters,
     pub json: json::GasParameters,
+    pub oracle: oracle::GasParameters,
 }
 
 impl GasParameters {
@@ -227,6 +229,11 @@ impl GasParameters {
                 },
                 generate_unique_address: transaction_context::GenerateUniqueAddressGasParameters {
                     base: 0.into(),
+                },
+            },
+            oracle: oracle::GasParameters {
+                get_price: oracle::GetPricesGasParameters {
+                    base_cost: 0.into(),
                 },
             },
         }

@@ -5,11 +5,13 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use initia_natives::{account::AccountAPI, staking::StakingAPI, table::TableResolver};
+use initia_natives::{
+    account::AccountAPI, oracle::OracleAPI, staking::StakingAPI, table::TableResolver,
+};
 use initia_types::{
     access_path::AccessPath, iterator::Order, table::TableHandle, write_set::WriteSet,
 };
-use move_core_types::{account_address::AccountAddress, effects::Op};
+use move_core_types::{account_address::AccountAddress, effects::Op, u256::U256};
 
 use anyhow::{anyhow, Error};
 
@@ -209,14 +211,20 @@ fn clone_and_format_item(item_ref: BTreeMapRecordRef, prefix_length: usize) -> V
 pub struct MockAPI {
     pub account_api: MockAccountAPI,
     pub staking_api: MockStakingAPI,
+    pub oracle_api: MockOracleAPI,
     pub block_time: u64,
 }
 
 impl MockAPI {
-    pub fn new(account_api: MockAccountAPI, staking_api: MockStakingAPI) -> Self {
+    pub fn new(
+        account_api: MockAccountAPI,
+        staking_api: MockStakingAPI,
+        oracle_api: MockOracleAPI,
+    ) -> Self {
         Self {
             account_api,
             staking_api,
+            oracle_api,
             block_time: 0,
         }
     }
@@ -224,7 +232,8 @@ impl MockAPI {
     pub fn empty() -> Self {
         let account_api = MockAccountAPI::new();
         let staking_api = MockStakingAPI::new();
-        MockAPI::new(account_api, staking_api)
+        let oracle_api = MockOracleAPI::new();
+        MockAPI::new(account_api, staking_api, oracle_api)
     }
 
     pub fn set_block_time(&mut self, block_time: u64) {
@@ -268,6 +277,19 @@ impl StakingAPI for MockAPI {
 
     fn unbond_timestamp(&self) -> anyhow::Result<u64> {
         Ok(self.block_time + 60 * 60 * 24 * 7)
+    }
+}
+
+impl OracleAPI for MockAPI {
+    fn get_price(
+        &self,
+        pair_id: &[u8],
+    ) -> anyhow::Result<(
+        U256, /* price */
+        u64,  /* updated_at */
+        u64,  /* decimals */
+    )> {
+        self.oracle_api.get_price(pair_id)
     }
 }
 
@@ -383,6 +405,43 @@ impl MockStakingAPI {
     }
 }
 
+pub struct MockOracleAPI {
+    pub prices: BTreeMap<Vec<u8>, (U256, u64, u64)>,
+}
+
+impl MockOracleAPI {
+    pub fn new() -> Self {
+        MockOracleAPI {
+            prices: BTreeMap::default(),
+        }
+    }
+
+    pub fn set_oracle_price(
+        &mut self,
+        pair_id: Vec<u8>,
+        price: U256,
+        updated_at: u64,
+        decimals: u64,
+    ) {
+        self.prices.insert(pair_id, (price, updated_at, decimals));
+    }
+}
+
+impl Default for MockOracleAPI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MockOracleAPI {
+    fn get_price(&self, pair_id: &[u8]) -> anyhow::Result<(U256, u64, u64)> {
+        match self.prices.get(pair_id) {
+            Some(res) => Ok(*res),
+            None => Err(anyhow!("pair not found")),
+        }
+    }
+}
+
 ////////////////////////////////////////////////
 /// Blank resolver & API for Unit Tests
 
@@ -424,6 +483,7 @@ impl TableResolver for BlankTableViewImpl {
 pub struct BlankAPIImpl {
     pub account_api: BlankAccountAPIImpl,
     pub staking_api: BlankStakingAPIImpl,
+    pub oracle_api: BlankOracleAPIImpl,
 }
 
 impl BlankAPIImpl {
@@ -431,6 +491,7 @@ impl BlankAPIImpl {
         Self {
             account_api: BlankAccountAPIImpl,
             staking_api: BlankStakingAPIImpl,
+            oracle_api: BlankOracleAPIImpl,
         }
     }
 }
@@ -486,5 +547,20 @@ impl StakingAPI for BlankStakingAPIImpl {
 
     fn unbond_timestamp(&self) -> anyhow::Result<u64> {
         Ok(60 * 60 * 24 * 7)
+    }
+}
+
+pub struct BlankOracleAPIImpl;
+
+impl OracleAPI for BlankOracleAPIImpl {
+    fn get_price(
+        &self,
+        _pair_id: &[u8],
+    ) -> anyhow::Result<(
+        U256, /* price */
+        u64,  /* updated_at */
+        u64,  /* decimals */
+    )> {
+        Err(anyhow!("pair not found"))
     }
 }

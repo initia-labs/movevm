@@ -14,6 +14,7 @@ pub mod event;
 pub mod from_bcs;
 pub mod json;
 pub mod object;
+pub mod oracle;
 pub mod staking;
 pub mod table;
 pub mod transaction_context;
@@ -84,6 +85,7 @@ pub fn initia_natives(
         "transaction_context",
         transaction_context::make_all(gas_params.transaction_context)
     );
+    add_natives_from_module!("oracle", oracle::make_all(gas_params.oracle));
 
     #[cfg(feature = "testing")]
     add_natives_from_module!("unit_test", unit_test::make_all());

@@ -51,14 +51,12 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	stdlibFiles = append(stdlibFiles, types.NewModule(bz))
 
 	kvStore := api.NewLookup()
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
 
 	vm := vm.NewVM(100)
 	err = vm.Initialize(
 		kvStore,
-		api.NewMockAPI(blockTime, &accountAPI, &stakingAPI),
+		api.NewEmptyMockAPI(blockTime),
 		types.Env{
 			BlockHeight:       100,
 			BlockTimestamp:    blockTime,
@@ -101,9 +99,6 @@ func publishModuleBundle(
 	f4, err := os.ReadFile("./precompile/binaries/tests/TableTestData.mv")
 	require.NoError(t, err)
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
-
 	moduleIds, err := types.SerializeBytesVector([][]byte{
 		[]byte("0x2::TestCoin"),
 		[]byte("0x2::Bundle1"),
@@ -122,7 +117,7 @@ func publishModuleBundle(
 
 	res, err := vm.ExecuteEntryFunction(
 		kvStore,
-		api.NewMockAPI(blockTime, &accountAPI, &stakingAPI),
+		api.NewEmptyMockAPI(blockTime),
 		types.Env{
 			BlockHeight:       100,
 			BlockTimestamp:    blockTime,
@@ -177,13 +172,11 @@ func mintCoin(
 		Args:     [][]byte{arg},
 	}
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
 
 	res, err := vm.ExecuteEntryFunction(
 		kvStore,
-		api.NewMockAPI(blockTime, &accountAPI, &stakingAPI),
+		api.NewEmptyMockAPI(blockTime),
 		types.Env{
 			BlockHeight:       100,
 			BlockTimestamp:    blockTime,
@@ -262,10 +255,8 @@ func Test_FailOnExecute(t *testing.T) {
 		Args:     [][]byte{arg},
 	}
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
-	_api := api.NewMockAPI(blockTime, &accountAPI, &stakingAPI)
+	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
 		BlockTimestamp:    blockTime,
@@ -309,11 +300,8 @@ func Test_OutOfGas(t *testing.T) {
 		Args:     [][]byte{arg},
 	}
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
-
-	_api := api.NewMockAPI(blockTime, &accountAPI, &stakingAPI)
+	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
 		BlockTimestamp:    blockTime,
@@ -357,11 +345,8 @@ func Test_QueryContract(t *testing.T) {
 		Args:     [][]byte{testAccount[:]},
 	}
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
-
-	_api := api.NewMockAPI(blockTime, &accountAPI, &stakingAPI)
+	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
 		BlockTimestamp:    blockTime,
@@ -448,11 +433,8 @@ func Test_ExecuteScript(t *testing.T) {
 		Args:   [][]byte{optionalUint64},
 	}
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
-
-	_api := api.NewMockAPI(blockTime, &accountAPI, &stakingAPI)
+	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
 		BlockTimestamp:    blockTime,
@@ -506,11 +488,8 @@ func Test_TableIterator(t *testing.T) {
 		Args:     [][]byte{},
 	}
 
-	accountAPI := api.NewMockAccountAPI()
-	stakingAPI := api.NewMockStakingAPI()
 	blockTime := uint64(time.Now().Unix())
-
-	_api := api.NewMockAPI(blockTime, &accountAPI, &stakingAPI)
+	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
 		BlockTimestamp:    blockTime,
@@ -570,4 +549,47 @@ func Test_TableIterator(t *testing.T) {
 		payload,
 	)
 	require.NoError(t, err)
+}
+
+func Test_OracleAPI(t *testing.T) {
+	vm, kvStore := initializeVM(t, true)
+	defer vm.Destroy()
+
+	pairId := "BITCOIN/USD"
+	pairIdArg, err := types.SerializeString(pairId)
+	require.NoError(t, err)
+	payload := types.ViewFunction{
+		Module: types.ModuleId{
+			Address: types.StdAddress,
+			Name:    "oracle",
+		},
+		Function: "get_price",
+		TyArgs:   []types.TypeTag{},
+		Args:     [][]byte{pairIdArg},
+	}
+
+	price := uint64(11231231231)
+	updatedAt := uint64(102310)
+	decimals := uint64(8)
+
+	blockTime := uint64(time.Now().Unix())
+	_api := api.NewEmptyMockAPI(blockTime)
+	_api.OracleAPI.SetPrice(pairId, price, updatedAt, decimals)
+	env := types.Env{
+		BlockHeight:       100,
+		BlockTimestamp:    blockTime,
+		NextAccountNumber: 1,
+		TxHash:            [32]uint8(generateRandomHash()),
+		SessionId:         [32]uint8(generateRandomHash()),
+	}
+
+	res, err := vm.ExecuteViewFunction(
+		kvStore,
+		_api,
+		env,
+		10000,
+		payload,
+	)
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("[\"%d\",\"%d\",\"%d\"]", price, updatedAt, decimals), res)
 }

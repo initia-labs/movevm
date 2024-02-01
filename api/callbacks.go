@@ -16,6 +16,7 @@ typedef GoError (*get_account_info_fn)(api_t *ptr, U8SliceView addr, bool *found
 typedef GoError (*amount_to_share_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share,  UnmanagedVector *errOut);
 typedef GoError (*share_to_amount_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount,  UnmanagedVector *errOut);
 typedef GoError (*unbond_timestamp_fn)(api_t *ptr, uint64_t *unbondTimestamp,  UnmanagedVector *errOut);
+typedef GoError (*get_price_fn)(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
 // and iterator
 typedef GoError (*next_db_fn)(iterator_t ptr, UnmanagedVector *key, UnmanagedVector *errOut);
 
@@ -29,6 +30,7 @@ GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t 
 GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share, UnmanagedVector *errOut);
 GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount, UnmanagedVector *errOut);
 GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);
+GoError cGetPrice_cgo(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
 // iterator
 GoError cNext_cgo(iterator_t *ptr, UnmanagedVector *key, UnmanagedVector *errOut);
 */
@@ -300,6 +302,7 @@ type GoAPI interface {
 	AmountToShare([]byte, types.AccountAddress, uint64) (uint64, error)
 	ShareToAmount([]byte, types.AccountAddress, uint64) (uint64, error)
 	UnbondTimestamp() uint64
+	GetPrice(string) ([]byte, uint64, uint64, error)
 }
 
 var api_vtable = C.GoApi_vtable{
@@ -307,6 +310,7 @@ var api_vtable = C.GoApi_vtable{
 	amount_to_share:  (C.amount_to_share_fn)(C.cAmountToShare_cgo),
 	share_to_amount:  (C.share_to_amount_fn)(C.cShareToAmount_cgo),
 	unbond_timestamp: (C.unbond_timestamp_fn)(C.cUnbondTimestamp_cgo),
+	get_price:        (C.get_price_fn)(C.cGetPrice_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
@@ -449,5 +453,34 @@ func cUnbondTimestamp(ptr *C.api_t, unbondTimestamp *C.uint64_t, errOut *C.Unman
 
 	t := api.UnbondTimestamp()
 	*unbondTimestamp = C.uint64_t(t)
+	return C.GoError_None
+}
+
+//export cGetPrice
+func cGetPrice(ptr *C.api_t, pairId C.U8SliceView, price *C.UnmanagedVector, updatedAt *C.uint64_t, decimals *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+	defer recoverPanic(&ret)
+
+	if price == nil || updatedAt == nil || decimals == nil {
+		return C.GoError_BadArgument
+	}
+	if errOut == nil {
+		return C.GoError_BadArgument
+	}
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	}
+
+	api := *(*GoAPI)(unsafe.Pointer(ptr))
+
+	pid := copyU8Slice(pairId)
+	p, u, d, err := api.GetPrice(string(pid))
+	if err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
+
+	*price = newUnmanagedVector(p)
+	*updatedAt = C.uint64_t(u)
+	*decimals = C.uint64_t(d)
 	return C.GoError_None
 }

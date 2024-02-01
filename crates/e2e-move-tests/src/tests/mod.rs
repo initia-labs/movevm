@@ -5,6 +5,7 @@ mod cosmos;
 mod infinite_loop;
 mod max_loop_depth;
 mod memory_quota;
+mod oracle;
 mod output;
 mod staking;
 mod std_coin;

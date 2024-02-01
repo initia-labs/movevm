@@ -14,6 +14,7 @@ GoError cGetAccountInfo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *acc
 GoError cAmountToShare(api_t *ptr, U8SliceView validator, U8SliceView coinType, uint64_t amount, uint64_t *share, UnmanagedVector *errOut);
 GoError cShareToAmount(api_t *ptr, U8SliceView validator, U8SliceView coinType, uint64_t share, uint64_t *amount, UnmanagedVector *errOut);
 GoError cUnbondTimestamp(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);
+GoError cGetPrice(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
 // imports (iterator)
 GoError cNext(iterator_t *ptr, UnmanagedVector *key, UnmanagedVector *errOut);
 
@@ -48,6 +49,9 @@ GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinTy
 }
 GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut) {
     return cUnbondTimestamp(ptr, unbondTimestamp, errOut);
+}
+GoError cGetPrice_cgo(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut) {
+    return cGetPrice(ptr, pairId, price, updatedAt, decimals, errOut);
 }
 */
 import "C"

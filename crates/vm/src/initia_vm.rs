@@ -30,6 +30,7 @@ use initia_natives::{
     code::{NativeCodeContext, PublishRequest},
     cosmos::NativeCosmosContext,
     event::NativeEventContext,
+    oracle::{NativeOracleContext, OracleAPI},
     staking::NativeStakingContext,
     transaction_context::NativeTransactionContext,
 };
@@ -108,7 +109,7 @@ impl InitiaVM {
 
     fn create_session<
         'r,
-        A: AccountAPI + StakingAPI,
+        A: AccountAPI + StakingAPI + OracleAPI,
         S: MoveResolver<PartialVMError>,
         T: TableResolver,
     >(
@@ -139,6 +140,7 @@ impl InitiaVM {
         extensions.add(NativeCosmosContext::default());
         extensions.add(NativeTransactionContext::new(tx_hash, session_id));
         extensions.add(NativeEventContext::default());
+        extensions.add(NativeOracleContext::new(api));
 
         SessionExt::new(
             self.move_vm
@@ -147,7 +149,7 @@ impl InitiaVM {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
+    pub fn initialize<S: StateView, T: TableView, A: AccountAPI + StakingAPI + OracleAPI>(
         &mut self,
         api: &A,
         env: &Env,
@@ -217,7 +219,7 @@ impl InitiaVM {
         Ok(output)
     }
 
-    pub fn execute_message<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
+    pub fn execute_message<S: StateView, T: TableView, A: AccountAPI + StakingAPI + OracleAPI>(
         &mut self,
         api: &A,
         env: &Env,
@@ -245,7 +247,11 @@ impl InitiaVM {
         )
     }
 
-    pub fn execute_view_function<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
+    pub fn execute_view_function<
+        S: StateView,
+        T: TableView,
+        A: AccountAPI + StakingAPI + OracleAPI,
+    >(
         &self,
         api: &A,
         env: &Env,
@@ -284,7 +290,11 @@ impl InitiaVM {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn execute_script_or_entry_function<S: StateView, T: TableView, A: AccountAPI + StakingAPI>(
+    fn execute_script_or_entry_function<
+        S: StateView,
+        T: TableView,
+        A: AccountAPI + StakingAPI + OracleAPI,
+    >(
         &self,
         api: &A,
         env: &Env,

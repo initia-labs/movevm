@@ -11,15 +11,13 @@ use move_vm_types::{
     values::{Reference, StructRef, Value, Vector},
 };
 use smallvec::smallvec;
-use std::sync::Arc;
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, VecDeque},
-};
+use std::collections::{BTreeMap, VecDeque};
+use std::{borrow::BorrowMut, sync::Arc};
 
 #[cfg(feature = "testing")]
 use crate::block::NativeBlockContext;
 
+use crate::util::make_native_from_func;
 #[cfg(feature = "testing")]
 use crate::util::make_test_only_native_from_func;
 
@@ -50,7 +48,7 @@ pub trait StakingAPI {
 #[derive(Tid)]
 pub struct NativeStakingContext<'a> {
     api: &'a dyn StakingAPI,
-    staking_data: RefCell<StakingData>,
+    staking_data: StakingData,
     #[cfg(feature = "testing")]
     share_ratios: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64 /* share */, u64 /* amount */)>>,
 }
@@ -91,7 +89,7 @@ impl<'a> NativeStakingContext<'a> {
 
     pub fn into_change_set(self) -> StakingChangeSet {
         let NativeStakingContext { staking_data, .. } = self;
-        let StakingData { changes } = staking_data.into_inner();
+        let StakingData { changes } = staking_data;
 
         StakingChangeSet::new(changes)
     }
@@ -142,15 +140,15 @@ fn get_metadata_address(metadata: &StructRef) -> PartialVMResult<AccountAddress>
 
 fn native_delegate(
     gas_params: &DelegateGasParameters,
-    context: &NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
-    let staking_context = context.extensions().get::<NativeStakingContext>();
-    let mut staking_data = staking_context.staking_data.borrow_mut();
+    let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
+    let staking_data = staking_context.staking_data.borrow_mut();
 
     let amount = pop_arg!(args, u64);
     let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
@@ -201,15 +199,15 @@ pub fn make_native_delegate(gas_params: DelegateGasParameters) -> NativeFunction
 
 fn native_undelegate(
     gas_params: &UndelegateGasParameters,
-    context: &NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 3);
 
-    let staking_context = context.extensions().get::<NativeStakingContext>();
-    let mut staking_data = staking_context.staking_data.borrow_mut();
+    let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
+    let staking_data = staking_context.staking_data.borrow_mut();
 
     let share = pop_arg!(args, u64);
     let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
@@ -233,19 +231,18 @@ fn native_undelegate(
 
     #[cfg(feature = "testing")]
     if staking_context.share_ratios.contains_key(&validator) {
-        let block_context = context.extensions().get::<NativeBlockContext>();
-        let (_, timestamp) = block_context.get_block_info();
-        let unbond_timestamp = timestamp + 60 * 60 * 24 * 7;
-
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         let ratio = ratios.get(&metadata).unwrap();
+        let amount = share * ratio.1 / ratio.0;
+
         if ratios.contains_key(&metadata) {
+            let block_context = context.extensions().get::<NativeBlockContext>();
+            let (_, timestamp) = block_context.get_block_info();
+            let unbond_timestamp = timestamp + 60 * 60 * 24 * 7;
+
             return Ok(NativeResult::ok(
                 gas_params.base,
-                smallvec![
-                    Value::u64(share * ratio.1 / ratio.0),
-                    Value::u64(unbond_timestamp)
-                ],
+                smallvec![Value::u64(amount), Value::u64(unbond_timestamp)],
             ));
         }
     }
@@ -273,7 +270,7 @@ pub fn make_native_undelegate(gas_params: UndelegateGasParameters) -> NativeFunc
 
 fn native_share_to_amount(
     gas_params: &ShareToAmountGasParameters,
-    context: &NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -317,7 +314,7 @@ pub fn make_native_share_to_amount(gas_params: ShareToAmountGasParameters) -> Na
 
 fn native_amount_to_share(
     gas_params: &AmountToShareGasParameters,
-    context: &NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -364,49 +361,32 @@ pub fn make_native_amount_to_share(gas_params: AmountToShareGasParameters) -> Na
  *
  **************************************************************************************************/
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
-    #[cfg(not(feature = "testing"))]
-    let natives = vec![
+    let mut natives = vec![];
+
+    natives.extend([
         (
             "delegate_internal",
-            make_native_delegate(gas_params.delegate),
+            make_native_from_func(gas_params.delegate, native_delegate),
         ),
         (
             "undelegate_internal",
-            make_native_undelegate(gas_params.undelegate),
+            make_native_from_func(gas_params.undelegate, native_undelegate),
         ),
         (
             "share_to_amount",
-            make_native_share_to_amount(gas_params.share_to_amount),
+            make_native_from_func(gas_params.share_to_amount, native_share_to_amount),
         ),
         (
             "amount_to_share",
-            make_native_amount_to_share(gas_params.amount_to_share),
+            make_native_from_func(gas_params.amount_to_share, native_amount_to_share),
         ),
-    ];
+    ]);
 
     #[cfg(feature = "testing")]
-    let natives = vec![
-        (
-            "delegate_internal",
-            make_native_delegate(gas_params.delegate),
-        ),
-        (
-            "undelegate_internal",
-            make_native_undelegate(gas_params.undelegate),
-        ),
-        (
-            "share_to_amount",
-            make_native_share_to_amount(gas_params.share_to_amount),
-        ),
-        (
-            "amount_to_share",
-            make_native_amount_to_share(gas_params.amount_to_share),
-        ),
-        (
-            "set_staking_share_ratio",
-            make_test_only_native_from_func(native_test_only_set_staking_share_ratio),
-        ),
-    ];
+    natives.extend([(
+        "set_staking_share_ratio",
+        make_test_only_native_from_func(native_test_only_set_staking_share_ratio),
+    )]);
 
     crate::helpers::make_module_natives(natives)
 }

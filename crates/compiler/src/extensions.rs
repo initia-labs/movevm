@@ -1,8 +1,9 @@
 use crate::mocks::{BlankAPIImpl, BlankTableViewImpl};
 use initia_natives::{
     account::NativeAccountContext, block::NativeBlockContext, code::NativeCodeContext,
-    cosmos::NativeCosmosContext, event::NativeEventContext, staking::NativeStakingContext,
-    table::NativeTableContext, transaction_context::NativeTransactionContext,
+    cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
+    staking::NativeStakingContext, table::NativeTableContext,
+    transaction_context::NativeTransactionContext,
 };
 use move_unit_test;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
@@ -26,4 +27,5 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeCosmosContext::default());
     exts.add(NativeTransactionContext::new([0; 32], [0; 32]));
     exts.add(NativeEventContext::default());
+    exts.add(NativeOracleContext::new(&MOCK_API.oracle_api));
 }

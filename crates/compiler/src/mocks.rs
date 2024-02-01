@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Error};
-use initia_natives::{account::AccountAPI, staking::StakingAPI, table::TableResolver};
+use initia_natives::{
+    account::AccountAPI, oracle::OracleAPI, staking::StakingAPI, table::TableResolver,
+};
 use initia_types::table::TableHandle;
-use move_core_types::account_address::AccountAddress;
+use move_core_types::{account_address::AccountAddress, u256::U256};
 
 /// A dummy storage containing no modules or resources.
 #[derive(Debug, Clone)]
@@ -34,6 +36,7 @@ impl TableResolver for BlankTableViewImpl {
 pub struct BlankAPIImpl {
     pub account_api: BlankAccountAPIImpl,
     pub staking_api: BlankStakingAPIImpl,
+    pub oracle_api: BlankOracleAPIImpl,
 }
 
 impl BlankAPIImpl {
@@ -41,6 +44,7 @@ impl BlankAPIImpl {
         Self {
             account_api: BlankAccountAPIImpl,
             staking_api: BlankStakingAPIImpl,
+            oracle_api: BlankOracleAPIImpl,
         }
     }
 }
@@ -84,5 +88,20 @@ impl StakingAPI for BlankStakingAPIImpl {
 
     fn unbond_timestamp(&self) -> anyhow::Result<u64> {
         Ok(60 * 60 * 24 * 7)
+    }
+}
+
+pub struct BlankOracleAPIImpl;
+
+impl OracleAPI for BlankOracleAPIImpl {
+    fn get_price(
+        &self,
+        _pair_id: &[u8],
+    ) -> anyhow::Result<(
+        U256, /* price */
+        u64,  /* updated_at */
+        u64,  /* decimals */
+    )> {
+        Err(anyhow!("pair not found"))
     }
 }

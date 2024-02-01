@@ -86,6 +86,26 @@ func SerializeUint128(high, low uint64) ([]byte, error) {
 	return s.GetBytes(), nil
 }
 
+// SerializeUint256 serialize num to BCS bytes
+func SerializeUint256(hh, hl, h, l uint64) ([]byte, error) {
+	s := NewSerializer()
+	err := s.SerializeU128(serde.Uint128{
+		Low:  l,
+		High: h,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = s.SerializeU128(serde.Uint128{
+		Low:  hl,
+		High: hh,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.GetBytes(), nil
+}
+
 // DeserializeUint128 deserialize BCS bytes
 func DeserializeUint128(bz []byte) (uint64, uint64, error) {
 	d := NewDeserializer(bz)

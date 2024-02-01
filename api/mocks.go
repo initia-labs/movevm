@@ -78,13 +78,33 @@ var _ GoAPI = MockAPI{}
 type MockAPI struct {
 	AccountAPI *MockAccountAPI
 	StakingAPI *MockStakingAPI
+	OracleAPI  *MockOracleAPI
 	BlockTime  uint64
 }
 
-func NewMockAPI(blockTime uint64, accountAPI *MockAccountAPI, stakingAPI *MockStakingAPI) *MockAPI {
+func NewMockAPI(
+	blockTime uint64,
+	accountAPI *MockAccountAPI,
+	stakingAPI *MockStakingAPI,
+	oracleAPI *MockOracleAPI,
+) *MockAPI {
+
 	return &MockAPI{
 		AccountAPI: accountAPI,
 		StakingAPI: stakingAPI,
+		OracleAPI:  oracleAPI,
+		BlockTime:  blockTime,
+	}
+}
+
+func NewEmptyMockAPI(blockTime uint64) *MockAPI {
+	accountAPI := NewMockAccountAPI()
+	stakingAPI := NewMockStakingAPI()
+	oracleAPI := NewMockOracleAPI()
+	return &MockAPI{
+		AccountAPI: &accountAPI,
+		StakingAPI: &stakingAPI,
+		OracleAPI:  &oracleAPI,
 		BlockTime:  blockTime,
 	}
 }
@@ -105,6 +125,10 @@ func (m MockAPI) UnbondTimestamp() uint64 {
 	return m.BlockTime + 60*60*24*7
 }
 
+func (m MockAPI) GetPrice(pairId string) ([]byte, uint64, uint64, error) {
+	return m.OracleAPI.GetPrice(pairId)
+}
+
 type MockAccountAPI struct {
 	accounts map[string][]uint64
 }
@@ -116,7 +140,7 @@ func NewMockAccountAPI() MockAccountAPI {
 	}
 }
 
-func (m MockAccountAPI) SetAccountInfo(addr types.AccountAddress, accountNumber, sequence uint64, accountType uint8) {
+func (m *MockAccountAPI) SetAccountInfo(addr types.AccountAddress, accountNumber, sequence uint64, accountType uint8) {
 	m.accounts[addr.String()] = []uint64{accountNumber, sequence, uint64(accountType)}
 }
 
@@ -145,7 +169,7 @@ func NewMockStakingAPI() MockStakingAPI {
 	}
 }
 
-func (m MockStakingAPI) SetShareRatio(validator []byte, metadata types.AccountAddress, share uint64, amount uint64) {
+func (m *MockStakingAPI) SetShareRatio(validator []byte, metadata types.AccountAddress, share uint64, amount uint64) {
 	if ratios, ok := m.validators[string(validator)]; ok {
 		ratios[metadata] = ShareAmountRatio{share, amount}
 	} else {
@@ -180,4 +204,33 @@ func (m MockStakingAPI) ShareToAmount(validator []byte, metadata types.AccountAd
 	}
 
 	return share * ratio.amount / ratio.share, nil
+}
+
+type MockOracleAPI struct {
+	prices map[string][]uint64
+}
+
+// NewMockOracleAPI return MockOracleAPI instance
+func NewMockOracleAPI() MockOracleAPI {
+	return MockOracleAPI{
+		prices: make(map[string][]uint64),
+	}
+}
+
+func (m *MockOracleAPI) SetPrice(pairId string, price, updatedAt, decimals uint64) {
+	m.prices[pairId] = []uint64{price, updatedAt, decimals}
+}
+
+func (m MockOracleAPI) GetPrice(pairId string) ([]byte, uint64, uint64, error) {
+	info, found := m.prices[pairId]
+	if !found {
+		return nil, 0, 0, errors.New("pair not found")
+	}
+
+	priceBz, err := types.SerializeUint256(0, 0, 0, info[0])
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	return priceBz, info[1], info[2], nil
 }

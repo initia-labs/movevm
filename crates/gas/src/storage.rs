@@ -17,7 +17,7 @@ crate::params::define_gas_parameters!(
         [
             per_item_create: InternalGasPerArg,
             "per_item_create",
-            50_000 * SCALING
+            10_000 * SCALING
         ],
         [
             per_item_write: InternalGasPerArg,

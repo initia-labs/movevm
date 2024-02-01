@@ -333,6 +333,12 @@ typedef struct {
                              uint64_t*,
                              UnmanagedVector*);
   int32_t (*unbond_timestamp)(const api_t*, uint64_t*, UnmanagedVector*);
+  int32_t (*get_price)(const api_t*,
+                       U8SliceView,
+                       UnmanagedVector*,
+                       uint64_t*,
+                       uint64_t*,
+                       UnmanagedVector*);
 } GoApi_vtable;
 
 typedef struct {

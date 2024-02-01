@@ -10,9 +10,7 @@ use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
 use move_package::BuildConfig;
 
-use crate::test_utils::mock_chain::{
-    MockAPI, MockAccountAPI, MockChain, MockStakingAPI, MockState, MockTableState,
-};
+use crate::test_utils::mock_chain::{MockAPI, MockChain, MockState, MockTableState};
 use crate::test_utils::parser::MemberId;
 use initia_gas::Gas;
 use initia_storage::{
@@ -66,10 +64,7 @@ impl MoveHarness {
     pub fn new() -> Self {
         let vm = InitiaVM::new(100);
         let chain = MockChain::new();
-
-        let account_api = MockAccountAPI::new();
-        let staking_api = MockStakingAPI::new();
-        let api = MockAPI::new(account_api, staking_api);
+        let api = MockAPI::empty();
 
         Self { chain, vm, api }
     }

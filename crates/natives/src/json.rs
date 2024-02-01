@@ -124,9 +124,9 @@ fn native_get_number_internal(
 
     let bytes_slice = dec_value.to_bytes_le().1;
     if bytes_slice.len() > 32 {
-        return Ok(NativeResult::err(cost.into(), EOUT_OF_RANGE))
+        return Ok(NativeResult::err(cost.into(), EOUT_OF_RANGE));
     }
-    
+
     let mut bytes_array: [u8; 32] = [0u8; 32];
     bytes_array[0..bytes_slice.len()].copy_from_slice(&bytes_slice);
 

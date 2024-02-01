@@ -2,8 +2,10 @@ use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
 use anyhow::anyhow;
+use initia_natives::oracle::OracleAPI;
 use initia_natives::{account::AccountAPI, staking::StakingAPI};
 use move_core_types::account_address::AccountAddress;
+use move_core_types::u256::U256;
 
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
@@ -45,6 +47,14 @@ pub struct GoApi_vtable {
     pub unbond_timestamp: extern "C" fn(
         *const api_t,
         *mut u64,             // unbond_timestamp
+        *mut UnmanagedVector, // error_msg
+    ) -> i32,
+    pub get_price: extern "C" fn(
+        *const api_t,
+        U8SliceView,          // pair_id
+        *mut UnmanagedVector, // price
+        *mut u64,             // updated_at
+        *mut u64,             // decimals
         *mut UnmanagedVector, // error_msg
     ) -> i32,
 }
@@ -189,5 +199,41 @@ impl StakingAPI for GoApi {
         }
 
         Ok(unbond_timestamp)
+    }
+}
+
+impl OracleAPI for GoApi {
+    fn get_price(&self, pair_id: &[u8]) -> anyhow::Result<(U256, u64, u64)> {
+        let pair_id = U8SliceView::new(Some(pair_id));
+        let mut price = UnmanagedVector::default();
+        let mut updated_at = 0_u64;
+        let mut decimals = 0_u64;
+        let mut error_msg = UnmanagedVector::default();
+
+        let go_error: GoError = (self.vtable.get_price)(
+            self.state,
+            pair_id,
+            &mut price,
+            &mut updated_at,
+            &mut decimals,
+            &mut error_msg,
+        )
+        .into();
+
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let price = price.consume();
+
+        // return complete error message (reading from buffer for GoError::Other)
+        let default = || "Failed to get price from the remote oracle".to_string();
+        unsafe {
+            if let Err(err) = go_error.into_result(error_msg, default) {
+                return Err(anyhow!(err));
+            }
+        }
+
+        let price_bytes = price.ok_or_else(|| anyhow!("Unset price"))?;
+        let price: U256 = bcs::from_bytes(&price_bytes).map_err(|_| anyhow!("Unset price"))?;
+
+        Ok((price, updated_at, decimals))
     }
 }

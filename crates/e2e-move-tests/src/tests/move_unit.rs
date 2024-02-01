@@ -6,8 +6,9 @@ use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
 use initia_gas::NativeGasParameters;
 use initia_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
-    cosmos::NativeCosmosContext, event::NativeEventContext, staking::NativeStakingContext,
-    table::NativeTableContext, transaction_context::NativeTransactionContext,
+    cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
+    staking::NativeStakingContext, table::NativeTableContext,
+    transaction_context::NativeTransactionContext,
 };
 use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
 use move_unit_test::UnitTestingConfig;
@@ -37,6 +38,7 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeCosmosContext::default());
     exts.add(NativeTransactionContext::new([0; 32], [0; 32]));
     exts.add(NativeEventContext::default());
+    exts.add(NativeOracleContext::new(&BLANK_API.oracle_api));
 }
 
 fn initia_test_natives() -> NativeFunctionTable {
