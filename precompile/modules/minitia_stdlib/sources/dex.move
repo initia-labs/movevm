@@ -278,6 +278,38 @@ module minitia_std::dex {
     }
 
     #[view]
+    /// Return swap simulation result
+    public fun get_swap_simulation_given_out(
+        pair: Object<Config>,
+        offer_metadata: Object<Metadata>,
+        return_amount: u64,
+    ): u64 acquires Config, Pool {
+        let pair_key = generate_pair_key(pair);
+        let offer_address = object::object_address(offer_metadata);
+        assert!(
+            offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
+            error::invalid_argument(ECOIN_TYPE),
+        );
+        let is_offer_a = offer_address == pair_key.coin_a;
+        let (pool_a, pool_b, weight_a, weight_b, swap_fee_rate) = pool_info(pair, true);
+        let (offer_pool, return_pool, offer_weight, return_weight) = if (is_offer_a) {
+            (pool_a, pool_b, weight_a, weight_b)
+        } else {
+            (pool_b, pool_a, weight_b, weight_a)
+        };
+        let (offer_amount, _fee_amount) = swap_simulation_given_out(
+            offer_pool,
+            return_pool,
+            offer_weight,
+            return_weight,
+            return_amount,
+            swap_fee_rate,
+        );
+
+        offer_amount
+    }
+
+    #[view]
     /// get pool info
     public fun get_pool_info(pair: Object<Config>): PoolInfoResponse acquires Pool {
         let pair_addr = object::object_address(pair);
@@ -1170,6 +1202,27 @@ module minitia_std::dex {
         let base = decimal128::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
         let sub_amount = pow(&base, &exp);
         (decimal128::mul_u64(&decimal128::sub(&one, &sub_amount), pool_amount_out), fee_amount)
+    }
+
+    public fun swap_simulation_given_out(
+        pool_amount_in: u64,
+        pool_amount_out: u64,
+        weight_in: Decimal128,
+        weight_out: Decimal128,
+        amount_out: u64,
+        swap_fee_rate: Decimal128,
+    ): (u64, u64) {
+        let one = decimal128::one();
+        let exp = decimal128::from_ratio(decimal128::val(&weight_out), decimal128::val(&weight_in));
+        let base = decimal128::from_ratio_u64(pool_amount_out, pool_amount_out - amount_out);
+        let base_exp = pow(&base, &exp);
+        let adjusted_amount_in = decimal128::val(&decimal128::sub(&base_exp, &one)) * (pool_amount_in as u128) ;
+        let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);                                                                                                                                                                                
+
+        let amount_in = ( adjusted_amount_in / decimal128::val(&sub_one_fee) as u64);
+        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+
+        (amount_in, fee_amount)
     }
 
     public fun pool_metadata(pair: Object<Config>): (Object<Metadata>, Object<Metadata>) acquires Pool {
