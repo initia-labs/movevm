@@ -23,6 +23,7 @@ module initia_std::minitswap {
     const EL2_PRICE_TOO_LOW: u64 = 7;
     const EMAX_CHANGE: u64 = 8;
     const EMIN_RETURN: u64 = 9;
+    const EPOOL_SIZE: u64= 10;
 
     const A_PRECISION: u256 = 100;
     const U64_MAX: u128 = 18_446_744_073_709_551_615;
@@ -60,14 +61,14 @@ module initia_std::minitswap {
         l1_pool_amount: u64,
         /// Virtual pool amount of L2 INIT
         l2_pool_amount: u64,
-        /// latest revoered timestamp
-        latest_recovered_timestamp: u64,
+        /// last recovered timestamp
+        last_recovered_timestamp: u64,
         /// L1 INIT balance of peg keeper (negative value)
         virtual_l1_balance: u64,
         /// L2 INIT balance of peg keeper
         virtual_l2_balance: u64,
-        /// A
-        amplifier: u64,
+        /// ANN
+        ann: u64,
         /// Is pool in active
         active: bool,
     }
@@ -142,11 +143,12 @@ module initia_std::minitswap {
         l2_init_metadata: Object<Metadata>,
         recover_velocity: Decimal128,
         pool_size: u64,
-        amplifier: u64,
+        ann: u64,
         max_ratio: Decimal128,
         recover_param: Decimal128,
     ) acquires ModuleStore {
         assert_is_chain(chain);
+        assert!(pool_size > 0, error::invalid_argument(EPOOL_SIZE));
         let constructor_ref = object::create_object(@initia_std, false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let pool_signer = object::generate_signer(&constructor_ref);
@@ -162,10 +164,10 @@ module initia_std::minitswap {
                 recover_param,
                 l1_pool_amount: pool_size,
                 l2_pool_amount: pool_size,
-                latest_recovered_timestamp: timestamp,
+                last_recovered_timestamp: timestamp,
                 virtual_l1_balance: 0,
                 virtual_l2_balance: 0,
-                amplifier,
+                ann,
                 active: true,
             }
         );
@@ -174,20 +176,20 @@ module initia_std::minitswap {
         table::add(&mut module_store.pools, l2_init_metadata, object::object_from_constructor_ref<VirtualPool>(&constructor_ref));
     }
 
-    public entry fun inactive(chain: &signer, l2_init_metadata: Object<Metadata>) acquires ModuleStore, VirtualPool {
-        assert_is_chain(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
-        pool.active = true
-    }
-
-    public entry fun active(chain: &signer, l2_init_metadata: Object<Metadata>) acquires ModuleStore, VirtualPool {
+    public entry fun deactivate(chain: &signer, l2_init_metadata: Object<Metadata>) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
         let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
         pool.active = false
+    }
+
+    public entry fun activate(chain: &signer, l2_init_metadata: Object<Metadata>) acquires ModuleStore, VirtualPool {
+        assert_is_chain(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        pool.active = true
     }
 
     public entry fun change_pool_size(
@@ -196,6 +198,7 @@ module initia_std::minitswap {
         new_pool_size: u64
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain);
+        assert!(new_pool_size > 0, error::invalid_argument(EPOOL_SIZE));
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
         let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
@@ -264,7 +267,7 @@ module initia_std::minitswap {
             pool.pool_size = new_pool_size;
 
             // 3. swap back 
-            let return_amount = get_return_amount(l2_return_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.amplifier);
+            let return_amount = get_return_amount(l2_return_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
             pool.l2_pool_amount = pool.l2_pool_amount + l2_return_amount;
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
             pool.virtual_l2_balance = pool.virtual_l2_balance - l2_return_amount;
@@ -300,7 +303,7 @@ module initia_std::minitswap {
         chain: &signer,
         l2_init_metadata: Object<Metadata>,
         recover_velocity: Option<Decimal128>,
-        amplifier: Option<u64>,
+        ann: Option<u64>,
         max_ratio: Option<Decimal128>,
         recover_param: Option<Decimal128>,
     ) acquires ModuleStore, VirtualPool {
@@ -313,9 +316,9 @@ module initia_std::minitswap {
             pool.recover_velocity = option::extract(&mut recover_velocity);
         };
 
-        // It is okay to change amplifier immediately cause there are no real provider
-        if (option::is_some(&amplifier)) {
-            pool.amplifier = option::extract(&mut amplifier);
+        // It is okay to change ann immediately cause there are no real provider
+        if (option::is_some(&ann)) {
+            pool.ann = option::extract(&mut ann);
         };
 
         if (option::is_some(&max_ratio)) {
@@ -441,18 +444,18 @@ module initia_std::minitswap {
         // Peg keeper swap
         let r_fr = get_fully_recovered_ratio(&imbalance, &pool.max_ratio, &pool.recover_param);
         let current_ratio = decimal128::from_ratio_u64(pool.l2_pool_amount, pool.l1_pool_amount + pool.l2_pool_amount);
-        let time_diff = timestamp - pool.latest_recovered_timestamp;
+        let time_diff = timestamp - pool.last_recovered_timestamp;
         let (peg_keeper_offer_amount, peg_keeper_return_amount) = if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
-            let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.amplifier);
-            let max_reocver_amount = decimal128::mul_u64(&pool.recover_velocity, time_diff);
+            let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.ann);
+            let max_recover_amount = decimal128::mul_u64(&pool.recover_velocity, time_diff);
             let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
-            let swap_amount = if (swap_amount_to_reach_fr < max_reocver_amount) {
+            let swap_amount = if (swap_amount_to_reach_fr < max_recover_amount) {
                 swap_amount_to_reach_fr
             } else {
-                max_reocver_amount
+                max_recover_amount
             };
 
-            let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.amplifier);
+            let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.ann);
             pool.l1_pool_amount = pool.l1_pool_amount + swap_amount;
             pool.l2_pool_amount = pool.l2_pool_amount - return_amount;
             pool.virtual_l1_balance = pool.virtual_l1_balance + swap_amount;
@@ -463,7 +466,7 @@ module initia_std::minitswap {
             (0, 0)
         };
 
-        pool.latest_recovered_timestamp = timestamp;
+        pool.last_recovered_timestamp = timestamp;
 
         // user swap
         let offer_amount = fungible_asset::amount(&offer_asset);
@@ -471,14 +474,17 @@ module initia_std::minitswap {
         let return_asset = if (is_l1_init_offered) {
             primary_fungible_store::deposit(module_addr, offer_asset);
             // 0 fee for L1 > L2
-            let return_amount = get_return_amount(offer_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.amplifier);
+            let return_amount = get_return_amount(offer_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.ann);
             pool.l1_pool_amount = pool.l1_pool_amount + offer_amount;
             pool.l2_pool_amount = pool.l2_pool_amount - return_amount;
-            assert!(pool.l2_pool_amount >= pool.l1_pool_amount, error::invalid_state(EL2_PRICE_TOO_LOW));
+            assert!(
+                pool.l2_pool_amount >= pool.pool_size && pool.l1_pool_amount <= pool.pool_size,
+                error::invalid_state(EL2_PRICE_TOO_LOW),
+            );
             primary_fungible_store::withdraw(&pool_signer, return_asset_metadata, return_amount)
         } else {
             primary_fungible_store::deposit(pool_addr, offer_asset);
-            let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.amplifier);
+            let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
             fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
             module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
@@ -503,7 +509,8 @@ module initia_std::minitswap {
         return_asset
     }
 
-    // take l2 init from peg kepper and refill l1 init 
+    // Purchasing L2 init token with L1 init from the Peg Keeper.
+    // The trader always receives a greater amount than the offered amount.
     public fun rebalance_internal(
         account: &signer,
         l1_init: FungibleAsset,
@@ -585,20 +592,19 @@ module initia_std::minitswap {
         metadata == l1_init_metadata()
     }
 
-    fun get_d0(pool_size: u64, amplifier: u64): u64 {
-        get_d(pool_size, pool_size, amplifier)
+    fun get_d0(pool_size: u64, ann: u64): u64 {
+        get_d(pool_size, pool_size, ann)
     }
 
 
-    fun get_d(l1_init_amount: u64, l2_init_amount: u64, amplifier: u64): u64 {
+    fun get_d(l1_init_amount: u64, l2_init_amount: u64, ann: u64): u64 {
         let l1_init_amount = (l1_init_amount as u256);
         let l2_init_amount = (l2_init_amount as u256);
-        let amplifier = (amplifier as u256);
+        let ann = (ann as u256);
 
         let sum = l1_init_amount + l2_init_amount;
         if (sum == 0) return 0;
         let d = sum;
-        let ann = amplifier * 4;
 
         let i = 0;
 
@@ -621,20 +627,20 @@ module initia_std::minitswap {
         return (d as u64)
     }
 
-    fun get_return_amount(offer_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, amplifier: u64): u64 {
-        let d = get_d0(pool_size, amplifier);
+    fun get_return_amount(offer_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, ann: u64): u64 {
+        let d = get_d0(pool_size, ann);
         let offer_pool_amount_after = offer_pool_amount + offer_amount;
 
-        let y = get_y(d, offer_pool_amount_after, amplifier);
+        let y = get_y(d, offer_pool_amount_after, ann);
 
         (return_pool_amount - y as u64)
     }
 
     /// get counterparty's amount
-    fun get_y(d: u64, x: u64, amplifier: u64): u64 {
+    fun get_y(d: u64, x: u64, ann: u64): u64 {
         let d = (d as u256);
         let x = (x as u256);
-        let amplifier = (amplifier as u256);
+        let ann = (ann as u256);
 
         // Done by solving quadratic equation iteratively.
         // x_1**2 + x_1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
@@ -643,7 +649,6 @@ module initia_std::minitswap {
 
         // y = (y**2 + c) / (2*y + b)
 
-        let ann = amplifier * 4;
         let c = d * d * d * A_PRECISION / ann / 4 / x; // d ** (2 + 1) / ann / 2 ** 2  / x 
         let b_plus_d = x + d * A_PRECISION / ann; // need to sub d but sub later due to value must be less than 0
         
@@ -684,7 +689,7 @@ module initia_std::minitswap {
     }
 
 
-    fun get_fully_recovered_pool_amounts(pool_size: u64, fully_recovered_ratio: &Decimal128, amplifier: u64): (u64, u64) {
+    fun get_fully_recovered_pool_amounts(pool_size: u64, fully_recovered_ratio: &Decimal128, ann: u64): (u64, u64) {
         let denominator = decimal128::val(&decimal128::one());
         let fully_recovered_ratio_val = decimal128::val(fully_recovered_ratio);
         let grad = decimal128::from_ratio(fully_recovered_ratio_val, denominator - fully_recovered_ratio_val);
@@ -695,12 +700,12 @@ module initia_std::minitswap {
         let sim_size_val = sim_size * denominator;
 
         // Get first point
-        let d0 = get_d0((sim_size as u64), amplifier);
+        let d0 = get_d0((sim_size as u64), ann);
         let x = 2 * sim_size_val / (grad_val + denominator); // x = 2z / (g + 1)
         if (x == sim_size) { // fully_recovered_ratio = 0.5
             return (pool_size, pool_size)
         };
-        let y = (get_y(d0, (x as u64), amplifier) as u128);
+        let y = (get_y(d0, (x as u64), ann) as u128);
 
         let i = 0;
         let x_prev;
@@ -712,7 +717,7 @@ module initia_std::minitswap {
             // x = z * (y' - x') / (g * (z - x') + (y' - z))
             let temp_x = sim_size * (y - x) * denominator / (grad_val * (sim_size - x) + (y - sim_size) * denominator);
             let y = decimal128::mul_u128(&grad, temp_x);
-            x = (get_y(d0, (y as u64), amplifier) as u128);
+            x = (get_y(d0, (y as u64), ann) as u128);
 
             // when fully recovered rate is too close to 0.5, x can be smaller than z
             // TODO: improve this protection

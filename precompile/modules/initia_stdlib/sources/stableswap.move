@@ -24,8 +24,8 @@ module initia_std::stableswap {
     struct Pool has key {
         /// Extend Refernce
         extend_ref: ExtendRef,
-        /// A
-        amplifier: Amplifier,
+        /// ANN
+        ann: Ann,
         /// swap fee
         swap_fee_rate: Decimal128,
         /// Coin metadata
@@ -41,7 +41,7 @@ module initia_std::stableswap {
     struct CreatePairEvent has drop, store {
         coins: vector<address>,
         liquidity_token: address,
-        amplifier: u64,
+        ann: u64,
         swap_fee_rate: Decimal128,
     }
 
@@ -71,9 +71,9 @@ module initia_std::stableswap {
         fee_amount: u64,
     }
 
-    struct Amplifier has copy, drop, store {
-        amplifier_before: u64,
-        amplifier_after: u64,
+    struct Ann has copy, drop, store {
+        ann_before: u64,
+        ann_after: u64,
         timestamp_before: u64,
         timestamp_after: u64,
     }
@@ -81,7 +81,7 @@ module initia_std::stableswap {
     struct PairResponse has copy, drop, store {
         coin_metadata: vector<Object<Metadata>>,
         coin_balances: vector<u64>,
-        current_amplifier: u64,
+        current_ann: u64,
         swap_fee_rate: Decimal128,
     }
 
@@ -142,13 +142,13 @@ module initia_std::stableswap {
         let pair_addr = object::object_address(pair);
         let pool = borrow_global<Pool>(pair_addr);
 
-        let a = get_current_a(&pool.amplifier);
+        let ann = get_current_ann(&pool.ann);
         let pool_amounts = get_pool_amounts(pair_addr, pool.coin_metadata);
 
         (
             pool.coin_metadata,
             pool_amounts,
-            a,
+            ann,
             pool.swap_fee_rate,
         )
     }
@@ -194,8 +194,8 @@ module initia_std::stableswap {
 
         while (vector::length(&res) < (limit as u64) && table::prepare<address, bool>(&mut pairs_iter)) {
             let (key, _) = table::next<address, bool>(&mut pairs_iter);
-            let (coin_metadata, coin_balances, current_amplifier, swap_fee_rate) = pool_info(object::address_to_object<Pool>(key));
-            vector::push_back(&mut res, PairResponse { coin_metadata, coin_balances, current_amplifier, swap_fee_rate })
+            let (coin_metadata, coin_balances, current_ann, swap_fee_rate) = pool_info(object::address_to_object<Pool>(key));
+            vector::push_back(&mut res, PairResponse { coin_metadata, coin_balances, current_ann, swap_fee_rate })
         };
 
         res
@@ -205,7 +205,7 @@ module initia_std::stableswap {
         (
             pair_response.coin_metadata,
             pair_response.coin_balances,
-            pair_response.current_amplifier,
+            pair_response.current_ann,
             pair_response.swap_fee_rate,
         )
     }
@@ -217,7 +217,7 @@ module initia_std::stableswap {
         swap_fee_rate: Decimal128,
         coin_metadata: vector<Object<Metadata>>,
         coin_amounts: vector<u64>,
-        amplifier: u64,
+        ann: u64,
     ) acquires Pool, ModuleStore {
         let coins: vector<FungibleAsset> = vector[];
         let i = 0;
@@ -229,7 +229,7 @@ module initia_std::stableswap {
             i = i + 1;
         };
 
-        let liquidity_token = create_pair(creator, name, symbol, swap_fee_rate, coins, amplifier);
+        let liquidity_token = create_pair(creator, name, symbol, swap_fee_rate, coins, ann);
         primary_fungible_store::deposit(signer::address_of(creator), liquidity_token);
     }
 
@@ -239,14 +239,14 @@ module initia_std::stableswap {
         pool.swap_fee_rate = new_swap_fee_rate;
     }
 
-    public entry fun update_a(account: &signer, pair: Object<Pool>, a_after: u64, timestamp_after: u64) acquires Pool {
+    public entry fun update_ann(account: &signer, pair: Object<Pool>, ann_after: u64, timestamp_after: u64) acquires Pool {
         check_chain_permission(account);
         let (_, timestamp) = block::get_block_info();
         let pool = borrow_pool_mut(pair);
-        pool.amplifier.amplifier_before = get_current_a(&pool.amplifier);
-        pool.amplifier.timestamp_before = timestamp;
-        pool.amplifier.amplifier_after = a_after;
-        pool.amplifier.timestamp_after = timestamp_after;
+        pool.ann.ann_before = get_current_ann(&pool.ann);
+        pool.ann.timestamp_before = timestamp;
+        pool.ann.ann_after = ann_after;
+        pool.ann.timestamp_after = timestamp_after;
     }
 
     public entry fun provide_liquidity_script(
@@ -309,7 +309,7 @@ module initia_std::stableswap {
         symbol: String,
         swap_fee_rate: Decimal128,
         coins: vector<FungibleAsset>,
-        amplifier: u64,
+        ann: u64,
     ): FungibleAsset acquires Pool, ModuleStore {
         let (_, timestamp) = block::get_block_info();
         let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref (
@@ -351,9 +351,9 @@ module initia_std::stableswap {
             pair_signer,
             Pool {
                 extend_ref,
-                amplifier: Amplifier {
-                    amplifier_before: amplifier,
-                    amplifier_after: amplifier,
+                ann: Ann {
+                    ann_before: ann,
+                    ann_after: ann,
                     timestamp_before: timestamp,
                     timestamp_after: timestamp,
                 },
@@ -387,7 +387,7 @@ module initia_std::stableswap {
             CreatePairEvent {
                 coins: get_coin_addresses(coin_metadata),
                 liquidity_token: pair_address,
-                amplifier,
+                ann,
                 swap_fee_rate,
             },
         );
@@ -399,10 +399,10 @@ module initia_std::stableswap {
         let pool = borrow_pool(pair);
         let pair_addr = object::object_address(pair);
         let n = check_coin_metadata(&pool.coin_metadata, &coins);
-        let a = get_current_a(&pool.amplifier);
+        let ann = get_current_ann(&pool.ann);
 
         let pool_amounts_before = get_pool_amounts(pair_addr, pool.coin_metadata);
-        let d_before = get_d(pool_amounts_before, a);
+        let d_before = get_d(pool_amounts_before, ann);
         let total_supply = option::extract(&mut fungible_asset::supply(pair));
         let amounts = get_amounts(&coins);
 
@@ -419,7 +419,7 @@ module initia_std::stableswap {
             i = i + 1;
         };
 
-        let d_idle = get_d(pool_amounts_after, a);
+        let d_idle = get_d(pool_amounts_after, ann);
 
         // calc fees
         let liquidity_amount = if (total_supply > 0) {
@@ -441,7 +441,7 @@ module initia_std::stableswap {
                 i = i + 1;
             };
 
-            let d_real = get_d(pool_amounts_after, a); 
+            let d_real = get_d(pool_amounts_after, ann); 
             (mul_div_u128(total_supply, (d_real - d_before as u128), (d_before as u128)) as u64)
         } else {
             d_idle
@@ -565,17 +565,17 @@ module initia_std::stableswap {
         borrow_global_mut<Pool>(object::object_address(pair))
     }
 
-    fun get_current_a(a: &Amplifier): u64 {
+    fun get_current_ann(ann: &Ann): u64 {
         let (_, timestamp) = block::get_block_info();
 
-        if (timestamp >= a.timestamp_after) {
-            return a.amplifier_after
+        if (timestamp >= ann.timestamp_after) {
+            return ann.ann_after
         };
             
-        if (a.amplifier_after > a.amplifier_before) {
-            return a.amplifier_before + (a.amplifier_after - a.amplifier_before) * (timestamp - a.timestamp_before) / (a.timestamp_after - a.timestamp_before)
+        if (ann.ann_after > ann.ann_before) {
+            return ann.ann_before + (ann.ann_after - ann.ann_before) * (timestamp - ann.timestamp_before) / (ann.timestamp_after - ann.timestamp_before)
         } else {
-            return a.amplifier_before - (a.amplifier_before - a.amplifier_after) * (timestamp - a.timestamp_before) / (a.timestamp_after - a.timestamp_before)
+            return ann.ann_before - (ann.ann_before - ann.ann_after) * (timestamp - ann.timestamp_before) / (ann.timestamp_after - ann.timestamp_before)
         }
     }
 
@@ -633,8 +633,8 @@ module initia_std::stableswap {
         return addresses
     }
 
-    fun get_d(amounts: vector<u64>, amplifier: u64): u64 {
-        let amplifier = (amplifier as u256);
+    fun get_d(amounts: vector<u64>, ann: u64): u64 {
+        let ann = (ann as u256);
 
         let sum: u256 = 0;
         let n = (vector::length(&amounts) as u256);
@@ -645,7 +645,6 @@ module initia_std::stableswap {
         };
         if (sum == 0) return 0;
         let d = sum;
-        let ann = amplifier * (n * n as u256);
 
         let i = 0;
 
@@ -674,10 +673,10 @@ module initia_std::stableswap {
     }
 
     /// get counterparty's amount
-    fun get_y(offer_index: u64, return_index: u64, offer_amount: u64, pool_amounts: vector<u64>, amplifier: u64): u64 {
-        let d = (get_d(pool_amounts, amplifier) as u256);
+    fun get_y(offer_index: u64, return_index: u64, offer_amount: u64, pool_amounts: vector<u64>, ann: u64): u64 {
+        let d = (get_d(pool_amounts, ann) as u256);
         
-        let amplifier = (amplifier as u256);
+        let ann = (ann as u256);
         // Done by solving quadratic equation iteratively.
         // x_1**2 + x_1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
         // y**2 + b*y = c
@@ -702,8 +701,8 @@ module initia_std::stableswap {
             c = c * d / (pool_amount * (n as u256));
             i = i + 1;
         };
-        let ann = amplifier * (n * n as u256);
-        c = c * d * A_PRECISION / ann;
+
+        c = c * d * A_PRECISION / ann / (n as u256);
         let b_plus_d = sum + d * A_PRECISION / ann; // need to sub d but sub later due to value must be less than 0
         
         let y_prev;
@@ -736,7 +735,7 @@ module initia_std::stableswap {
         let pair_addr = object::object_address(pair);
         let n = vector::length(&pool.coin_metadata);
 
-        let a = get_current_a(&pool.amplifier);
+        let ann = get_current_ann(&pool.ann);
         let pool_amounts = get_pool_amounts(pair_addr, pool.coin_metadata);
         let offer_index = n;
         let return_index = n;
@@ -756,7 +755,7 @@ module initia_std::stableswap {
         };
         assert!(offer_index != n && return_index != n, error::invalid_argument(ECOIN_TYPE));
 
-        let y = get_y(offer_index, return_index, offer_amount, pool_amounts, a);
+        let y = get_y(offer_index, return_index, offer_amount, pool_amounts, ann);
         let return_amount = y - *vector::borrow(&pool_amounts, return_index) - 1; // sub 1 just in case
         let fee_amount = decimal128::mul_u64(&pool.swap_fee_rate, return_amount);
         (return_amount, fee_amount)
