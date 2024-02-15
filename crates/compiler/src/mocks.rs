@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Error};
 use initia_natives::{
-    account::AccountAPI, oracle::OracleAPI, staking::StakingAPI, table::TableResolver,
+    account::AccountAPI, oracle::OracleAPI, query::QueryAPI, staking::StakingAPI,
+    table::TableResolver,
 };
 use initia_types::table::TableHandle;
 use move_core_types::{account_address::AccountAddress, u256::U256};
@@ -37,6 +38,7 @@ pub struct BlankAPIImpl {
     pub account_api: BlankAccountAPIImpl,
     pub staking_api: BlankStakingAPIImpl,
     pub oracle_api: BlankOracleAPIImpl,
+    pub query_api: BlankQueryAPIImpl,
 }
 
 impl BlankAPIImpl {
@@ -45,6 +47,7 @@ impl BlankAPIImpl {
             account_api: BlankAccountAPIImpl,
             staking_api: BlankStakingAPIImpl,
             oracle_api: BlankOracleAPIImpl,
+            query_api: BlankQueryAPIImpl,
         }
     }
 }
@@ -103,5 +106,13 @@ impl OracleAPI for BlankOracleAPIImpl {
         u64,  /* decimals */
     )> {
         Err(anyhow!("pair not found"))
+    }
+}
+
+pub struct BlankQueryAPIImpl;
+
+impl QueryAPI for BlankQueryAPIImpl {
+    fn query(&self, _request: &[u8], _gas_balance: u64) -> (anyhow::Result<Vec<u8>>, u64) {
+        (Err(anyhow!("not registered query")), 0)
     }
 }

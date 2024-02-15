@@ -2,7 +2,7 @@ use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
 use initia_types::cosmos::{
     CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage,
-    StakingMessage,
+    StakingMessage, StargateMessage,
 };
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
@@ -548,6 +548,37 @@ fn test_cosmos_move_script() {
         ),
     );
     tests.push(test_move_script);
+
+    run_tests(tests);
+}
+
+#[test]
+fn test_cosmos_stargate() {
+    let mut tests = vec![];
+    let sender = AccountAddress::random();
+    let path = "path".to_string();
+    let data = "data".to_string();
+
+    let test_stargate = (
+        sender,
+        "0x1::cosmos::stargate",
+        vec![],
+        vec![
+            bcs::to_bytes(path.as_bytes()).unwrap(),
+            bcs::to_bytes(data.as_bytes()).unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::Stargate(StargateMessage {
+                sender,
+                path,
+                data: data.as_bytes().to_vec(),
+            })]),
+        ),
+    );
+    tests.push(test_stargate);
 
     run_tests(tests);
 }

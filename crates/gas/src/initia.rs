@@ -16,12 +16,28 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.type_info.type_name.base, "type_info.type_name.base", 1102],
     [.type_info.type_name.unit, "type_info.type_name.unit", 18],
 
-    [.json.get_array.base, "json.get_array.base", 1102],
-    [.json.get_array.unit, "json.get_array.unit", 18],
-    [.json.get_number.base, "json.get_number.base", 1102],
-    [.json.get_number.unit, "json.get_number.unit", 18],
-    [.json.object_to_simple_map.base, "json.object_to_simple_map.base", 1102],
-    [.json.object_to_simple_map.unit, "json.object_to_simple_map.unit", 18],
+    [.json.parse_bool.base, "json.parse_bool.base", 1102],
+    [.json.parse_bool.unit, "json.parse_bool.unit", 18],
+    [.json.parse_number.base, "json.parse_number.base", 1102],
+    [.json.parse_number.unit, "json.parse_number.unit", 18],
+    [.json.parse_string.base, "json.parse_string.base", 1102],
+    [.json.parse_string.unit, "json.parse_string.unit", 18],
+    [.json.parse_array.base, "json.parse_array.base", 1102],
+    [.json.parse_array.unit, "json.parse_array.unit", 18],
+    [.json.parse_object.base, "json.parse_object.base", 1102],
+    [.json.parse_object.unit, "json.parse_object.unit", 18],
+    [.json.stringify_bool.base, "json.stringify_bool.base", 1102],
+    [.json.stringify_bool.unit, "json.stringify_bool.unit", 18],
+    [.json.stringify_number.base, "json.stringify_number.base", 1102],
+    [.json.stringify_number.unit, "json.stringify_number.unit", 18],
+    [.json.stringify_string.base, "json.stringify_string.base", 1102],
+    [.json.stringify_string.unit, "json.stringify_string.unit", 18],
+    [.json.stringify_array.base, "json.stringify_array.base", 1102],
+    [.json.stringify_array.unit, "json.stringify_array.unit", 18],
+    [.json.stringify_object.base, "json.stringify_object.base", 1102],
+    [.json.stringify_object.unit, "json.stringify_object.unit", 18],
+    [.json.get_type.base, "json.get_type.base", 1102],
+    [.json.get_type.unit, "json.get_type.unit", 18],
 
     [.from_bcs.from_bytes.base, "from_bcs.from_bytes.base", 1102],
     [.from_bcs.from_bytes.unit, "from_bcs.from_bytes.unit", 18],
@@ -65,6 +81,7 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     // These functions will consume gas after move execution finished,
     // so don't need to charge a lot here.
+    [.cosmos.stargate.base, "cosmos.stargate.base", 1000 * SCALING],
     [.cosmos.move_execute.base, "cosmos.move_execute.base", 1000 * SCALING],
     [.cosmos.move_script.base, "cosmos.move_script.base", 1000 * SCALING],
     [.cosmos.delegate.base, "cosmos.delegate.base", 1000 * SCALING],
@@ -75,6 +92,9 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.cosmos.pay_fee.base, "cosmos.pay_fee.base", 1000 * SCALING],
     [.cosmos.initiate_token_deposit.base, "cosmos.initiate_token_deposit", 1000 * SCALING],
     [.cosmos.initiate_token_withdrawal.base, "cosmos.initiate_token_withdrawal", 1000 * SCALING],
+
+    [.query.custom.base, "query.custom.base", 100 * SCALING],
+    [.query.stargate.base, "query.stargate.base", 100 * SCALING],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
@@ -98,6 +118,7 @@ pub struct GasParameters {
     pub staking: staking::GasParameters,
     pub cosmos: cosmos::GasParameters,
     pub json: json::GasParameters,
+    pub query: query::GasParameters,
     pub oracle: oracle::GasParameters,
 }
 
@@ -146,15 +167,47 @@ impl GasParameters {
                 },
             },
             json: json::GasParameters {
-                get_array: json::GetArrayGasParameters {
+                parse_bool: json::ParseBoolGasParameters {
                     base: 0.into(),
                     unit: 0.into(),
                 },
-                get_number: json::GetNumberGasParameters {
+                parse_number: json::ParseNumberGasParameters {
                     base: 0.into(),
                     unit: 0.into(),
                 },
-                object_to_simple_map: json::ObjectToSimpleMapGasParameters {
+                parse_string: json::ParseStringGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                parse_array: json::ParseArrayGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                parse_object: json::ParseObjectGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                stringify_bool: json::StringifyBoolGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                stringify_number: json::StringifyNumberGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                stringify_string: json::StringifyStringGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                stringify_array: json::StringifyArrayGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                stringify_object: json::StringifyObjectGasParameters {
+                    base: 0.into(),
+                    unit: 0.into(),
+                },
+                get_type: json::GetTypeGasParameters {
                     base: 0.into(),
                     unit: 0.into(),
                 },
@@ -199,6 +252,7 @@ impl GasParameters {
                 },
             },
             cosmos: cosmos::GasParameters {
+                stargate: cosmos::StargateParameters { base: 0.into() },
                 move_execute: cosmos::MoveExecuteGasParameters { base: 0.into() },
                 move_script: cosmos::MoveScriptGasParameters { base: 0.into() },
                 delegate: cosmos::DelegateGasParameters { base: 0.into() },
@@ -222,6 +276,10 @@ impl GasParameters {
                     per_byte_loaded: 0.into(),
                     per_item_loaded: 0.into(),
                 },
+            },
+            query: query::GasParameters {
+                custom: query::QueryCustomParameters { base: 0.into() },
+                stargate: query::QueryStargateParameters { base: 0.into() },
             },
             transaction_context: transaction_context::GasParameters {
                 get_transaction_hash: transaction_context::GetTransactionHashGasParameters {

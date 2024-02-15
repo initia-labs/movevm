@@ -2,7 +2,7 @@ use better_any::{Tid, TidAble};
 use initia_gas::gas_params::cosmos::*;
 use initia_types::cosmos::{
     CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
-    MoveMessage, OPinitMessage, StakingMessage,
+    MoveMessage, OPinitMessage, StakingMessage, StargateMessage,
 };
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
@@ -11,12 +11,16 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
-    values::{Reference, StructRef, Value, Vector},
+    values::{StructRef, Value, Vector},
 };
 use smallvec::smallvec;
 use std::{cell::RefCell, collections::VecDeque};
 
-use crate::{helpers::make_module_natives, pop_vec_arg, util::make_native_from_func};
+use crate::{
+    helpers::{get_metadata_address, make_module_natives},
+    pop_vec_arg,
+    util::make_native_from_func,
+};
 
 /***************************************************************************************************
  * native fun create_address
@@ -42,24 +46,40 @@ impl NativeCosmosContext {
 // =========================================================================================
 // Helpers
 
-/// The field index of the `handle` field in the `Table` Move struct.
-const ADDRESS_FIELD_INDEX: usize = 0;
-
-fn get_metadata_address(metadata: &StructRef) -> PartialVMResult<AccountAddress> {
-    let metadata_addr = metadata
-        .borrow_field(ADDRESS_FIELD_INDEX)?
-        .value_as::<Reference>()?
-        .read_ref()?
-        .value_as::<AccountAddress>()?;
-    Ok(metadata_addr)
-}
-
 fn partial_extension_error(msg: impl ToString) -> PartialVMError {
     PartialVMError::new(StatusCode::VM_EXTENSION_ERROR).with_message(msg.to_string())
 }
 
+fn partial_error(code: StatusCode, msg: impl ToString) -> PartialVMError {
+    PartialVMError::new(code).with_message(msg.to_string())
+}
+
 // =========================================================================================
 // Implementations
+
+fn native_stargate(
+    gas_params: &StargateParameters,
+    context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(args.len() == 3);
+
+    let data = pop_arg!(args, Vector).to_vec_u8()?;
+    let path = pop_arg!(args, Vector).to_vec_u8()?;
+    let path = String::from_utf8(path)
+        .map_err(|err| partial_error(StatusCode::VALUE_SERIALIZATION_ERROR, err))?;
+    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+
+    let message = CosmosMessage::Stargate(StargateMessage { sender, path, data });
+
+    // build cosmos message
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    cosmos_context.messages.borrow_mut().push(message);
+
+    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+}
 
 fn native_move_execute(
     gas_params: &MoveExecuteGasParameters,
@@ -460,6 +480,10 @@ fn native_initiate_token_withdrawal(
  **************************************************************************************************/
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
     let natives = vec![
+        (
+            "stargate_internal",
+            make_native_from_func(gas_params.stargate, native_stargate),
+        ),
         (
             "move_execute_internal",
             make_native_from_func(gas_params.move_execute, native_move_execute),

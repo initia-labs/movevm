@@ -12,6 +12,7 @@ typedef GoError (*write_db_fn)(db_t *ptr, U8SliceView key, U8SliceView val, Unma
 typedef GoError (*remove_db_fn)(db_t *ptr, U8SliceView key, UnmanagedVector *errOut);
 typedef GoError (*scan_db_fn)(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // and api
+typedef GoError (*query_fn)(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
 typedef GoError (*get_account_info_fn)(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence,  UnmanagedVector *errOut);
 typedef GoError (*amount_to_share_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share,  UnmanagedVector *errOut);
 typedef GoError (*share_to_amount_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount,  UnmanagedVector *errOut);
@@ -26,6 +27,7 @@ GoError cSet_cgo(db_t *ptr, U8SliceView key, U8SliceView val, UnmanagedVector *e
 GoError cDelete_cgo(db_t *ptr, U8SliceView key, UnmanagedVector *errOut);
 GoError cScan_cgo(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // api
+GoError cQuery_cgo(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
 GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, UnmanagedVector *errOut);
 GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share, UnmanagedVector *errOut);
 GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount, UnmanagedVector *errOut);
@@ -37,6 +39,7 @@ GoError cNext_cgo(iterator_t *ptr, UnmanagedVector *key, UnmanagedVector *errOut
 import "C"
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"runtime/debug"
@@ -298,6 +301,7 @@ func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) 
 /***** GoAPI *******/
 
 type GoAPI interface {
+	Query(types.QueryRequest, uint64) ([]byte, uint64, error)
 	GetAccountInfo(types.AccountAddress) (bool /* found */, uint64 /* account number */, uint64 /* sequence */, uint8 /* account type */)
 	AmountToShare([]byte, types.AccountAddress, uint64) (uint64, error)
 	ShareToAmount([]byte, types.AccountAddress, uint64) (uint64, error)
@@ -306,6 +310,7 @@ type GoAPI interface {
 }
 
 var api_vtable = C.GoApi_vtable{
+	query:            (C.query_fn)(C.cQuery_cgo),
 	get_account_info: (C.get_account_info_fn)(C.cGetAccountInfo_cgo),
 	amount_to_share:  (C.amount_to_share_fn)(C.cAmountToShare_cgo),
 	share_to_amount:  (C.share_to_amount_fn)(C.cShareToAmount_cgo),
@@ -320,6 +325,38 @@ func buildAPI(api *GoAPI) C.GoApi {
 		state:  (*C.api_t)(unsafe.Pointer(api)),
 		vtable: api_vtable,
 	}
+}
+
+//export cQuery
+func cQuery(ptr *C.api_t, request C.U8SliceView, gasBalance C.uint64_t, response *C.UnmanagedVector, usedGas *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+	defer recoverPanic(&ret)
+
+	if errOut == nil {
+		return C.GoError_BadArgument
+	}
+	if !(*response).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	}
+
+	api := *(*GoAPI)(unsafe.Pointer(ptr))
+	req := copyU8Slice(request)
+	queryReq := types.QueryRequest{}
+	err := json.Unmarshal(req, &queryReq)
+	if err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
+	gb := uint64(gasBalance)
+
+	res, ug, err := api.Query(queryReq, gb)
+	if err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
+	*usedGas = C.uint64_t(ug)
+	*response = newUnmanagedVector(res)
+
+	return C.GoError_None
 }
 
 //export cGetAccountInfo

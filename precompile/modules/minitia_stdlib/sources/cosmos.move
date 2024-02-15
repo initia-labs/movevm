@@ -8,6 +8,41 @@ module minitia_std::cosmos {
     use std::fungible_asset::Metadata;
     use std::collection::{Collection};
 
+    use minitia_std::option;
+    use minitia_std::json;
+    use minitia_std::simple_json;
+
+    public entry fun stargate_vote(
+        sender: &signer, 
+        proposal_id: u64, 
+        voter: String, 
+        option: u64, 
+        metadata: String
+    ) {
+        let obj = simple_json::empty();
+        simple_json::set_object(&mut obj, option::none<String>());
+        simple_json::increase_depth(&mut obj);
+        simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"proposal_id")), true, (proposal_id as u256));
+        simple_json::set_string(&mut obj, option::some(string::utf8(b"voter")), voter);
+        simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"option")), true, (option as u256));
+        simple_json::set_string(&mut obj, option::some(string::utf8(b"metadata")), metadata);
+
+        let req = json::stringify(simple_json::to_json_object(&obj));
+        stargate(sender, string::utf8(b"/cosmos.gov.v1.Msg/Vote"), req);
+    }
+
+    public entry fun stargate (
+        sender: &signer,
+        path: String,
+        data: String,
+    ) {
+        stargate_internal(
+            signer::address_of(sender),
+            *string::bytes(&path),
+            *string::bytes(&data),
+        )
+    }
+
     public entry fun move_execute (
         sender: &signer,
         module_address: address,
@@ -165,6 +200,12 @@ module minitia_std::cosmos {
             data,
         )
     }
+
+    native fun stargate_internal (
+        sender: address,
+        path: vector<u8>,
+        data: vector<u8>,
+    );
 
     native fun move_execute_internal (
         sender: address,

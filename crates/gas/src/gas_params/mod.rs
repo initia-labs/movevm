@@ -9,6 +9,7 @@ pub mod from_bcs;
 pub mod json;
 pub mod object;
 pub mod oracle;
+pub mod query;
 pub mod staking;
 pub mod table;
 pub mod transaction_context;

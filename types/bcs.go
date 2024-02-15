@@ -233,6 +233,13 @@ func DeserializeCosmosMessage(deserializer serde.Deserializer) (CosmosMessage, e
 			return nil, err
 		}
 
+	case 5:
+		if val, err := load_CosmosMessage__Stargate(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("Unknown variant index for CosmosMessage: %d", index)
 	}
@@ -402,6 +409,37 @@ func load_CosmosMessage__Move(deserializer serde.Deserializer) (CosmosMessage__M
 	var obj CosmosMessage__Move
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := DeserializeMoveMessage(deserializer); err == nil { obj.Value = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+type CosmosMessage__Stargate struct {
+	Value StargateMessage
+}
+
+func (*CosmosMessage__Stargate) isCosmosMessage() {}
+
+func (obj *CosmosMessage__Stargate) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(5)
+	if err := obj.Value.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CosmosMessage__Stargate) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_CosmosMessage__Stargate(deserializer serde.Deserializer) (CosmosMessage__Stargate, error) {
+	var obj CosmosMessage__Stargate
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeStargateMessage(deserializer); err == nil { obj.Value = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -1993,6 +2031,53 @@ func load_StakingMessage__Delegate(deserializer serde.Deserializer) (StakingMess
 	if val, err := DeserializeCosmosCoin(deserializer); err == nil { obj.Amount = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
+}
+
+type StargateMessage struct {
+	Sender AccountAddress
+	Path string
+	Data []uint8
+}
+
+func (obj *StargateMessage) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := obj.Sender.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeStr(obj.Path); err != nil { return err }
+	if err := serialize_vector_u8(obj.Data, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *StargateMessage) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeStargateMessage(deserializer serde.Deserializer) (StargateMessage, error) {
+	var obj StargateMessage
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Sender = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Path = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Data = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeStargateMessage(input []byte) (StargateMessage, error) {
+	if input == nil {
+		var obj StargateMessage
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeStargateMessage(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
 }
 
 type StructTag struct {

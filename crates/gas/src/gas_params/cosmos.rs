@@ -1,6 +1,11 @@
 use move_core_types::gas_algebra::{InternalGas, InternalGasPerArg};
 
 #[derive(Debug, Clone)]
+pub struct StargateParameters {
+    pub base: InternalGas,
+}
+
+#[derive(Debug, Clone)]
 pub struct MoveExecuteGasParameters {
     pub base: InternalGas,
 }
@@ -48,6 +53,7 @@ pub struct InitiateTokenWithdrawalGasParameters {
 
 #[derive(Debug, Clone)]
 pub struct GasParameters {
+    pub stargate: StargateParameters,
     pub move_execute: MoveExecuteGasParameters,
     pub move_script: MoveScriptGasParameters,
     pub delegate: DelegateGasParameters,

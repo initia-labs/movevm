@@ -313,6 +313,12 @@ typedef struct {
 } api_t;
 
 typedef struct {
+  int32_t (*query)(const api_t*,
+                   U8SliceView,
+                   uint64_t,
+                   UnmanagedVector*,
+                   uint64_t*,
+                   UnmanagedVector*);
   int32_t (*get_account_info)(const api_t*,
                               U8SliceView,
                               bool*,

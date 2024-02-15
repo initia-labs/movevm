@@ -1,4 +1,4 @@
-use initia_natives::{account::AccountAPI, staking::StakingAPI};
+use initia_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
 use initia_storage::state_view::StateView;
 use initia_types::errors::BackendError;
 
@@ -6,7 +6,7 @@ use initia_types::errors::BackendError;
 /// Designed to allow easy dependency injection at runtime.
 /// This cannot be copied or cloned since it would behave differently
 /// for mock storages and a bridge storage in the VM.
-pub struct Backend<A: AccountAPI + StakingAPI, S: StateView> {
+pub struct Backend<A: AccountAPI + StakingAPI + QueryAPI, S: StateView> {
     pub api: A,
     pub storage: S,
 }

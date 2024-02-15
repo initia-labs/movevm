@@ -3,7 +3,7 @@ use crate::memory::{U8SliceView, UnmanagedVector};
 
 use anyhow::anyhow;
 use initia_natives::oracle::OracleAPI;
-use initia_natives::{account::AccountAPI, staking::StakingAPI};
+use initia_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::u256::U256;
 
@@ -19,6 +19,14 @@ pub struct api_t {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
+    pub query: extern "C" fn(
+        *const api_t,
+        U8SliceView, // request
+        u64,
+        *mut UnmanagedVector, // response
+        *mut u64,
+        *mut UnmanagedVector, // error_msg
+    ) -> i32,
     pub get_account_info: extern "C" fn(
         *const api_t,
         U8SliceView,          // addr
@@ -235,5 +243,37 @@ impl OracleAPI for GoApi {
         let price: U256 = bcs::from_bytes(&price_bytes).map_err(|_| anyhow!("Unset price"))?;
 
         Ok((price, updated_at, decimals))
+    }
+}
+
+impl QueryAPI for GoApi {
+    fn query(&self, request: &[u8], gas_balance: u64) -> (anyhow::Result<Vec<u8>>, u64) {
+        let request = U8SliceView::new(Some(request));
+        let mut response: UnmanagedVector = UnmanagedVector::default();
+        let mut error_msg = UnmanagedVector::default();
+        let mut used_gas = 0_u64;
+
+        let go_error: GoError = (self.vtable.query)(
+            self.state,
+            request,
+            gas_balance,
+            &mut response,
+            &mut used_gas,
+            &mut error_msg,
+        )
+        .into();
+
+        // return complete error message (reading from buffer for GoError::Other)
+        let default = || "Failed to query".to_string();
+        unsafe {
+            if let Err(err) = go_error.into_result(error_msg, default) {
+                return (Err(anyhow!(err)), used_gas);
+            }
+        }
+
+        match response.consume() {
+            Some(val) => (Ok(val), used_gas),
+            None => (Err(anyhow!(default())), used_gas),
+        }
     }
 }

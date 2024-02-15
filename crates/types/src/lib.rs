@@ -11,6 +11,7 @@ pub mod json_event;
 pub mod message;
 pub mod metadata;
 pub mod module;
+pub mod query;
 pub mod result;
 pub mod script;
 mod serde_helper;

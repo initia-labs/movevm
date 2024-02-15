@@ -78,6 +78,7 @@ var _ GoAPI = MockAPI{}
 type MockAPI struct {
 	AccountAPI *MockAccountAPI
 	StakingAPI *MockStakingAPI
+	QueryAPI   *MockQueryAPI
 	OracleAPI  *MockOracleAPI
 	BlockTime  uint64
 }
@@ -86,12 +87,14 @@ func NewMockAPI(
 	blockTime uint64,
 	accountAPI *MockAccountAPI,
 	stakingAPI *MockStakingAPI,
+	queryAPI *MockQueryAPI,
 	oracleAPI *MockOracleAPI,
 ) *MockAPI {
 
 	return &MockAPI{
 		AccountAPI: accountAPI,
 		StakingAPI: stakingAPI,
+		QueryAPI:   queryAPI,
 		OracleAPI:  oracleAPI,
 		BlockTime:  blockTime,
 	}
@@ -101,12 +104,18 @@ func NewEmptyMockAPI(blockTime uint64) *MockAPI {
 	accountAPI := NewMockAccountAPI()
 	stakingAPI := NewMockStakingAPI()
 	oracleAPI := NewMockOracleAPI()
+	queryAPI := NewMockQueryAPI()
 	return &MockAPI{
 		AccountAPI: &accountAPI,
 		StakingAPI: &stakingAPI,
 		OracleAPI:  &oracleAPI,
+		QueryAPI:   &queryAPI,
 		BlockTime:  blockTime,
 	}
+}
+
+func (m MockAPI) Query(request types.QueryRequest, gasBalance uint64) ([]byte, uint64, error) {
+	return m.QueryAPI.Query(request, gasBalance)
 }
 
 func (m MockAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8) {
@@ -204,6 +213,38 @@ func (m MockStakingAPI) ShareToAmount(validator []byte, metadata types.AccountAd
 	}
 
 	return share * ratio.amount / ratio.share, nil
+}
+
+type MockQueryAPI struct {
+	StargateQuerySet map[string][]byte
+	CustomQuerySet   map[string][]byte
+}
+
+func NewMockQueryAPI() MockQueryAPI {
+	q := MockQueryAPI{
+		StargateQuerySet: make(map[string][]byte),
+		CustomQuerySet:   make(map[string][]byte),
+	}
+	q.StargateQuerySet["/initia.gov.v1.Query/Proposal"] = []byte("{\"proposal\":{\"id\":0,\"title\":\"test_proposal\",\"summary\":\"test_proposal_summary\"}}")
+	q.CustomQuerySet["amount_to_share"] = []byte("{\"share\": 0}")
+	return q
+}
+
+func (m MockQueryAPI) Query(request types.QueryRequest, gasBalance uint64) ([]byte, uint64, error) {
+	if request.Custom != nil {
+		data, ok := m.CustomQuerySet[request.Custom.Name]
+		if !ok {
+			return nil, 0, errors.New("not registered custom function")
+		}
+		return data, 0, nil
+	} else if request.Stargate != nil {
+		data, ok := m.StargateQuerySet[request.Stargate.Path]
+		if !ok {
+			return nil, 0, errors.New("not registered stargate function")
+		}
+		return data, 0, nil
+	}
+	return nil, 0, nil
 }
 
 type MockOracleAPI struct {

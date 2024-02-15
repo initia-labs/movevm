@@ -31,6 +31,7 @@ use initia_natives::{
     cosmos::NativeCosmosContext,
     event::NativeEventContext,
     oracle::{NativeOracleContext, OracleAPI},
+    query::{NativeQueryContext, QueryAPI},
     staking::NativeStakingContext,
     transaction_context::NativeTransactionContext,
 };
@@ -109,7 +110,7 @@ impl InitiaVM {
 
     fn create_session<
         'r,
-        A: AccountAPI + StakingAPI + OracleAPI,
+        A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
         S: MoveResolver<PartialVMError>,
         T: TableResolver,
     >(
@@ -137,6 +138,7 @@ impl InitiaVM {
         ));
         extensions.add(NativeCodeContext::default());
         extensions.add(NativeStakingContext::new(api));
+        extensions.add(NativeQueryContext::new(api));
         extensions.add(NativeCosmosContext::default());
         extensions.add(NativeTransactionContext::new(tx_hash, session_id));
         extensions.add(NativeEventContext::default());
@@ -149,7 +151,11 @@ impl InitiaVM {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize<S: StateView, T: TableView, A: AccountAPI + StakingAPI + OracleAPI>(
+    pub fn initialize<
+        S: StateView,
+        T: TableView,
+        A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
+    >(
         &mut self,
         api: &A,
         env: &Env,
@@ -219,7 +225,11 @@ impl InitiaVM {
         Ok(output)
     }
 
-    pub fn execute_message<S: StateView, T: TableView, A: AccountAPI + StakingAPI + OracleAPI>(
+    pub fn execute_message<
+        S: StateView,
+        T: TableView,
+        A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
+    >(
         &mut self,
         api: &A,
         env: &Env,
@@ -250,7 +260,7 @@ impl InitiaVM {
     pub fn execute_view_function<
         S: StateView,
         T: TableView,
-        A: AccountAPI + StakingAPI + OracleAPI,
+        A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &self,
         api: &A,
@@ -293,7 +303,7 @@ impl InitiaVM {
     fn execute_script_or_entry_function<
         S: StateView,
         T: TableView,
-        A: AccountAPI + StakingAPI + OracleAPI,
+        A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &self,
         api: &A,

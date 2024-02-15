@@ -6,7 +6,8 @@ use std::{
 };
 
 use initia_natives::{
-    account::AccountAPI, oracle::OracleAPI, staking::StakingAPI, table::TableResolver,
+    account::AccountAPI, oracle::OracleAPI, query::QueryAPI, staking::StakingAPI,
+    table::TableResolver,
 };
 use initia_types::{
     access_path::AccessPath, iterator::Order, table::TableHandle, write_set::WriteSet,
@@ -211,6 +212,7 @@ fn clone_and_format_item(item_ref: BTreeMapRecordRef, prefix_length: usize) -> V
 pub struct MockAPI {
     pub account_api: MockAccountAPI,
     pub staking_api: MockStakingAPI,
+    pub query_api: MockQueryAPI,
     pub oracle_api: MockOracleAPI,
     pub block_time: u64,
 }
@@ -219,11 +221,13 @@ impl MockAPI {
     pub fn new(
         account_api: MockAccountAPI,
         staking_api: MockStakingAPI,
+        query_api: MockQueryAPI,
         oracle_api: MockOracleAPI,
     ) -> Self {
         Self {
             account_api,
             staking_api,
+            query_api,
             oracle_api,
             block_time: 0,
         }
@@ -232,8 +236,9 @@ impl MockAPI {
     pub fn empty() -> Self {
         let account_api = MockAccountAPI::new();
         let staking_api = MockStakingAPI::new();
+        let query_api = MockQueryAPI::new();
         let oracle_api = MockOracleAPI::new();
-        MockAPI::new(account_api, staking_api, oracle_api)
+        MockAPI::new(account_api, staking_api, query_api, oracle_api)
     }
 
     pub fn set_block_time(&mut self, block_time: u64) {
@@ -277,6 +282,12 @@ impl StakingAPI for MockAPI {
 
     fn unbond_timestamp(&self) -> anyhow::Result<u64> {
         Ok(self.block_time + 60 * 60 * 24 * 7)
+    }
+}
+
+impl QueryAPI for MockAPI {
+    fn query(&self, request: &[u8], gas_balance: u64) -> (anyhow::Result<Vec<u8>>, u64) {
+        self.query_api.query(request, gas_balance)
     }
 }
 
@@ -405,6 +416,26 @@ impl MockStakingAPI {
     }
 }
 
+pub struct MockQueryAPI {}
+
+impl MockQueryAPI {
+    pub fn new() -> Self {
+        MockQueryAPI {}
+    }
+}
+
+impl Default for MockQueryAPI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MockQueryAPI {
+    fn query(&self, _request: &[u8], _gas_balance: u64) -> (anyhow::Result<Vec<u8>>, u64) {
+        (Err(anyhow!("not registered query")), 0)
+    }
+}
+
 pub struct MockOracleAPI {
     pub prices: BTreeMap<Vec<u8>, (U256, u64, u64)>,
 }
@@ -484,6 +515,7 @@ pub struct BlankAPIImpl {
     pub account_api: BlankAccountAPIImpl,
     pub staking_api: BlankStakingAPIImpl,
     pub oracle_api: BlankOracleAPIImpl,
+    pub query_api: BlankQueryAPIImpl,
 }
 
 impl BlankAPIImpl {
@@ -492,6 +524,7 @@ impl BlankAPIImpl {
             account_api: BlankAccountAPIImpl,
             staking_api: BlankStakingAPIImpl,
             oracle_api: BlankOracleAPIImpl,
+            query_api: BlankQueryAPIImpl,
         }
     }
 }
@@ -562,5 +595,12 @@ impl OracleAPI for BlankOracleAPIImpl {
         u64,  /* decimals */
     )> {
         Err(anyhow!("pair not found"))
+    }
+}
+pub struct BlankQueryAPIImpl;
+
+impl QueryAPI for BlankQueryAPIImpl {
+    fn query(&self, _request: &[u8], _gas_balance: u64) -> (anyhow::Result<Vec<u8>>, u64) {
+        (Err(anyhow!("not registered query")), 0)
     }
 }

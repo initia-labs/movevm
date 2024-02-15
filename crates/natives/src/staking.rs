@@ -1,3 +1,4 @@
+use crate::helpers::get_metadata_address;
 use better_any::{Tid, TidAble};
 use initia_gas::gas_params::staking::*;
 use initia_types::staking_change_set::StakingChangeSet;
@@ -8,7 +9,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
-    values::{Reference, StructRef, Value, Vector},
+    values::{StructRef, Value, Vector},
 };
 use smallvec::smallvec;
 use std::collections::{BTreeMap, VecDeque};
@@ -118,21 +119,6 @@ impl<'a> NativeStakingContext<'a> {
             }
         }
     }
-}
-
-// =========================================================================================
-// Helpers
-
-/// The field index of the `handle` field in the `Table` Move struct.
-const ADDRESS_FIELD_INDEX: usize = 0;
-
-fn get_metadata_address(metadata: &StructRef) -> PartialVMResult<AccountAddress> {
-    let metadata_addr = metadata
-        .borrow_field(ADDRESS_FIELD_INDEX)?
-        .value_as::<Reference>()?
-        .read_ref()?
-        .value_as::<AccountAddress>()?;
-    Ok(metadata_addr)
 }
 
 // =========================================================================================
