@@ -263,7 +263,7 @@ module initia_std::stableswap {
         let pool = borrow_pool(pair);
 
         let i = 0;
-        let n = vector::length(&coins);
+        let n = vector::length(&coin_amounts);
         while (i < n) {
             let metadata = *vector::borrow(&pool.coin_metadata, i);
             let amount = *vector::borrow(&coin_amounts, i);
@@ -660,7 +660,7 @@ module initia_std::stableswap {
             let d_prod = d;
             let j = 0;
             while (j < (n as u64)) {
-                d_prod = d_prod * d / (n as u256) / (*vector::borrow(&amounts, i) as u256);
+                d_prod = d_prod * d / (n as u256) / (*vector::borrow(&amounts, j) as u256);
                 j = j + 1;
             };
 
@@ -820,11 +820,22 @@ module initia_std::stableswap {
             vector[100000000, 100000000],
             6000
         );
-
         let metadata_lp = coin::metadata(chain_addr, string::utf8(b"lp"));
+        let pool = object::convert<Metadata, Pool>(metadata_lp);
 
-        // print_state(l2_1_metadata);
-
-        swap_script(&chain, object::convert<Metadata, Pool>(metadata_lp), metadata_a, metadata_b, 1000000, option::none());
+        assert!(coin::balance(chain_addr, metadata_lp) == 200000000, 0);
+        assert!(coin::balance(chain_addr, metadata_a) == 900000000, 0);
+        assert!(coin::balance(chain_addr, metadata_b) == 900000000, 0);
+        provide_liquidity_script(&chain, pool, vector[100000000, 100000000], option::none());
+        assert!(coin::balance(chain_addr, metadata_lp) == 400000000, 1);
+        assert!(coin::balance(chain_addr, metadata_a) == 800000000, 1);
+        assert!(coin::balance(chain_addr, metadata_b) == 800000000, 1);
+        withdraw_liquidity_script(&chain, pool, 100000000, vector[option::none(), option::none()]);
+        assert!(coin::balance(chain_addr, metadata_lp) == 300000000, 2);
+        assert!(coin::balance(chain_addr, metadata_a) == 850000000, 2);
+        assert!(coin::balance(chain_addr, metadata_b) == 850000000, 2);
+        swap_script(&chain, pool, metadata_a, metadata_b, 1000000, option::none());
+        assert!(coin::balance(chain_addr, metadata_a) == 849000000, 3);
+        assert!(coin::balance(chain_addr, metadata_b) == 850999285, 3);
     }
 }
