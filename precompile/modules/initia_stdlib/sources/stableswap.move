@@ -46,7 +46,6 @@ module initia_std::stableswap {
     }
 
     struct ProvideEvent has drop, store {
-        account: address,
         coins: vector<address>,
         coin_amounts: vector<u64>,
         liquidity_token: address,
@@ -54,7 +53,6 @@ module initia_std::stableswap {
     }
 
     struct WithdrawEvent has drop, store {
-        account: address,
         coins: vector<address>,
         coin_amounts: vector<u64>,
         liquidity_token: address,
@@ -62,7 +60,6 @@ module initia_std::stableswap {
     }
 
     struct SwapEvent has drop, store {
-        account: address,
         offer_coin: address,
         return_coin: address,
         liquidity_token: address,
@@ -271,13 +268,13 @@ module initia_std::stableswap {
             i = i + 1;
         };
 
-        let liquidity_token = provide_liquidity(account, pair, coins, min_liquidity);
+        let liquidity_token = provide_liquidity(pair, coins, min_liquidity);
         primary_fungible_store::deposit(signer::address_of(account), liquidity_token);
     }
 
     public entry fun withdraw_liquidity_script(account: &signer, pair: Object<Pool>, liquidity_amount: u64, min_return_amounts: vector<Option<u64>>) acquires Pool {
         let liquidity_token = primary_fungible_store::withdraw(account, pair, liquidity_amount);
-        let coins = withdraw_liquidity(account, liquidity_token, min_return_amounts);
+        let coins = withdraw_liquidity(liquidity_token, min_return_amounts);
 
         let i = 0;
         let n = vector::length(&coins);
@@ -303,7 +300,7 @@ module initia_std::stableswap {
         min_return_amount: Option<u64>,
     ) acquires Pool{
         let offer_coin = primary_fungible_store::withdraw(account, offer_coin_metadata, offer_amount);
-        let return_coin = swap(account, pair, offer_coin, return_coin_metadata, min_return_amount);
+        let return_coin = swap(pair, offer_coin, return_coin_metadata, min_return_amount);
         primary_fungible_store::deposit(signer::address_of(account), return_coin);
     }
 
@@ -370,7 +367,6 @@ module initia_std::stableswap {
         );
 
         let liquidity_token = provide_liquidity(
-            creator,
             object::address_to_object<Pool>(pair_address),
             coins,
             option::none(),
@@ -399,7 +395,7 @@ module initia_std::stableswap {
         return liquidity_token
     }
 
-    public fun provide_liquidity(account: &signer, pair: Object<Pool>, coins: vector<FungibleAsset>, min_liquidity: Option<u64>): FungibleAsset acquires Pool {
+    public fun provide_liquidity(pair: Object<Pool>, coins: vector<FungibleAsset>, min_liquidity: Option<u64>): FungibleAsset acquires Pool {
         let pool = borrow_pool(pair);
         let pair_addr = object::object_address(pair);
         let n = check_coin_metadata(&pool.coin_metadata, &coins);
@@ -468,7 +464,6 @@ module initia_std::stableswap {
 
         event::emit<ProvideEvent>(
             ProvideEvent {
-                account: signer::address_of(account),
                 coins: get_coin_addresses(pool.coin_metadata),
                 coin_amounts: amounts,
                 liquidity_token: pair_addr,
@@ -479,7 +474,7 @@ module initia_std::stableswap {
         return liquidity_token
     }
 
-    public fun withdraw_liquidity(account: &signer, liquidity_token: FungibleAsset, min_return_amounts: vector<Option<u64>>): vector<FungibleAsset> acquires Pool {
+    public fun withdraw_liquidity(liquidity_token: FungibleAsset, min_return_amounts: vector<Option<u64>>): vector<FungibleAsset> acquires Pool {
         let pair_addr = object::object_address(fungible_asset::metadata_from_asset(&liquidity_token));
         let pair = object::address_to_object<Pool>(pair_addr);
         let liquidity_amount = fungible_asset::amount(&liquidity_token);
@@ -514,7 +509,6 @@ module initia_std::stableswap {
 
         event::emit<ProvideEvent>(
             ProvideEvent {
-                account: signer::address_of(account),
                 coins: get_coin_addresses(pool.coin_metadata),
                 coin_amounts,
                 liquidity_token: pair_addr,
@@ -529,7 +523,7 @@ module initia_std::stableswap {
 
     // public entry fun single_asset_withdraw_liquidity() {}
 
-    public entry fun swap(account: &signer, pair: Object<Pool>, offer_coin: FungibleAsset, return_coin_metadata: Object<Metadata>, min_return_amount: Option<u64>): FungibleAsset acquires Pool {
+    public fun swap(pair: Object<Pool>, offer_coin: FungibleAsset, return_coin_metadata: Object<Metadata>, min_return_amount: Option<u64>): FungibleAsset acquires Pool {
         let offer_coin_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_amount = fungible_asset::amount(&offer_coin);
         let (return_amount, fee_amount) = swap_simulation(pair, offer_coin_metadata, return_coin_metadata, offer_amount);
@@ -548,7 +542,6 @@ module initia_std::stableswap {
 
         event::emit<SwapEvent>(
             SwapEvent {
-                account: signer::address_of(account),
                 offer_coin: object::object_address(offer_coin_metadata),
                 return_coin: object::object_address(return_coin_metadata),
                 liquidity_token: pair_addr,

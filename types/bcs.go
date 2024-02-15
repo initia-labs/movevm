@@ -8,8 +8,8 @@ package types
 
 import (
 	"fmt"
-	"github.com/novifinancial/serde-reflection/serde-generate/runtime/golang/serde"
-	"github.com/novifinancial/serde-reflection/serde-generate/runtime/golang/bcs"
+	"github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang/serde"
+	"github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang/bcs"
 )
 
 
@@ -387,20 +387,27 @@ func DeserializeDataPath(deserializer serde.Deserializer) (DataPath, error) {
 		}
 
 	case 1:
-		if val, err := load_DataPath__Resource(deserializer); err == nil {
+		if val, err := load_DataPath__CodeChecksum(deserializer); err == nil {
 			return &val, nil
 		} else {
 			return nil, err
 		}
 
 	case 2:
-		if val, err := load_DataPath__TableItem(deserializer); err == nil {
+		if val, err := load_DataPath__Resource(deserializer); err == nil {
 			return &val, nil
 		} else {
 			return nil, err
 		}
 
 	case 3:
+		if val, err := load_DataPath__TableItem(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
+	case 4:
 		if val, err := load_DataPath__TableInfo(deserializer); err == nil {
 			return &val, nil
 		} else {
@@ -456,6 +463,37 @@ func load_DataPath__Code(deserializer serde.Deserializer) (DataPath__Code, error
 	return obj, nil
 }
 
+type DataPath__CodeChecksum struct {
+	Value Identifier
+}
+
+func (*DataPath__CodeChecksum) isDataPath() {}
+
+func (obj *DataPath__CodeChecksum) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(1)
+	if err := obj.Value.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *DataPath__CodeChecksum) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_DataPath__CodeChecksum(deserializer serde.Deserializer) (DataPath__CodeChecksum, error) {
+	var obj DataPath__CodeChecksum
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeIdentifier(deserializer); err == nil { obj.Value = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
 type DataPath__Resource struct {
 	Value StructTag
 }
@@ -464,7 +502,7 @@ func (*DataPath__Resource) isDataPath() {}
 
 func (obj *DataPath__Resource) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(1)
+	serializer.SerializeVariantIndex(2)
 	if err := obj.Value.Serialize(serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
@@ -493,7 +531,7 @@ func (*DataPath__TableItem) isDataPath() {}
 
 func (obj *DataPath__TableItem) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(2)
+	serializer.SerializeVariantIndex(3)
 	if err := serialize_vector_u8((([]uint8)(*obj)), serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
@@ -523,7 +561,7 @@ func (*DataPath__TableInfo) isDataPath() {}
 
 func (obj *DataPath__TableInfo) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(3)
+	serializer.SerializeVariantIndex(4)
 	serializer.DecreaseContainerDepth()
 	return nil
 }

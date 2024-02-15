@@ -75,21 +75,18 @@ module initia_std::minitswap {
 
     /// Event emitted when provide.
     struct ProvideEvent has drop, store {
-        account: address,
         provide_amount: u64,
         share_amount: u64,
     }
 
     /// Event emitted when withdraw.
     struct WithdrawEvent has drop, store {
-        account: address,
         withdraw_amount: u64,
         share_amount: u64,
     }
 
     /// Event emitted when swap token.
     struct SwapEvent has drop, store {
-        account: address,
         offer_coin: Object<Metadata>,
         return_coin: Object<Metadata>,
         peg_keeper_offer_amount: u64, // always l1 init
@@ -101,7 +98,6 @@ module initia_std::minitswap {
 
     /// Event emitted when rebalance peg keeper's balances.
     struct RebalanceEvent has drop, store {
-        account: address,
         offer_coin: Object<Metadata>, // always l1 init
         return_coin: Object<Metadata>, // always l2 init
         offer_amount: u64,
@@ -337,14 +333,14 @@ module initia_std::minitswap {
 
     public entry fun provide(account: &signer, amount: u64, min_return_amount: Option<u64>) acquires ModuleStore {
         let l1_init = primary_fungible_store::withdraw(account, l1_init_metadata(), amount);
-        let share_token = provide_internal(account, l1_init);
+        let share_token = provide_internal(l1_init);
         assert_min_amount(&share_token, min_return_amount);
         primary_fungible_store::deposit(signer::address_of(account), share_token);
     }
 
     public entry fun withdraw(account: &signer, amount: u64, min_return_amount: Option<u64>) acquires ModuleStore {
         let share_token = primary_fungible_store::withdraw(account, share_token_metadata(), amount);
-        let l1_init = withdraw_internal(account, share_token);
+        let l1_init = withdraw_internal(share_token);
         assert_min_amount(&l1_init, min_return_amount);
         primary_fungible_store::deposit(signer::address_of(account), l1_init);
     }
@@ -357,7 +353,7 @@ module initia_std::minitswap {
         min_return_amount: Option<u64>
     ) acquires ModuleStore, VirtualPool {
         let offer_asset = primary_fungible_store::withdraw(account, offer_asset_metadata, amount);
-        let return_asset = swap_internal(account, offer_asset, return_asset_metadata);
+        let return_asset = swap_internal(offer_asset, return_asset_metadata);
         assert_min_amount(&return_asset, min_return_amount);
         primary_fungible_store::deposit(signer::address_of(account), return_asset);
     }
@@ -369,12 +365,12 @@ module initia_std::minitswap {
         min_return_amount: Option<u64>
     ) acquires ModuleStore, VirtualPool {
         let l1_init = primary_fungible_store::withdraw(account, l1_init_metadata(), amount);
-        let l2_init = rebalance_internal(account, l1_init, l2_asset_metadata);
+        let l2_init = rebalance_internal(l1_init, l2_asset_metadata);
         assert_min_amount(&l2_init, min_return_amount);
         primary_fungible_store::deposit(signer::address_of(account), l2_init);
     }
 
-    public fun provide_internal(account: &signer, l1_init: FungibleAsset): FungibleAsset acquires ModuleStore {
+    public fun provide_internal(l1_init: FungibleAsset): FungibleAsset acquires ModuleStore {
         assert!(is_l1_init(&l1_init), error::invalid_argument(ENOT_L1_INIT));
         let provide_amount = fungible_asset::amount(&l1_init);
 
@@ -391,7 +387,6 @@ module initia_std::minitswap {
         primary_fungible_store::deposit(module_addr, l1_init);
         event::emit<ProvideEvent>(
             ProvideEvent {
-                account: signer::address_of(account), 
                 provide_amount,
                 share_amount,
             },
@@ -399,7 +394,7 @@ module initia_std::minitswap {
         coin::mint(&module_store.mint_cap, share_amount)
     }
 
-    public fun withdraw_internal(account: &signer, share_token: FungibleAsset): FungibleAsset acquires ModuleStore {
+    public fun withdraw_internal(share_token: FungibleAsset): FungibleAsset acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let share_token_metadata = fungible_asset::metadata_from_asset(&share_token);
         assert!(share_token_metadata == share_token_metadata(), error::invalid_argument(ENOT_SHARE_TOKEN));
@@ -412,7 +407,6 @@ module initia_std::minitswap {
         let module_signer = object::generate_signer_for_extending(&module_store.extend_ref);
         event::emit<WithdrawEvent>(
             WithdrawEvent {
-                account: signer::address_of(account), 
                 withdraw_amount,
                 share_amount,
             },
@@ -421,7 +415,6 @@ module initia_std::minitswap {
     }
 
     public fun swap_internal(
-        account: &signer,
         offer_asset: FungibleAsset,
         return_asset_metadata: Object<Metadata>,
     ): FungibleAsset acquires ModuleStore, VirtualPool {
@@ -495,7 +488,6 @@ module initia_std::minitswap {
 
         event::emit<SwapEvent>(
             SwapEvent {
-                account: signer::address_of(account), 
                 offer_coin: offer_metadata,
                 return_coin: return_asset_metadata,
                 peg_keeper_offer_amount, // always l1 init
@@ -512,7 +504,6 @@ module initia_std::minitswap {
     // Purchasing L2 init token with L1 init from the Peg Keeper.
     // The trader always receives a greater amount than the offered amount.
     public fun rebalance_internal(
-        account: &signer,
         l1_init: FungibleAsset,
         l2_init_metadata: Object<Metadata>,
     ): FungibleAsset acquires ModuleStore, VirtualPool {
@@ -531,7 +522,6 @@ module initia_std::minitswap {
 
         event::emit<RebalanceEvent>(
             RebalanceEvent {
-                account: signer::address_of(account), 
                 offer_coin: l1_init_metadata(), // always l1 init
                 return_coin: l2_init_metadata, // always l2 init
                 offer_amount: amount,
@@ -719,9 +709,8 @@ module initia_std::minitswap {
             let y = decimal128::mul_u128(&grad, temp_x);
             x = (get_y(d0, (y as u64), ann) as u128);
 
-            // when fully recovered rate is too close to 0.5, x can be smaller than z
-            // TODO: improve this protection
-            if (y == decimal128::mul_u128(&grad, temp_x)) break;
+            // when fully recovered rate is too close to 0.5 y can be same with sim_size
+            if (y == sim_size) break;
 
             if (x > x_prev) {
                 if (x - x_prev <= 1) break
@@ -730,8 +719,9 @@ module initia_std::minitswap {
             };
             i = i + 1;
         };
+        std::debug::print(&1);
 
-        // scale up/down to real in real pool size
+        // scale up/down to real pool size
         (
             (x * (pool_size as u128) / sim_size as u64),
             (y * (pool_size as u128) / sim_size as u64)
@@ -782,13 +772,6 @@ module initia_std::minitswap {
         return (burn_cap, freeze_cap, mint_cap)
     }
 
-    #[test_only]
-    fun print_state(l2_meatdata: Object<Metadata>) acquires ModuleStore, VirtualPool {
-        let (module_store, pool, _, _) = borrow_all(l2_meatdata);
-        std::debug::print(module_store);
-        std::debug::print(pool);
-    }
-
     #[test(chain = @0x1)]
     fun end_to_end(
         chain: signer,
@@ -832,30 +815,21 @@ module initia_std::minitswap {
             decimal128::from_ratio(2, 1),
         );
 
-        // print_state(l2_1_metadata);
-
         swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
-        // print_state(l2_1_metadata);
 
         block::set_block_info(0, 101);
 
         swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
-        // print_state(l2_1_metadata);
 
         swap(&chain, l2_1_metadata, init_metadata, 100000000, option::none());
-        // print_state(l2_1_metadata);
 
         block::set_block_info(0, 121);
         swap(&chain, l2_1_metadata, init_metadata, 100, option::none());
-        // print_state(l2_1_metadata);
 
         block::set_block_info(0, 141);
         swap(&chain, l2_1_metadata, init_metadata, 100, option::none());
         swap(&chain, init_metadata, l2_1_metadata, 10000, option::none());
-        print_state(l2_1_metadata);
         rebalance(&chain, l2_1_metadata, 4100000, option::none());
-        print_state(l2_1_metadata);
         change_pool_size(&chain, l2_1_metadata, 9000000);
-        print_state(l2_1_metadata);
     }
 }
