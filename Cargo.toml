@@ -47,7 +47,7 @@ edition = "2021"
 license = "BUSL-1.1"
 homepage = "https://www.initia.co"
 repository = "https://github.com/initia-labs/initiavm/"
-rust-version = "1.72.0"
+rust-version = "1.76.0"
 
 [workspace.dependencies]
 # Internal crate dependencies.

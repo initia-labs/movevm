@@ -1,6 +1,6 @@
 module github.com/initia-labs/initiavm
 
-go 1.19
+go 1.21.5
 
 require (
 	github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang v0.0.0-20231213012317-73b6bbf74833
