@@ -141,7 +141,7 @@ module initia_std::minitswap {
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (_, pool) = borrow_all(l2_init_metadata);
         assert!(pool.active, error::invalid_state(EINACTIVE));
-        let (swap_amount, return_amount) = if (!after_peg_keeper_swap) {
+        let (swap_amount, return_amount) = if (after_peg_keeper_swap) {
             calc_peg_keeper_swap(pool)
         } else {
             (0, 0)
