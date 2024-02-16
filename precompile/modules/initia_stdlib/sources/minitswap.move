@@ -131,6 +131,76 @@ module initia_std::minitswap {
     }
 
     //
+    // View Functions
+    //
+
+    #[view]
+    public fun get_pool_amount(
+        l2_init_metadata: Object<Metadata>,
+        after_peg_keeper_swap: bool,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let (_, pool) = borrow_all(l2_init_metadata);
+        assert!(pool.active, error::invalid_state(EINACTIVE));
+        let (swap_amount, return_amount) = if (!after_peg_keeper_swap) {
+            calc_peg_keeper_swap(pool)
+        } else {
+            (0, 0)
+        };
+        return (pool.l1_pool_amount + swap_amount, pool.l2_pool_amount - return_amount)
+    }
+
+    #[view]
+    public fun get_peg_keeper_balance(
+        l2_init_metadata: Object<Metadata>,
+        after_peg_keeper_swap: bool,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let (_, pool) = borrow_all(l2_init_metadata);
+        assert!(pool.active, error::invalid_state(EINACTIVE));
+        let (swap_amount, return_amount) = if (after_peg_keeper_swap) {
+            calc_peg_keeper_swap(pool)
+        } else {
+            (0, 0)
+        };
+
+        return (pool.virtual_l1_balance + swap_amount, pool.virtual_l2_balance + return_amount)
+    }
+
+    #[view]
+    public fun swap_simulation(
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
+        offer_amount: u64,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let is_l1_init_offered = is_l1_init_metadata(offer_metadata);
+        let l2_init_metadata = if(is_l1_init_offered) {
+            return_metadata
+        } else {
+            offer_metadata
+        };
+
+        let (l1_pool_amount, l2_pool_amount) = get_pool_amount(l2_init_metadata, true);
+
+        let (module_store, pool) = borrow_all(l2_init_metadata);
+        let fee_amount = 0;
+        let return_amount = if (is_l1_init_offered) {
+            // 0 fee for L1 > L2
+            let return_amount = get_return_amount(offer_amount, l1_pool_amount, l2_pool_amount, pool.pool_size, pool.ann);
+            assert!(
+                l2_pool_amount >= pool.pool_size && l1_pool_amount <= pool.pool_size,
+                error::invalid_state(EL2_PRICE_TOO_LOW),
+            );
+            return_amount
+        } else {
+            let return_amount = get_return_amount(offer_amount, l2_pool_amount, l1_pool_amount, pool.pool_size, pool.ann);
+            fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
+            let return_amount = return_amount - fee_amount;
+            return_amount
+        };
+
+        (return_amount, fee_amount)
+    }
+
+    //
     // Admin functions
     //
 
@@ -348,12 +418,12 @@ module initia_std::minitswap {
     public entry fun swap(
         account: &signer,
         offer_asset_metadata: Object<Metadata>,
-        return_asset_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
         amount: u64,
         min_return_amount: Option<u64>
     ) acquires ModuleStore, VirtualPool {
         let offer_asset = primary_fungible_store::withdraw(account, offer_asset_metadata, amount);
-        let return_asset = swap_internal(offer_asset, return_asset_metadata);
+        let return_asset = swap_internal(offer_asset, return_metadata);
         assert_min_amount(&return_asset, min_return_amount);
         primary_fungible_store::deposit(signer::address_of(account), return_asset);
     }
@@ -416,50 +486,27 @@ module initia_std::minitswap {
 
     public fun swap_internal(
         offer_asset: FungibleAsset,
-        return_asset_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
     ): FungibleAsset acquires ModuleStore, VirtualPool {
         let (_, timestamp) = block::get_block_info();
         let is_l1_init_offered = is_l1_init(&offer_asset);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_asset);
         let (module_store, pool, module_signer, pool_signer) = if(is_l1_init_offered) {
-            borrow_all(return_asset_metadata)
+            borrow_all_mut(return_metadata)
         } else {
-            borrow_all(offer_metadata)
+            borrow_all_mut(offer_metadata)
         };
         assert!(pool.active, error::invalid_state(EINACTIVE));
+
+        let (peg_keeper_offer_amount, peg_keeper_return_amount) = calc_peg_keeper_swap(pool);
+        pool.l1_pool_amount = pool.l1_pool_amount + peg_keeper_offer_amount;
+        pool.l2_pool_amount = pool.l2_pool_amount - peg_keeper_return_amount;
+        pool.virtual_l1_balance = pool.virtual_l1_balance + peg_keeper_offer_amount;
+        pool.virtual_l2_balance = pool.virtual_l2_balance + peg_keeper_return_amount;
+        pool.last_recovered_timestamp = timestamp;
+        
         let module_addr = signer::address_of(&module_signer);
         let pool_addr = signer::address_of(&pool_signer);
-
-        let imbalance = decimal128::from_ratio_u64(
-            pool.virtual_l2_balance + pool.l2_pool_amount - pool.pool_size, // same with real l2 balance
-            pool.pool_size,
-        );
-        // Peg keeper swap
-        let r_fr = get_fully_recovered_ratio(&imbalance, &pool.max_ratio, &pool.recover_param);
-        let current_ratio = decimal128::from_ratio_u64(pool.l2_pool_amount, pool.l1_pool_amount + pool.l2_pool_amount);
-        let time_diff = timestamp - pool.last_recovered_timestamp;
-        let (peg_keeper_offer_amount, peg_keeper_return_amount) = if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
-            let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.ann);
-            let max_recover_amount = decimal128::mul_u64(&pool.recover_velocity, time_diff);
-            let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
-            let swap_amount = if (swap_amount_to_reach_fr < max_recover_amount) {
-                swap_amount_to_reach_fr
-            } else {
-                max_recover_amount
-            };
-
-            let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.ann);
-            pool.l1_pool_amount = pool.l1_pool_amount + swap_amount;
-            pool.l2_pool_amount = pool.l2_pool_amount - return_amount;
-            pool.virtual_l1_balance = pool.virtual_l1_balance + swap_amount;
-            pool.virtual_l2_balance = pool.virtual_l2_balance + return_amount;
-
-            (swap_amount, return_amount)
-        } else {
-            (0, 0)
-        };
-
-        pool.last_recovered_timestamp = timestamp;
 
         // user swap
         let offer_amount = fungible_asset::amount(&offer_asset);
@@ -474,7 +521,7 @@ module initia_std::minitswap {
                 pool.l2_pool_amount >= pool.pool_size && pool.l1_pool_amount <= pool.pool_size,
                 error::invalid_state(EL2_PRICE_TOO_LOW),
             );
-            primary_fungible_store::withdraw(&pool_signer, return_asset_metadata, return_amount)
+            primary_fungible_store::withdraw(&pool_signer, return_metadata, return_amount)
         } else {
             primary_fungible_store::deposit(pool_addr, offer_asset);
             let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
@@ -483,13 +530,13 @@ module initia_std::minitswap {
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
             pool.l2_pool_amount = pool.l2_pool_amount + offer_amount;
             let return_amount = return_amount - fee_amount;
-            primary_fungible_store::withdraw(&module_signer, return_asset_metadata, return_amount)
+            primary_fungible_store::withdraw(&module_signer, return_metadata, return_amount)
         };
 
         event::emit<SwapEvent>(
             SwapEvent {
                 offer_coin: offer_metadata,
-                return_coin: return_asset_metadata,
+                return_coin: return_metadata,
                 peg_keeper_offer_amount, // always l1 init
                 peg_keeper_return_amount, // always l2 init
                 offer_amount,
@@ -508,7 +555,7 @@ module initia_std::minitswap {
         l2_init_metadata: Object<Metadata>,
     ): FungibleAsset acquires ModuleStore, VirtualPool {
         assert!(is_l1_init(&l1_init), error::invalid_argument(ENOT_L1_INIT));
-        let (module_store, pool, module_signer, pool_signer) = borrow_all(l2_init_metadata);
+        let (module_store, pool, module_signer, pool_signer) = borrow_all_mut(l2_init_metadata);
         let amount = fungible_asset::amount(&l1_init);
         let fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, amount);
         module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
@@ -537,13 +584,49 @@ module initia_std::minitswap {
     // Helper function
     //
 
-    inline fun borrow_all(metadata: Object<Metadata>): (&mut ModuleStore, &mut VirtualPool, signer, signer) acquires ModuleStore, VirtualPool {
+    inline fun borrow_all_mut(metadata: Object<Metadata>): (&mut ModuleStore, &mut VirtualPool, signer, signer) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let module_signer = object::generate_signer_for_extending(&module_store.extend_ref);
         let pool_addr = object::object_address(*table::borrow(&module_store.pools, metadata));
         let pool = borrow_global_mut<VirtualPool>(pool_addr);
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         (module_store, pool, module_signer, pool_signer)
+    }
+
+    inline fun borrow_all(metadata: Object<Metadata>): (&ModuleStore, &VirtualPool) acquires ModuleStore, VirtualPool {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pool_addr = object::object_address(*table::borrow(&module_store.pools, metadata));
+        let pool = borrow_global<VirtualPool>(pool_addr);
+        (module_store, pool)
+    }
+
+    inline fun calc_peg_keeper_swap(pool: &VirtualPool): (u64, u64) acquires ModuleStore, VirtualPool {
+        let (_, timestamp) = block::get_block_info();
+
+        let imbalance = decimal128::from_ratio_u64(
+            pool.virtual_l2_balance + pool.l2_pool_amount - pool.pool_size, // same with real l2 balance
+            pool.pool_size,
+        );
+        // Peg keeper swap
+        let r_fr = get_fully_recovered_ratio(&imbalance, &pool.max_ratio, &pool.recover_param);
+        let current_ratio = decimal128::from_ratio_u64(pool.l2_pool_amount, pool.l1_pool_amount + pool.l2_pool_amount);
+        let time_diff = timestamp - pool.last_recovered_timestamp;
+        if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
+            let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.ann);
+            let max_recover_amount = decimal128::mul_u64(&pool.recover_velocity, time_diff);
+            let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
+            let swap_amount = if (swap_amount_to_reach_fr < max_recover_amount) {
+                swap_amount_to_reach_fr
+            } else {
+                max_recover_amount
+            };
+
+            let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.ann);
+
+            (swap_amount, return_amount)
+        } else {
+            (0, 0)
+        }
     }
 
     fun l1_init_metadata(): Object<Metadata> {
@@ -719,7 +802,6 @@ module initia_std::minitswap {
             };
             i = i + 1;
         };
-        std::debug::print(&1);
 
         // scale up/down to real pool size
         (
@@ -815,7 +897,11 @@ module initia_std::minitswap {
             decimal128::from_ratio(2, 1),
         );
 
+        let (return_amount, _) = swap_simulation(l2_1_metadata, init_metadata, 1000000);
+        let balance_before = coin::balance(chain_addr, init_metadata);
         swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
+        let balance_after = coin::balance(chain_addr, init_metadata);
+        assert!(balance_after - balance_before == return_amount, 0);
 
         block::set_block_info(0, 101);
 
