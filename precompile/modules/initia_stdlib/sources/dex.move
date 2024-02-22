@@ -162,7 +162,7 @@ module initia_std::dex {
     /// Only chain can execute.
     const EUNAUTHORIZED: u64 = 7;
 
-    /// Fee rate must be smaller than 1
+    /// Fee rate must be smaller than max fee rate
     const EOUT_OF_SWAP_FEE_RATE_RANGE: u64 = 8;
 
     /// end time must be larger than start time
@@ -194,6 +194,8 @@ module initia_std::dex {
     // TODO - find the resonable percision
     /// Result Precision of `pow` and `ln` function
     const PRECISION: u128 = 100000;
+
+    const MAX_FEE_RATE: u128 = 50_000_000_000_000_000; // 5%
 
     #[view]
     public fun pool_info(pair: Object<Config>, lbp_assertion: bool): (u64, u64, Decimal128, Decimal128, Decimal128) acquires Config, Pool {
@@ -597,7 +599,7 @@ module initia_std::dex {
 
         let config = borrow_global_mut<Config>(object::object_address(pair));
         assert!(
-            decimal128::val(&swap_fee_rate) < decimal128::val(&decimal128::one()),
+            decimal128::val(&swap_fee_rate) <= MAX_FEE_RATE,
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
         );
 
@@ -978,7 +980,7 @@ module initia_std::dex {
         );
 
         assert!(
-            decimal128::val(&swap_fee_rate) < decimal128::val(&decimal128::one()),
+            decimal128::val(&swap_fee_rate) <= MAX_FEE_RATE,
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
         );
 
