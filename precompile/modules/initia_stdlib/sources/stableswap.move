@@ -103,7 +103,7 @@ module initia_std::stableswap {
     /// Only chain can execute.
     const EUNAUTHORIZED: u64 = 7;
 
-    /// Fee rate must be smaller than 1
+    /// Fee rate must be smaller than max fee rate
     const EOUT_OF_SWAP_FEE_RATE_RANGE: u64 = 8;
 
     /// end time must be larger than start time
@@ -133,6 +133,8 @@ module initia_std::stableswap {
 
     // Constants
     const MAX_LIMIT: u8 = 30;
+
+    const MAX_FEE_RATE: u128 = 10_000_000_000_000_000; // 1%
 
     #[view]
     public fun pool_info(pair: Object<Pool>): (vector<Object<Metadata>>, vector<u64>, u64, Decimal128) acquires Pool {
@@ -339,7 +341,7 @@ module initia_std::stableswap {
         };
 
         assert!(
-            decimal128::val(&swap_fee_rate) < decimal128::val(&decimal128::one()),
+            decimal128::val(&swap_fee_rate) < MAX_FEE_RATE,
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
         );
 
