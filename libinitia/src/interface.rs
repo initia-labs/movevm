@@ -48,8 +48,14 @@ pub extern "C" fn release_vm(vm: *mut vm_t) {
 }
 
 #[no_mangle]
-pub extern "C" fn allocate_vm(cache_capacity: usize) -> *mut vm_t {
-    let vm = Box::into_raw(Box::new(InitiaVM::new(cache_capacity)));
+pub extern "C" fn allocate_vm(
+    module_cache_capacity: usize,
+    script_cache_capacity: usize,
+) -> *mut vm_t {
+    let vm = Box::into_raw(Box::new(InitiaVM::new(
+        module_cache_capacity,
+        script_cache_capacity,
+    )));
     vm as *mut vm_t
 }
 

@@ -11,8 +11,8 @@ type VM struct {
 }
 
 // NewVm return VM instance
-func NewVM(cache_capacity uint64) VM {
-	inner := api.AllocateVM(cache_capacity)
+func NewVM(moduleCacheCapacity, scriptCacheCapacity uint64) VM {
+	inner := api.AllocateVM(moduleCacheCapacity, scriptCacheCapacity)
 	return VM{inner}
 }
 

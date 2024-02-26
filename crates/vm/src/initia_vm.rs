@@ -12,11 +12,11 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{StatusCode, VMStatus},
 };
+use move_vm_runtime::session::SerializedReturnValues;
 use move_vm_runtime::{
-    config::VMConfig, data_cache::TransactionDataCache, loader::Loader,
-    native_extensions::NativeContextExtensions,
+    config::VMConfig, native_extensions::NativeContextExtensions, runtime::VMRuntime,
+    session::Session, session_cache::SessionCache,
 };
-use move_vm_runtime::{move_vm::MoveVM, session::SerializedReturnValues};
 
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -73,22 +73,21 @@ use crate::{
 #[derive(Clone)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct InitiaVM {
-    move_vm: Arc<MoveVM>,
+    runtime: Arc<VMRuntime>,
     gas_params: InitiaGasParameters,
 }
 
-const DEFAULT_CACHE_CAPACITY: usize = 100;
 impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new(DEFAULT_CACHE_CAPACITY)
+        Self::new(1000, 100)
     }
 }
 
 impl InitiaVM {
-    pub fn new(_cache_capacity: usize) -> Self {
+    pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
         let abs_val_size_gas_params = AbstractValueSizeGasParameters::initial();
-        let inner = MoveVM::new_with_config(
+        let runtime = VMRuntime::new(
             all_natives(
                 gas_params.move_stdlib,
                 gas_params.initia_stdlib,
@@ -97,13 +96,15 @@ impl InitiaVM {
             ),
             VMConfig {
                 verifier: verifier_config(true),
+                module_cache_capacity,
+                script_cache_capacity,
                 ..Default::default()
             },
         )
-        .expect("should be able to create Move VM; check if there are duplicated natives");
+        .expect("should be able to create Move runtime; check if there are duplicated natives");
 
         Self {
-            move_vm: Arc::new(inner),
+            runtime: Arc::new(runtime),
             gas_params: InitiaGasParameters::initial(),
         }
     }
@@ -144,10 +145,7 @@ impl InitiaVM {
         extensions.add(NativeEventContext::default());
         extensions.add(NativeOracleContext::new(api));
 
-        SessionExt::new(
-            self.move_vm
-                .new_session_with_extensions(resolver, extensions),
-        )
+        SessionExt::new(Session::new(&self.runtime, resolver, extensions))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -168,7 +166,6 @@ impl InitiaVM {
         let gas_limit = Gas::new(u64::MAX);
         let gas_params = self.gas_params.clone();
         let mut gas_meter = InitiaGasMeter::new(gas_params, gas_limit);
-        let mut new_published_modules_loaded = false;
 
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
@@ -179,12 +176,8 @@ impl InitiaVM {
             module_bundle,
         };
 
-        let published_module_ids = self.resolve_pending_code_publish(
-            &mut session,
-            &mut gas_meter,
-            publish_request,
-            &mut new_published_modules_loaded,
-        )?;
+        let published_module_ids =
+            self.resolve_pending_code_publish(&mut session, &mut gas_meter, publish_request)?;
 
         // execute code::init_genesis to properly store module metadata.
         {
@@ -213,14 +206,8 @@ impl InitiaVM {
         }
 
         // session cleanup
-        let (session_output, loader) = session.finish()?;
-        let output: MessageOutput = self.success_message_cleanup(
-            loader,
-            session_output,
-            &mut gas_meter,
-            state_view_impl,
-            new_published_modules_loaded,
-        )?;
+        let session_output = session.finish()?;
+        let output: MessageOutput = self.success_message_cleanup(session_output, &mut gas_meter)?;
 
         Ok(output)
     }
@@ -244,8 +231,7 @@ impl InitiaVM {
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((msg.size() as u64).into())?;
 
-        let mut new_published_modules_loaded = false;
-        self.execute_script_or_entry_function(
+        let res = self.execute_script_or_entry_function(
             api,
             env,
             state_view_impl,
@@ -253,8 +239,9 @@ impl InitiaVM {
             senders,
             msg.payload(),
             &mut gas_meter,
-            &mut new_published_modules_loaded,
-        )
+        );
+
+        res
     }
 
     pub fn execute_view_function<
@@ -274,7 +261,8 @@ impl InitiaVM {
 
         let func_inst =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
-        let metadata = get_vm_metadata(&session, view_fn.module());
+        let metadata = get_vm_metadata(&session, view_fn.module())
+            .map_err(|e| e.finish(Location::Undefined))?;
         let args = validate_view_function(
             &mut session,
             view_fn.args().to_vec(),
@@ -313,7 +301,6 @@ impl InitiaVM {
         senders: Vec<AccountAddress>,
         payload: &MessagePayload,
         gas_meter: &mut InitiaGasMeter,
-        new_published_modules_loaded: &mut bool,
     ) -> Result<MessageOutput, VMStatus> {
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
@@ -370,25 +357,18 @@ impl InitiaVM {
         }
 
         if let Some(publish_request) = session.extract_publish_request() {
-            self.resolve_pending_code_publish(
-                &mut session,
-                gas_meter,
-                publish_request,
-                new_published_modules_loaded,
-            )?;
+            self.resolve_pending_code_publish(&mut session, gas_meter, publish_request)?;
         }
 
-        let (session_output, loader) = session.finish()?;
+        let session_output = session.finish()?;
 
         // Charge for gas cost for write set ops
         gas_meter.charge_write_set_gas(&session_output.1)?;
-        let output = self.success_message_cleanup(
-            loader,
-            session_output,
-            gas_meter,
-            state_view_impl,
-            *new_published_modules_loaded,
-        )?;
+        let output = self.success_message_cleanup(session_output, gas_meter)?;
+
+        // flush unused module and script cache
+        self.runtime.flush_unused_module_cache();
+        self.runtime.flush_unused_script_cache();
 
         Ok(output)
     }
@@ -399,7 +379,6 @@ impl InitiaVM {
         session: &mut SessionExt,
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
-        new_published_modules_loaded: &mut bool,
     ) -> VMResult<Vec<String>> {
         let PublishRequest {
             destination,
@@ -455,14 +434,7 @@ impl InitiaVM {
         )?;
 
         // call init function of the each module
-        self.execute_module_initialization(
-            session,
-            gas_meter,
-            &modules,
-            exists,
-            &[destination],
-            new_published_modules_loaded,
-        )?;
+        self.execute_module_initialization(session, gas_meter, &modules, exists, &[destination])?;
 
         Ok(published_module_ids)
     }
@@ -475,7 +447,6 @@ impl InitiaVM {
         modules: &[CompiledModule],
         exists: BTreeSet<ModuleId>,
         senders: &[AccountAddress],
-        new_published_modules_loaded: &mut bool,
     ) -> VMResult<()> {
         let init_func_name = ident_str!(INIT_MODULE_FUNCTION_NAME);
         for module in modules {
@@ -484,7 +455,6 @@ impl InitiaVM {
                 continue;
             }
 
-            *new_published_modules_loaded = true;
             let init_function = session.load_function(&module.self_id(), init_func_name, &[]);
             // it is ok to not have init_module function
             // init_module function should be (1) private and (2) has no return value
@@ -518,20 +488,18 @@ impl InitiaVM {
         Ok(())
     }
 
-    fn success_message_cleanup<S: StateView>(
+    fn success_message_cleanup(
         &self,
-        loader: Loader,
         session_output: SessionOutput,
         gas_meter: &mut InitiaGasMeter,
-        state_view_impl: &StateViewImpl<'_, S>,
-        new_published_modules_loaded: bool,
     ) -> VMResult<MessageOutput> {
         let gas_limit = gas_meter.gas_limit();
         let gas_used = gas_limit.checked_sub(gas_meter.balance()).unwrap();
         let gas_usage_set = gas_meter.into_usage_set();
 
-        let (events, write_set, staking_change_set, cosmos_messages, new_accounts) = session_output;
-        let json_events = self.serialize_events_to_json(loader, events, state_view_impl)?;
+        let (events, write_set, staking_change_set, cosmos_messages, new_accounts, session_cache) =
+            session_output;
+        let json_events = self.serialize_events_to_json(events, &session_cache)?;
 
         Ok(get_message_output(
             json_events,
@@ -541,7 +509,6 @@ impl InitiaVM {
             new_accounts,
             gas_used,
             gas_usage_set,
-            new_published_modules_loaded,
         ))
     }
 
@@ -562,19 +529,17 @@ impl InitiaVM {
         Ok(result)
     }
 
-    pub fn serialize_events_to_json<S: StateView>(
+    pub fn serialize_events_to_json(
         &self,
-        loader: Loader,
         events: Vec<ContractEvent>,
-        state_view_impl: &StateViewImpl<'_, S>,
+        session_cache: &SessionCache,
     ) -> VMResult<JsonEvents> {
-        // create data cache for lookup
-        let data_cache = TransactionDataCache::new(state_view_impl);
-
         let mut res = vec![];
         for event in events.into_iter() {
-            let ty_layout =
-                loader.get_fully_annotated_type_layout(event.type_tag(), &data_cache)?;
+            let ty_layout = self
+                .runtime
+                .get_fully_annotated_type_layout(session_cache, event.type_tag())?;
+
             let move_val =
                 MoveValue::simple_deserialize(event.event_data(), &ty_layout).map_err(|_| {
                     PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
@@ -623,7 +588,6 @@ pub(crate) fn get_message_output(
     new_accounts: Accounts,
     gas_used: Gas,
     gas_usage_set: GasUsageSet,
-    new_published_modules_loaded: bool,
 ) -> MessageOutput {
     MessageOutput::new(
         events,
@@ -633,6 +597,5 @@ pub(crate) fn get_message_output(
         new_accounts,
         gas_used.into(),
         gas_usage_set,
-        new_published_modules_loaded,
     )
 }

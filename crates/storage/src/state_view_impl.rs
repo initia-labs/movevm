@@ -56,7 +56,7 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
         self.get(&ap)
     }
 
-    fn get_module_checksum(&self, module_id: &ModuleId) -> PartialVMResult<Option<[u8; 32]>> {
+    fn get_checksum(&self, module_id: &ModuleId) -> PartialVMResult<Option<[u8; 32]>> {
         let ap = AccessPath::new(
             *module_id.address(),
             DataPath::CodeChecksum(module_id.name().into()),

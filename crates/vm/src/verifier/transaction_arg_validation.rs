@@ -204,8 +204,8 @@ pub(crate) fn is_valid_txn_arg(
     match typ {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
         Vector(inner) => is_valid_txn_arg(session, inner, allowed_structs),
-        Struct { idx, .. } | StructInstantiation { idx, .. } => {
-            session.get_struct_type(*idx).is_some_and(|st| {
+        Struct { id, .. } | StructInstantiation { id, .. } => {
+            session.get_struct_type(id).is_some_and(|st| {
                 let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
                 allowed_structs.contains_key(&full_name)
             })
@@ -337,10 +337,8 @@ pub(crate) fn recursively_construct_arg(
                 len -= 1;
             }
         }
-        Struct { idx, .. } | StructInstantiation { idx, .. } => {
-            let st = session
-                .get_struct_type(*idx)
-                .ok_or_else(invalid_signature)?;
+        Struct { id, .. } | StructInstantiation { id, .. } => {
+            let st = session.get_struct_type(id).ok_or_else(invalid_signature)?;
 
             let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
             let constructor = allowed_structs

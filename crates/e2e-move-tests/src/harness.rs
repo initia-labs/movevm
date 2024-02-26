@@ -62,7 +62,7 @@ impl Default for MoveHarness {
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
-        let vm = InitiaVM::new(100);
+        let vm = InitiaVM::new(1000, 100);
         let chain = MockChain::new();
         let api = MockAPI::empty();
 
@@ -360,7 +360,7 @@ impl MoveHarness {
     // commit only module checksum to test module cache
     pub fn commit_module_checksum(&mut self, output: MessageOutput, should_commit: bool) {
         let mut state = self.chain.create_state();
-        let (_, write_set, _, _, _, _, _, _) = output.into_inner();
+        let (_, write_set, _, _, _, _, _) = output.into_inner();
         let write_set = write_set
             .into_iter()
             .filter(|v| {

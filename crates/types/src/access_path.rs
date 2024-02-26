@@ -182,9 +182,10 @@ impl DataType {
     pub fn from_index(idx: u8) -> Result<Self> {
         match idx {
             0 => Ok(DataType::Code),
-            1 => Ok(DataType::Resource),
-            2 => Ok(DataType::TableItem),
-            3 => Ok(DataType::TableInfo),
+            1 => Ok(DataType::CodeChecksum),
+            2 => Ok(DataType::Resource),
+            3 => Ok(DataType::TableItem),
+            4 => Ok(DataType::TableInfo),
             _ => bail!("invalid DataType {:?}", idx),
         }
     }

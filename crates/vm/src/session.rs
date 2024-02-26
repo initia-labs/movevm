@@ -15,14 +15,15 @@ use initia_types::{
 
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::vm_status::StatusCode;
-use move_vm_runtime::{loader::Loader, session::Session};
+use move_vm_runtime::{session::Session, session_cache::SessionCache};
 
-pub type SessionOutput = (
+pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
     WriteSet,
     StakingChangeSet,
     CosmosMessages,
     Accounts,
+    SessionCache<'r>,
 );
 
 pub struct SessionExt<'r, 'l> {
@@ -34,9 +35,9 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Self { inner }
     }
 
-    pub fn finish(self) -> VMResult<(SessionOutput, Loader)> {
-        let (change_set, mut extensions, loader) =
-            self.inner.finish_with_extensions_with_loader()?;
+    pub fn finish(self) -> VMResult<SessionOutput<'r>> {
+        let (change_set, session_cache, mut extensions) =
+            self.inner.finish_with_extensions_with_session_cache()?;
         let event_context: NativeEventContext = extensions.remove::<NativeEventContext>();
         let events = event_context.into_events();
 
@@ -62,14 +63,12 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         })?;
 
         Ok((
-            (
-                events,
-                write_set,
-                staking_change_set,
-                cosmos_messages,
-                new_accounts,
-            ),
-            loader,
+            events,
+            write_set,
+            staking_change_set,
+            cosmos_messages,
+            new_accounts,
+            session_cache,
         ))
     }
 

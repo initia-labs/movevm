@@ -53,7 +53,7 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	kvStore := api.NewLookup()
 	blockTime := uint64(time.Now().Unix())
 
-	vm := vm.NewVM(100)
+	vm := vm.NewVM(1000, 100)
 	err = vm.Initialize(
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),
@@ -146,7 +146,6 @@ func publishModuleBundle(
 
 	// no gas usage report for publish module
 	require.NotEmpty(t, res.GasUsages)
-	require.True(t, res.NewPublishedModulesLoaded)
 }
 
 func mintCoin(

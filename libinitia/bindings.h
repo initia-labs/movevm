@@ -436,7 +436,7 @@ typedef struct {
   bool compute_coverage;
 } InitiaCompilerTestOption;
 
-vm_t *allocate_vm(size_t cache_capacity);
+vm_t *allocate_vm(size_t module_cache_capacity, size_t script_cache_capacity);
 
 UnmanagedVector build_move_package(UnmanagedVector *errmsg, InitiaCompilerArgument initia_args);
 

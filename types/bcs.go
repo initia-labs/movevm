@@ -13,50 +13,6 @@ import (
 )
 
 
-type AccessPath struct {
-	Address AccountAddress
-	Path DataPath
-}
-
-func (obj *AccessPath) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	if err := obj.Address.Serialize(serializer); err != nil { return err }
-	if err := obj.Path.Serialize(serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *AccessPath) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func DeserializeAccessPath(deserializer serde.Deserializer) (AccessPath, error) {
-	var obj AccessPath
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Address = val } else { return obj, err }
-	if val, err := DeserializeDataPath(deserializer); err == nil { obj.Path = val } else { return obj, err }
-	deserializer.DecreaseContainerDepth()
-	return obj, nil
-}
-
-func BcsDeserializeAccessPath(input []byte) (AccessPath, error) {
-	if input == nil {
-		var obj AccessPath
-		return obj, fmt.Errorf("Cannot deserialize null array")
-	}
-	deserializer := bcs.NewDeserializer(input);
-	obj, err := DeserializeAccessPath(deserializer)
-	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
-		return obj, fmt.Errorf("Some input bytes were not read")
-	}
-	return obj, err
-}
-
 type Account struct {
 	Address AccountAddress
 	AccountNumber uint64
@@ -444,220 +400,6 @@ func load_CosmosMessage__Stargate(deserializer serde.Deserializer) (CosmosMessag
 	return obj, nil
 }
 
-type DataPath interface {
-	isDataPath()
-	Serialize(serializer serde.Serializer) error
-	BcsSerialize() ([]byte, error)
-}
-
-func DeserializeDataPath(deserializer serde.Deserializer) (DataPath, error) {
-	index, err := deserializer.DeserializeVariantIndex()
-	if err != nil { return nil, err }
-
-	switch index {
-	case 0:
-		if val, err := load_DataPath__Code(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	case 1:
-		if val, err := load_DataPath__CodeChecksum(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	case 2:
-		if val, err := load_DataPath__Resource(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	case 3:
-		if val, err := load_DataPath__TableItem(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	case 4:
-		if val, err := load_DataPath__TableInfo(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	default:
-		return nil, fmt.Errorf("Unknown variant index for DataPath: %d", index)
-	}
-}
-
-func BcsDeserializeDataPath(input []byte) (DataPath, error) {
-	if input == nil {
-		var obj DataPath
-		return obj, fmt.Errorf("Cannot deserialize null array")
-	}
-	deserializer := bcs.NewDeserializer(input);
-	obj, err := DeserializeDataPath(deserializer)
-	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
-		return obj, fmt.Errorf("Some input bytes were not read")
-	}
-	return obj, err
-}
-
-type DataPath__Code struct {
-	Value Identifier
-}
-
-func (*DataPath__Code) isDataPath() {}
-
-func (obj *DataPath__Code) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(0)
-	if err := obj.Value.Serialize(serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *DataPath__Code) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_DataPath__Code(deserializer serde.Deserializer) (DataPath__Code, error) {
-	var obj DataPath__Code
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := DeserializeIdentifier(deserializer); err == nil { obj.Value = val } else { return obj, err }
-	deserializer.DecreaseContainerDepth()
-	return obj, nil
-}
-
-type DataPath__CodeChecksum struct {
-	Value Identifier
-}
-
-func (*DataPath__CodeChecksum) isDataPath() {}
-
-func (obj *DataPath__CodeChecksum) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(1)
-	if err := obj.Value.Serialize(serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *DataPath__CodeChecksum) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_DataPath__CodeChecksum(deserializer serde.Deserializer) (DataPath__CodeChecksum, error) {
-	var obj DataPath__CodeChecksum
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := DeserializeIdentifier(deserializer); err == nil { obj.Value = val } else { return obj, err }
-	deserializer.DecreaseContainerDepth()
-	return obj, nil
-}
-
-type DataPath__Resource struct {
-	Value StructTag
-}
-
-func (*DataPath__Resource) isDataPath() {}
-
-func (obj *DataPath__Resource) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(2)
-	if err := obj.Value.Serialize(serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *DataPath__Resource) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_DataPath__Resource(deserializer serde.Deserializer) (DataPath__Resource, error) {
-	var obj DataPath__Resource
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := DeserializeStructTag(deserializer); err == nil { obj.Value = val } else { return obj, err }
-	deserializer.DecreaseContainerDepth()
-	return obj, nil
-}
-
-type DataPath__TableItem []uint8
-
-func (*DataPath__TableItem) isDataPath() {}
-
-func (obj *DataPath__TableItem) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(3)
-	if err := serialize_vector_u8((([]uint8)(*obj)), serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *DataPath__TableItem) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_DataPath__TableItem(deserializer serde.Deserializer) (DataPath__TableItem, error) {
-	var obj []uint8
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return (DataPath__TableItem)(obj), err }
-	if val, err := deserialize_vector_u8(deserializer); err == nil { obj = val } else { return ((DataPath__TableItem)(obj)), err }
-	deserializer.DecreaseContainerDepth()
-	return (DataPath__TableItem)(obj), nil
-}
-
-type DataPath__TableInfo struct {
-}
-
-func (*DataPath__TableInfo) isDataPath() {}
-
-func (obj *DataPath__TableInfo) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(4)
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *DataPath__TableInfo) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_DataPath__TableInfo(deserializer serde.Deserializer) (DataPath__TableInfo, error) {
-	var obj DataPath__TableInfo
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	deserializer.DecreaseContainerDepth()
-	return obj, nil
-}
-
 type DistributionMessage interface {
 	isDistributionMessage()
 	Serialize(serializer serde.Serializer) error
@@ -838,7 +580,6 @@ type ExecutionResult struct {
 	NewAccounts []Account
 	GasUsed uint64
 	GasUsages []GasUsage
-	NewPublishedModulesLoaded bool
 }
 
 func (obj *ExecutionResult) Serialize(serializer serde.Serializer) error {
@@ -849,7 +590,6 @@ func (obj *ExecutionResult) Serialize(serializer serde.Serializer) error {
 	if err := serialize_vector_Account(obj.NewAccounts, serializer); err != nil { return err }
 	if err := serializer.SerializeU64(obj.GasUsed); err != nil { return err }
 	if err := serialize_vector_GasUsage(obj.GasUsages, serializer); err != nil { return err }
-	if err := serializer.SerializeBool(obj.NewPublishedModulesLoaded); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -872,7 +612,6 @@ func DeserializeExecutionResult(deserializer serde.Deserializer) (ExecutionResul
 	if val, err := deserialize_vector_Account(deserializer); err == nil { obj.NewAccounts = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.GasUsed = val } else { return obj, err }
 	if val, err := deserialize_vector_GasUsage(deserializer); err == nil { obj.GasUsages = val } else { return obj, err }
-	if val, err := deserializer.DeserializeBool(); err == nil { obj.NewPublishedModulesLoaded = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -1679,142 +1418,6 @@ func load_OPinitMessage__InitiateTokenWithdrawal(deserializer serde.Deserializer
 	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.SenderAddress = val } else { return obj, err }
 	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.ToAddress = val } else { return obj, err }
 	if val, err := DeserializeCosmosCoin(deserializer); err == nil { obj.Amount = val } else { return obj, err }
-	deserializer.DecreaseContainerDepth()
-	return obj, nil
-}
-
-type Op interface {
-	isOp()
-	Serialize(serializer serde.Serializer) error
-	BcsSerialize() ([]byte, error)
-}
-
-func DeserializeOp(deserializer serde.Deserializer) (Op, error) {
-	index, err := deserializer.DeserializeVariantIndex()
-	if err != nil { return nil, err }
-
-	switch index {
-	case 0:
-		if val, err := load_Op__New(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	case 1:
-		if val, err := load_Op__Modify(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	case 2:
-		if val, err := load_Op__Delete(deserializer); err == nil {
-			return &val, nil
-		} else {
-			return nil, err
-		}
-
-	default:
-		return nil, fmt.Errorf("Unknown variant index for Op: %d", index)
-	}
-}
-
-func BcsDeserializeOp(input []byte) (Op, error) {
-	if input == nil {
-		var obj Op
-		return obj, fmt.Errorf("Cannot deserialize null array")
-	}
-	deserializer := bcs.NewDeserializer(input);
-	obj, err := DeserializeOp(deserializer)
-	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
-		return obj, fmt.Errorf("Some input bytes were not read")
-	}
-	return obj, err
-}
-
-type Op__New []uint8
-
-func (*Op__New) isOp() {}
-
-func (obj *Op__New) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(0)
-	if err := serialize_vector_u8((([]uint8)(*obj)), serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *Op__New) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_Op__New(deserializer serde.Deserializer) (Op__New, error) {
-	var obj []uint8
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return (Op__New)(obj), err }
-	if val, err := deserialize_vector_u8(deserializer); err == nil { obj = val } else { return ((Op__New)(obj)), err }
-	deserializer.DecreaseContainerDepth()
-	return (Op__New)(obj), nil
-}
-
-type Op__Modify []uint8
-
-func (*Op__Modify) isOp() {}
-
-func (obj *Op__Modify) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(1)
-	if err := serialize_vector_u8((([]uint8)(*obj)), serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *Op__Modify) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_Op__Modify(deserializer serde.Deserializer) (Op__Modify, error) {
-	var obj []uint8
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return (Op__Modify)(obj), err }
-	if val, err := deserialize_vector_u8(deserializer); err == nil { obj = val } else { return ((Op__Modify)(obj)), err }
-	deserializer.DecreaseContainerDepth()
-	return (Op__Modify)(obj), nil
-}
-
-type Op__Delete struct {
-}
-
-func (*Op__Delete) isOp() {}
-
-func (obj *Op__Delete) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	serializer.SerializeVariantIndex(2)
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *Op__Delete) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func load_Op__Delete(deserializer serde.Deserializer) (Op__Delete, error) {
-	var obj Op__Delete
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -2643,45 +2246,6 @@ func BcsDeserializeViewFunction(input []byte) (ViewFunction, error) {
 	}
 	return obj, err
 }
-
-type WriteSet map[AccessPath]Op
-
-func (obj *WriteSet) Serialize(serializer serde.Serializer) error {
-	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	if err := serialize_map_AccessPath_to_Op(((map[AccessPath]Op)(*obj)), serializer); err != nil { return err }
-	serializer.DecreaseContainerDepth()
-	return nil
-}
-
-func (obj *WriteSet) BcsSerialize() ([]byte, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("Cannot serialize null object")
-	}
-	serializer := bcs.NewSerializer();
-	if err := obj.Serialize(serializer); err != nil { return nil, err }
-	return serializer.GetBytes(), nil
-}
-
-func DeserializeWriteSet(deserializer serde.Deserializer) (WriteSet, error) {
-	var obj map[AccessPath]Op
-	if err := deserializer.IncreaseContainerDepth(); err != nil { return (WriteSet)(obj), err }
-	if val, err := deserialize_map_AccessPath_to_Op(deserializer); err == nil { obj = val } else { return ((WriteSet)(obj)), err }
-	deserializer.DecreaseContainerDepth()
-	return (WriteSet)(obj), nil
-}
-
-func BcsDeserializeWriteSet(input []byte) (WriteSet, error) {
-	if input == nil {
-		var obj WriteSet
-		return obj, fmt.Errorf("Cannot deserialize null array")
-	}
-	deserializer := bcs.NewDeserializer(input);
-	obj, err := DeserializeWriteSet(deserializer)
-	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
-		return obj, fmt.Errorf("Some input bytes were not read")
-	}
-	return obj, err
-}
 func serialize_array32_u8_array(value [32]uint8, serializer serde.Serializer) error {
 	for _, item := range(value) {
 		if err := serializer.SerializeU8(item); err != nil { return err }
@@ -2693,41 +2257,6 @@ func deserialize_array32_u8_array(deserializer serde.Deserializer) ([32]uint8, e
 	var obj [32]uint8
 	for i := range(obj) {
 		if val, err := deserializer.DeserializeU8(); err == nil { obj[i] = val } else { return obj, err }
-	}
-	return obj, nil
-}
-
-func serialize_map_AccessPath_to_Op(value map[AccessPath]Op, serializer serde.Serializer) error {
-	if err := serializer.SerializeLen(uint64(len(value))); err != nil { return err }
-	offsets := make([]uint64, len(value))
-	count := 0
-	for k, v := range(value) {
-		offsets[count] = serializer.GetBufferOffset()
-		count += 1
-		if err := k.Serialize(serializer); err != nil { return err }
-		if err := v.Serialize(serializer); err != nil { return err }
-	}
-	serializer.SortMapEntries(offsets);
-	return nil
-}
-
-func deserialize_map_AccessPath_to_Op(deserializer serde.Deserializer) (map[AccessPath]Op, error) {
-	length, err := deserializer.DeserializeLen()
-	if err != nil { return nil, err }
-	obj := make(map[AccessPath]Op)
-	previous_slice := serde.Slice { 0, 0 }
-	for i := 0; i < int(length); i++ {
-		var slice serde.Slice
-		slice.Start = deserializer.GetBufferOffset()
-		var key AccessPath
-		if val, err := DeserializeAccessPath(deserializer); err == nil { key = val } else { return nil, err }
-		slice.End = deserializer.GetBufferOffset()
-		if i > 0 {
-			err := deserializer.CheckThatKeySlicesAreIncreasing(previous_slice, slice)
-			if err != nil { return nil, err }
-		}
-		previous_slice = slice
-		if val, err := DeserializeOp(deserializer); err == nil { obj[key] = val } else { return nil, err }
 	}
 	return obj, nil
 }

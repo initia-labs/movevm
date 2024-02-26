@@ -20,7 +20,6 @@ pub fn generate_result(output: MessageOutput) -> Result<ExecutionResult, Error> 
         new_accounts,
         gas_used,
         gas_usage_set,
-        new_published_modules_loaded,
     ) = output.into_inner();
 
     Ok(ExecutionResult::new(
@@ -30,6 +29,5 @@ pub fn generate_result(output: MessageOutput) -> Result<ExecutionResult, Error> 
         new_accounts.into_inner(),
         gas_used,
         gas_usage_set.into_inner(),
-        new_published_modules_loaded,
     ))
 }

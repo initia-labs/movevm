@@ -4,7 +4,6 @@ use serde_generate::{golang::CodeGenerator, CodeGeneratorConfig, Encoding};
 use serde_reflection::{Tracer, TracerConfig};
 
 use initia_types::{
-    access_path::DataPath,
     account::Account,
     cosmos::{
         CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, OPinitMessage,
@@ -19,7 +18,6 @@ use initia_types::{
     staking_change_set::StakingDelta,
     table::TableInfo,
     view_function::ViewFunction,
-    write_set::{WriteOp, WriteSet},
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -51,9 +49,6 @@ fn main() {
     tracer.trace_simple_type::<ViewFunction>().unwrap();
     tracer.trace_simple_type::<ModuleBundle>().unwrap();
     tracer.trace_simple_type::<Script>().unwrap();
-    tracer.trace_simple_type::<DataPath>().unwrap();
-    tracer.trace_simple_type::<WriteOp>().unwrap();
-    tracer.trace_simple_type::<WriteSet>().unwrap();
     tracer.trace_simple_type::<Env>().unwrap();
     tracer.trace_simple_type::<TableInfo>().unwrap();
 

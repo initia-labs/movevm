@@ -125,9 +125,6 @@ pub struct MessageOutput {
     /// The amount of gas used during execution.
     gas_used: u64,
     gas_usage_set: GasUsageSet,
-
-    /// The flag indicates new module published or not.
-    new_published_modules_loaded: bool,
 }
 
 impl MessageOutput {
@@ -140,7 +137,6 @@ impl MessageOutput {
         new_accounts: Accounts,
         gas_used: u64,
         gas_usage_set: GasUsageSet,
-        new_published_modules_loaded: bool,
     ) -> Self {
         MessageOutput {
             events,
@@ -150,7 +146,6 @@ impl MessageOutput {
             new_accounts,
             gas_used,
             gas_usage_set,
-            new_published_modules_loaded,
         }
     }
 
@@ -182,10 +177,6 @@ impl MessageOutput {
         &self.gas_usage_set
     }
 
-    pub fn new_published_modules_loaded(&self) -> bool {
-        self.new_published_modules_loaded
-    }
-
     pub fn into_inner(
         self,
     ) -> (
@@ -196,7 +187,6 @@ impl MessageOutput {
         Accounts,
         u64,
         GasUsageSet,
-        bool,
     ) {
         let Self {
             events,
@@ -206,7 +196,6 @@ impl MessageOutput {
             new_accounts,
             gas_used,
             gas_usage_set,
-            new_published_modules_loaded,
         } = self;
 
         (
@@ -217,7 +206,6 @@ impl MessageOutput {
             new_accounts,
             gas_used,
             gas_usage_set,
-            new_published_modules_loaded,
         )
     }
 }

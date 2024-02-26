@@ -12,7 +12,6 @@ pub struct ExecutionResult {
     new_accounts: Vec<Account>,
     gas_used: u64,
     gas_usages: Vec<GasUsage>,
-    new_published_modules_loaded: bool,
 }
 
 impl ExecutionResult {
@@ -23,7 +22,6 @@ impl ExecutionResult {
         new_accounts: Vec<Account>,
         gas_used: u64,
         gas_usages: Vec<GasUsage>,
-        new_published_modules_loaded: bool,
     ) -> Self {
         Self {
             events,
@@ -32,7 +30,6 @@ impl ExecutionResult {
             new_accounts,
             gas_used,
             gas_usages,
-            new_published_modules_loaded,
         }
     }
 }

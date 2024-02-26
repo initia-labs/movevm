@@ -12,10 +12,7 @@ use move_vm_types::{
 use smallvec::smallvec;
 use std::collections::{BTreeMap, VecDeque};
 
-use crate::{
-    helpers::make_module_natives,
-    util::{make_native_from_func, make_test_only_native_from_func},
-};
+use crate::{helpers::make_module_natives, util::make_native_from_func};
 
 /// API to allow move modules to interact with CosmosSDK's
 /// staking API.
@@ -99,6 +96,8 @@ fn native_get_price(
         ],
     ))
 }
+#[cfg(feature = "testing")]
+use crate::util::make_test_only_native_from_func;
 
 #[cfg(feature = "testing")]
 fn native_test_only_set_price(
