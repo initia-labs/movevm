@@ -119,19 +119,17 @@ module initia_std::vip_reward {
     }
 
     struct VestingScore has copy, drop, store {
-        /// Left vesting reward amount.
-        reward: u64,
+        /// initial vesting reward amount.
+        initial_reward: u64,
+        /// remaining vesting reward amount.
+        remaining_reward: u64,
         /// The initial score of the L2 contract that were present
         /// to receive the reward.
         l2_score: u64,
-        /// Initial vesting reward amount.
-        reward_amount: u64,
         /// start stage
         start_stage: u64,
         /// end stage (start_stage + vesting_period)
         end_stage: u64,
-        /// latest claimed stage
-        last_claimed_stage: u64,
         /// minimum score to receive the reward.
         minimum_score: u64,
     }
@@ -381,10 +379,10 @@ module initia_std::vip_reward {
         let max_ratio = decimal256::div_u64(&decimal256::one(), vesting_period);
         let vest_ratio = decimal256::mul(&max_ratio, &score_ratio);
         assert!(decimal256::val(&vest_ratio) <= decimal256::val(&max_ratio), error::invalid_argument(EINVALID_VEST_RATIO));
-        let vest_amount = decimal256::mul_u64(&vest_ratio, vesting.reward_amount);
+        let vest_amount = decimal256::mul_u64(&vest_ratio, vesting.initial_reward);
         
-        if (vest_amount > vesting.reward) {
-            vest_amount = vesting.reward;
+        if (vest_amount > vesting.remaining_reward) {
+            vest_amount = vesting.remaining_reward;
         };
 
         vest_amount
@@ -406,7 +404,7 @@ module initia_std::vip_reward {
             let (key, value) = table::next_mut<vector<u8>, VestingScore>(&mut iter);
 
             // move vesting if end stage is over or the left reward is empty 
-            if ( stage > value.end_stage || value.reward == 0) {
+            if ( stage > value.end_stage || value.remaining_reward == 0) {
                 let vesting = table::remove(vestings, key);
                 table::add(vestings_finalized, key, vesting);
                 continue
@@ -420,13 +418,12 @@ module initia_std::vip_reward {
             // max_ratio = 1 / vesting_period
             // 
             // vest_ratio = max_ratio * score_ratio
-            // vest_amount = value.reward_amount * vest_ratio
+            // vest_amount = value.initial_reward * vest_ratio
 
             let vest_amount = calculate_vest(value, l2_score);
             
             vested_reward = vested_reward + vest_amount;
-            value.reward = value.reward - vest_amount;
-            value.last_claimed_stage = stage;
+            value.remaining_reward = value.remaining_reward - vest_amount;
         };
         vested_reward
     }
@@ -490,12 +487,11 @@ module initia_std::vip_reward {
         let vesting_reward_amount = decimal256::mul_u64(&remaining_reward_ratio, reward_amount);
 
         table::add(&mut vesting_store.vestings, table_key::encode_u64(stage), VestingScore {
-            reward: vesting_reward_amount,
+            initial_reward: vesting_reward_amount,
+            remaining_reward: vesting_reward_amount,
             l2_score,
-            reward_amount: vesting_reward_amount,
             start_stage: stage,
             end_stage: stage + module_store.vesting_period,
-            last_claimed_stage: stage,
             minimum_score: decimal256::mul_u64(&module_store.proportion, l2_score),
         });
 
@@ -532,8 +528,8 @@ module initia_std::vip_reward {
         let vesting_store = borrow_global_mut<VestingStore>(get_vesting_address(account_addr, bridge_id));
         assert!(table::contains(&vesting_store.vestings, table_key::encode_u64(stage)), error::not_found(EVESTING_NOT_FOUND));
         let vesting = table::borrow_mut(&mut vesting_store.vestings, table_key::encode_u64(stage));
-        assert!(vesting.reward >= zapping_amount, error::invalid_argument(EREWARD_NOT_ENOUGH));
-        vesting.reward = vesting.reward - zapping_amount;
+        assert!(vesting.remaining_reward >= zapping_amount, error::invalid_argument(EREWARD_NOT_ENOUGH));
+        vesting.remaining_reward = vesting.remaining_reward - zapping_amount;
 
         let reward_store = borrow_global<RewardStore>(get_reward_address(operator, bridge_id));
         let esinit = primary_fungible_store::withdraw(&object::generate_signer_for_extending(&reward_store.extend_ref), reward_metadata(), zapping_amount);
@@ -1007,7 +1003,7 @@ module initia_std::vip_reward {
             };
 
             let (_, value) = table::next<vector<u8>, VestingScore>(&mut iter);
-            locked_reward = locked_reward + value.reward;
+            locked_reward = locked_reward + value.remaining_reward;
         };
         
         locked_reward
@@ -1504,7 +1500,7 @@ module initia_std::vip_reward {
         claim_reward_script(receiver, operator_addr, bridge_id, 5, score_merkle_proofs, 100);
         claim_reward_script(receiver, operator_addr, bridge_id, 6, score_merkle_proofs, 100);
         let vesting = get_vesting_at_stage(signer::address_of(receiver), bridge_id, 1);
-        let reward_by_stage_1 = vesting.reward_amount - vesting.reward;
+        let reward_by_stage_1 = vesting.initial_reward - vesting.remaining_reward;
         let max_reward_per_claim = reward_per_stage / vesting_period;
 
         // score_ratio = l2_score > minimum_score ? 1 : l2_score / minimum_score
@@ -1617,7 +1613,7 @@ module initia_std::vip_reward {
         
         claim_reward_script(receiver, operator_addr, bridge_id, 1, score_merkle_proofs, 800_000);
         assert!(coin::balance(signer::address_of(receiver), reward_metadata()) == 0, 1);
-        assert!(get_vesting_at_stage(signer::address_of(receiver), bridge_id, 1).reward_amount == reward_per_stage, 2);
+        assert!(get_vesting_at_stage(signer::address_of(receiver), bridge_id, 1).initial_reward == reward_per_stage, 2);
 
         claim_reward_script(receiver, operator_addr, bridge_id, 2, score_merkle_proofs, 800_000);
         assert!(coin::balance(signer::address_of(receiver), reward_metadata()) == (reward_per_stage/vesting_period), 3);
@@ -1691,7 +1687,7 @@ module initia_std::vip_reward {
          
         claim_reward_script(receiver, operator_addr, bridge_id, 1, score_merkle_proofs, 800_000);
         assert!(get_locked_reward(signer::address_of(receiver), bridge_id, 1) == reward_per_stage/portion, 1);
-        assert!(get_vesting_at_stage(signer::address_of(receiver), bridge_id, 1).reward_amount == reward_per_stage/portion, 2);
+        assert!(get_vesting_at_stage(signer::address_of(receiver), bridge_id, 1).initial_reward == reward_per_stage/portion, 2);
 
         claim_reward_script(receiver, operator_addr, bridge_id, 2, score_merkle_proofs, 800_000);
         assert!(get_unlocked_reward(signer::address_of(receiver), bridge_id, 2, 800_000) == (reward_per_stage/vesting_period)/portion, 3);
