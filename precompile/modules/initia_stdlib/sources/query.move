@@ -94,26 +94,7 @@ module initia_std::query {
         ((id as u64), status, submit_time, emergency)
     }
 
-    #[view]
-    public fun get_amount_to_share(val_addr: String, metadata: String, amount: u64): u64 {
-        let obj = simple_json::empty();
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
-        
-        simple_json::set_string(&mut obj, option::some(string::utf8(b"val_addr")), val_addr);
-        simple_json::set_string(&mut obj, option::some(string::utf8(b"metadata")), metadata);
-        simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"amount")), true, (amount as u256));
-
-        let req = json::stringify(simple_json::to_json_object(&obj));
-        let res = query_custom(b"amount_to_share", *string::bytes(&req));
-        let res = simple_json::from_json_object(json::parse(string::utf8(res)));
-
-        simple_json::increase_depth(&mut res);
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
-        let (_, share) = json::as_int(data);
-        (share as u64)
-    }
-
+    /// query_custom examples are in initia_stdlib::address module
     native public fun query_custom(name: vector<u8>, data: vector<u8>): vector<u8>;
     native public fun query_stargate(path: vector<u8>, data: vector<u8>): vector<u8>;
 }

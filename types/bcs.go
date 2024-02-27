@@ -1638,14 +1638,12 @@ func load_StakingMessage__Delegate(deserializer serde.Deserializer) (StakingMess
 
 type StargateMessage struct {
 	Sender AccountAddress
-	Path string
 	Data []uint8
 }
 
 func (obj *StargateMessage) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := obj.Sender.Serialize(serializer); err != nil { return err }
-	if err := serializer.SerializeStr(obj.Path); err != nil { return err }
 	if err := serialize_vector_u8(obj.Data, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
@@ -1664,7 +1662,6 @@ func DeserializeStargateMessage(deserializer serde.Deserializer) (StargateMessag
 	var obj StargateMessage
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Sender = val } else { return obj, err }
-	if val, err := deserializer.DeserializeStr(); err == nil { obj.Path = val } else { return obj, err }
 	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Data = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil

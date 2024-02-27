@@ -39,3 +39,7 @@ pub fn get_string(v: Struct) -> PartialVMResult<Vec<u8>> {
         |v| v.value_as::<Vec<u8>>(),
     )
 }
+
+pub fn partial_extension_error(msg: impl ToString) -> PartialVMError {
+    PartialVMError::new(StatusCode::VM_EXTENSION_ERROR).with_message(msg.to_string())
+}

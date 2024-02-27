@@ -26,19 +26,18 @@ module minitia_std::cosmos {
         simple_json::set_string(&mut obj, option::some(string::utf8(b"voter")), voter);
         simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"option")), true, (option as u256));
         simple_json::set_string(&mut obj, option::some(string::utf8(b"metadata")), metadata);
+        simple_json::set_string(&mut obj, option::some(string::utf8(b"@type")), string::utf8(b"/cosmos.gov.v1.MsgVote"));
 
         let req = json::stringify(simple_json::to_json_object(&obj));
-        stargate(sender, string::utf8(b"/cosmos.gov.v1.Msg/Vote"), req);
+        stargate(sender, req);
     }
 
     public entry fun stargate (
         sender: &signer,
-        path: String,
         data: String,
     ) {
         stargate_internal(
             signer::address_of(sender),
-            *string::bytes(&path),
             *string::bytes(&data),
         )
     }
@@ -203,7 +202,6 @@ module minitia_std::cosmos {
 
     native fun stargate_internal (
         sender: address,
-        path: vector<u8>,
         data: vector<u8>,
     );
 

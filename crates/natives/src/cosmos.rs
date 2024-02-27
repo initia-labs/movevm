@@ -67,12 +67,9 @@ fn native_stargate(
     debug_assert!(args.len() == 3);
 
     let data = pop_arg!(args, Vector).to_vec_u8()?;
-    let path = pop_arg!(args, Vector).to_vec_u8()?;
-    let path = String::from_utf8(path)
-        .map_err(|err| partial_error(StatusCode::VALUE_SERIALIZATION_ERROR, err))?;
     let sender: AccountAddress = pop_arg!(args, AccountAddress);
 
-    let message = CosmosMessage::Stargate(StargateMessage { sender, path, data });
+    let message = CosmosMessage::Stargate(StargateMessage { sender, data });
 
     // build cosmos message
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();

@@ -31,7 +31,6 @@ pub enum CosmosMessage {
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct StargateMessage {
     pub sender: AccountAddress,
-    pub path: String,
     pub data: Vec<u8>,
 }
 

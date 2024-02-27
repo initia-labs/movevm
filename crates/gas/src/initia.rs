@@ -8,6 +8,9 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.account.create_address.base_cost, "account.create_address.base", 1102],
     [.account.create_signer.base_cost, "account.create_signer.base", 1102],
 
+    [.address.to_string.base_cost, "address.to_string.base_cost", 1678],
+    [.address.from_string.base_cost, "address.from_string.base_cost", 1678],
+
     [.code.request_publish.base_cost, "code.request_publish.base", 1838],
     [.code.request_publish.per_byte, "code.request_publish.per_byte", 7],
 
@@ -106,6 +109,7 @@ use crate::gas_params::*;
 #[derive(Debug, Clone)]
 pub struct GasParameters {
     pub account: account::GasParameters,
+    pub address: address::GasParameters,
     pub block: block::GasParameters,
     pub code: code::GasParameters,
     pub type_info: type_info::GasParameters,
@@ -136,6 +140,14 @@ impl GasParameters {
                     base_cost: 0.into(),
                 },
                 create_signer: account::CreateSignerGasParameters {
+                    base_cost: 0.into(),
+                },
+            },
+            address: address::GasParameters {
+                to_string: address::ToStringGasParameters {
+                    base_cost: 0.into(),
+                },
+                from_string: address::FromStringGasParameters {
                     base_cost: 0.into(),
                 },
             },

@@ -573,7 +573,6 @@ fn test_cosmos_stargate() {
             None,
             Some(vec![CosmosMessage::Stargate(StargateMessage {
                 sender,
-                path,
                 data: data.as_bytes().to_vec(),
             })]),
         ),

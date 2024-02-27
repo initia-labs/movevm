@@ -4,6 +4,7 @@
 mod helpers;
 
 pub mod account;
+pub mod address;
 pub mod any;
 pub mod base64;
 pub mod block;
@@ -61,6 +62,7 @@ pub fn initia_natives(
     }
 
     add_natives_from_module!("account", account::make_all(gas_params.account));
+    add_natives_from_module!("address", address::make_all(gas_params.address));
     add_natives_from_module!("block", block::make_all(gas_params.block));
     add_natives_from_module!("code", code::make_all(gas_params.code));
     add_natives_from_module!(

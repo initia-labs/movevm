@@ -1,4 +1,5 @@
 pub mod account;
+pub mod address;
 pub mod base64;
 pub mod block;
 pub mod code;
