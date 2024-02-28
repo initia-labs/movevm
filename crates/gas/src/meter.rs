@@ -8,8 +8,8 @@ use crate::{
 };
 use crate::{AbstractValueSize, GasUnit};
 
-use initia_types::access_path::AccessPath;
-use initia_types::gas_usage::GasUsageSet;
+use initia_move_types::access_path::AccessPath;
+use initia_move_types::gas_usage::GasUsageSet;
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_binary_format::file_format::CodeOffset;
 use move_core_types::account_address::AccountAddress;

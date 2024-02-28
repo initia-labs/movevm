@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test precompile
 
-# Builds the Rust library libinitiavm
+# Builds the Rust library libmovevm
 BUILDERS_PREFIX := initia/go-ext-builder:0001
 # Contains a full Go dev environment in order to run Go tests on the built library
 ALPINE_TESTER := initia/go-ext-builder:0001-alpine
@@ -11,17 +11,17 @@ USER_GROUP = $(shell id -g)
 SHARED_LIB_SRC = "" # File name of the shared library as created by the Rust build system
 SHARED_LIB_DST = "" # File name of the shared library that we store
 ifeq ($(OS),Windows_NT)
-	SHARED_LIB_SRC = initiavm.dll
-	SHARED_LIB_DST = initiavm.dll
+	SHARED_LIB_SRC = movevm.dll
+	SHARED_LIB_DST = movevm.dll
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
-		SHARED_LIB_SRC = libinitia.so
-		SHARED_LIB_DST = libinitia.$(shell rustc --print cfg | grep target_arch | cut  -d '"' -f 2).so
+		SHARED_LIB_SRC = libmovevm.so
+		SHARED_LIB_DST = libmovevm.$(shell rustc --print cfg | grep target_arch | cut  -d '"' -f 2).so
 	endif
 	ifeq ($(UNAME_S),Darwin)
-		SHARED_LIB_SRC = libinitia.dylib
-		SHARED_LIB_DST = libinitia.dylib
+		SHARED_LIB_SRC = libmovevm.dylib
+		SHARED_LIB_DST = libmovevm.dylib
 	endif
 endif
 
@@ -44,10 +44,10 @@ test-safety:
 test-rust: test-compiler test-lib test-e2e
 
 test-compiler:
-	cargo test -p initia-compiler
+	cargo test -p initia-move-compiler
 
 test-lib:
-	cargo test -p initia
+	cargo test -p movevm
 
 test-e2e: 
 	cargo test -p e2e-move-tests --features testing
@@ -69,15 +69,15 @@ fmt:
 	cargo fmt
 
 update-bindings:
-	# After we build libinitia, we have to copy the generated bindings for Go code to use.
+	# After we build libmovevm, we have to copy the generated bindings for Go code to use.
 	# We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).
-	cp libinitia/bindings.h api
+	cp libmovevm/bindings.h api
 
 
 # Use debug build for quick testing.
 # In order to use "--features backtraces" here we need a Rust nightly toolchain, which we don't have by default
 build-rust-debug:
-	cargo build -p initia
+	cargo build -p movevm
 	cp -fp target/debug/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
 	make update-bindings
 
@@ -86,7 +86,7 @@ build-rust-debug:
 # See https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-880616953 for two approaches to
 # enable stripping through cargo (if that is desired).
 build-rust-release:
-	cargo build -p initia --release
+	cargo build -p movevm --release
 	rm -f api/$(SHARED_LIB_DST)
 	cp -fp target/release/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
 	make update-bindings
@@ -95,8 +95,8 @@ build-rust-release:
 clean:
 	cargo clean
 	@-rm api/bindings.h 
-	@-rm api/libinitia.dylib
-	@-rm libinitia/bindings.h
+	@-rm api/libmovevm.dylib
+	@-rm libmovevm/bindings.h
 	@echo cleaned.
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
@@ -106,8 +106,8 @@ release-build-alpine:
 	docker run --rm -u $(USER_ID):$(USER_GROUP)  \
 		-v $(shell pwd):/code/ \
 		$(BUILDERS_PREFIX)-alpine
-	cp libinitia/artifacts/libinitia_muslc.x86_64.a api
-	cp libinitia/artifacts/libinitia_muslc.aarch64.a api
+	cp libmovevm/artifacts/libmovevm_muslc.x86_64.a api
+	cp libmovevm/artifacts/libmovevm_muslc.aarch64.a api
 	make update-bindings
 	# try running go tests using this lib with muslc
 	# docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
@@ -120,8 +120,8 @@ release-build-linux:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) \
 		-v $(shell pwd):/code/ \
 		$(BUILDERS_PREFIX)-centos7
-	cp libinitia/artifacts/libinitia.x86_64.so api
-	cp libinitia/artifacts/libinitia.aarch64.so api
+	cp libmovevm/artifacts/libmovevm.x86_64.so api
+	cp libmovevm/artifacts/libmovevm.aarch64.so api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
@@ -131,7 +131,7 @@ release-build-macos:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) \
 		-v $(shell pwd):/code/ \
 		$(BUILDERS_PREFIX)-cross build_macos.sh
-	cp libinitia/artifacts/libinitia.dylib api
+	cp libmovevm/artifacts/libmovevm.dylib api
 	make update-bindings
 
 release-build:

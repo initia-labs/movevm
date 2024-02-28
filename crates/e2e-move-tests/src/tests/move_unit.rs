@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
-use initia_gas::NativeGasParameters;
-use initia_natives::{
+use initia_move_gas::NativeGasParameters;
+use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
     staking::NativeStakingContext, table::NativeTableContext,
@@ -41,10 +41,10 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeOracleContext::new(&BLANK_API.oracle_api));
 }
 
-fn initia_test_natives() -> NativeFunctionTable {
+fn initia_move_test_natives() -> NativeFunctionTable {
     configure_for_unit_test();
     let gas_params = NativeGasParameters::zeros();
-    let misc_gas_params = initia_gas::MiscGasParameters::zeros();
+    let misc_gas_params = initia_move_gas::MiscGasParameters::zeros();
     all_natives(gas_params, misc_gas_params)
 }
 
@@ -59,7 +59,7 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
             ..Default::default()
         },
         UnitTestingConfig::default_with_bound(Some(100_000)),
-        initia_test_natives(),
+        initia_move_test_natives(),
         // TODO(Gas): we may want to switch to non-zero costs in the future
         None,
         /* compute_coverage */ false,

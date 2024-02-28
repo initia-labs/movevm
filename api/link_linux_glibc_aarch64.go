@@ -1,6 +1,6 @@
-//go:build linux && !muslc && arm64 && !sys_initia
+//go:build linux && !muslc && arm64 && !sys_movevm
 
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -linitia.aarch64
+// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lmovevm.aarch64
 import "C"

@@ -46,7 +46,7 @@ import (
 	"unsafe"
 
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/initia-labs/initiavm/types"
+	"github.com/initia-labs/movevm/types"
 )
 
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),

@@ -1,5 +1,5 @@
 use better_any::{Tid, TidAble};
-use initia_types::cosmos::{
+use initia_move_types::cosmos::{
     CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
     MoveMessage, StakingMessage, StargateMessage,
 };

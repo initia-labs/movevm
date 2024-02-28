@@ -25,14 +25,14 @@ pub mod table;
 pub mod transaction_context;
 pub mod type_info;
 
-use initia_gas::{MiscGasParameters, NativeGasParameters};
+use initia_move_gas::{MiscGasParameters, NativeGasParameters};
 use interface::SafeNativeBuilder;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::CORE_CODE_ADDRESS;
 use move_vm_runtime::native_functions::{make_table_from_iter, NativeFunctionTable};
 use table as table_natives;
 
-pub fn initia_natives(
+pub fn initia_move_natives(
     initia_std_addr: AccountAddress,
     builder: &SafeNativeBuilder,
 ) -> NativeFunctionTable {
@@ -79,7 +79,7 @@ pub fn all_natives(
 
     move_stdlib::all_natives(CORE_CODE_ADDRESS, &builder)
         .into_iter()
-        .chain(initia_natives(CORE_CODE_ADDRESS, &builder))
+        .chain(initia_move_natives(CORE_CODE_ADDRESS, &builder))
         .chain(table_natives::all_natives(CORE_CODE_ADDRESS, &mut builder))
         .collect()
 }

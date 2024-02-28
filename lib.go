@@ -1,8 +1,8 @@
-package initia
+package movevm
 
 import (
-	"github.com/initia-labs/initiavm/api"
-	"github.com/initia-labs/initiavm/types"
+	"github.com/initia-labs/movevm/api"
+	"github.com/initia-labs/movevm/types"
 )
 
 // VM struct is the core of initiavm.

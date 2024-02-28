@@ -1,5 +1,5 @@
 use crate::verifier::transaction_arg_validation;
-use initia_types::metadata::RuntimeModuleMetadataV0;
+use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_core_types::{
     identifier::IdentStr,
     vm_status::{StatusCode, VMStatus},

@@ -25,6 +25,6 @@ export CXX=o64-clang++
 cargo build --release --target x86_64-apple-darwin
 
 # Create a universal library with both archs
-lipo -output artifacts/libinitia.dylib -create \
-  ../target/x86_64-apple-darwin/release/deps/libinitia.dylib \
-  ../target/aarch64-apple-darwin/release/deps/libinitia.dylib
+lipo -output artifacts/libmovevm.dylib -create \
+  ../target/x86_64-apple-darwin/release/deps/libmovevm.dylib \
+  ../target/aarch64-apple-darwin/release/deps/libmovevm.dylib

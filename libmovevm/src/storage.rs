@@ -1,7 +1,7 @@
 use bytes::Bytes;
-use initia_storage::state_view::StateView;
-use initia_types::access_path::AccessPath;
-use initia_vm::backend::BackendResult;
+use initia_move_storage::state_view::StateView;
+use initia_move_types::access_path::AccessPath;
+use initia_move_vm::backend::BackendResult;
 
 use crate::db::Db;
 use crate::error::GoError;

@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use initia_types::{message::MessageOutput, result::ExecutionResult};
+use initia_move_types::{message::MessageOutput, result::ExecutionResult};
 
 use serde::Serialize;
 

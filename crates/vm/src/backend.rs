@@ -1,6 +1,6 @@
-use initia_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
-use initia_storage::state_view::StateView;
-use initia_types::errors::BackendError;
+use initia_move_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
+use initia_move_storage::state_view::StateView;
+use initia_move_types::errors::BackendError;
 
 /// Holds all external dependencies of the contract.
 /// Designed to allow easy dependency injection at runtime.

@@ -1,6 +1,6 @@
-//go:build linux && muslc && !sys_initia
+//go:build linux && muslc && !sys_movevm
 
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -linitia_muslc
+// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lmovevm_muslc
 import "C"

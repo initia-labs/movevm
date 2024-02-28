@@ -1,11 +1,11 @@
 [package]
-name = "initia"
+name = "movevm"
 version = "0.1.0"
 edition = "2021"
 rust-version = { workspace = true }
 description = "Initia VM Engine"
-homepage = "https://www.initia.co"
-repository = "https://github.com/initia-labs/initiavm"
+homepage = "https://initia.xyz/"
+repository = "https://github.com/initia-labs/movevm"
 license-file = "LICENSE"
 exclude = [".gitignore"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -40,12 +40,12 @@ log = { workspace = true, features = [
     "release_max_level_warn",
 ] }
 
-initia-compiler = { workspace = true }
-initia-vm = { workspace = true, features = ["backtraces"] }
-initia-natives = { workspace = true }
-initia-types = { workspace = true }
-initia-gas = { workspace = true }
-initia-storage = { workspace = true }
+initia-move-compiler = { workspace = true }
+initia-move-vm = { workspace = true, features = ["backtraces"] }
+initia-move-natives = { workspace = true }
+initia-move-types = { workspace = true }
+initia-move-gas = { workspace = true }
+initia-move-storage = { workspace = true }
 
 move-core-types = { workspace = true }
 move-cli = { workspace = true }

@@ -2,7 +2,7 @@
 
 As this library is targetting go developers, we cannot assume a properly set up
 rust environment on their system. Further, when importing this library, there is no
-clean way to add a `libinitia.{so,dll,dylib}`. It needs to be committed with the
+clean way to add a `libmovevm.{so,dll,dylib}`. It needs to be committed with the
 tagged (go) release in order to be easily usable.
 
 The solution is to precompile the rust code into libraries for the major platforms

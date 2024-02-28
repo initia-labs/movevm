@@ -1,4 +1,4 @@
-use initia_types::metadata::{
+use initia_move_types::metadata::{
     KnownAttribute, RuntimeModuleMetadataV0, ERROR_PREFIX, EVENT_STRUCT_ATTRIBUTE,
     INIT_MODULE_FUNCTION_NAME, VIEW_FUN_ATTRIBUTE,
 };
@@ -156,7 +156,7 @@ impl<'a> ExtendedChecker<'a> {
 
     fn is_allowed_input_struct(&self, qid: QualifiedId<StructId>) -> bool {
         let name = self.env.get_struct(qid).get_full_name_with_address();
-        // TODO(gerben) find a nice way to keep this in sync with allowed_structs in initia-vm
+        // TODO(gerben) find a nice way to keep this in sync with allowed_structs in initia-move-vm
         matches!(
             name.as_str(),
             "0x1::string::String"

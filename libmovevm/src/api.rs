@@ -2,8 +2,8 @@ use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
 use anyhow::anyhow;
-use initia_natives::oracle::OracleAPI;
-use initia_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
+use initia_move_natives::oracle::OracleAPI;
+use initia_move_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::u256::U256;
 

@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use anyhow::bail;
-use initia_gas::{MiscGasParameters, NativeGasParameters};
-use initia_natives::all_natives;
-use initia_types::metadata;
+use initia_move_gas::{MiscGasParameters, NativeGasParameters};
+use initia_move_natives::all_natives;
+use initia_move_types::metadata;
 use move_cli::base::{
     coverage::{Coverage, CoverageSummaryOptions},
     test::{run_move_unit_tests, Test, UnitTestResult},

@@ -1,5 +1,5 @@
 use crate::{error::GoError, UnmanagedVector};
-use initia_types::errors::BackendError;
+use initia_move_types::errors::BackendError;
 
 // GoError test
 #[test]

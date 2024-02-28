@@ -4,7 +4,7 @@ use codespan_reporting::{
     diagnostic::Severity,
     term::termcolor::{ColorChoice, StandardStream},
 };
-use initia_types::metadata::{
+use initia_move_types::metadata::{
     self, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0, METADATA_V0_MIN_FILE_FORMAT_VERSION,
 };
 use itertools::Itertools;

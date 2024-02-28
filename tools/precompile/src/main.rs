@@ -1,4 +1,4 @@
-use initia_compiler::{execute, Command};
+use initia_move_compiler::{execute, Command};
 use move_cli::{base::build::Build, Move};
 use std::{env::current_dir, fs, io, path::PathBuf, str::FromStr};
 

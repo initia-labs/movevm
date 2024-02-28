@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use initia_types::metadata::{KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
+use initia_move_types::metadata::{KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
 use move_binary_format::{
     access::ModuleAccess,
     errors::VMResult,

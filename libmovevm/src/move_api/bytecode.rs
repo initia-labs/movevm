@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use initia_types::metadata::RuntimeModuleMetadataV0;
+use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     file_format::{

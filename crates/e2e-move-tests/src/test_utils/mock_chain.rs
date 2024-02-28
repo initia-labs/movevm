@@ -1,15 +1,15 @@
 use bytes::Bytes;
-use initia_storage::{state_view::StateView, table_view::TableView};
+use initia_move_storage::{state_view::StateView, table_view::TableView};
 use std::{
     collections::BTreeMap,
     ops::{Bound, RangeBounds},
 };
 
-use initia_natives::{
+use initia_move_natives::{
     account::AccountAPI, oracle::OracleAPI, query::QueryAPI, staking::StakingAPI,
     table::TableResolver,
 };
-use initia_types::{
+use initia_move_types::{
     access_path::AccessPath, iterator::Order, table::TableHandle, write_set::WriteSet,
 };
 use move_core_types::{account_address::AccountAddress, effects::Op, u256::U256};

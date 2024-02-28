@@ -5,7 +5,7 @@ use super::{
     context::SafeNativeContext,
     errors::{SafeNativeError, SafeNativeResult},
 };
-use initia_gas::{MiscGasParameters, NativeGasParameters};
+use initia_move_gas::{MiscGasParameters, NativeGasParameters};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, values::Value,

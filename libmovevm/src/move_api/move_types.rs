@@ -1,5 +1,5 @@
 use anyhow::{bail, format_err};
-use initia_types::module::Module;
+use initia_move_types::module::Module;
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{

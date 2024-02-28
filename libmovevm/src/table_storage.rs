@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use initia_storage::table_view::TableView;
-use initia_types::access_path::AccessPath;
-use initia_types::iterator::Order;
-use initia_types::table::TableHandle;
+use initia_move_storage::table_view::TableView;
+use initia_move_types::access_path::AccessPath;
+use initia_move_types::iterator::Order;
+use initia_move_types::table::TableHandle;
 
 use crate::db::Db;
 use crate::error::GoError;

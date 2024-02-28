@@ -1,5 +1,5 @@
 use crate::meter::GAS_UNIT_SCALING_FACTOR as SCALING;
-use initia_types::access_path::{AccessPath, DataPath};
+use initia_move_types::access_path::{AccessPath, DataPath};
 use move_core_types::{
     effects::Op,
     gas_algebra::{InternalGas, InternalGasPerArg, InternalGasPerByte, NumArgs, NumBytes},

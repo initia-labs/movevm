@@ -3,7 +3,7 @@ use std::{env::current_dir, fs::File};
 use serde_generate::{golang::CodeGenerator, CodeGeneratorConfig, Encoding};
 use serde_reflection::{Tracer, TracerConfig};
 
-use initia_types::{
+use initia_move_types::{
     account::Account,
     cosmos::{
         CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, StakingMessage,

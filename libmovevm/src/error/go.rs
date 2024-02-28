@@ -1,4 +1,4 @@
-use initia_types::errors::BackendError;
+use initia_move_types::errors::BackendError;
 
 use crate::memory::UnmanagedVector;
 

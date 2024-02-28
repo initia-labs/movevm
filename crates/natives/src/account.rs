@@ -1,6 +1,6 @@
 use anyhow::Result;
 use better_any::{Tid, TidAble};
-use initia_types::account::{AccountType, Accounts};
+use initia_move_types::account::{AccountType, Accounts};
 use move_binary_format::errors::PartialVMError;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::StatusCode;

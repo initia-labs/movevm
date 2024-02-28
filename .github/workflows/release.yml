@@ -1,4 +1,4 @@
-name: Release rust libinitiavm
+name: Release rust libmovevm
 on:
   workflow_dispatch:
   push:
@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: libinitia-linux-glibc
+          name: libmovevm-linux-glibc
           path: api/*.so
 
   build-linux-muslc:
@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: libinitia-linux-muslc
+          name: libmovevm-linux-muslc
           path: api/*.a
 
   build-macos:
@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: libinitia-macos
+          name: libmovevm-macos
           path: api/*.dylib
 
   release:
@@ -57,17 +57,17 @@ jobs:
       - name: Get linux-glibc artifacts
         uses: actions/download-artifact@v3
         with:
-          name: libinitia-linux-glibc
+          name: libmovevm-linux-glibc
 
       - name: Get linux-muslc artifacts
         uses: actions/download-artifact@v3
         with:
-          name: libinitia-linux-muslc
+          name: libmovevm-linux-muslc
 
       - name: Get macos artifacts
         uses: actions/download-artifact@v3
         with:
-          name: libinitia-macos
+          name: libmovevm-macos
 
       - name: Release
         uses: softprops/action-gh-release@v1

@@ -1,4 +1,4 @@
-name: Build rust libinitiavm
+name: Build rust libmovevm
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
     paths:
       - "crates/**"
       - '!crates/e2e-move-tests/**'
-      - "libinitia/**"
+      - "libmovevm/**"
       - "Cargo.toml"
 
 concurrency:
@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: libinitia-linux-glibc
+          name: libmovevm-linux-glibc
           path: api/*.so
 
   build-macos:
@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: libinitia-macos
+          name: libmovevm-macos
           path: api/*.dylib
 
   commit:
@@ -57,18 +57,18 @@ jobs:
       - name: Get linux-glibc artifacts
         uses: actions/download-artifact@v3
         with:
-          name: libinitia-linux-glibc
+          name: libmovevm-linux-glibc
           path: api
 
       - name: Get macos artifacts
         uses: actions/download-artifact@v3
         with:
-          name: libinitia-macos
+          name: libmovevm-macos
           path: api
 
       - name: Commit shared libraries
         uses: EndBug/add-and-commit@v9
         with:
-          add: '["api/libinitia.dylib", "api/libinitia.aarch64.so", "api/libinitia.x86_64.so"]'
+          add: '["api/libmovevm.dylib", "api/libmovevm.aarch64.so", "api/libmovevm.x86_64.so"]'
           default_author: github_actions
           message: "update shared libraries"

@@ -6,7 +6,7 @@
 //! This crate defines [`trait TableView`](TableView).
 
 use anyhow::Result;
-use initia_types::{iterator::Order, table::TableHandle};
+use initia_move_types::{iterator::Order, table::TableHandle};
 
 /// `TableView` is a trait that defines a read-only snapshot of the global state for table extension. It is passed to
 /// the VM for transaction execution, during which the VM is guaranteed to read anything at the

@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test:
-    name: Rust libinitiavm
+    name: Rust libmovevm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

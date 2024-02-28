@@ -1,6 +1,6 @@
 use better_any::{Tid, TidAble};
-use initia_types::iterator::Order;
-use initia_types::table::{TableChange, TableChangeSet, TableHandle, TableInfo};
+use initia_move_types::iterator::Order;
+use initia_move_types::table::{TableChange, TableChangeSet, TableHandle, TableInfo};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::gas_algebra::NumArgs;
 use move_core_types::identifier::Identifier;

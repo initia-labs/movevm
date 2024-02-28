@@ -1,4 +1,4 @@
-use initia_types::{cosmos::CosmosMessage, message::MessageOutput};
+use initia_move_types::{cosmos::CosmosMessage, message::MessageOutput};
 use std::collections::BTreeMap;
 
 use move_core_types::{account_address::AccountAddress, vm_status::VMStatus};

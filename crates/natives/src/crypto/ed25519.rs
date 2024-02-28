@@ -3,7 +3,7 @@ use crate::interface::{
 };
 use crate::{safely_pop_arg, safely_pop_vec_arg};
 
-use initia_gas::{NumArgs, NumBytes};
+use initia_move_gas::{NumArgs, NumBytes};
 
 use move_binary_format::errors::PartialVMError;
 use move_core_types::vm_status::StatusCode;

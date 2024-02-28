@@ -10,7 +10,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 
 pub const INITIA_STDLIB_PACKAGE_NAME: &str = "InitiaStdlib";
 pub const INITIA_STDLIB_PACKAGE_PATH: &str = "{ \
-    git = \"https://github.com/initia-labs/initiavm.git\", \
+    git = \"https://github.com/initia-labs/movevm.git\", \
     subdir = \"precompile/modules/initia_stdlib\", rev = \"main\" \
 }";
 pub const INITIA_STDLIB_ADDR_NAME: &str = "std";

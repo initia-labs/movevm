@@ -1,6 +1,6 @@
 /// Extract metadata from the VM, upgrading V0 to V1 representation as needed
 use crate::session::SessionExt;
-use initia_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
+use initia_move_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
 use move_binary_format::{errors::PartialVMResult, CompiledModule};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 

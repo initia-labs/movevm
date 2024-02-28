@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::errors::{SafeNativeError, SafeNativeResult};
-use initia_gas::{AbstractValueSize, MiscGasParameters, NativeGasParameters};
+use initia_move_gas::{AbstractValueSize, MiscGasParameters, NativeGasParameters};
 use move_core_types::gas_algebra::InternalGas;
 use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::values::Value;

@@ -1,4 +1,4 @@
-use initia_types::metadata::INIT_MODULE_FUNCTION_NAME;
+use initia_move_types::metadata::INIT_MODULE_FUNCTION_NAME;
 use move_binary_format::{
     access::ModuleAccess,
     errors::{PartialVMError, PartialVMResult},

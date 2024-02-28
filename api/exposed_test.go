@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/initia-labs/initiavm/types"
+	"github.com/initia-labs/movevm/types"
 )
 
 func Test_StructTag_String(t *testing.T) {

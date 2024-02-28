@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use initia_natives::{
+use initia_move_natives::{
     account::NativeAccountContext,
     code::{NativeCodeContext, PublishRequest},
     cosmos::NativeCosmosContext,
@@ -8,7 +8,7 @@ use initia_natives::{
     staking::NativeStakingContext,
     table::NativeTableContext,
 };
-use initia_types::{
+use initia_move_types::{
     account::Accounts, cosmos::CosmosMessages, event::ContractEvent,
     staking_change_set::StakingChangeSet, write_set::WriteSet,
 };

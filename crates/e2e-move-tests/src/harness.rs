@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use bytes::Bytes;
-use initia_compiler::built_package::BuiltPackage;
-use initia_types::env::Env;
-use initia_types::view_function::ViewFunction;
+use initia_move_compiler::built_package::BuiltPackage;
+use initia_move_types::env::Env;
+use initia_move_types::view_function::ViewFunction;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
@@ -12,15 +12,15 @@ use move_package::BuildConfig;
 
 use crate::test_utils::mock_chain::{MockAPI, MockChain, MockState, MockTableState};
 use crate::test_utils::parser::MemberId;
-use initia_gas::Gas;
-use initia_storage::{
+use initia_move_gas::Gas;
+use initia_move_storage::{
     state_view::StateView, state_view_impl::StateViewImpl, table_view_impl::TableViewImpl,
 };
-use initia_types::access_path::AccessPath;
-use initia_types::message::{Message, MessageOutput};
-use initia_types::module::ModuleBundle;
-use initia_types::{entry_function::EntryFunction, script::Script};
-use initia_vm::InitiaVM;
+use initia_move_types::access_path::AccessPath;
+use initia_move_types::message::{Message, MessageOutput};
+use initia_move_types::module::ModuleBundle;
+use initia_move_types::{entry_function::EntryFunction, script::Script};
+use initia_move_vm::MoveVM;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
@@ -40,7 +40,7 @@ use std::{fs, io};
 pub struct MoveHarness {
     /// The executor being used.
     pub chain: MockChain,
-    pub vm: InitiaVM,
+    pub vm: MoveVM,
     pub api: MockAPI,
 }
 
@@ -62,7 +62,7 @@ impl Default for MoveHarness {
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
-        let vm = InitiaVM::new(1000, 100);
+        let vm = MoveVM::new(1000, 100);
         let chain = MockChain::new();
         let api = MockAPI::empty();
 
@@ -274,7 +274,7 @@ impl MoveHarness {
         let resolver = StateViewImpl::new(&state);
         let mut table_resolver = TableViewImpl::new(&mut table_state);
 
-        let gas_limit: initia_gas::GasQuantity<initia_gas::GasUnit> = Gas::new(100_000_000u64);
+        let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> = Gas::new(100_000_000u64);
         self.vm.execute_message(
             &self.api,
             &env,

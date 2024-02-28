@@ -86,6 +86,6 @@ RUN tar -zxvf ./openssl-1.1.1k.tar.gz \
 
 RUN rm ./openssl-1.1.1k.tar.gz
 
-WORKDIR /code/libinitia
+WORKDIR /code/libmovevm
 
 CMD ["/opt/build_linux.sh"]

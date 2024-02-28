@@ -1,15 +1,15 @@
 [package]
-name = "initia-natives"
+name = "initia-move-natives"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/initia-labs/initiavm/tree/main/crates/natives"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/natives"
 rust-version = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-initia-types = { workspace = true }
-initia-gas = { workspace = true }
+initia-move-types = { workspace = true }
+initia-move-gas = { workspace = true }
 
 anyhow = { workspace = true }
 bcs = { workspace = true }
@@ -40,7 +40,7 @@ serial_test = { workspace = true }
 [features]
 default = []
 testing = [
-    "initia-gas/testing",
+    "initia-move-gas/testing",
     "move-vm-runtime/testing",
     "move-stdlib/testing",
 ]

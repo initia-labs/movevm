@@ -4,7 +4,7 @@ use crate::{
     safely_pop_arg,
 };
 use better_any::{Tid, TidAble};
-use initia_types::staking_change_set::StakingChangeSet;
+use initia_move_types::staking_change_set::StakingChangeSet;
 use move_binary_format::errors::PartialVMError;
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::NumBytes, vm_status::StatusCode,

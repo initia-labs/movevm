@@ -20,11 +20,11 @@ use move_vm_runtime::{
 
 use std::{collections::BTreeSet, sync::Arc};
 
-use initia_gas::MiscGasParameters;
-use initia_gas::{
+use initia_move_gas::MiscGasParameters;
+use initia_move_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
 };
-use initia_natives::{
+use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
     all_natives,
     code::{NativeCodeContext, PublishRequest},
@@ -35,16 +35,16 @@ use initia_natives::{
     staking::NativeStakingContext,
     transaction_context::NativeTransactionContext,
 };
-use initia_natives::{
+use initia_move_natives::{
     block::NativeBlockContext,
     staking::StakingAPI,
     table::{NativeTableContext, TableResolver},
 };
-use initia_storage::{
+use initia_move_storage::{
     state_view::StateView, state_view_impl::StateViewImpl, table_view::TableView,
     table_view_impl::TableViewImpl,
 };
-use initia_types::{
+use initia_move_types::{
     account::Accounts,
     cosmos::CosmosMessages,
     env::Env,
@@ -72,18 +72,18 @@ use crate::{
 
 #[derive(Clone)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct InitiaVM {
+pub struct MoveVM {
     runtime: Arc<VMRuntime>,
     gas_params: InitiaGasParameters,
 }
 
-impl Default for InitiaVM {
+impl Default for MoveVM {
     fn default() -> Self {
         Self::new(1000, 100)
     }
 }
 
-impl InitiaVM {
+impl MoveVM {
     pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();

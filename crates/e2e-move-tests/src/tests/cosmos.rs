@@ -1,6 +1,6 @@
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
-use initia_types::cosmos::{
+use initia_move_types::cosmos::{
     CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage,
     StakingMessage, StargateMessage,
 };

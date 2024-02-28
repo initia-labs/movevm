@@ -7,23 +7,23 @@ use crate::table_storage::GoTableStorage;
 use crate::Db;
 use crate::GoStorage;
 
-use initia_gas::Gas;
-use initia_storage::state_view_impl::StateViewImpl;
-use initia_storage::table_view_impl::TableViewImpl;
-use initia_types::access_path::AccessPath;
-use initia_types::env::Env;
-use initia_types::errors::BackendError;
-use initia_types::view_function::ViewFunction;
-use initia_types::write_set::WriteSet;
-use initia_types::{message::Message, module::ModuleBundle};
-use initia_vm::BackendResult;
-use initia_vm::InitiaVM;
+use initia_move_gas::Gas;
+use initia_move_storage::state_view_impl::StateViewImpl;
+use initia_move_storage::table_view_impl::TableViewImpl;
+use initia_move_types::access_path::AccessPath;
+use initia_move_types::env::Env;
+use initia_move_types::errors::BackendError;
+use initia_move_types::view_function::ViewFunction;
+use initia_move_types::write_set::WriteSet;
+use initia_move_types::{message::Message, module::ModuleBundle};
+use initia_move_vm::BackendResult;
+use initia_move_vm::MoveVM;
 
 use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
 
 pub(crate) fn initialize_vm(
-    vm: &mut InitiaVM,
+    vm: &mut MoveVM,
     db_handle: Db,
     api: GoApi,
     env: Env,
@@ -53,7 +53,7 @@ pub(crate) fn initialize_vm(
 }
 
 pub(crate) fn execute_contract(
-    vm: &mut InitiaVM,
+    vm: &mut MoveVM,
     db_handle: Db,
     api: GoApi,
     env: Env,
@@ -84,7 +84,7 @@ pub(crate) fn execute_contract(
 }
 
 pub(crate) fn execute_script(
-    vm: &mut InitiaVM,
+    vm: &mut MoveVM,
     db_handle: Db,
     api: GoApi,
     env: Env,
@@ -118,7 +118,7 @@ pub(crate) fn execute_script(
 
 // execute view function
 pub(crate) fn execute_view_function(
-    vm: &mut InitiaVM,
+    vm: &mut MoveVM,
     db_handle: Db,
     api: GoApi,
     env: Env,

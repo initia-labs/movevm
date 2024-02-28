@@ -3,7 +3,7 @@ use crate::move_api::move_types::{MoveModuleBytecode, MoveScriptBytecode};
 use crate::result::to_vec;
 use crate::{error::Error, Db, GoStorage};
 
-use initia_storage::state_view_impl::StateViewImpl;
+use initia_move_storage::state_view_impl::StateViewImpl;
 use move_binary_format::access::ModuleAccess;
 use move_binary_format::internals::ModuleIndex;
 use move_binary_format::CompiledModule;

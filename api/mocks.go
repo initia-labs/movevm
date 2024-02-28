@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/initia-labs/initiavm/types"
+	"github.com/initia-labs/movevm/types"
 )
 
 /*** Mock KVStore ****/

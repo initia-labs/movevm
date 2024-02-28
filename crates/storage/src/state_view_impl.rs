@@ -15,7 +15,7 @@ use move_core_types::{
     language_storage::ModuleId, resolver::ModuleResolver, resolver::ResourceResolver,
 };
 
-use initia_types::access_path::{AccessPath, DataPath};
+use initia_move_types::access_path::{AccessPath, DataPath};
 
 pub struct StateViewImpl<'block, S> {
     state_view: &'block S,

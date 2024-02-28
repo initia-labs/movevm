@@ -1,4 +1,4 @@
-package initia_test
+package movevm_test
 
 import (
 	"encoding/base64"
@@ -11,10 +11,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	vm "github.com/initia-labs/initiavm"
-	"github.com/initia-labs/initiavm/api"
-	"github.com/initia-labs/initiavm/precompile"
-	"github.com/initia-labs/initiavm/types"
+	vm "github.com/initia-labs/movevm"
+	"github.com/initia-labs/movevm/api"
+	"github.com/initia-labs/movevm/precompile"
+	"github.com/initia-labs/movevm/types"
 )
 
 func generateRandomHash() [32]uint8 {

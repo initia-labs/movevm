@@ -1,5 +1,5 @@
 use crate::mocks::{BlankAPIImpl, BlankTableViewImpl};
-use initia_natives::{
+use initia_move_natives::{
     account::NativeAccountContext, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
     query::NativeQueryContext, staking::NativeStakingContext, table::NativeTableContext,

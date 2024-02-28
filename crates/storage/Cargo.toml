@@ -1,13 +1,13 @@
 [package]
-name = "initia-storage"
+name = "initia-move-storage"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/initia-labs/initiavm/tree/main/crates/storage"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/storage"
 rust-version = { workspace = true }
 
 [dependencies]
-initia-types = { workspace = true }
-initia-natives = { workspace = true }
+initia-move-types = { workspace = true }
+initia-move-natives = { workspace = true }
 
 move-binary-format = { workspace = true }
 move-core-types = { workspace = true }

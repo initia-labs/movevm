@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "libinitia",
+    "libmovevm",
     "crates/compiler",
     "crates/gas",
     "crates/natives",
@@ -45,20 +45,19 @@ codegen-units = 16
 version = "0.1.0"
 edition = "2021"
 license = "BUSL-1.1"
-homepage = "https://www.initia.co"
-repository = "https://github.com/initia-labs/initiavm/"
+homepage = "https://initia.xyz"
+repository = "https://github.com/initia-labs/movevm"
 rust-version = "1.76.0"
 
 [workspace.dependencies]
 # Internal crate dependencies.
 # Please do not add any test features here: they should be declared by the individual crate.
-initia = { path = "libinitia" }
-initia-vm = { path = "crates/vm" }
-initia-types = { path = "crates/types" }
-initia-storage = { path = "crates/storage" }
-initia-natives = { path = "crates/natives" }
-initia-gas = { path = "crates/gas" }
-initia-compiler = { path = "crates/compiler" }
+initia-move-vm = { path = "crates/vm" }
+initia-move-types = { path = "crates/types" }
+initia-move-storage = { path = "crates/storage" }
+initia-move-natives = { path = "crates/natives" }
+initia-move-gas = { path = "crates/gas" }
+initia-move-compiler = { path = "crates/compiler" }
 
 # External crate dependencies.
 # Please do not add any test features here: they should be declared by the individual crate.

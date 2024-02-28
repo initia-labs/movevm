@@ -6,7 +6,7 @@ use crate::{
     safely_pop_arg, safely_pop_vec_arg,
 };
 use better_any::{Tid, TidAble};
-use initia_types::module::ModuleBundle;
+use initia_move_types::module::ModuleBundle;
 use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{

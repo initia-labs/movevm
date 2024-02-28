@@ -1,4 +1,4 @@
-use initia_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
+use initia_move_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
 use move_binary_format::CompiledModule;
 use move_core_types::{identifier::IdentStr, metadata::Metadata};
 

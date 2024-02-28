@@ -1,7 +1,7 @@
 /* (c) 2022 initia labs. Licensed under BUSL-1.1 */
 
-#ifndef __LIBINITIAVM__
-#define __LIBINITIAVM__
+#ifndef __LIBMOVEVM__
+#define __LIBMOVEVM__
 
 /* Generated with cbindgen:0.26.0 */
 
@@ -177,7 +177,7 @@ typedef struct {
    * bytecode version. set 0 to unset and to use default
    */
   uint32_t bytecode_version;
-} InitiaCompilerBuildConfig;
+} CompilerBuildConfig;
 
 typedef struct {
   /**
@@ -191,16 +191,16 @@ typedef struct {
   /**
    * Package build options
    */
-  InitiaCompilerBuildConfig build_config;
-} InitiaCompilerArgument;
+  CompilerBuildConfig build_config;
+} CompilerArgument;
 
 typedef struct {
   ByteSliceView module_name;
-} InitiaCompilerCoverageBytecodeOption;
+} CompilerCoverageBytecodeOption;
 
 typedef struct {
   ByteSliceView module_name;
-} InitiaCompilerCoverageSourceOption;
+} CompilerCoverageSourceOption;
 
 typedef struct {
   /**
@@ -211,7 +211,7 @@ typedef struct {
    * Output CSV data of coverage
    */
   bool output_csv;
-} InitiaCompilerCoverageSummaryOption;
+} CompilerCoverageSummaryOption;
 
 typedef struct {
   uint8_t _private[0];
@@ -306,7 +306,7 @@ typedef struct {
    * This can contain common markdown references fpr this package (e.g. `[move-book]: <url>`).
    */
   ByteSliceView references_file;
-} InitiaCompilerDocgenOption;
+} CompilerDocgenOption;
 
 typedef struct {
   uint8_t _private[0];
@@ -410,7 +410,7 @@ typedef struct {
    * indicating that this prover run is for a test.
    */
   bool for_test;
-} InitiaCompilerProveOption;
+} CompilerProveOption;
 
 typedef struct {
   /**
@@ -434,14 +434,14 @@ typedef struct {
    * Collect coverage information for later use with the various `package coverage` subcommands
    */
   bool compute_coverage;
-} InitiaCompilerTestOption;
+} CompilerTestOption;
 
 vm_t *allocate_vm(size_t module_cache_capacity, size_t script_cache_capacity);
 
-UnmanagedVector build_move_package(UnmanagedVector *errmsg, InitiaCompilerArgument initia_args);
+UnmanagedVector build_move_package(UnmanagedVector *errmsg, CompilerArgument compiler_args);
 
 UnmanagedVector clean_move_package(UnmanagedVector *errmsg,
-                                   InitiaCompilerArgument initia_args,
+                                   CompilerArgument compiler_args,
                                    bool clean_cache,
                                    bool clean_byproduct,
                                    bool force);
@@ -451,19 +451,19 @@ UnmanagedVector convert_module_name(UnmanagedVector *errmsg,
                                     ByteSliceView module_name);
 
 UnmanagedVector coverage_bytecode_move_package(UnmanagedVector *errmsg,
-                                               InitiaCompilerArgument initia_args,
-                                               InitiaCompilerCoverageBytecodeOption coverage_opt);
+                                               CompilerArgument compiler_args,
+                                               CompilerCoverageBytecodeOption coverage_opt);
 
 UnmanagedVector coverage_source_move_package(UnmanagedVector *errmsg,
-                                             InitiaCompilerArgument initia_args,
-                                             InitiaCompilerCoverageSourceOption coverage_opt);
+                                             CompilerArgument compiler_args,
+                                             CompilerCoverageSourceOption coverage_opt);
 
 UnmanagedVector coverage_summary_move_package(UnmanagedVector *errmsg,
-                                              InitiaCompilerArgument initia_args,
-                                              InitiaCompilerCoverageSummaryOption coverage_opt);
+                                              CompilerArgument compiler_args,
+                                              CompilerCoverageSummaryOption coverage_opt);
 
 UnmanagedVector create_new_move_package(UnmanagedVector *errmsg,
-                                        InitiaCompilerArgument initia_args,
+                                        CompilerArgument compiler_args,
                                         ByteSliceView name_view);
 
 UnmanagedVector decode_module_bytes(UnmanagedVector *errmsg, ByteSliceView module_bytes);
@@ -483,8 +483,8 @@ UnmanagedVector decode_script_bytes(UnmanagedVector *errmsg, ByteSliceView scrip
 void destroy_unmanaged_vector(UnmanagedVector v);
 
 UnmanagedVector docgen_move_package(UnmanagedVector *errmsg,
-                                    InitiaCompilerArgument initia_args,
-                                    InitiaCompilerDocgenOption docgen_opt);
+                                    CompilerArgument compiler_args,
+                                    CompilerDocgenOption docgen_opt);
 
 UnmanagedVector execute_contract(vm_t *vm_ptr,
                                  Db db,
@@ -526,8 +526,8 @@ UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, size_t length
 UnmanagedVector parse_struct_tag(UnmanagedVector *errmsg, ByteSliceView struct_tag_str);
 
 UnmanagedVector prove_move_package(UnmanagedVector *errmsg,
-                                   InitiaCompilerArgument initia_args,
-                                   InitiaCompilerProveOption prove_opt);
+                                   CompilerArgument compiler_args,
+                                   CompilerProveOption prove_opt);
 
 UnmanagedVector read_module_info(UnmanagedVector *errmsg, ByteSliceView compiled);
 
@@ -536,14 +536,14 @@ void release_vm(vm_t *vm);
 UnmanagedVector stringify_struct_tag(UnmanagedVector *errmsg, ByteSliceView struct_tag);
 
 UnmanagedVector test_move_package(UnmanagedVector *errmsg,
-                                  InitiaCompilerArgument initia_args,
-                                  InitiaCompilerTestOption test_opt);
+                                  CompilerArgument compiler_args,
+                                  CompilerTestOption test_opt);
 
 /**
  * Returns a version number of this library as a C string.
  *
- * The string is owned by libinitia and must not be mutated or destroyed by the caller.
+ * The string is owned by libmovevm and must not be mutated or destroyed by the caller.
  */
 const char *version_str(void);
 
-#endif /* __LIBINITIAVM__ */
+#endif /* __LIBMOVEVM__ */

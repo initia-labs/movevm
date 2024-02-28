@@ -1,11 +1,11 @@
 [package]
-name = "initia-vm"
+name = "initia-move-vm"
 version = "0.1.0"
 edition = "2021"
 rust-version = { workspace = true }
 description = "VM bindings to run move contracts on go"
 homepage = "https://www.initia.co"
-repository = "https://github.com/initia-labs/initiavm/tree/main/crates/vm"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/vm"
 license = "BUSL-1.1"
 exclude = [".gitignore"]
 
@@ -14,10 +14,10 @@ default = []
 backtraces = []
 
 [dependencies]
-initia-types = { workspace = true }
-initia-storage = { workspace = true }
-initia-natives = { workspace = true }
-initia-gas = { workspace = true }
+initia-move-types = { workspace = true }
+initia-move-storage = { workspace = true }
+initia-move-natives = { workspace = true }
+initia-move-gas = { workspace = true }
 
 ## Move Dependencies
 move-binary-format = { workspace = true }

@@ -3,9 +3,8 @@ use std::path::Path;
 
 use crate::args::VM_ARG;
 use crate::compiler::{
-    self, InitiaCompilerArgument, InitiaCompilerCoverageBytecodeOption,
-    InitiaCompilerCoverageSourceOption, InitiaCompilerCoverageSummaryOption,
-    InitiaCompilerDocgenOption, InitiaCompilerProveOption, InitiaCompilerTestOption,
+    self, CompilerArgument, CompilerCoverageBytecodeOption, CompilerCoverageSourceOption,
+    CompilerCoverageSummaryOption, CompilerDocgenOption, CompilerProveOption, CompilerTestOption,
 };
 use crate::error::handle_c_error_default;
 use crate::error::{handle_c_error_binary, Error};
@@ -13,14 +12,14 @@ use crate::move_api::handler as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
 
 use crate::compiler::Command;
-use initia_compiler::{self, New};
-use initia_types::entry_function::EntryFunction;
-use initia_types::env::Env;
-use initia_types::message::Message;
-use initia_types::module::ModuleBundle;
-use initia_types::script::Script;
-use initia_types::view_function::ViewFunction;
-use initia_vm::InitiaVM;
+use initia_move_compiler::{self, New};
+use initia_move_types::entry_function::EntryFunction;
+use initia_move_types::env::Env;
+use initia_move_types::message::Message;
+use initia_move_types::module::ModuleBundle;
+use initia_move_types::script::Script;
+use initia_move_types::view_function::ViewFunction;
+use initia_move_vm::MoveVM;
 use move_cli::base::build::Build;
 use move_cli::Move;
 use move_core_types::account_address::AccountAddress;
@@ -30,11 +29,11 @@ use move_package::BuildConfig;
 #[repr(C)]
 pub struct vm_t {}
 
-pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut InitiaVM> {
+pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut MoveVM> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut InitiaVM) };
+        let c = unsafe { &mut *(ptr as *mut MoveVM) };
         Some(c)
     }
 }
@@ -43,7 +42,7 @@ pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut InitiaVM> {
 pub extern "C" fn release_vm(vm: *mut vm_t) {
     if !vm.is_null() {
         // this will free cache when it goes out of scope
-        let _ = unsafe { Box::from_raw(vm as *mut InitiaVM) };
+        let _ = unsafe { Box::from_raw(vm as *mut MoveVM) };
     }
 }
 
@@ -52,7 +51,7 @@ pub extern "C" fn allocate_vm(
     module_cache_capacity: usize,
     script_cache_capacity: usize,
 ) -> *mut vm_t {
-    let vm = Box::into_raw(Box::new(InitiaVM::new(
+    let vm = Box::into_raw(Box::new(MoveVM::new(
         module_cache_capacity,
         script_cache_capacity,
     )));
@@ -289,12 +288,12 @@ pub extern "C" fn decode_script_bytes(
 #[no_mangle]
 pub extern "C" fn build_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
+    compiler_args: CompilerArgument,
 ) -> UnmanagedVector {
     let cmd = Command::Build(Build);
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -305,13 +304,13 @@ pub extern "C" fn build_move_package(
 #[no_mangle]
 pub extern "C" fn test_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
-    test_opt: InitiaCompilerTestOption,
+    compiler_args: CompilerArgument,
+    test_opt: CompilerTestOption,
 ) -> UnmanagedVector {
     let cmd = Command::Test(test_opt.into());
 
     let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -322,13 +321,13 @@ pub extern "C" fn test_move_package(
 #[no_mangle]
 pub extern "C" fn coverage_summary_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
-    coverage_opt: InitiaCompilerCoverageSummaryOption,
+    compiler_args: CompilerArgument,
+    coverage_opt: CompilerCoverageSummaryOption,
 ) -> UnmanagedVector {
     let cmd = Command::Coverage(coverage_opt.into());
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -339,13 +338,13 @@ pub extern "C" fn coverage_summary_move_package(
 #[no_mangle]
 pub extern "C" fn coverage_source_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
-    coverage_opt: InitiaCompilerCoverageSourceOption,
+    compiler_args: CompilerArgument,
+    coverage_opt: CompilerCoverageSourceOption,
 ) -> UnmanagedVector {
     let cmd = Command::Coverage(coverage_opt.into());
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -356,13 +355,13 @@ pub extern "C" fn coverage_source_move_package(
 #[no_mangle]
 pub extern "C" fn coverage_bytecode_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
-    coverage_opt: InitiaCompilerCoverageBytecodeOption,
+    compiler_args: CompilerArgument,
+    coverage_opt: CompilerCoverageBytecodeOption,
 ) -> UnmanagedVector {
     let cmd = Command::Coverage(coverage_opt.into());
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -373,13 +372,13 @@ pub extern "C" fn coverage_bytecode_move_package(
 #[no_mangle]
 pub extern "C" fn docgen_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
-    docgen_opt: InitiaCompilerDocgenOption,
+    compiler_args: CompilerArgument,
+    docgen_opt: CompilerDocgenOption,
 ) -> UnmanagedVector {
     let cmd = Command::Document(docgen_opt.into());
 
     let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -390,7 +389,7 @@ pub extern "C" fn docgen_move_package(
 #[no_mangle]
 pub extern "C" fn create_new_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
+    compiler_args: CompilerArgument,
     name_view: ByteSliceView,
 ) -> UnmanagedVector {
     let name: Option<String> = name_view.into();
@@ -400,7 +399,7 @@ pub extern "C" fn create_new_move_package(
     });
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -411,19 +410,19 @@ pub extern "C" fn create_new_move_package(
 #[no_mangle]
 pub extern "C" fn clean_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
+    compiler_args: CompilerArgument,
     clean_cache: bool,
     clean_byproduct: bool,
     force: bool,
 ) -> UnmanagedVector {
-    let cmd = Command::Clean(initia_compiler::Clean {
+    let cmd = Command::Clean(initia_move_compiler::Clean {
         clean_cache,
         clean_byproduct,
         force,
     });
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 
@@ -434,13 +433,13 @@ pub extern "C" fn clean_move_package(
 #[no_mangle]
 pub extern "C" fn prove_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    initia_args: InitiaCompilerArgument,
-    prove_opt: InitiaCompilerProveOption,
+    compiler_args: CompilerArgument,
+    prove_opt: CompilerProveOption,
 ) -> UnmanagedVector {
     let cmd = Command::Prove(prove_opt.into());
 
     let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(initia_args.into(), cmd)
+        compiler::execute(compiler_args.into(), cmd)
     }))
     .unwrap_or_else(|_| Err(Error::panic()));
 

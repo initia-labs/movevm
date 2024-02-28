@@ -3,9 +3,9 @@
 mod session;
 
 pub use crate::backend::*;
-pub use crate::initia_vm::InitiaVM;
+pub use crate::move_vm::MoveVM;
 pub mod backend;
 
 mod convert;
-mod initia_vm;
+mod move_vm;
 mod verifier;

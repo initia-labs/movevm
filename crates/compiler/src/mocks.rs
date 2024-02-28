@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Error};
-use initia_natives::{
+use initia_move_natives::{
     account::AccountAPI, oracle::OracleAPI, query::QueryAPI, staking::StakingAPI,
     table::TableResolver,
 };
-use initia_types::table::TableHandle;
+use initia_move_types::table::TableHandle;
 use move_core_types::{account_address::AccountAddress, u256::U256};
 
 /// A dummy storage containing no modules or resources.
@@ -24,7 +24,7 @@ impl TableResolver for BlankTableViewImpl {
         _handle: &TableHandle,
         _start: Option<&[u8]>,
         _end: Option<&[u8]>,
-        _order: initia_types::iterator::Order,
+        _order: initia_move_types::iterator::Order,
     ) -> anyhow::Result<u32> {
         Ok(0)
     }

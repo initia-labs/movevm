@@ -1,4 +1,4 @@
-use initia_gas::NumArgs;
+use initia_move_gas::NumArgs;
 
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{loaded_data::runtime_types::Type, values::Value};

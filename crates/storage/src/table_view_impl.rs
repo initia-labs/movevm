@@ -2,9 +2,9 @@
 
 use crate::table_view::TableView;
 
-use initia_natives::table::TableResolver;
-use initia_types::iterator::Order;
-use initia_types::table::TableHandle;
+use initia_move_natives::table::TableResolver;
+use initia_move_types::iterator::Order;
+use initia_move_types::table::TableHandle;
 
 pub struct TableViewImpl<'block, S> {
     table_view: &'block mut S,

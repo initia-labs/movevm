@@ -3,7 +3,7 @@ name = "e2e-move-tests"
 version = "0.1.0"
 edition = "2021"
 publish = false
-repository = "https://github.com/initia-labs/initiavm/tree/main/crates/e2e-move-tests"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/e2e-move-tests"
 rust-version = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,12 +21,12 @@ once_cell = { workspace = true }
 sha3 = { workspace = true }
 bytes = { workspace = true }
 
-initia-types = { workspace = true }
-initia-vm = { workspace = true }
-initia-storage = { workspace = true }
-initia-gas = { workspace = true }
-initia-natives = { workspace = true }
-initia-compiler = { workspace = true }
+initia-move-types = { workspace = true }
+initia-move-vm = { workspace = true }
+initia-move-storage = { workspace = true }
+initia-move-gas = { workspace = true }
+initia-move-natives = { workspace = true }
+initia-move-compiler = { workspace = true }
 
 move-binary-format = { workspace = true }
 move-core-types = { workspace = true }
@@ -40,7 +40,7 @@ move-vm-runtime = { workspace = true }
 [features]
 default = []
 testing = [
-    "initia-gas/testing",
-    "initia-natives/testing",
+    "initia-move-gas/testing",
+    "initia-move-natives/testing",
     "move-vm-runtime/testing",
 ]

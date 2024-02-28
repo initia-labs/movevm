@@ -6,9 +6,9 @@ import (
 	"path"
 	"testing"
 
-	compiler "github.com/initia-labs/initiavm/types/compiler"
-	buildtypes "github.com/initia-labs/initiavm/types/compiler/build"
-	testtypes "github.com/initia-labs/initiavm/types/compiler/test"
+	compiler "github.com/initia-labs/movevm/types/compiler"
+	buildtypes "github.com/initia-labs/movevm/types/compiler/build"
+	testtypes "github.com/initia-labs/movevm/types/compiler/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +21,7 @@ func init() {
 }
 
 func Test_TestContract(t *testing.T) {
-	initia_arg := compiler.NewInitiaCompilerArgumentWithBuildOption(packagePath, false,
+	initia_arg := compiler.NewCompilerArgumentWithBuildOption(packagePath, false,
 		buildtypes.WithInstallDir(path.Join(packagePath, "build-test")),
 		buildtypes.WithDevMode(),
 		buildtypes.WithTestMode(),
@@ -44,7 +44,7 @@ func Test_CleanContract(t *testing.T) {
 	defer os.RemoveAll(tmpPath)
 
 	// new
-	initia_arg := compiler.NewInitiaCompilerArgument(tmpPath, false, buildtypes.DefaultBuildConfig())
+	initia_arg := compiler.NewCompilerArgument(tmpPath, false, buildtypes.DefaultBuildConfig())
 	res, err := CreateContractPackage(initia_arg, "novum_initium")
 	require.NoError(t, err)
 	require.Equal(t, string(res), "ok")
@@ -55,7 +55,7 @@ func Test_CleanContract(t *testing.T) {
 	require.NoError(t, err)
 
 	// clean
-	initia_arg = compiler.NewInitiaCompilerArgument(tmpPath, false, buildtypes.DefaultBuildConfig())
+	initia_arg = compiler.NewCompilerArgument(tmpPath, false, buildtypes.DefaultBuildConfig())
 	res, err = CleanContractPackage(initia_arg, true, true, true)
 	require.NoError(t, err)
 	require.Equal(t, string(res), "ok")
@@ -76,7 +76,7 @@ func Test_CleanContract(t *testing.T) {
 
 // NOTE: should be executed after `Test_CleanContract`
 func Test_BuildContract(t *testing.T) {
-	initia_arg := compiler.NewInitiaCompilerArgumentWithBuildOption(packagePath, false,
+	initia_arg := compiler.NewCompilerArgumentWithBuildOption(packagePath, false,
 		buildtypes.WithInstallDir(path.Join(packagePath, "build-release")),
 		buildtypes.WithBytecodeVersion(6),
 		buildtypes.WithSkipFetchLatestGitDeps(),
@@ -89,7 +89,7 @@ func Test_BuildContract(t *testing.T) {
 /* it requires 3rd party executables like boogie and one of z4 or cvc5
 // to run this test, make sure Z3_EXE, CVC4_EXE, BOOGIE_EXE is set as environment variables
 func Test_ProveContract(t *testing.T) {
-	initia_arg := compiler.NewInitiaCompilerArgumentWithBuildOption(packagePath, false,
+	initia_arg := compiler.NewCompilerArgumentWithBuildOption(packagePath, false,
 		buildtypes.WithBytecodeVersion(6),
 		buildtypes.WithSkipFetchLatestGitDeps(),
 	)
@@ -109,7 +109,7 @@ func Test_CreateNewContract(t *testing.T) {
 
 	defer os.RemoveAll(tmpPath)
 
-	initia_arg := compiler.NewInitiaCompilerArgument(tmpPath, false, buildtypes.DefaultBuildConfig())
+	initia_arg := compiler.NewCompilerArgument(tmpPath, false, buildtypes.DefaultBuildConfig())
 	res, err := CreateContractPackage(initia_arg, "novum_initium")
 	require.NoError(t, err)
 	require.Equal(t, string(res), "ok")

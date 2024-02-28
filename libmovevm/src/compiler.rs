@@ -4,7 +4,7 @@ use std::{path::Path, str::FromStr};
 
 use crate::{error::Error, ByteSliceView};
 
-use initia_compiler::{self, prover::ProverOptions};
+use initia_move_compiler::{self, prover::ProverOptions};
 
 use move_cli::{
     base::{
@@ -15,13 +15,13 @@ use move_cli::{
 };
 use move_package::{Architecture, BuildConfig, CompilerConfig};
 
-pub use initia_compiler::Command;
+pub use initia_move_compiler::Command;
 
 pub fn execute(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
     let action = cmd.to_string();
     let verbose = move_args.verbose;
 
-    match initia_compiler::execute(move_args, cmd) {
+    match initia_move_compiler::execute(move_args, cmd) {
         Ok(_) => Ok(Vec::from("ok")),
         Err(e) => {
             if verbose {
@@ -53,7 +53,7 @@ pub enum CoverageOption {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerArgument {
+pub struct CompilerArgument {
     /// Path to a package which the command should be run with respect to.
     pub package_path: ByteSliceView,
 
@@ -61,11 +61,11 @@ pub struct InitiaCompilerArgument {
     pub verbose: bool,
 
     /// Package build options
-    pub build_config: InitiaCompilerBuildConfig,
+    pub build_config: CompilerBuildConfig,
 }
 
-impl From<InitiaCompilerArgument> for Move {
-    fn from(val: InitiaCompilerArgument) -> Self {
+impl From<CompilerArgument> for Move {
+    fn from(val: CompilerArgument) -> Self {
         let package_path = val
             .package_path
             .read()
@@ -79,7 +79,7 @@ impl From<InitiaCompilerArgument> for Move {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerBuildConfig {
+pub struct CompilerBuildConfig {
     /// Compile in 'dev' mode. The 'dev-addresses' and 'dev-dependencies' fields will be used if
     /// this flag is set. This flag is useful for development of packages that expose named
     /// addresses that are not set to a specific value.
@@ -103,8 +103,8 @@ pub struct InitiaCompilerBuildConfig {
     pub bytecode_version: u32,
 }
 
-impl From<InitiaCompilerBuildConfig> for BuildConfig {
-    fn from(val: InitiaCompilerBuildConfig) -> Self {
+impl From<CompilerBuildConfig> for BuildConfig {
+    fn from(val: CompilerBuildConfig) -> Self {
         Self {
             dev_mode: val.dev_mode,
             test_mode: val.test_mode,
@@ -129,7 +129,7 @@ impl From<InitiaCompilerBuildConfig> for BuildConfig {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerTestOption {
+pub struct CompilerTestOption {
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     pub filter: ByteSliceView,
@@ -143,8 +143,8 @@ pub struct InitiaCompilerTestOption {
     pub compute_coverage: bool,
 }
 
-impl From<InitiaCompilerTestOption> for Test {
-    fn from(val: InitiaCompilerTestOption) -> Self {
+impl From<CompilerTestOption> for Test {
+    fn from(val: CompilerTestOption) -> Self {
         Self {
             filter: val.filter.into(),
             report_statistics: val.report_statistics,
@@ -161,15 +161,15 @@ impl From<InitiaCompilerTestOption> for Test {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerCoverageSummaryOption {
+pub struct CompilerCoverageSummaryOption {
     /// Whether function coverage summaries should be displayed
     functions: bool,
     /// Output CSV data of coverage
     output_csv: bool,
 }
 
-impl From<InitiaCompilerCoverageSummaryOption> for Coverage {
-    fn from(val: InitiaCompilerCoverageSummaryOption) -> Self {
+impl From<CompilerCoverageSummaryOption> for Coverage {
+    fn from(val: CompilerCoverageSummaryOption) -> Self {
         Self {
             options: CoverageSummaryOptions::Summary {
                 functions: val.functions,
@@ -180,12 +180,12 @@ impl From<InitiaCompilerCoverageSummaryOption> for Coverage {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerCoverageSourceOption {
+pub struct CompilerCoverageSourceOption {
     module_name: ByteSliceView,
 }
 
-impl From<InitiaCompilerCoverageSourceOption> for Coverage {
-    fn from(val: InitiaCompilerCoverageSourceOption) -> Self {
+impl From<CompilerCoverageSourceOption> for Coverage {
+    fn from(val: CompilerCoverageSourceOption) -> Self {
         let module_name: Option<String> = val.module_name.into();
         Self {
             options: CoverageSummaryOptions::Source {
@@ -196,12 +196,12 @@ impl From<InitiaCompilerCoverageSourceOption> for Coverage {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerCoverageBytecodeOption {
+pub struct CompilerCoverageBytecodeOption {
     module_name: ByteSliceView,
 }
 
-impl From<InitiaCompilerCoverageBytecodeOption> for Coverage {
-    fn from(val: InitiaCompilerCoverageBytecodeOption) -> Self {
+impl From<CompilerCoverageBytecodeOption> for Coverage {
+    fn from(val: CompilerCoverageBytecodeOption) -> Self {
         let module_name: Option<String> = val.module_name.into();
         Self {
             options: CoverageSummaryOptions::Bytecode {
@@ -212,7 +212,7 @@ impl From<InitiaCompilerCoverageBytecodeOption> for Coverage {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerProveOption {
+pub struct CompilerProveOption {
     // Verbosity level
     pub verbosity: ByteSliceView,
     /// Filters targets out from the package. Any module with a matching file name will
@@ -247,8 +247,8 @@ pub struct InitiaCompilerProveOption {
     pub for_test: bool,
 }
 
-impl From<InitiaCompilerProveOption> for ProverOptions {
-    fn from(val: InitiaCompilerProveOption) -> Self {
+impl From<CompilerProveOption> for ProverOptions {
+    fn from(val: CompilerProveOption) -> Self {
         let verbosity_str: Option<String> = val.verbosity.into();
         let verbosity = verbosity_str.map(|s| LevelFilter::from_str(s.as_str()).unwrap());
         Self {
@@ -276,7 +276,7 @@ impl From<InitiaCompilerProveOption> for ProverOptions {
 }
 
 #[repr(C)]
-pub struct InitiaCompilerDocgenOption {
+pub struct CompilerDocgenOption {
     /// Whether to include private declarations and implementations into the generated
     /// documentation. Defaults to false.
     pub include_impl: bool,
@@ -309,8 +309,8 @@ pub struct InitiaCompilerDocgenOption {
     pub references_file: ByteSliceView,
 }
 
-impl From<InitiaCompilerDocgenOption> for DocgenOptions {
-    fn from(val: InitiaCompilerDocgenOption) -> Self {
+impl From<CompilerDocgenOption> for DocgenOptions {
+    fn from(val: CompilerDocgenOption) -> Self {
         let landing_page_template: Option<String> = val.landing_page_template.into();
 
         Self {

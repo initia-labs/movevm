@@ -1,6 +1,6 @@
 use better_any::{Tid, TidAble};
-use initia_gas::InternalGas;
-use initia_types::query::*;
+use initia_move_gas::InternalGas;
+use initia_move_types::query::*;
 use move_binary_format::errors::PartialVMError;
 use move_core_types::gas_algebra::NumBytes;
 use move_core_types::vm_status::StatusCode;
@@ -19,7 +19,7 @@ use crate::{
     safely_pop_arg,
 };
 
-// defined in initia_gas::meter
+// defined in initia_move_gas::meter
 const GAS_UNIT_SCALING_FACTOR: u64 = 100;
 
 // See stdlib/error.move

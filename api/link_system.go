@@ -1,6 +1,6 @@
-//go:build sys_initia
+//go:build sys_movevm
 
 package api
 
-// #cgo LDFLAGS: -linitia
+// #cgo LDFLAGS: -lmovevm
 import "C"

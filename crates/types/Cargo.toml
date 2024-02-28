@@ -1,8 +1,8 @@
 [package]
-name = "initia-types"
+name = "initia-move-types"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/initia-labs/initiavm/tree/main/crates/types"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/types"
 rust-version = { workspace = true }
 
 [dependencies]

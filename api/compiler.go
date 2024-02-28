@@ -8,14 +8,14 @@ import (
 	"runtime"
 	"syscall"
 
-	compiler "github.com/initia-labs/initiavm/types/compiler"
-	coveragetypes "github.com/initia-labs/initiavm/types/compiler/coverage"
-	docgentypes "github.com/initia-labs/initiavm/types/compiler/docgen"
-	provetypes "github.com/initia-labs/initiavm/types/compiler/prove"
-	testtypes "github.com/initia-labs/initiavm/types/compiler/test"
+	compiler "github.com/initia-labs/movevm/types/compiler"
+	coveragetypes "github.com/initia-labs/movevm/types/compiler/coverage"
+	docgentypes "github.com/initia-labs/movevm/types/compiler/docgen"
+	provetypes "github.com/initia-labs/movevm/types/compiler/prove"
+	testtypes "github.com/initia-labs/movevm/types/compiler/test"
 )
 
-func BuildContract(arg compiler.InitiaCompilerArgument) ([]byte, error) {
+func BuildContract(arg compiler.CompilerArgument) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -26,10 +26,10 @@ func BuildContract(arg compiler.InitiaCompilerArgument) ([]byte, error) {
 	installDirBytesView := makeView([]byte(buildConfig.InstallDir))
 	defer runtime.KeepAlive(installDirBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -51,7 +51,7 @@ func BuildContract(arg compiler.InitiaCompilerArgument) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func TestContract(arg compiler.InitiaCompilerArgument, testConfig testtypes.TestConfig) ([]byte, error) {
+func TestContract(arg compiler.CompilerArgument, testConfig testtypes.TestConfig) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -64,10 +64,10 @@ func TestContract(arg compiler.InitiaCompilerArgument, testConfig testtypes.Test
 	filterBytesView := makeView([]byte(testConfig.Filter))
 	defer runtime.KeepAlive(filterBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -79,7 +79,7 @@ func TestContract(arg compiler.InitiaCompilerArgument, testConfig testtypes.Test
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
 		},
 	}
-	testOpt := C.InitiaCompilerTestOption{
+	testOpt := C.CompilerTestOption{
 		filter:                  filterBytesView,
 		report_statistics:       cbool(testConfig.ReportStatistics),
 		report_storage_on_error: cbool(testConfig.ReportStorageOnError),
@@ -99,7 +99,7 @@ func TestContract(arg compiler.InitiaCompilerArgument, testConfig testtypes.Test
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CoverageSummary(arg compiler.InitiaCompilerArgument, coverageSummaryConfig coveragetypes.CoverageSummaryConfig) ([]byte, error) {
+func CoverageSummary(arg compiler.CompilerArgument, coverageSummaryConfig coveragetypes.CoverageSummaryConfig) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -110,10 +110,10 @@ func CoverageSummary(arg compiler.InitiaCompilerArgument, coverageSummaryConfig 
 	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
 	defer runtime.KeepAlive(installDirBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -125,7 +125,7 @@ func CoverageSummary(arg compiler.InitiaCompilerArgument, coverageSummaryConfig 
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
 		},
 	}
-	coverageSummaryOpt := C.InitiaCompilerCoverageSummaryOption{
+	coverageSummaryOpt := C.CompilerCoverageSummaryOption{
 		functions:  cbool(coverageSummaryConfig.Functions),
 		output_csv: cbool(coverageSummaryConfig.OutputCSV),
 	}
@@ -142,7 +142,7 @@ func CoverageSummary(arg compiler.InitiaCompilerArgument, coverageSummaryConfig 
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CoverageSource(arg compiler.InitiaCompilerArgument, coverageSourceConfig coveragetypes.CoverageSourceConfig) ([]byte, error) {
+func CoverageSource(arg compiler.CompilerArgument, coverageSourceConfig coveragetypes.CoverageSourceConfig) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -155,10 +155,10 @@ func CoverageSource(arg compiler.InitiaCompilerArgument, coverageSourceConfig co
 	moduleNameBytesView := makeView([]byte(coverageSourceConfig.ModuleName))
 	defer runtime.KeepAlive(moduleNameBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -170,7 +170,7 @@ func CoverageSource(arg compiler.InitiaCompilerArgument, coverageSourceConfig co
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
 		},
 	}
-	coverageSourceOpt := C.InitiaCompilerCoverageSourceOption{
+	coverageSourceOpt := C.CompilerCoverageSourceOption{
 		module_name: moduleNameBytesView,
 	}
 
@@ -186,7 +186,7 @@ func CoverageSource(arg compiler.InitiaCompilerArgument, coverageSourceConfig co
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CoverageBytecode(arg compiler.InitiaCompilerArgument, coverageBytecodeConfig coveragetypes.CoverageBytecodeConfig) ([]byte, error) {
+func CoverageBytecode(arg compiler.CompilerArgument, coverageBytecodeConfig coveragetypes.CoverageBytecodeConfig) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -199,10 +199,10 @@ func CoverageBytecode(arg compiler.InitiaCompilerArgument, coverageBytecodeConfi
 	moduleNameBytesView := makeView([]byte(coverageBytecodeConfig.ModuleName))
 	defer runtime.KeepAlive(moduleNameBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -214,7 +214,7 @@ func CoverageBytecode(arg compiler.InitiaCompilerArgument, coverageBytecodeConfi
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
 		},
 	}
-	coverageBytecodeOpt := C.InitiaCompilerCoverageBytecodeOption{
+	coverageBytecodeOpt := C.CompilerCoverageBytecodeOption{
 		module_name: moduleNameBytesView,
 	}
 
@@ -230,7 +230,7 @@ func CoverageBytecode(arg compiler.InitiaCompilerArgument, coverageBytecodeConfi
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func ProveContract(arg compiler.InitiaCompilerArgument, proveConfig provetypes.ProveConfig) ([]byte, error) {
+func ProveContract(arg compiler.CompilerArgument, proveConfig provetypes.ProveConfig) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -245,10 +245,10 @@ func ProveContract(arg compiler.InitiaCompilerArgument, proveConfig provetypes.P
 	verbosityBytesView := makeView([]byte(proveConfig.Verbosity))
 	defer runtime.KeepAlive(verbosityBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -260,7 +260,7 @@ func ProveContract(arg compiler.InitiaCompilerArgument, proveConfig provetypes.P
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
 		},
 	}
-	proveOpt := C.InitiaCompilerProveOption{
+	proveOpt := C.CompilerProveOption{
 		verbosity:            verbosityBytesView,
 		filter:               filterBytesView,
 		trace:                cbool(proveConfig.Trace),
@@ -289,7 +289,7 @@ func ProveContract(arg compiler.InitiaCompilerArgument, proveConfig provetypes.P
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func Docgen(arg compiler.InitiaCompilerArgument, docgenOption docgentypes.DocgenConfig) ([]byte, error) {
+func Docgen(arg compiler.CompilerArgument, docgenOption docgentypes.DocgenConfig) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -304,10 +304,10 @@ func Docgen(arg compiler.InitiaCompilerArgument, docgenOption docgentypes.Docgen
 	referencesFileBytesView := makeView([]byte(docgenOption.ReferencesFile))
 	defer runtime.KeepAlive(referencesFileBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -319,7 +319,7 @@ func Docgen(arg compiler.InitiaCompilerArgument, docgenOption docgentypes.Docgen
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
 		},
 	}
-	docgenOpt := C.InitiaCompilerDocgenOption{
+	docgenOpt := C.CompilerDocgenOption{
 		include_impl:          cbool(docgenOption.IncludeImpl),
 		include_specs:         cbool(docgenOption.IncludeSpecs),
 		specs_inlined:         cbool(docgenOption.SpecsInlined),
@@ -341,7 +341,7 @@ func Docgen(arg compiler.InitiaCompilerArgument, docgenOption docgentypes.Docgen
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CreateContractPackage(arg compiler.InitiaCompilerArgument, name string) ([]byte, error) {
+func CreateContractPackage(arg compiler.CompilerArgument, name string) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -352,10 +352,10 @@ func CreateContractPackage(arg compiler.InitiaCompilerArgument, name string) ([]
 	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
 	defer runtime.KeepAlive(installDirBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),
@@ -380,7 +380,7 @@ func CreateContractPackage(arg compiler.InitiaCompilerArgument, name string) ([]
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CleanContractPackage(arg compiler.InitiaCompilerArgument, cleanCache, cleanByproduct, force bool) ([]byte, error) {
+func CleanContractPackage(arg compiler.CompilerArgument, cleanCache, cleanByproduct, force bool) ([]byte, error) {
 	var err error
 
 	errmsg := newUnmanagedVector(nil)
@@ -391,10 +391,10 @@ func CleanContractPackage(arg compiler.InitiaCompilerArgument, cleanCache, clean
 	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
 	defer runtime.KeepAlive(installDirBytesView)
 
-	compArg := C.InitiaCompilerArgument{
+	compArg := C.CompilerArgument{
 		package_path: pathBytesView,
 		verbose:      cbool(arg.Verbose),
-		build_config: C.InitiaCompilerBuildConfig{
+		build_config: C.CompilerBuildConfig{
 			dev_mode:                   cbool(buildConfig.DevMode),
 			test_mode:                  cbool(buildConfig.TestMode),
 			generate_docs:              cbool(buildConfig.GenerateDocs),

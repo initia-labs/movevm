@@ -88,6 +88,6 @@ RUN mkdir /.cargo
 RUN chmod +rx /.cargo
 COPY guest/cargo-config /.cargo/config
 
-WORKDIR /code/libinitia
+WORKDIR /code/libmovevm
 
 CMD ["/opt/build_muslc.sh"]
