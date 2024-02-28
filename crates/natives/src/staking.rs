@@ -1,29 +1,25 @@
-use crate::helpers::get_metadata_address;
+use crate::{
+    helpers::get_metadata_address,
+    interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult},
+    safely_pop_arg,
+};
 use better_any::{Tid, TidAble};
-use initia_gas::gas_params::staking::*;
 use initia_types::staking_change_set::StakingChangeSet;
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
-use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_binary_format::errors::PartialVMError;
+use move_core_types::{
+    account_address::AccountAddress, gas_algebra::NumBytes, vm_status::StatusCode,
+};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{StructRef, Value, Vector},
 };
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
+use std::borrow::BorrowMut;
 use std::collections::{BTreeMap, VecDeque};
-use std::{borrow::BorrowMut, sync::Arc};
 
 #[cfg(feature = "testing")]
 use crate::block::NativeBlockContext;
-
-use crate::util::make_native_from_func;
-#[cfg(feature = "testing")]
-use crate::util::make_test_only_native_from_func;
-
-#[cfg(feature = "testing")]
-use initia_gas::InternalGas;
 
 /// API to allow move modules to interact with CosmosSDK's
 /// staking API.
@@ -125,20 +121,24 @@ impl<'a> NativeStakingContext<'a> {
 // Implementations
 
 fn native_delegate(
-    gas_params: &DelegateGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.staking.delegate;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 3);
+    debug_assert!(arguments.len() == 3);
+
+    let amount = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+
+    context
+        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
 
     let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
     let staking_data = staking_context.staking_data.borrow_mut();
-
-    let amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let validator = pop_arg!(args, Vector).to_vec_u8()?;
 
     match staking_data.changes.get_mut(&validator) {
         Some(val) => match val.get_mut(&metadata) {
@@ -161,10 +161,7 @@ fn native_delegate(
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            return Ok(NativeResult::ok(
-                gas_params.base,
-                smallvec![Value::u64(amount * ratio.0 / ratio.1)],
-            ));
+            return Ok(smallvec![Value::u64(amount * ratio.0 / ratio.1)]);
         }
     }
 
@@ -173,31 +170,28 @@ fn native_delegate(
         .amount_to_share(&validator, metadata, amount)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(NativeResult::ok(
-        gas_params.base,
-        smallvec![Value::u64(share)],
-    ))
-}
-
-pub fn make_native_delegate(gas_params: DelegateGasParameters) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| native_delegate(&gas_params, context, ty_args, args))
+    Ok(smallvec![Value::u64(share)])
 }
 
 fn native_undelegate(
-    gas_params: &UndelegateGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.staking.undelegate;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 3);
+    debug_assert!(arguments.len() == 3);
+
+    let share = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+
+    context
+        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
 
     let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
     let staking_data = staking_context.staking_data.borrow_mut();
-
-    let share = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let validator = pop_arg!(args, Vector).to_vec_u8()?;
 
     match staking_data.changes.get_mut(&validator) {
         Some(val) => match val.get_mut(&metadata) {
@@ -226,10 +220,7 @@ fn native_undelegate(
             let (_, timestamp) = block_context.get_block_info();
             let unbond_timestamp = timestamp + 60 * 60 * 24 * 7;
 
-            return Ok(NativeResult::ok(
-                gas_params.base,
-                smallvec![Value::u64(amount), Value::u64(unbond_timestamp)],
-            ));
+            return Ok(smallvec![Value::u64(amount), Value::u64(unbond_timestamp)]);
         }
     }
 
@@ -244,40 +235,38 @@ fn native_undelegate(
         .unbond_timestamp()
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(NativeResult::ok(
-        gas_params.base,
-        smallvec![Value::u64(amount), Value::u64(unbond_timestamp)],
-    ))
-}
-
-pub fn make_native_undelegate(gas_params: UndelegateGasParameters) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| native_undelegate(&gas_params, context, ty_args, args))
+    Ok(smallvec![Value::u64(amount), Value::u64(unbond_timestamp)])
 }
 
 fn native_share_to_amount(
-    gas_params: &ShareToAmountGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context
+        .native_gas_params
+        .initia_stdlib
+        .staking
+        .share_to_amount;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 3);
+    debug_assert!(arguments.len() == 3);
+
+    let share = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+
+    context
+        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
-
-    let share = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let validator = pop_arg!(args, Vector).to_vec_u8()?;
 
     #[cfg(feature = "testing")]
     if staking_context.share_ratios.contains_key(&validator) {
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            return Ok(NativeResult::ok(
-                gas_params.base,
-                smallvec![Value::u64(share * ratio.1 / ratio.0)],
-            ));
+            return Ok(smallvec![Value::u64(share * ratio.1 / ratio.0)]);
         }
     }
 
@@ -286,42 +275,38 @@ fn native_share_to_amount(
         .share_to_amount(&validator, metadata, share)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(NativeResult::ok(
-        gas_params.base,
-        smallvec![Value::u64(amount),],
-    ))
-}
-
-pub fn make_native_share_to_amount(gas_params: ShareToAmountGasParameters) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| {
-        native_share_to_amount(&gas_params, context, ty_args, args)
-    })
+    Ok(smallvec![Value::u64(amount),])
 }
 
 fn native_amount_to_share(
-    gas_params: &AmountToShareGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context
+        .native_gas_params
+        .initia_stdlib
+        .staking
+        .amount_to_share;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 3);
+    debug_assert!(arguments.len() == 3);
+
+    let amount = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+
+    context
+        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
-
-    let amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let validator = pop_arg!(args, Vector).to_vec_u8()?;
 
     #[cfg(feature = "testing")]
     if staking_context.share_ratios.contains_key(&validator) {
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            return Ok(NativeResult::ok(
-                gas_params.base,
-                smallvec![Value::u64(amount * ratio.0 / ratio.1)],
-            ));
+            return Ok(smallvec![Value::u64(amount * ratio.0 / ratio.1)]);
         }
     }
 
@@ -330,71 +315,51 @@ fn native_amount_to_share(
         .amount_to_share(&validator, metadata, amount)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(NativeResult::ok(
-        gas_params.base,
-        smallvec![Value::u64(share),],
-    ))
-}
-
-pub fn make_native_amount_to_share(gas_params: AmountToShareGasParameters) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| {
-        native_amount_to_share(&gas_params, context, ty_args, args)
-    })
+    Ok(smallvec![Value::u64(share),])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
-
     natives.extend([
-        (
-            "delegate_internal",
-            make_native_from_func(gas_params.delegate, native_delegate),
-        ),
-        (
-            "undelegate_internal",
-            make_native_from_func(gas_params.undelegate, native_undelegate),
-        ),
-        (
-            "share_to_amount",
-            make_native_from_func(gas_params.share_to_amount, native_share_to_amount),
-        ),
-        (
-            "amount_to_share",
-            make_native_from_func(gas_params.amount_to_share, native_amount_to_share),
-        ),
+        ("delegate_internal", native_delegate as RawSafeNative),
+        ("undelegate_internal", native_undelegate),
+        ("share_to_amount", native_share_to_amount),
+        ("amount_to_share", native_amount_to_share),
     ]);
 
     #[cfg(feature = "testing")]
     natives.extend([(
         "set_staking_share_ratio",
-        make_test_only_native_from_func(native_test_only_set_staking_share_ratio),
+        native_test_only_set_staking_share_ratio as RawSafeNative,
     )]);
 
-    crate::helpers::make_module_natives(natives)
+    builder.make_named_natives(natives)
 }
 
 #[cfg(feature = "testing")]
 fn native_test_only_set_staking_share_ratio(
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 4);
+    debug_assert!(arguments.len() == 4);
 
-    let amount = pop_arg!(args, u64);
-    let share = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let validator = pop_arg!(args, Vector).to_vec_u8()?;
+    let amount = safely_pop_arg!(arguments, u64);
+    let share = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
     let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
     NativeStakingContext::set_share_ratio(staking_context, validator, metadata, share, amount);
 
-    Ok(NativeResult::ok(InternalGas::zero(), smallvec![]))
+    Ok(smallvec![])
 }
 
 // =========================================================================================

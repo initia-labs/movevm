@@ -1,15 +1,6 @@
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
-use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::values::{Reference, Struct, StructRef, Value};
-
-pub fn make_module_natives(
-    natives: impl IntoIterator<Item = (impl Into<String>, NativeFunction)>,
-) -> impl Iterator<Item = (String, NativeFunction)> {
-    natives
-        .into_iter()
-        .map(|(func_name, func)| (func_name.into(), func))
-}
 
 // =========================================================================================
 // Helpers

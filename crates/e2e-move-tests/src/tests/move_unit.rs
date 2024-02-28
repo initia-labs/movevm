@@ -44,13 +44,8 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
 fn initia_test_natives() -> NativeFunctionTable {
     configure_for_unit_test();
     let gas_params = NativeGasParameters::zeros();
-    let abs_val_size_gas_params = initia_gas::AbstractValueSizeGasParameters::zeros();
-    all_natives(
-        gas_params.move_stdlib,
-        gas_params.initia_stdlib,
-        gas_params.table,
-        abs_val_size_gas_params,
-    )
+    let misc_gas_params = initia_gas::MiscGasParameters::zeros();
+    all_natives(gas_params, misc_gas_params)
 }
 
 fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {

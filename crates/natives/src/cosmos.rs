@@ -1,25 +1,23 @@
 use better_any::{Tid, TidAble};
-use initia_gas::gas_params::cosmos::*;
 use initia_types::cosmos::{
     CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
-    MoveMessage, OPinitMessage, StakingMessage, StargateMessage,
+    MoveMessage, StakingMessage, StargateMessage,
 };
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
-use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{StructRef, Value, Vector},
 };
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 use std::{cell::RefCell, collections::VecDeque};
 
 use crate::{
-    helpers::{get_metadata_address, make_module_natives},
-    pop_vec_arg,
-    util::make_native_from_func,
+    helpers::{get_metadata_address, partial_extension_error},
+    interface::{
+        RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+    },
+    safely_pop_arg, safely_pop_vec_arg,
 };
 
 /***************************************************************************************************
@@ -44,66 +42,68 @@ impl NativeCosmosContext {
 }
 
 // =========================================================================================
-// Helpers
-
-fn partial_extension_error(msg: impl ToString) -> PartialVMError {
-    PartialVMError::new(StatusCode::VM_EXTENSION_ERROR).with_message(msg.to_string())
-}
-
-fn partial_error(code: StatusCode, msg: impl ToString) -> PartialVMError {
-    PartialVMError::new(code).with_message(msg.to_string())
-}
-
-// =========================================================================================
 // Implementations
 
 fn native_stargate(
-    gas_params: &StargateParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.stargate;
+    context.charge(gas_params.base)?;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 3);
+    debug_assert!(arguments.len() == 2);
 
-    let data = pop_arg!(args, Vector).to_vec_u8()?;
-    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+    let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(data.len() as u64))?;
 
+    let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
     let message = CosmosMessage::Stargate(StargateMessage { sender, data });
 
     // build cosmos message
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_move_execute(
-    gas_params: &MoveExecuteGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.move_execute;
+    context.charge(gas_params.base)?;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 6);
+    debug_assert!(arguments.len() == 6);
 
     let mut msg_args: Vec<Vec<u8>> = vec![];
-    for msg_arg in pop_vec_arg!(args, Vec<u8>) {
+    for msg_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
+        context.charge(gas_params.per_byte * NumBytes::new(msg_arg.len() as u64))?;
+
         msg_args.push(msg_arg);
     }
 
     let mut msg_type_args: Vec<String> = vec![];
-    for msg_type_arg in pop_vec_arg!(args, Vec<u8>) {
+    for msg_type_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
+        context.charge(gas_params.per_byte * NumBytes::new(msg_type_arg.len() as u64))?;
+
         let msg_type_arg = std::str::from_utf8(&msg_type_arg)
             .map_err(|_| partial_extension_error("failed to deserialize type args"))?
             .to_string();
         msg_type_args.push(msg_type_arg);
     }
 
-    let function_name = pop_arg!(args, Vector).to_vec_u8()?;
-    let module_name = pop_arg!(args, Vector).to_vec_u8()?;
-    let module_address = pop_arg!(args, AccountAddress);
-    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+    let function_name = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(function_name.len() as u64))?;
+
+    let module_name = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(module_name.len() as u64))?;
+
+    let module_address = safely_pop_arg!(arguments, AccountAddress);
+    let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
     let function_name = std::str::from_utf8(&function_name)
         .map_err(|_| partial_extension_error("failed to deserialize function_name"))?
@@ -126,34 +126,41 @@ fn native_move_execute(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_move_script(
-    gas_params: &MoveScriptGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.move_script;
+    context.charge(gas_params.base)?;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 4);
+    debug_assert!(arguments.len() == 4);
 
     let mut msg_args: Vec<Vec<u8>> = vec![];
-    for msg_arg in pop_vec_arg!(args, Vec<u8>) {
+    for msg_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
+        context.charge(gas_params.per_byte * NumBytes::new(msg_arg.len() as u64))?;
+
         msg_args.push(msg_arg);
     }
 
     let mut msg_type_args: Vec<String> = vec![];
-    for msg_type_arg in pop_vec_arg!(args, Vec<u8>) {
+    for msg_type_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
+        context.charge(gas_params.per_byte * NumBytes::new(msg_type_arg.len() as u64))?;
+
         let msg_type_arg = std::str::from_utf8(&msg_type_arg)
             .map_err(|_| partial_extension_error("failed to deserialize type args"))?
             .to_string();
         msg_type_args.push(msg_type_arg);
     }
 
-    let code_bytes = pop_arg!(args, Vector).to_vec_u8()?;
-    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+    let code_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(code_bytes.len() as u64))?;
 
+    let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
     let message = CosmosMessage::Move(MoveMessage::Script {
         sender,
         code_bytes,
@@ -165,22 +172,26 @@ fn native_move_script(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_delegate(
-    gas_params: &DelegateGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 4);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.delegate;
+    context.charge(gas_params.base)?;
 
-    let amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let validator_address = pop_arg!(args, Vector).to_vec_u8()?;
-    let delegator_address: AccountAddress = pop_arg!(args, AccountAddress);
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 4);
+
+    let amount = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let validator_address = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(validator_address.len() as u64))?;
+
+    let delegator_address: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
     // convert string
     let validator_address = std::str::from_utf8(&validator_address)
@@ -196,21 +207,27 @@ fn native_delegate(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_fund_community_pool(
-    gas_params: &FundCommunityPoolGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 3);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context
+        .native_gas_params
+        .initia_stdlib
+        .cosmos
+        .fund_community_pool;
+    context.charge(gas_params.base)?;
 
-    let amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let sender_address: AccountAddress = pop_arg!(args, AccountAddress);
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 3);
+
+    let amount = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let sender_address: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
     let message = CosmosMessage::Distribution(DistributionMessage::FundCommunityPool {
         sender_address,
@@ -221,28 +238,38 @@ fn native_fund_community_pool(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_transfer(
-    gas_params: &TransferGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 10);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.transfer;
+    context.charge(gas_params.base)?;
 
-    let memo = pop_arg!(args, Vector).to_vec_u8()?;
-    let timeout_timestamp = pop_arg!(args, u64);
-    let revision_height = pop_arg!(args, u64);
-    let revision_number = pop_arg!(args, u64);
-    let source_channel = pop_arg!(args, Vector).to_vec_u8()?;
-    let source_port = pop_arg!(args, Vector).to_vec_u8()?;
-    let token_amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let receiver = pop_arg!(args, Vector).to_vec_u8()?;
-    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 10);
+
+    let memo = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(memo.len() as u64))?;
+
+    let timeout_timestamp = safely_pop_arg!(arguments, u64);
+    let revision_height = safely_pop_arg!(arguments, u64);
+    let revision_number = safely_pop_arg!(arguments, u64);
+    let source_channel = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+
+    let source_port = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+
+    let token_amount = safely_pop_arg!(arguments, u64);
+    let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let receiver = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(receiver.len() as u64))?;
+
+    let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
     // convert to string
     let memo = std::str::from_utf8(&memo)
@@ -257,12 +284,6 @@ fn native_transfer(
     let receiver = std::str::from_utf8(&receiver)
         .map_err(|_| partial_extension_error("failed to deserialize receiver"))?
         .to_string();
-
-    if memo.len() > 4096 {
-        return Err(partial_extension_error(
-            "memo cannot be greater than 4096 characters",
-        ));
-    }
 
     // build cosmos message
     let message = CosmosMessage::IBC(IBCMessage::Transfer {
@@ -285,28 +306,41 @@ fn native_transfer(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_nft_transfer(
-    gas_params: &NFTTransferGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 10);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.nft_transfer;
+    context.charge(gas_params.base)?;
 
-    let memo = pop_arg!(args, Vector).to_vec_u8()?;
-    let timeout_timestamp = pop_arg!(args, u64);
-    let revision_height = pop_arg!(args, u64);
-    let revision_number = pop_arg!(args, u64);
-    let source_channel = pop_arg!(args, Vector).to_vec_u8()?;
-    let source_port = pop_arg!(args, Vector).to_vec_u8()?;
-    let token_ids = pop_vec_arg!(args, Vec<u8>);
-    let collection = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let receiver = pop_arg!(args, Vector).to_vec_u8()?;
-    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 10);
+
+    let memo = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    let timeout_timestamp = safely_pop_arg!(arguments, u64);
+    let revision_height = safely_pop_arg!(arguments, u64);
+    let revision_number = safely_pop_arg!(arguments, u64);
+    let source_channel = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+
+    let source_port = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(source_port.len() as u64))?;
+
+    let token_ids = safely_pop_vec_arg!(arguments, Vec<u8>);
+    context.charge(
+        gas_params.per_byte
+            * NumBytes::new(token_ids.iter().map(|v| v.len()).sum::<usize>() as u64),
+    )?;
+
+    let collection = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let receiver = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(receiver.len() as u64))?;
+
+    let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
     // convert to string
     let memo = std::str::from_utf8(&memo)
@@ -325,17 +359,13 @@ fn native_nft_transfer(
     let token_ids = token_ids
         .iter()
         .map(|v| {
-            std::str::from_utf8(v)
-                .map(|v| v.to_string())
-                .map_err(|_| partial_extension_error("failed to deserialize receiver"))
+            std::str::from_utf8(v).map(|v| v.to_string()).map_err(|_| {
+                SafeNativeError::InvariantViolation(partial_extension_error(
+                    "failed to deserialize receiver",
+                ))
+            })
         })
-        .collect::<PartialVMResult<Vec<String>>>()?;
-
-    if memo.len() > 4096 {
-        return Err(partial_extension_error(
-            "memo cannot be greater than 4096 characters",
-        ));
-    }
+        .collect::<SafeNativeResult<Vec<String>>>()?;
 
     // build cosmos message
     let message = CosmosMessage::IBC(IBCMessage::NFTTransfer {
@@ -356,27 +386,33 @@ fn native_nft_transfer(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 fn native_pay_fee(
-    gas_params: &PayFeeGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 9);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.pay_fee;
+    context.charge(gas_params.base)?;
 
-    let timeout_fee_amount = pop_arg!(args, u64);
-    let timeout_fee_metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let ack_fee_amount = pop_arg!(args, u64);
-    let ack_fee_metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let recv_fee_amount = pop_arg!(args, u64);
-    let recv_fee_metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let source_channel = pop_arg!(args, Vector).to_vec_u8()?;
-    let source_port = pop_arg!(args, Vector).to_vec_u8()?;
-    let sender: AccountAddress = pop_arg!(args, AccountAddress);
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 9);
+
+    let timeout_fee_amount = safely_pop_arg!(arguments, u64);
+    let timeout_fee_metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let ack_fee_amount = safely_pop_arg!(arguments, u64);
+    let ack_fee_metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let recv_fee_amount = safely_pop_arg!(arguments, u64);
+    let recv_fee_metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
+    let source_channel = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+
+    let source_port = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(source_port.len() as u64))?;
+
+    let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
     // convert to string
     let source_channel = std::str::from_utf8(&source_channel)
@@ -410,120 +446,26 @@ fn native_pay_fee(
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();
     cosmos_context.messages.borrow_mut().push(message);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
-}
-
-fn native_initiate_token_deposit(
-    gas_params: &InitiateTokenDepositGasParameters,
-    context: &mut NativeContext,
-    ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 6);
-
-    let data = pop_arg!(args, Vector).to_vec_u8()?;
-    let amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let to_address: AccountAddress = pop_arg!(args, AccountAddress);
-    let sender_address: AccountAddress = pop_arg!(args, AccountAddress);
-    let bridge_id = pop_arg!(args, u64);
-
-    let message = CosmosMessage::OPinit(OPinitMessage::InitiateTokenDeposit {
-        bridge_id,
-        sender_address,
-        to_address,
-        amount: CosmosCoin { metadata, amount },
-        data,
-    });
-
-    // build cosmos message
-    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
-    cosmos_context.messages.borrow_mut().push(message);
-
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
-}
-
-fn native_initiate_token_withdrawal(
-    gas_params: &InitiateTokenWithdrawalGasParameters,
-    context: &mut NativeContext,
-    ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 4);
-
-    let amount = pop_arg!(args, u64);
-    let metadata = get_metadata_address(&pop_arg!(args, StructRef))?;
-    let to_address: AccountAddress = pop_arg!(args, AccountAddress);
-    let sender_address: AccountAddress = pop_arg!(args, AccountAddress);
-
-    let message = CosmosMessage::OPinit(OPinitMessage::InitiateTokenWithdrawal {
-        sender_address,
-        to_address,
-        amount: CosmosCoin { metadata, amount },
-    });
-
-    // build cosmos message
-    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
-    cosmos_context.messages.borrow_mut().push(message);
-
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(smallvec![])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let natives = vec![
-        (
-            "stargate_internal",
-            make_native_from_func(gas_params.stargate, native_stargate),
-        ),
-        (
-            "move_execute_internal",
-            make_native_from_func(gas_params.move_execute, native_move_execute),
-        ),
-        (
-            "move_script_internal",
-            make_native_from_func(gas_params.move_script, native_move_script),
-        ),
-        (
-            "delegate_internal",
-            make_native_from_func(gas_params.delegate, native_delegate),
-        ),
-        (
-            "fund_community_pool_internal",
-            make_native_from_func(gas_params.fund_community_pool, native_fund_community_pool),
-        ),
-        (
-            "transfer_internal",
-            make_native_from_func(gas_params.transfer, native_transfer),
-        ),
-        (
-            "nft_transfer_internal",
-            make_native_from_func(gas_params.nft_transfer, native_nft_transfer),
-        ),
-        (
-            "pay_fee_internal",
-            make_native_from_func(gas_params.pay_fee, native_pay_fee),
-        ),
-        (
-            "initiate_token_deposit_internal",
-            make_native_from_func(
-                gas_params.initiate_token_deposit,
-                native_initiate_token_deposit,
-            ),
-        ),
-        (
-            "initiate_token_withdrawal_internal",
-            make_native_from_func(
-                gas_params.initiate_token_withdrawal,
-                native_initiate_token_withdrawal,
-            ),
-        ),
+        ("stargate_internal", native_stargate as RawSafeNative),
+        ("move_execute_internal", native_move_execute),
+        ("move_script_internal", native_move_script),
+        ("delegate_internal", native_delegate),
+        ("fund_community_pool_internal", native_fund_community_pool),
+        ("transfer_internal", native_transfer),
+        ("nft_transfer_internal", native_nft_transfer),
+        ("pay_fee_internal", native_pay_fee),
     ];
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

@@ -1,29 +1,25 @@
-use crate::pop_vec_arg;
-use crate::{helpers::make_module_natives, util::make_native_from_func};
+use crate::interface::{
+    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+};
+use crate::{safely_pop_arg, safely_pop_vec_arg};
 
-use initia_gas::gas_params::crypto::Ed25519GasParameters;
 use initia_gas::{NumArgs, NumBytes};
 
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
+use move_binary_format::errors::PartialVMError;
 use move_core_types::vm_status::StatusCode;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{Struct, Value},
 };
 
 use ed25519_consensus::{batch, Signature, VerificationKey, VerificationKeyBytes};
 use rand_core::OsRng;
 
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 
 use std::array::TryFromSliceError;
 use std::collections::VecDeque;
-
-#[cfg(feature = "testing")]
-use initia_gas::InternalGas;
 
 #[cfg(feature = "testing")]
 use ed25519_consensus::SigningKey;
@@ -35,41 +31,43 @@ pub const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
 pub const ED25519_SIGNATURE_LENGTH: usize = 64;
 
 pub fn native_verify(
-    gas_params: &Ed25519GasParameters,
-    _context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.crypto.ed25519;
+    context.charge(gas_params.base)?;
+
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
-    let signature = pop_arg!(arguments, Vec<u8>);
-    let pubkey = pop_arg!(arguments, Vec<u8>);
-    let msg = pop_arg!(arguments, Vec<u8>);
+    let signature = safely_pop_arg!(arguments, Vec<u8>);
+    let pubkey = safely_pop_arg!(arguments, Vec<u8>);
+    let msg = safely_pop_arg!(arguments, Vec<u8>);
 
-    let mut cost = gas_params.base;
-
-    cost += gas_params.per_pubkey_deserialize * NumArgs::one();
+    context.charge(gas_params.per_pubkey_deserialize * NumArgs::one())?;
     let vk = match read_pubkey(&pubkey) {
         Ok(pk) => match VerificationKey::try_from(VerificationKeyBytes::from(pk)) {
             Ok(vk) => vk,
-            Err(_) => return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+            Err(_) => return Ok(smallvec![Value::bool(false)]),
         },
-        Err(_) => return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+        Err(_) => return Ok(smallvec![Value::bool(false)]),
     };
 
-    cost += gas_params.per_sig_deserialize * NumArgs::one();
+    context.charge(gas_params.per_sig_deserialize * NumArgs::one())?;
     let sig = match read_signature(&signature) {
         Ok(sig) => Signature::from(sig),
-        Err(_) => return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+        Err(_) => return Ok(smallvec![Value::bool(false)]),
     };
 
-    cost += gas_params.per_sig_verify * NumArgs::one()
-        + gas_params.per_msg_hashing_base * NumArgs::one()
-        + gas_params.per_msg_byte_hashing * NumBytes::new(msg.len() as u64);
+    context.charge(
+        gas_params.per_sig_verify * NumArgs::one()
+            + gas_params.per_msg_hashing_base * NumArgs::one()
+            + gas_params.per_msg_byte_hashing * NumBytes::new(msg.len() as u64),
+    )?;
     match vk.verify(&sig, &msg) {
-        Ok(()) => Ok(NativeResult::ok(cost, smallvec![Value::bool(true)])),
-        Err(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+        Ok(()) => Ok(smallvec![Value::bool(true)]),
+        Err(_) => Ok(smallvec![Value::bool(false)]),
     }
 }
 
@@ -83,8 +81,8 @@ fn read_pubkey(data: &[u8]) -> Result<[u8; ED25519_PUBLIC_KEY_LENGTH], TryFromSl
 
 /// Pops a Vec<T> off the argument stack and converts it to a Vec<Vec<u8>> by reading the first
 /// field of T, which is a Vec<u8> field named `bytes`.
-fn pop_vec_of_vec_u8(arguments: &mut VecDeque<Value>) -> PartialVMResult<Vec<Vec<u8>>> {
-    let structs = pop_vec_arg!(arguments, Struct);
+fn pop_vec_of_vec_u8(arguments: &mut VecDeque<Value>) -> SafeNativeResult<Vec<Vec<u8>>> {
+    let structs: Vec<Struct> = safely_pop_vec_arg!(arguments, Struct);
     let mut v = Vec::with_capacity(structs.len());
 
     for s in structs {
@@ -96,7 +94,7 @@ fn pop_vec_of_vec_u8(arguments: &mut VecDeque<Value>) -> PartialVMResult<Vec<Vec
         v.push(field.value_as::<Vec<u8>>()?);
     }
 
-    PartialVMResult::Ok(v)
+    SafeNativeResult::Ok(v)
 }
 
 fn repeats_vec_of_vec_u8(item: Vec<u8>, n: usize) -> Vec<Vec<u8>> {
@@ -150,17 +148,19 @@ fn repeats_vec_of_vec_u8(item: Vec<u8>, n: usize) -> Vec<Vec<u8>> {
 /// case.
 ///  - The empty case (no messages, no signatures and no public keys) returns true.
 pub fn native_batch_verify(
-    gas_params: &Ed25519GasParameters,
-    _context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.crypto.ed25519;
+    context.charge(gas_params.base)?;
+
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
     let signatures = pop_vec_of_vec_u8(&mut arguments)?;
     let mut public_keys = pop_vec_of_vec_u8(&mut arguments)?;
-    let mut messages = pop_vec_arg!(arguments, Vec<u8>);
+    let mut messages = safely_pop_vec_arg!(arguments, Vec<u8>);
 
     let messages_len = messages.len();
     let signatures_len = signatures.len();
@@ -172,15 +172,14 @@ pub fn native_batch_verify(
     } else if public_keys_len == 1 && messages_len == signatures_len {
         public_keys = repeats_vec_of_vec_u8(public_keys[0].to_vec(), signatures_len);
     } else {
-        return Err(PartialVMError::new(
+        return Err(SafeNativeError::InvariantViolation(PartialVMError::new(
             StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH,
-        ));
+        )));
     }
 
     debug_assert_eq!(messages.len(), signatures_len);
     debug_assert_eq!(messages.len(), public_keys.len());
 
-    let mut cost = gas_params.base;
     let mut batch = batch::Verifier::new();
 
     for ((message, public_key), signature) in messages
@@ -188,103 +187,77 @@ pub fn native_batch_verify(
         .zip(public_keys.iter())
         .zip(signatures.iter())
     {
-        cost += gas_params.per_pubkey_deserialize * NumArgs::one();
+        context.charge(gas_params.per_pubkey_deserialize * NumArgs::one())?;
         let vk_bytes = match read_pubkey(public_key) {
             Ok(pk) => VerificationKeyBytes::from(pk),
-            Err(_) => return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+            Err(_) => return Ok(smallvec![Value::bool(false)]),
         };
 
-        cost += gas_params.per_sig_deserialize * NumArgs::one();
+        context.charge(gas_params.per_sig_deserialize * NumArgs::one())?;
         let sig = match read_signature(signature) {
             Ok(sig) => Signature::from(sig),
-            Err(_) => return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+            Err(_) => return Ok(smallvec![Value::bool(false)]),
         };
 
-        cost += gas_params.per_sig_verify * NumArgs::one()
-            + gas_params.per_msg_hashing_base * NumArgs::one()
-            + gas_params.per_msg_byte_hashing * NumBytes::new(message.len() as u64);
-
+        context.charge(
+            gas_params.per_sig_verify * NumArgs::one()
+                + gas_params.per_msg_hashing_base * NumArgs::one()
+                + gas_params.per_msg_byte_hashing * NumBytes::new(message.len() as u64),
+        )?;
         batch.queue((vk_bytes, sig, message));
     }
 
     match batch.verify(OsRng) {
-        Ok(()) => Ok(NativeResult::ok(cost, smallvec![Value::bool(true)])),
-        Err(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+        Ok(()) => Ok(smallvec![Value::bool(true)]),
+        Err(_) => Ok(smallvec![Value::bool(false)]),
     }
 }
 
 #[cfg(feature = "testing")]
 pub fn native_test_only_generate_keys(
-    _context: &mut NativeContext,
+    _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
-    mut _args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let sk = SigningKey::new(OsRng);
     let vk = sk.verification_key();
-    Ok(NativeResult::ok(
-        InternalGas::zero(),
-        smallvec![
-            Value::vector_u8(sk.to_bytes()),
-            Value::vector_u8(vk.to_bytes())
-        ],
-    ))
+    Ok(smallvec![
+        Value::vector_u8(sk.to_bytes()),
+        Value::vector_u8(vk.to_bytes())
+    ])
 }
 
 #[cfg(feature = "testing")]
 pub fn native_test_only_sign(
-    _context: &mut NativeContext,
+    _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    let sk_bytes = pop_arg!(args, Vec<u8>);
-    let msg_bytes = pop_arg!(args, Vec<u8>);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let sk_bytes = safely_pop_arg!(arguments, Vec<u8>);
+    let msg_bytes = safely_pop_arg!(arguments, Vec<u8>);
 
     let sk = SigningKey::try_from(sk_bytes.as_slice()).unwrap();
     let sig = sk.sign(msg_bytes.as_slice());
 
-    Ok(NativeResult::ok(
-        InternalGas::zero(),
-        smallvec![Value::vector_u8(sig.to_bytes())],
-    ))
+    Ok(smallvec![Value::vector_u8(sig.to_bytes())])
 }
-
-#[cfg(feature = "testing")]
-use crate::util::make_test_only_native_from_func;
-
 pub fn make_all(
-    gas_params: Ed25519GasParameters,
-) -> impl Iterator<Item = (String, NativeFunction)> {
-    #[cfg(not(feature = "testing"))]
-    let natives = vec![
-        (
-            "verify_internal",
-            make_native_from_func(gas_params.clone(), native_verify),
-        ),
-        (
-            "batch_verify_internal",
-            make_native_from_func(gas_params, native_batch_verify),
-        ),
-    ];
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
+    let mut natives = vec![];
+    natives.extend([
+        ("verify_internal", native_verify as RawSafeNative),
+        ("batch_verify_internal", native_batch_verify),
+    ]);
 
     #[cfg(feature = "testing")]
-    let natives = vec![
-        (
-            "verify_internal",
-            make_native_from_func(gas_params.clone(), native_verify),
-        ),
-        (
-            "batch_verify_internal",
-            make_native_from_func(gas_params, native_batch_verify),
-        ),
+    natives.extend([
         (
             "generate_keys",
-            make_test_only_native_from_func(native_test_only_generate_keys),
+            native_test_only_generate_keys as RawSafeNative,
         ),
-        (
-            "sign",
-            make_test_only_native_from_func(native_test_only_sign),
-        ),
-    ];
+        ("sign", native_test_only_sign as RawSafeNative),
+    ]);
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

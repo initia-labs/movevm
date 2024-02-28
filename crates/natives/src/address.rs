@@ -1,78 +1,79 @@
 use std::{collections::VecDeque, str::FromStr};
 
 use crate::helpers::{get_string, partial_extension_error};
-use crate::util::make_native_from_func;
-use initia_gas::gas_params::address::*;
-use move_binary_format::errors::PartialVMResult;
-use move_core_types::account_address::AccountAddress;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use crate::interface::{
+    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+};
+use crate::safely_pop_arg;
+use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{Struct, Value},
 };
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
-const EINVALID_ADDRESS: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 1;
+const EINVALID_ADDRESS: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 
 fn native_to_string(
-    gas_params: &ToStringGasParameters,
-    _context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.address.to_string;
+    context.charge(gas_params.base_cost)?;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 1);
+    debug_assert!(arguments.len() == 1);
 
-    let base_cost: u64 = gas_params.base_cost.into();
-    let addr = pop_arg!(args, AccountAddress).to_standard_string();
+    let addr = safely_pop_arg!(arguments, AccountAddress).to_standard_string();
 
-    Ok(NativeResult::ok(
-        base_cost.into(),
-        smallvec![Value::struct_(Struct::pack(vec![Value::vector_u8(
-            addr.as_bytes().to_vec()
-        ),]))],
-    ))
+    Ok(smallvec![Value::struct_(Struct::pack(vec![
+        Value::vector_u8(addr.as_bytes().to_vec()),
+    ]))])
 }
 
 fn native_from_string(
-    gas_params: &FromStringGasParameters,
-    _context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 1);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.address.from_string;
+    context.charge(gas_params.base_cost)?;
 
-    let base_cost: u64 = gas_params.base_cost.into();
-    let value = get_string(pop_arg!(args, Struct))?;
-    let value = String::from_utf8(value)
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let raw_value = get_string(safely_pop_arg!(arguments, Struct))?;
+    context.charge(gas_params.per_byte * NumBytes::new(raw_value.len() as u64))?;
+
+    let value = String::from_utf8(raw_value)
         .map_err(|_| partial_extension_error("failed to deserialize arg"))?;
 
     let addr = match AccountAddress::from_str(value.as_str()) {
         Ok(val) => val,
-        Err(_) => return Ok(NativeResult::err(base_cost.into(), EINVALID_ADDRESS)),
+        Err(_) => {
+            return Err(SafeNativeError::Abort {
+                abort_code: EINVALID_ADDRESS,
+            })
+        }
     };
 
-    Ok(NativeResult::ok(
-        base_cost.into(),
-        smallvec![Value::address(addr)],
-    ))
+    Ok(smallvec![Value::address(addr)])
 }
 
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+/***************************************************************************************************
+ * module
+ *
+ **************************************************************************************************/
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let natives = vec![
-        (
-            "to_string",
-            make_native_from_func(gas_params.to_string.clone(), native_to_string),
-        ),
-        (
-            "from_string",
-            make_native_from_func(gas_params.from_string.clone(), native_from_string),
-        ),
+        ("to_string", native_to_string as RawSafeNative),
+        ("from_string", native_from_string),
     ];
 
-    crate::helpers::make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

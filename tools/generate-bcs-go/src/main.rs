@@ -6,8 +6,7 @@ use serde_reflection::{Tracer, TracerConfig};
 use initia_types::{
     account::Account,
     cosmos::{
-        CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, OPinitMessage,
-        StakingMessage,
+        CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, StakingMessage,
     },
     entry_function::EntryFunction,
     env::Env,
@@ -40,7 +39,6 @@ fn main() {
     tracer.trace_simple_type::<IBCFee>().unwrap();
     tracer.trace_simple_type::<MoveMessage>().unwrap();
     tracer.trace_simple_type::<StakingMessage>().unwrap();
-    tracer.trace_simple_type::<OPinitMessage>().unwrap();
     tracer.trace_simple_type::<CosmosMessage>().unwrap();
     tracer.trace_simple_type::<Account>().unwrap();
     tracer.trace_simple_type::<GasUsage>().unwrap();

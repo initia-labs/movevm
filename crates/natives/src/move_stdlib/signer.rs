@@ -1,8 +1,15 @@
-use move_core_types::account_address::AccountAddress;
-use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
-use smallvec::{smallvec, SmallVec};
+// Copyright © Aptos Foundation
 
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_types::{
+    loaded_data::runtime_types::Type,
+    values::{values_impl::SignerRef, Value},
+};
+use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
 use crate::{
@@ -11,45 +18,35 @@ use crate::{
 };
 
 /***************************************************************************************************
- * native fun exists_at
+ * native fun borrow_address
  *
- *   gas cost: base_cost + per_byte_loaded * num_bytes + per_item_loaded
+ *   gas cost: base_cost
  *
  **************************************************************************************************/
-fn native_exists_at(
+#[inline]
+fn native_borrow_address(
     context: &mut SafeNativeContext,
-    mut ty_args: Vec<Type>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.object.exists_at;
+    let gas_params = &context.native_gas_params.move_stdlib.signer.borrow_address;
 
-    debug_assert_eq!(ty_args.len(), 1);
-    debug_assert_eq!(arguments.len(), 1);
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let signer_reference = safely_pop_arg!(arguments, SignerRef);
 
     context.charge(gas_params.base)?;
 
-    let type_ = ty_args.pop().unwrap();
-    let address = safely_pop_arg!(arguments, AccountAddress);
-
-    let (exists, num_bytes) = context
-        .exists_at(address, &type_)
-        .map_err(|e| e.to_partial())?;
-
-    if let Some(num_bytes) = num_bytes {
-        context.charge(gas_params.per_item_loaded + gas_params.per_byte_loaded * num_bytes)?;
-    }
-
-    Ok(smallvec![Value::bool(exists)])
+    Ok(smallvec![signer_reference.borrow_signer()?])
 }
 
 /***************************************************************************************************
  * module
- *
  **************************************************************************************************/
 pub fn make_all(
     builder: &SafeNativeBuilder,
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
-    let natives = vec![("exists_at", native_exists_at as RawSafeNative)];
-
+    let natives = [("borrow_address", native_borrow_address as RawSafeNative)];
     builder.make_named_natives(natives)
 }

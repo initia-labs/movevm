@@ -1,34 +1,32 @@
 use better_any::{Tid, TidAble};
-use initia_gas::gas_params::table::*;
-use initia_gas::table::GasParameters;
 use initia_types::iterator::Order;
 use initia_types::table::{TableChange, TableChangeSet, TableHandle, TableInfo};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::gas_algebra::NumArgs;
+use move_core_types::identifier::Identifier;
 use move_core_types::{
     account_address::AccountAddress, effects::Op, gas_algebra::NumBytes, value::MoveTypeLayout,
     vm_status::StatusCode,
 };
-use move_vm_runtime::{
-    native_functions,
-    native_functions::{NativeContext, NativeFunction, NativeFunctionTable},
-};
+use move_vm_runtime::native_functions::{NativeContext, NativeFunctionTable};
 use move_vm_types::values::Vector;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{GlobalValue, Reference, StructRef, Value},
 };
 use sha3::{Digest, Sha3_256};
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 
 use std::ops::{Bound, RangeBounds};
 use std::{
     cell::RefCell,
     collections::{btree_map::Entry, BTreeMap, BTreeSet, VecDeque},
-    sync::Arc,
 };
+
+use crate::interface::{
+    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+};
+use crate::safely_pop_arg;
 
 /// UID prefix is used to generate unique address from the txn hash.
 const UID_PREFIX: [u8; 4] = [0, 0, 0, 2];
@@ -288,91 +286,49 @@ impl TableIter {
 // Native Function Implementations
 
 /// Returns all natives for tables.
-pub fn all_natives(table_addr: AccountAddress, gas_params: GasParameters) -> NativeFunctionTable {
-    let natives: [(&str, &str, NativeFunction); 14] = [
-        (
-            "table",
-            "new_table_handle",
-            make_native_new_table_handle(gas_params.new_table_handle),
-        ),
-        (
-            "table",
-            "add_box",
-            make_native_add_box(gas_params.common.clone(), gas_params.add_box),
-        ),
-        (
-            "table",
-            "borrow_box",
-            make_native_borrow_box(gas_params.common.clone(), gas_params.borrow_box.clone()),
-        ),
-        (
-            "table",
-            "borrow_box_mut",
-            make_native_borrow_box(gas_params.common.clone(), gas_params.borrow_box),
-        ),
-        (
-            "table",
-            "remove_box",
-            make_native_remove_box(gas_params.common.clone(), gas_params.remove_box),
-        ),
-        (
-            "table",
-            "contains_box",
-            make_native_contains_box(gas_params.common.clone(), gas_params.contains_box),
-        ),
-        (
-            "table",
-            "destroy_empty_box",
-            make_native_destroy_empty_box(gas_params.destroy_empty_box),
-        ),
-        (
-            "table",
-            "drop_unchecked_box",
-            make_native_drop_unchecked_box(gas_params.drop_unchecked_box),
-        ),
-        (
-            "table",
-            "new_table_iter",
-            make_native_new_table_iter(gas_params.new_table_iter.clone()),
-        ),
-        (
-            "table",
-            "prepare_box",
-            make_native_prepare_box(gas_params.common.clone(), gas_params.prepare_box.clone()),
-        ),
-        (
-            "table",
-            "next_box",
-            make_native_next_box(gas_params.next_box.clone()),
-        ),
-        (
-            "table",
-            "new_table_iter_mut",
-            make_native_new_table_iter(gas_params.new_table_iter),
-        ),
-        (
-            "table",
-            "prepare_box_mut",
-            make_native_prepare_box(gas_params.common, gas_params.prepare_box),
-        ),
-        (
-            "table",
-            "next_box_mut",
-            make_native_next_box(gas_params.next_box),
-        ),
-    ];
-
-    native_functions::make_table_from_iter(table_addr, natives)
+pub fn all_natives(
+    table_addr: AccountAddress,
+    builder: &mut SafeNativeBuilder,
+) -> NativeFunctionTable {
+    builder
+        .make_named_natives([
+            ("new_table_handle", native_new_table_handle as RawSafeNative),
+            ("add_box", native_add_box),
+            ("borrow_box", native_borrow_box),
+            ("borrow_box_mut", native_borrow_box),
+            ("remove_box", native_remove_box),
+            ("contains_box", native_contains_box),
+            ("destroy_empty_box", native_destroy_empty_box),
+            ("drop_unchecked_box", native_drop_unchecked_box),
+            ("new_table_iter", native_new_table_iter),
+            ("prepare_box", native_prepare_box),
+            ("next_box", native_next_box),
+            ("new_table_iter_mut", native_new_table_iter),
+            ("prepare_box_mut", native_prepare_box),
+            ("next_box_mut", native_next_box),
+        ])
+        .map(|(func_name, func)| {
+            (
+                table_addr,
+                Identifier::new("table").unwrap(),
+                Identifier::new(func_name).unwrap(),
+                func,
+            )
+        })
+        .collect()
 }
 
 fn native_new_table_handle(
-    gas_params: &NewTableHandleGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.table.new_table_handle;
+
     assert_eq!(ty_args.len(), 2);
-    assert_eq!(args.len(), 0);
+    assert_eq!(_arguments.len(), 0);
+
+    context.charge(gas_params.base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -395,254 +351,228 @@ fn native_new_table_handle(
         .insert(TableHandle(handle), TableInfo::new(key_type, value_type))
         .is_none());
 
-    Ok(NativeResult::ok(
-        gas_params.base,
-        smallvec![Value::address(handle)],
-    ))
-}
-
-pub fn make_native_new_table_handle(gas_params: NewTableHandleGasParameters) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_new_table_handle(&gas_params, context, ty_args, args)
-        },
-    )
+    Ok(smallvec![Value::address(handle)])
 }
 
 fn native_add_box(
-    common_gas_params: &CommonGasParameters,
-    gas_params: &AddBoxGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let common_gas_params = &context.native_gas_params.table.common;
+    let gas_params = &context.native_gas_params.table.add_box;
+
     assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 3);
+    assert_eq!(arguments.len(), 3);
+
+    context.charge(gas_params.base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let val = args.pop_back().unwrap();
-    let key = args.pop_back().unwrap();
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
-
-    let mut cost = gas_params.base;
+    let val = arguments.pop_back().unwrap();
+    let key = arguments.pop_back().unwrap();
+    let handle = get_table_handle(&safely_pop_arg!(arguments, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
-    match gv.move_to(val) {
-        Ok(_) => Ok(NativeResult::ok(cost, smallvec![])),
-        Err(_) => Ok(NativeResult::err(cost, ALREADY_EXISTS)),
-    }
-}
+    let res = match gv.move_to(val) {
+        Ok(_) => Ok(smallvec![]),
+        Err(_) => Err(SafeNativeError::Abort {
+            abort_code: ALREADY_EXISTS,
+        }),
+    };
 
-pub fn make_native_add_box(
-    common_gas_params: CommonGasParameters,
-    gas_params: AddBoxGasParameters,
-) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_add_box(&common_gas_params, &gas_params, context, ty_args, args)
-        },
-    )
+    drop(table_data);
+
+    // TODO(Gas): Figure out a way to charge this earlier.
+    context.charge(key_cost + value_cost)?;
+
+    res
 }
 
 fn native_borrow_box(
-    common_gas_params: &CommonGasParameters,
-    gas_params: &BorrowBoxGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let common_gas_params = &context.native_gas_params.table.common;
+    let gas_params = &context.native_gas_params.table.borrow_box;
+
     assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 2);
+    assert_eq!(arguments.len(), 2);
+
+    context.charge(gas_params.base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args.pop_back().unwrap();
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
+    let key = arguments.pop_back().unwrap();
+    let handle = get_table_handle(&safely_pop_arg!(arguments, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
-    let mut cost = gas_params.base;
-
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
-    match gv.borrow_global() {
-        Ok(ref_val) => Ok(NativeResult::ok(cost, smallvec![ref_val])),
-        Err(_) => Ok(NativeResult::err(cost, NOT_FOUND)),
-    }
-}
+    let res = match gv.borrow_global() {
+        Ok(ref_val) => Ok(smallvec![ref_val]),
+        Err(_) => Err(SafeNativeError::Abort {
+            abort_code: NOT_FOUND,
+        }),
+    };
 
-pub fn make_native_borrow_box(
-    common_gas_params: CommonGasParameters,
-    gas_params: BorrowBoxGasParameters,
-) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_borrow_box(&common_gas_params, &gas_params, context, ty_args, args)
-        },
-    )
+    drop(table_data);
+
+    // TODO(Gas): Figure out a way to charge this earlier.
+    context.charge(key_cost + value_cost)?;
+
+    res
 }
 
 fn native_contains_box(
-    common_gas_params: &CommonGasParameters,
-    gas_params: &ContainsBoxGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let common_gas_params = &context.native_gas_params.table.common;
+    let gas_params = &context.native_gas_params.table.contains_box;
+
     assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 2);
+    assert_eq!(arguments.len(), 2);
+
+    context.charge(gas_params.base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args.pop_back().unwrap();
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
+    let key = arguments.pop_back().unwrap();
+    let handle = get_table_handle(&safely_pop_arg!(arguments, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
-    let mut cost = gas_params.base;
-
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
     let exists = Value::bool(gv.exists()?);
 
-    Ok(NativeResult::ok(cost, smallvec![exists]))
-}
+    drop(table_data);
 
-pub fn make_native_contains_box(
-    common_gas_params: CommonGasParameters,
-    gas_params: ContainsBoxGasParameters,
-) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_contains_box(&common_gas_params, &gas_params, context, ty_args, args)
-        },
-    )
+    // TODO(Gas): Figure out a way to charge this earlier.
+    context.charge(key_cost + value_cost)?;
+
+    Ok(smallvec![exists])
 }
 
 fn native_remove_box(
-    common_gas_params: &CommonGasParameters,
-    gas_params: &RemoveGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let common_gas_params = &context.native_gas_params.table.common;
+    let gas_params = &context.native_gas_params.table.remove_box;
+
     assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 2);
+    assert_eq!(arguments.len(), 2);
+
+    context.charge(gas_params.base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args.pop_back().unwrap();
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
+    let key = arguments.pop_back().unwrap();
+    let handle = get_table_handle(&safely_pop_arg!(arguments, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
-    let mut cost = gas_params.base;
-
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
-    match gv.move_from() {
-        Ok(val) => Ok(NativeResult::ok(cost, smallvec![val])),
-        Err(_) => Ok(NativeResult::err(cost, NOT_FOUND)),
-    }
-}
+    let res = match gv.move_from() {
+        Ok(val) => Ok(smallvec![val]),
+        Err(_) => Err(SafeNativeError::Abort {
+            abort_code: NOT_FOUND,
+        }),
+    };
 
-pub fn make_native_remove_box(
-    common_gas_params: CommonGasParameters,
-    gas_params: RemoveGasParameters,
-) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_remove_box(&common_gas_params, &gas_params, context, ty_args, args)
-        },
-    )
+    drop(table_data);
+
+    // TODO(Gas): Figure out a way to charge this earlier.
+    context.charge(key_cost + value_cost)?;
+
+    res
 }
 
 fn native_destroy_empty_box(
-    gas_params: &DestroyEmptyBoxGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.table.destroy_empty_box;
+
     assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 1);
+    assert_eq!(arguments.len(), 1);
+
+    context.charge(gas_params.base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
+    let handle = get_table_handle(&safely_pop_arg!(arguments, StructRef))?;
     // TODO: Can the following line be removed?
     table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     assert!(table_data.removed_tables.insert(handle));
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
-}
-
-pub fn make_native_destroy_empty_box(gas_params: DestroyEmptyBoxGasParameters) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_destroy_empty_box(&gas_params, context, ty_args, args)
-        },
-    )
+    Ok(smallvec![])
 }
 
 fn native_drop_unchecked_box(
-    gas_params: &DropUncheckedBoxGasParameters,
-    _context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.table.drop_unchecked_box;
+
     assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 1);
+    assert_eq!(arguments.len(), 1);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
-}
+    context.charge(gas_params.base)?;
 
-pub fn make_native_drop_unchecked_box(gas_params: DropUncheckedBoxGasParameters) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_drop_unchecked_box(&gas_params, context, ty_args, args)
-        },
-    )
+    Ok(smallvec![])
 }
 
 fn native_new_table_iter(
-    gas_params: &NewTableIteratorGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 4);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.table.new_table_iter;
 
-    let order = Order::try_from(pop_arg!(args, u8) as i32)
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(arguments.len(), 4);
+
+    context.charge(gas_params.base)?;
+
+    let order = Order::try_from(safely_pop_arg!(arguments, u8) as i32)
         .map_err(|_| PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
-    let end_bytes = pop_arg!(args, Vector).to_vec_u8()?;
-    let start_bytes = pop_arg!(args, Vector).to_vec_u8()?;
+    let end_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    let start_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
     // convert vector start end args into option iterator arguments
     let start_option: Option<&[u8]> = if start_bytes.is_empty() {
@@ -656,7 +586,7 @@ fn native_new_table_iter(
         Some(end_bytes.as_ref())
     };
 
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
+    let handle = get_table_handle(&safely_pop_arg!(arguments, StructRef))?;
 
     // create iterator and store this to table context
     let changes = iter_table_changes(
@@ -669,9 +599,8 @@ fn native_new_table_iter(
         order,
     )?;
 
-    // charge gas cost
-    let mut cost = gas_params.base;
-    cost += NumArgs::new(changes.len() as u64) * gas_params.per_item_sorted;
+    // charge gas cost for sorting
+    context.charge(NumArgs::new(changes.len() as u64) * gas_params.per_item_sorted)?;
 
     let table_context = context.extensions_mut().get_mut::<NativeTableContext>();
     let iterator_id = table_context
@@ -691,80 +620,65 @@ fn native_new_table_iter(
         order,
     });
 
-    Ok(NativeResult::ok(
-        cost,
-        smallvec![Value::u64(context_iterator_id as u64)],
-    ))
-}
-
-pub fn make_native_new_table_iter(gas_params: NewTableIteratorGasParameters) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_new_table_iter(&gas_params, context, ty_args, args)
-        },
-    )
+    Ok(smallvec![Value::u64(context_iterator_id as u64)])
 }
 
 /// Check the `next_key` exist or not and store
 /// the computed `next` to the `table_context.next`
 /// for the function `next_box`.
 fn native_prepare_box(
-    common_gas_params: &CommonGasParameters,
-    gas_params: &PrepareBoxGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 1);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let common_gas_params = &context.native_gas_params.table.common;
+    let gas_params = &context.native_gas_params.table.prepare_box;
 
-    let mut cost = gas_params.base;
-    let iterator_id = get_iterator_id(&pop_arg!(args, StructRef))? as usize;
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(arguments.len(), 1);
+
+    context.charge(gas_params.base)?;
+
+    let iterator_id = get_iterator_id(&safely_pop_arg!(arguments, StructRef))? as usize;
 
     loop {
         let ((next_key, loaded), handle) = get_next_key_with_table_handle(context, iterator_id)?;
-        cost += common_gas_params.calculate_load_cost(loaded);
+        context.charge(common_gas_params.calculate_load_cost(loaded))?;
 
         if next_key.is_none() {
-            return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)]));
+            return Ok(smallvec![Value::bool(false)]);
         }
 
         let key_bytes = next_key.unwrap();
         let (next, loaded, serialized) =
             load_table_entry(context, handle, &ty_args[0], &ty_args[2], key_bytes)?;
-        cost += common_gas_params.calculate_load_cost(loaded);
-        cost += gas_params.calculate_serialize_cost(serialized);
+        context.charge(
+            common_gas_params.calculate_load_cost(loaded)
+                + gas_params.calculate_serialize_cost(serialized),
+        )?;
 
         if next.is_some() {
             set_next(context, iterator_id, next);
-            return Ok(NativeResult::ok(cost, smallvec![Value::bool(true)]));
+            return Ok(smallvec![Value::bool(true)]);
         }
     }
-}
-
-pub fn make_native_prepare_box(
-    common_gas_params: CommonGasParameters,
-    gas_params: PrepareBoxGasParameters,
-) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_prepare_box(&common_gas_params, &gas_params, context, ty_args, args)
-        },
-    )
 }
 
 /// Return `iterator.next` which was computed from
 /// the function `prepare_box`.
 fn native_next_box(
-    gas_params: &NextBoxGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    assert_eq!(ty_args.len(), 3);
-    assert_eq!(args.len(), 1);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.table.next_box;
 
-    let iterator_id = get_iterator_id(&pop_arg!(args, StructRef))? as usize;
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(arguments.len(), 1);
+
+    context.charge(gas_params.base)?;
+
+    let iterator_id = get_iterator_id(&safely_pop_arg!(arguments, StructRef))? as usize;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut iterators = table_context.iterators.borrow_mut();
@@ -775,15 +689,7 @@ fn native_next_box(
     let (key, value) = iterator.next.take().unwrap();
     iterator.next = None;
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![key, value]))
-}
-
-pub fn make_native_next_box(gas_params: NextBoxGasParameters) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_next_box(&gas_params, context, ty_args, args)
-        },
-    )
+    Ok(smallvec![key, value])
 }
 
 // =========================================================================================

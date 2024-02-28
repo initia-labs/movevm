@@ -1,18 +1,18 @@
 use better_any::{Tid, TidAble};
-use initia_gas::gas_params::oracle::{GasParameters, GetPricesGasParameters};
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
-use move_core_types::{u256::U256, vm_status::StatusCode};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_binary_format::errors::PartialVMError;
+use move_core_types::{gas_algebra::NumBytes, u256::U256, vm_status::StatusCode};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{Value, Vector},
 };
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 use std::collections::{BTreeMap, VecDeque};
 
-use crate::{helpers::make_module_natives, util::make_native_from_func};
+use crate::{
+    interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult},
+    safely_pop_arg,
+};
 
 /// API to allow move modules to interact with CosmosSDK's
 /// staking API.
@@ -63,15 +63,18 @@ fn partial_extension_error(msg: impl ToString) -> PartialVMError {
 // Implementations
 
 fn native_get_price(
-    gas_params: &GetPricesGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 1);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.oracle.get_price;
 
-    let pair_id = pop_arg!(args, Vector).to_vec_u8()?;
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let pair_id = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context
+        .charge(gas_params.base_cost + gas_params.per_byte * NumBytes::new(pair_id.len() as u64))?;
 
     let oracle_context = context.extensions_mut().get_mut::<NativeOracleContext>();
     let (price, updated_at, decimals) = if let Some(item) = oracle_context.prices.get(&pair_id) {
@@ -87,59 +90,50 @@ fn native_get_price(
         item
     };
 
-    Ok(NativeResult::ok(
-        gas_params.base_cost,
-        smallvec![
-            Value::u256(price),
-            Value::u64(updated_at),
-            Value::u64(decimals)
-        ],
-    ))
+    Ok(smallvec![
+        Value::u256(price),
+        Value::u64(updated_at),
+        Value::u64(decimals)
+    ])
 }
-#[cfg(feature = "testing")]
-use crate::util::make_test_only_native_from_func;
 
 #[cfg(feature = "testing")]
 fn native_test_only_set_price(
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    use initia_gas::InternalGas;
-
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 4);
+    debug_assert!(arguments.len() == 4);
 
-    let decimals = pop_arg!(args, u64);
-    let updated_at = pop_arg!(args, u64);
-    let price = pop_arg!(args, U256);
-    let pair_id = pop_arg!(args, Vector).to_vec_u8()?;
+    let decimals = safely_pop_arg!(arguments, u64);
+    let updated_at = safely_pop_arg!(arguments, u64);
+    let price = safely_pop_arg!(arguments, U256);
+    let pair_id = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
     let oracle_context = context.extensions_mut().get_mut::<NativeOracleContext>();
     oracle_context
         .prices
         .insert(pair_id, (price, updated_at, decimals));
 
-    Ok(NativeResult::ok(InternalGas::zero(), smallvec![]))
+    Ok(smallvec![])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
-
-    natives.extend([(
-        "get_price_internal",
-        make_native_from_func(gas_params.get_price, native_get_price),
-    )]);
+    natives.extend([("get_price_internal", native_get_price as RawSafeNative)]);
 
     #[cfg(feature = "testing")]
     natives.extend([(
         "set_price_internal",
-        make_test_only_native_from_func(native_test_only_set_price),
+        native_test_only_set_price as RawSafeNative,
     )]);
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

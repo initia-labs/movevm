@@ -1,20 +1,20 @@
-use crate::{helpers::make_module_natives, pop_vec_arg, util::make_native_from_func};
-use better_any::{Tid, TidAble};
-use initia_gas::gas_params::code::*;
-use initia_types::module::ModuleBundle;
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
-use move_core_types::{
-    account_address::AccountAddress, gas_algebra::NumBytes, vm_status::StatusCode,
+use crate::{
+    helpers::get_string,
+    interface::{
+        RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+    },
+    safely_pop_arg, safely_pop_vec_arg,
 };
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use better_any::{Tid, TidAble};
+use initia_types::module::ModuleBundle;
+use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{Struct, Value},
 };
 use serde::{Deserialize, Serialize};
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 use std::collections::{BTreeSet, VecDeque};
 
 /// Whether unconditional code upgrade with no compatibility check is allowed. This
@@ -65,10 +65,11 @@ impl<T> MoveOption<T> {
 // Code Publishing Logic
 
 // See stdlib/error.move
-const ECATEGORY_INVALID_STATE: u64 = 0x3;
+const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 
-/// Abort code when code publishing is requested twice (0x03 == INVALID_STATE)
-const EALREADY_REQUESTED: u64 = ECATEGORY_INVALID_STATE << 16;
+// native errors always start from 100
+const EALREADY_REQUESTED: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
+const EUNABLE_TO_PARSE_STRING: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 101;
 
 /// The native code context.
 #[derive(Tid, Default)]
@@ -85,16 +86,6 @@ pub struct PublishRequest {
     pub module_bundle: ModuleBundle,
     pub expected_modules: Option<BTreeSet<String>>,
     pub check_compat: bool,
-}
-
-/// Gets the string value embedded in a Move `string::String` struct.
-fn get_move_string(v: Struct) -> PartialVMResult<String> {
-    let bytes = v
-        .unpack()?
-        .next()
-        .ok_or_else(|| PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))?
-        .value_as::<Vec<u8>>()?;
-    String::from_utf8(bytes).map_err(|_| PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
 }
 
 /***************************************************************************************************
@@ -118,36 +109,42 @@ fn get_move_string(v: Struct) -> PartialVMResult<String> {
  *
  **************************************************************************************************/
 fn native_request_publish(
-    gas_params: &RequestPublishGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(args.len() == 4);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.code.request_publish;
 
-    let mut cost = gas_params.base_cost;
+    debug_assert!(arguments.len() == 4);
 
-    let policy = pop_arg!(args, u8);
+    context.charge(gas_params.base_cost)?;
+
+    let policy = safely_pop_arg!(arguments, u8);
     let mut code: Vec<Vec<u8>> = vec![];
-    for module_code in pop_vec_arg!(args, Vec<u8>) {
-        cost += gas_params.per_byte * NumBytes::new(module_code.len() as u64);
+    for module_code in safely_pop_vec_arg!(arguments, Vec<u8>) {
+        context.charge(gas_params.per_byte * NumBytes::new(module_code.len() as u64))?;
         code.push(module_code);
     }
 
     let mut expected_modules: BTreeSet<String> = BTreeSet::new();
-    for name in pop_vec_arg!(args, Struct) {
-        let str = get_move_string(name)?;
+    for name in safely_pop_vec_arg!(arguments, Struct) {
+        let str_bytes = get_string(name)?;
 
-        cost += gas_params.per_byte * NumBytes::new(str.len() as u64);
-        expected_modules.insert(str);
+        context.charge(gas_params.per_byte * NumBytes::new(str_bytes.len() as u64))?;
+        expected_modules.insert(String::from_utf8(str_bytes).map_err(|_| {
+            SafeNativeError::Abort {
+                abort_code: EUNABLE_TO_PARSE_STRING,
+            }
+        })?);
     }
 
-    let destination = pop_arg!(args, AccountAddress);
+    let destination = safely_pop_arg!(arguments, AccountAddress);
 
     let code_context = context.extensions_mut().get_mut::<NativeCodeContext>();
     if code_context.requested_module_bundle.is_some() {
-        // Can't request second time.
-        return Ok(NativeResult::err(cost, EALREADY_REQUESTED));
+        return Err(SafeNativeError::Abort {
+            abort_code: EALREADY_REQUESTED,
+        });
     }
 
     code_context.requested_module_bundle = Some(PublishRequest {
@@ -157,18 +154,17 @@ fn native_request_publish(
         check_compat: policy != UPGRADE_POLICY_ARBITRARY,
     });
 
-    Ok(NativeResult::ok(cost, smallvec![]))
+    Ok(smallvec![])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
-    let natives = vec![(
-        "request_publish",
-        make_native_from_func(gas_params.request_publish, native_request_publish),
-    )];
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
+    let natives = vec![("request_publish", native_request_publish as RawSafeNative)];
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

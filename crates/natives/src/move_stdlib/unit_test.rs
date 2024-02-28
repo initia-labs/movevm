@@ -2,18 +2,17 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: BUSL-1.1
 
-use initia_gas::InternalGas;
-use move_binary_format::errors::PartialVMResult;
 use move_core_types::account_address::AccountAddress;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
-use move_vm_types::{
-    loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
-};
+use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
 
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-use crate::util::make_test_only_native_from_func;
+use crate::{
+    interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult},
+    safely_pop_arg,
+};
 
 /***************************************************************************************************
  * native fun create_signers_for_testing
@@ -29,29 +28,31 @@ fn to_le_bytes(i: u64) -> [u8; AccountAddress::LENGTH] {
 }
 
 fn native_create_signers_for_testing(
-    _context: &mut NativeContext,
-    ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 1);
+    _context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
 
-    let num_signers = pop_arg!(args, u64);
+    let num_signers = safely_pop_arg!(arguments, u64);
     let signers = Value::vector_for_testing_only(
         (0..num_signers).map(|i| Value::signer(AccountAddress::new(to_le_bytes(i)))),
     );
 
-    Ok(NativeResult::ok(InternalGas::zero(), smallvec![signers]))
+    Ok(smallvec![signers])
 }
 
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-pub fn make_all() -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let natives = [(
         "create_signers_for_testing",
-        make_test_only_native_from_func(native_create_signers_for_testing),
+        native_create_signers_for_testing as RawSafeNative,
     )];
 
-    crate::helpers::make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

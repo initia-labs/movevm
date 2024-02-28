@@ -15,7 +15,7 @@ module initia_std::json {
     const JSON_VALUE_TYPE_STRING: u8 = 3;
     const JSON_VALUE_TYPE_ARRAY: u8 = 4;
     const JSON_VALUE_TYPE_OBJECT: u8 = 5;
-    const JSON_VALUE_TYPE_ERROR: u8 = 255;
+    const JSON_VALUE_TYPE_UNKNOWN: u8 = 255;
 
     const NUMBER_TYPE_INT: u8 = 0;
     const NUMBER_TYPE_DEC: u8 = 1;
@@ -517,7 +517,7 @@ module initia_std::json {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0x010003, location = Self)]
+    #[expected_failure(abort_code = 0x10066, location = Self)]
     fun test_string_to_number_exceeding_max_u256() {
         let test_str = string::utf8(b"115792089237316195423570985008687907853269984665640564039457584007913129639936"); // max_u256
         parse_number(test_str);

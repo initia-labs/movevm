@@ -1,19 +1,15 @@
-use crate::helpers::make_module_natives;
-use better_any::{Tid, TidAble};
-use initia_gas::gas_params::event::*;
-use initia_gas::AbstractValueSize;
-use initia_types::event::ContractEvent;
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
-use move_core_types::{language_storage::TypeTag, vm_status::StatusCode};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
-use move_vm_types::{
-    loaded_data::runtime_types::Type, natives::function::NativeResult, values::Value,
-};
-use smallvec::smallvec;
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
-#[cfg(feature = "testing")]
-use crate::util::make_test_only_native_from_func;
+use crate::interface::{
+    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+};
+use better_any::{Tid, TidAble};
+use initia_types::event::ContractEvent;
+use move_binary_format::errors::PartialVMError;
+use move_core_types::{language_storage::TypeTag, vm_status::StatusCode};
+use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
+use smallvec::{smallvec, SmallVec};
 
 /// Cached emitted module events.
 #[derive(Default, Tid)]
@@ -46,19 +42,25 @@ impl NativeEventContext {
  **************************************************************************************************/
 #[inline]
 fn native_write_module_event_to_store(
-    gas_params: &WriteModuleEventToStoreGasParameters,
-    calc_abstract_val_size: impl FnOnce(&Value) -> AbstractValueSize,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     mut ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context
+        .native_gas_params
+        .initia_stdlib
+        .event
+        .write_module_event_to_store;
+
     debug_assert!(ty_args.len() == 1);
     debug_assert!(arguments.len() == 1);
 
     let ty = ty_args.pop().unwrap();
     let msg = arguments.pop_back().unwrap();
 
-    let cost = gas_params.base + gas_params.per_abstract_value_unit * calc_abstract_val_size(&msg);
+    context.charge(
+        gas_params.base + gas_params.per_abstract_value_unit * context.abs_val_size(&msg),
+    )?;
     let type_tag = context.type_to_type_tag(&ty)?;
 
     // Additional runtime check for module call.
@@ -70,10 +72,14 @@ fn native_write_module_event_to_store(
     {
         if let TypeTag::Struct(ref struct_tag) = type_tag {
             if id != &struct_tag.module_id() {
-                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR));
+                return Err(SafeNativeError::InvariantViolation(PartialVMError::new(
+                    StatusCode::INTERNAL_TYPE_ERROR,
+                )));
             }
         } else {
-            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR));
+            return Err(SafeNativeError::InvariantViolation(PartialVMError::new(
+                StatusCode::INTERNAL_TYPE_ERROR,
+            )));
         }
     }
     let layout = context.type_to_type_layout(&ty)?;
@@ -84,32 +90,15 @@ fn native_write_module_event_to_store(
     let ctx = context.extensions_mut().get_mut::<NativeEventContext>();
     ctx.events.push(ContractEvent::new(type_tag, blob));
 
-    Ok(NativeResult::ok(cost, smallvec![]))
-}
-
-pub fn make_native_write_module_event_to_store(
-    gas_params: WriteModuleEventToStoreGasParameters,
-    calc_abstract_val_size: impl Fn(&Value) -> AbstractValueSize + Send + Sync + 'static,
-) -> NativeFunction {
-    Arc::new(
-        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
-            native_write_module_event_to_store(
-                &gas_params,
-                &calc_abstract_val_size,
-                context,
-                ty_args,
-                args,
-            )
-        },
-    )
+    Ok(smallvec![])
 }
 
 #[cfg(feature = "testing")]
 fn native_emitted_events(
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     mut ty_args: Vec<Type>,
     arguments: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(arguments.is_empty());
 
@@ -122,15 +111,15 @@ fn native_emitted_events(
         .emitted_events(&ty_tag)
         .into_iter()
         .map(|blob| {
-            Value::simple_deserialize(blob, &ty_layout)
-                .ok_or_else(|| PartialVMError::new(StatusCode::VALUE_DESERIALIZATION_ERROR))
+            Value::simple_deserialize(blob, &ty_layout).ok_or_else(|| {
+                SafeNativeError::InvariantViolation(PartialVMError::new(
+                    StatusCode::VALUE_DESERIALIZATION_ERROR,
+                ))
+            })
         })
-        .collect::<PartialVMResult<Vec<Value>>>()?;
+        .collect::<SafeNativeResult<Vec<Value>>>()?;
 
-    Ok(NativeResult::ok(
-        0.into(),
-        smallvec![Value::vector_for_testing_only(events)],
-    ))
+    Ok(smallvec![Value::vector_for_testing_only(events)])
 }
 
 /***************************************************************************************************
@@ -138,24 +127,16 @@ fn native_emitted_events(
  *
  **************************************************************************************************/
 pub fn make_all(
-    gas_params: GasParameters,
-    calc_abstract_val_size: impl Fn(&Value) -> AbstractValueSize + Send + Sync + 'static,
-) -> impl Iterator<Item = (String, NativeFunction)> {
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
-
     natives.extend([(
         "write_module_event_to_store",
-        make_native_write_module_event_to_store(
-            gas_params.write_module_event_to_store,
-            calc_abstract_val_size,
-        ),
+        native_write_module_event_to_store as RawSafeNative,
     )]);
 
     #[cfg(feature = "testing")]
-    natives.extend([(
-        "emitted_events",
-        make_test_only_native_from_func(native_emitted_events),
-    )]);
+    natives.extend([("emitted_events", native_emitted_events as RawSafeNative)]);
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

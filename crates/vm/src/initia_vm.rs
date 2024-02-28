@@ -20,7 +20,7 @@ use move_vm_runtime::{
 
 use std::{collections::BTreeSet, sync::Arc};
 
-use initia_gas::AbstractValueSizeGasParameters;
+use initia_gas::MiscGasParameters;
 use initia_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
 };
@@ -86,14 +86,9 @@ impl Default for InitiaVM {
 impl InitiaVM {
     pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
-        let abs_val_size_gas_params = AbstractValueSizeGasParameters::initial();
+        let misc_params = MiscGasParameters::initial();
         let runtime = VMRuntime::new(
-            all_natives(
-                gas_params.move_stdlib,
-                gas_params.initia_stdlib,
-                gas_params.table,
-                abs_val_size_gas_params,
-            ),
+            all_natives(gas_params, misc_params),
             VMConfig {
                 verifier: verifier_config(true),
                 module_cache_capacity,

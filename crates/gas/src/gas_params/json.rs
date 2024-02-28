@@ -1,5 +1,7 @@
 use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte};
 
+use crate::InternalGasPerAbstractValueUnit;
+
 #[derive(Debug, Clone)]
 pub struct ParseBoolGasParameters {
     pub base: InternalGas,
@@ -15,49 +17,49 @@ pub struct ParseNumberGasParameters {
 #[derive(Debug, Clone)]
 pub struct ParseStringGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub unit: InternalGasPerByte,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParseArrayGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub unit: InternalGasPerByte,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParseObjectGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub unit: InternalGasPerByte,
 }
 
 #[derive(Debug, Clone)]
 pub struct StringifyBoolGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub per_abstract_value_unit: InternalGasPerAbstractValueUnit,
 }
 
 #[derive(Debug, Clone)]
 pub struct StringifyNumberGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub per_abstract_value_unit: InternalGasPerAbstractValueUnit,
 }
 
 #[derive(Debug, Clone)]
 pub struct StringifyStringGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub per_abstract_value_unit: InternalGasPerAbstractValueUnit,
 }
 
 #[derive(Debug, Clone)]
 pub struct StringifyArrayGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub per_abstract_value_unit: InternalGasPerAbstractValueUnit,
 }
 
 #[derive(Debug, Clone)]
 pub struct StringifyObjectGasParameters {
     pub base: InternalGas,
-    pub unit: InternalGas,
+    pub per_abstract_value_unit: InternalGasPerAbstractValueUnit,
 }
 
 #[derive(Debug, Clone)]

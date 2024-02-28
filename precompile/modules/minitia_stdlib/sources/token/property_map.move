@@ -549,7 +549,7 @@ module minitia_std::property_map {
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x10001, location = minitia_std::from_bcs)]
+    #[expected_failure(abort_code = 0x10064, location = minitia_std::from_bcs)]
     fun test_invalid_init(creator: &signer) {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
@@ -591,7 +591,7 @@ module minitia_std::property_map {
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x10001, location = minitia_std::from_bcs)]
+    #[expected_failure(abort_code = 0x10064, location = minitia_std::from_bcs)]
     fun test_invalid_add(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
@@ -608,7 +608,7 @@ module minitia_std::property_map {
     }
 
     #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x10001, location = minitia_std::from_bcs)]
+    #[expected_failure(abort_code = 0x10064, location = minitia_std::from_bcs)]
     fun test_invalid_update(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);

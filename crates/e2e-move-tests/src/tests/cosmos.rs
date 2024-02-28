@@ -418,63 +418,6 @@ fn test_cosmos_pay_fee() {
 }
 
 #[test]
-fn test_initiate_token_deposit() {
-    let mut tests = vec![];
-    let bridge_id = 10u64;
-    let sender = AccountAddress::random();
-    let to = AccountAddress::random();
-    let metadata = staking_metadata();
-    let amount = 100u64;
-    let data = vec![1, 2, 3, 4];
-
-    let test_initialize_coin = (
-        AccountAddress::ONE,
-        "0x1::managed_coin::initialize",
-        vec![],
-        vec![
-            vec![0],
-            bcs::to_bytes(&b"Staking Denom".to_vec()).unwrap(),
-            bcs::to_bytes(&STAKING_SYMBOL.to_vec()).unwrap(),
-            6u8.to_le_bytes().to_vec(),
-            bcs::to_bytes(&b"".to_vec()).unwrap(),
-            bcs::to_bytes(&b"".to_vec()).unwrap(),
-        ],
-        ExpectedOutput::new(VMStatus::Executed, None, None, None),
-    );
-    tests.push(test_initialize_coin);
-
-    let test_pay_fee = (
-        sender,
-        "0x1::cosmos::initiate_token_deposit",
-        vec![],
-        vec![
-            bridge_id.to_le_bytes().to_vec(),
-            to.to_vec(),
-            metadata.to_vec(),
-            amount.to_le_bytes().to_vec(),
-            bcs::to_bytes(&data.to_vec()).unwrap(),
-        ],
-        ExpectedOutput::new(
-            VMStatus::Executed,
-            None,
-            None,
-            Some(vec![CosmosMessage::OPinit(
-                initia_types::cosmos::OPinitMessage::InitiateTokenDeposit {
-                    bridge_id,
-                    sender_address: sender,
-                    to_address: to,
-                    amount: CosmosCoin { amount, metadata },
-                    data,
-                },
-            )]),
-        ),
-    );
-    tests.push(test_pay_fee);
-
-    run_tests(tests);
-}
-
-#[test]
 fn test_cosmos_move_execute() {
     let mut tests = vec![];
     let sender = AccountAddress::random();
@@ -556,17 +499,13 @@ fn test_cosmos_move_script() {
 fn test_cosmos_stargate() {
     let mut tests = vec![];
     let sender = AccountAddress::random();
-    let path = "path".to_string();
     let data = "data".to_string();
 
     let test_stargate = (
         sender,
         "0x1::cosmos::stargate",
         vec![],
-        vec![
-            bcs::to_bytes(path.as_bytes()).unwrap(),
-            bcs::to_bytes(data.as_bytes()).unwrap(),
-        ],
+        vec![bcs::to_bytes(data.as_bytes()).unwrap()],
         ExpectedOutput::new(
             VMStatus::Executed,
             None,

@@ -1,23 +1,10 @@
 use better_any::{Tid, TidAble};
-use initia_gas::gas_params::block::*;
-use move_binary_format::errors::PartialVMResult;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
-use move_vm_types::{
-    loaded_data::runtime_types::Type, natives::function::NativeResult, values::Value,
-};
-use smallvec::smallvec;
+use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
+use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-use crate::{helpers::make_module_natives, util::make_native_from_func};
-
-#[cfg(feature = "testing")]
-use crate::util::make_test_only_native_from_func;
-
-#[cfg(feature = "testing")]
-use initia_gas::InternalGas;
-
-#[cfg(feature = "testing")]
-use move_vm_types::pop_arg;
+use crate::interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult};
 
 /// The native block context.
 #[derive(Tid)]
@@ -44,58 +31,55 @@ impl NativeBlockContext {
 }
 
 fn native_get_block_info(
-    gas_params: &GetBlockInfoGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
-    _args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    let cost = gas_params.base_cost;
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.block.get_block_info;
+    context.charge(gas_params.base_cost)?;
 
     let block_context = context.extensions().get::<NativeBlockContext>();
-    Ok(NativeResult::ok(
-        cost,
-        smallvec![
-            Value::u64(block_context.height),
-            Value::u64(block_context.timestamp)
-        ],
-    ))
+    Ok(smallvec![
+        Value::u64(block_context.height),
+        Value::u64(block_context.timestamp)
+    ])
 }
 
 #[cfg(feature = "testing")]
 fn native_test_only_set_block_info(
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 2);
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    use crate::safely_pop_arg;
 
-    let timestamp = pop_arg!(args, u64);
-    let height = pop_arg!(args, u64);
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 2);
+
+    let timestamp = safely_pop_arg!(arguments, u64);
+    let height = safely_pop_arg!(arguments, u64);
 
     let block_context = context.extensions_mut().get_mut::<NativeBlockContext>();
     NativeBlockContext::set_block_info(block_context, height, timestamp);
 
-    Ok(NativeResult::ok(InternalGas::zero(), smallvec![]))
+    Ok(smallvec![])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
-
-    natives.extend([(
-        "get_block_info",
-        make_native_from_func(gas_params.get_block_info, native_get_block_info),
-    )]);
+    natives.extend([("get_block_info", native_get_block_info as RawSafeNative)]);
 
     #[cfg(feature = "testing")]
     natives.extend([(
         "set_block_info",
-        make_test_only_native_from_func(native_test_only_set_block_info),
+        native_test_only_set_block_info as RawSafeNative,
     )]);
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

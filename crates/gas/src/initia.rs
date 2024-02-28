@@ -8,8 +8,9 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.account.create_address.base_cost, "account.create_address.base", 1102],
     [.account.create_signer.base_cost, "account.create_signer.base", 1102],
 
-    [.address.to_string.base_cost, "address.to_string.base_cost", 1678],
-    [.address.from_string.base_cost, "address.from_string.base_cost", 1678],
+    [.address.to_string.base_cost, "address.to_string.base_cost", 1678], // 1102 + 18 * 32
+    [.address.from_string.base_cost, "address.from_string.base_cost", 1102],
+    [.address.from_string.per_byte, "address.from_string.per_byte", 18],
 
     [.code.request_publish.base_cost, "code.request_publish.base", 1838],
     [.code.request_publish.per_byte, "code.request_publish.per_byte", 7],
@@ -30,15 +31,15 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.json.parse_object.base, "json.parse_object.base", 1102],
     [.json.parse_object.unit, "json.parse_object.unit", 18],
     [.json.stringify_bool.base, "json.stringify_bool.base", 1102],
-    [.json.stringify_bool.unit, "json.stringify_bool.unit", 18],
+    [.json.stringify_bool.per_abstract_value_unit, "json.stringify_bool.per_abstract_value_unit", 61],
     [.json.stringify_number.base, "json.stringify_number.base", 1102],
-    [.json.stringify_number.unit, "json.stringify_number.unit", 18],
+    [.json.stringify_number.per_abstract_value_unit, "json.stringify_number.per_abstract_value_unit", 61],
     [.json.stringify_string.base, "json.stringify_string.base", 1102],
-    [.json.stringify_string.unit, "json.stringify_string.unit", 18],
+    [.json.stringify_string.per_abstract_value_unit, "json.stringify_string.per_abstract_value_unit", 61],
     [.json.stringify_array.base, "json.stringify_array.base", 1102],
-    [.json.stringify_array.unit, "json.stringify_array.unit", 18],
+    [.json.stringify_array.per_abstract_value_unit, "json.stringify_array.per_abstract_value_unit", 61],
     [.json.stringify_object.base, "json.stringify_object.base", 1102],
-    [.json.stringify_object.unit, "json.stringify_object.unit", 18],
+    [.json.stringify_object.per_abstract_value_unit, "json.stringify_object.per_abstract_value_unit", 61],
     [.json.get_type.base, "json.get_type.base", 1102],
     [.json.get_type.unit, "json.get_type.unit", 18],
 
@@ -77,31 +78,44 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.staking.delegate.base, "staking.delegate.base", 50_000 * SCALING],
+    [.staking.delegate.per_byte, "staking.delegate.per_byte", 18],
     [.staking.undelegate.base, "staking.undelegate.base", 50_000 * SCALING],
+    [.staking.undelegate.per_byte, "staking.undelegate.per_byte", 18],
     [.staking.share_to_amount.base, "staking.share_to_amount.base", 100 * SCALING],
+    [.staking.share_to_amount.per_byte, "staking.share_to_amount.per_byte", 18],
     [.staking.amount_to_share.base, "staking.amount_to_share.base", 100 * SCALING],
+    [.staking.amount_to_share.per_byte, "staking.amount_to_share.per_byte", 18],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     // These functions will consume gas after move execution finished,
     // so don't need to charge a lot here.
     [.cosmos.stargate.base, "cosmos.stargate.base", 1000 * SCALING],
+    [.cosmos.stargate.per_byte, "cosmos.stargate.per_byte", 7],
     [.cosmos.move_execute.base, "cosmos.move_execute.base", 1000 * SCALING],
+    [.cosmos.move_execute.per_byte, "cosmos.move_execute.per_byte", 18],
     [.cosmos.move_script.base, "cosmos.move_script.base", 1000 * SCALING],
+    [.cosmos.move_script.per_byte, "cosmos.move_script.per_byte", 18],
     [.cosmos.delegate.base, "cosmos.delegate.base", 1000 * SCALING],
+    [.cosmos.delegate.per_byte, "cosmos.delegate.per_byte", 18],
     [.cosmos.fund_community_pool.base, "cosmos.fund_community_pool.base", 1000 * SCALING],
+    [.cosmos.fund_community_pool.per_byte, "cosmos.fund_community_pool.per_byte", 18],
     [.cosmos.transfer.base, "cosmos.transfer.base", 1000 * SCALING],
+    [.cosmos.transfer.per_byte, "cosmos.transfer.per_byte", 18],
     [.cosmos.nft_transfer.base, "cosmos.nft_transfer.base", 1000 * SCALING],
     [.cosmos.nft_transfer.per_token, "cosmos.nft_transfer.per_token", 10 * SCALING],
+    [.cosmos.nft_transfer.per_byte, "cosmos.nft_transfer.per_byte", 18],
     [.cosmos.pay_fee.base, "cosmos.pay_fee.base", 1000 * SCALING],
-    [.cosmos.initiate_token_deposit.base, "cosmos.initiate_token_deposit", 1000 * SCALING],
-    [.cosmos.initiate_token_withdrawal.base, "cosmos.initiate_token_withdrawal", 1000 * SCALING],
+    [.cosmos.pay_fee.per_byte, "cosmos.pay_fee.per_byte", 18],
 
     [.query.custom.base, "query.custom.base", 100 * SCALING],
+    [.query.custom.per_byte, "query.custom.per_byte", 18],
     [.query.stargate.base, "query.stargate.base", 100 * SCALING],
+    [.query.stargate.per_byte, "query.stargate.per_byte", 18],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
     [.oracle.get_price.base_cost, "oracle.get_prices.base_cost", 1500 * SCALING],
+    [.oracle.get_price.per_byte, "oracle.get_prices.per_byte", 18],
 ]);
 
 use crate::gas_params::*;
@@ -149,6 +163,7 @@ impl GasParameters {
                 },
                 from_string: address::FromStringGasParameters {
                     base_cost: 0.into(),
+                    per_byte: 0.into(),
                 },
             },
             block: block::GasParameters {
@@ -201,23 +216,23 @@ impl GasParameters {
                 },
                 stringify_bool: json::StringifyBoolGasParameters {
                     base: 0.into(),
-                    unit: 0.into(),
+                    per_abstract_value_unit: 0.into(),
                 },
                 stringify_number: json::StringifyNumberGasParameters {
                     base: 0.into(),
-                    unit: 0.into(),
+                    per_abstract_value_unit: 0.into(),
                 },
                 stringify_string: json::StringifyStringGasParameters {
                     base: 0.into(),
-                    unit: 0.into(),
+                    per_abstract_value_unit: 0.into(),
                 },
                 stringify_array: json::StringifyArrayGasParameters {
                     base: 0.into(),
-                    unit: 0.into(),
+                    per_abstract_value_unit: 0.into(),
                 },
                 stringify_object: json::StringifyObjectGasParameters {
                     base: 0.into(),
-                    unit: 0.into(),
+                    per_abstract_value_unit: 0.into(),
                 },
                 get_type: json::GetTypeGasParameters {
                     base: 0.into(),
@@ -241,10 +256,22 @@ impl GasParameters {
                 },
             },
             staking: staking::GasParameters {
-                delegate: staking::DelegateGasParameters { base: 0.into() },
-                undelegate: staking::UndelegateGasParameters { base: 0.into() },
-                share_to_amount: staking::ShareToAmountGasParameters { base: 0.into() },
-                amount_to_share: staking::AmountToShareGasParameters { base: 0.into() },
+                delegate: staking::DelegateGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                undelegate: staking::UndelegateGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                share_to_amount: staking::ShareToAmountGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                amount_to_share: staking::AmountToShareGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
             },
             crypto: crypto::GasParameters {
                 ed25519: crypto::Ed25519GasParameters {
@@ -264,22 +291,38 @@ impl GasParameters {
                 },
             },
             cosmos: cosmos::GasParameters {
-                stargate: cosmos::StargateParameters { base: 0.into() },
-                move_execute: cosmos::MoveExecuteGasParameters { base: 0.into() },
-                move_script: cosmos::MoveScriptGasParameters { base: 0.into() },
-                delegate: cosmos::DelegateGasParameters { base: 0.into() },
-                fund_community_pool: cosmos::FundCommunityPoolGasParameters { base: 0.into() },
-                transfer: cosmos::TransferGasParameters { base: 0.into() },
+                stargate: cosmos::StargateParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                move_execute: cosmos::MoveExecuteGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                move_script: cosmos::MoveScriptGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                delegate: cosmos::DelegateGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                fund_community_pool: cosmos::FundCommunityPoolGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                transfer: cosmos::TransferGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
                 nft_transfer: cosmos::NFTTransferGasParameters {
                     base: 0.into(),
                     per_token: 0.into(),
+                    per_byte: 0.into(),
                 },
-                pay_fee: cosmos::PayFeeGasParameters { base: 0.into() },
-                initiate_token_deposit: cosmos::InitiateTokenDepositGasParameters {
+                pay_fee: cosmos::PayFeeGasParameters {
                     base: 0.into(),
-                },
-                initiate_token_withdrawal: cosmos::InitiateTokenWithdrawalGasParameters {
-                    base: 0.into(),
+                    per_byte: 0.into(),
                 },
             },
             object: object::GasParameters {
@@ -290,8 +333,14 @@ impl GasParameters {
                 },
             },
             query: query::GasParameters {
-                custom: query::QueryCustomParameters { base: 0.into() },
-                stargate: query::QueryStargateParameters { base: 0.into() },
+                custom: query::QueryCustomParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+                stargate: query::QueryStargateParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
             },
             transaction_context: transaction_context::GasParameters {
                 get_transaction_hash: transaction_context::GetTransactionHashGasParameters {
@@ -304,6 +353,7 @@ impl GasParameters {
             oracle: oracle::GasParameters {
                 get_price: oracle::GetPricesGasParameters {
                     base_cost: 0.into(),
+                    per_byte: 0.into(),
                 },
             },
         }

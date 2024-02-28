@@ -1,25 +1,32 @@
 use better_any::{Tid, TidAble};
-use initia_gas::{gas_params::query::*, InternalGas};
+use initia_gas::InternalGas;
 use initia_types::query::*;
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
+use move_binary_format::errors::PartialVMError;
+use move_core_types::gas_algebra::NumBytes;
 use move_core_types::vm_status::StatusCode;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
-    pop_arg,
     values::{Value, Vector},
 };
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-use crate::util::make_native_from_func;
+use crate::{
+    interface::{
+        RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+    },
+    safely_pop_arg,
+};
 
 // defined in initia_gas::meter
 const GAS_UNIT_SCALING_FACTOR: u64 = 100;
 
+// See stdlib/error.move
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
-const EINVALID_QUERY: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 1;
+
+// native errors always start from 100
+const UNABLE_TO_PARSE_STRING: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 
 // API to allow move modules to query information from the environment
 // it is executed in. This is typically used to query a custom function
@@ -49,105 +56,112 @@ impl<'a> NativeQueryContext<'a> {
 }
 
 fn native_query_custom(
-    gas_params: &QueryCustomParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.query.custom;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 2);
+    debug_assert!(arguments.len() == 2);
 
-    let query_context = context.extensions().get::<NativeQueryContext>();
+    let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    let name_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
-    let data = pop_arg!(args, Vector).to_vec_u8()?;
-    let name = pop_arg!(args, Vector).to_vec_u8()?;
-    let name = String::from_utf8(name)
-        .map_err(|err| partial_error(StatusCode::VALUE_SERIALIZATION_ERROR, err))?;
+    // charge gas before execution
+    context.charge(
+        gas_params.base
+            + gas_params.per_byte * NumBytes::new((name_bytes.len() + data.len()) as u64),
+    )?;
+
+    let name = String::from_utf8(name_bytes).map_err(|_| SafeNativeError::Abort {
+        abort_code: UNABLE_TO_PARSE_STRING,
+    })?;
 
     let custom_query = CustomQuery { name, data };
-
     let req = QueryRequest::Custom(custom_query);
     let req = serde_json::to_vec(&req)
         .map_err(|err| partial_error(StatusCode::VALUE_SERIALIZATION_ERROR, err))?;
+
     let gas_balance: u64 = context.gas_balance().into();
+    let query_context = context.extensions().get::<NativeQueryContext>();
     let (res, used_gas) = query_context
         .api
         .query(req.as_slice(), gas_balance / GAS_UNIT_SCALING_FACTOR);
     let used_gas = InternalGas::from(used_gas * GAS_UNIT_SCALING_FACTOR);
+    context.charge(used_gas)?;
 
     let res = match res {
         Ok(val) => val,
-        Err(_) => {
-            return Ok(NativeResult::err(
-                gas_params.base + used_gas,
-                EINVALID_QUERY,
-            ))
+        Err(err) => {
+            return Err(SafeNativeError::InvariantViolation(partial_error(
+                StatusCode::ABORTED,
+                err,
+            )))
         }
     };
 
-    Ok(NativeResult::ok(
-        gas_params.base + used_gas,
-        smallvec![Value::vector_u8(res)],
-    ))
+    Ok(smallvec![Value::vector_u8(res)])
 }
 
 fn native_query_stargate(
-    gas_params: &QueryStargateParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.query.stargate;
+
     debug_assert!(ty_args.is_empty());
-    debug_assert!(args.len() == 2);
+    debug_assert!(arguments.len() == 2);
 
-    let query_context = context.extensions().get::<NativeQueryContext>();
+    let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    let path_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
-    let data = pop_arg!(args, Vector).to_vec_u8()?;
-    let path = pop_arg!(args, Vector).to_vec_u8()?;
-    let path = String::from_utf8(path)
-        .map_err(|err| partial_error(StatusCode::VALUE_SERIALIZATION_ERROR, err))?;
+    // charge gas before execution
+    context.charge(
+        gas_params.base
+            + gas_params.per_byte * NumBytes::new((path_bytes.len() + data.len()) as u64),
+    )?;
+
+    let path = String::from_utf8(path_bytes).map_err(|_| SafeNativeError::Abort {
+        abort_code: UNABLE_TO_PARSE_STRING,
+    })?;
 
     let stargate_query = StargateQuery { path, data };
-
     let req = QueryRequest::Stargate(stargate_query);
     let req = serde_json::to_vec(&req)
         .map_err(|err| partial_error(StatusCode::VALUE_SERIALIZATION_ERROR, err))?;
 
     let gas_balance: u64 = context.gas_balance().into();
+    let query_context = context.extensions().get::<NativeQueryContext>();
     let (res, used_gas) = query_context
         .api
         .query(req.as_slice(), gas_balance / GAS_UNIT_SCALING_FACTOR);
     let used_gas = InternalGas::from(used_gas * GAS_UNIT_SCALING_FACTOR);
+    context.charge(used_gas)?;
 
     let res = match res {
         Ok(val) => val,
-        Err(_) => {
-            return Ok(NativeResult::err(
-                gas_params.base + used_gas,
-                EINVALID_QUERY,
-            ))
+        Err(err) => {
+            return Err(SafeNativeError::InvariantViolation(partial_error(
+                StatusCode::ABORTED,
+                err,
+            )))
         }
     };
 
-    Ok(NativeResult::ok(
-        gas_params.base + used_gas,
-        smallvec![Value::vector_u8(res)],
-    ))
+    Ok(smallvec![Value::vector_u8(res)])
 }
 
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let natives = vec![
-        (
-            "query_custom",
-            make_native_from_func(gas_params.custom.clone(), native_query_custom),
-        ),
-        (
-            "query_stargate",
-            make_native_from_func(gas_params.stargate.clone(), native_query_stargate),
-        ),
+        ("query_custom", native_query_custom as RawSafeNative),
+        ("query_stargate", native_query_stargate),
     ];
 
-    crate::helpers::make_module_natives(natives)
+    builder.make_named_natives(natives)
 }
 
 // =========================================================================================

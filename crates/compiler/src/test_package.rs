@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::bail;
-use initia_gas::{AbstractValueSizeGasParameters, NativeGasParameters};
+use initia_gas::{MiscGasParameters, NativeGasParameters};
 use initia_natives::all_natives;
 use initia_types::metadata;
 use move_cli::base::{
@@ -31,7 +31,7 @@ impl TestPackage {
         configure_for_unit_test();
 
         let gas_params = NativeGasParameters::zeros();
-        let abs_val_size_gas_params = AbstractValueSizeGasParameters::zeros();
+        let misc_gas_params = MiscGasParameters::zeros();
         let result = run_move_unit_tests(
             &self.package_path,
             new_build_config,
@@ -42,12 +42,7 @@ impl TestPackage {
                 ignore_compile_warnings: self.test_config.ignore_compile_warnings,
                 ..UnitTestingConfig::default_with_bound(None)
             },
-            all_natives(
-                gas_params.move_stdlib,
-                gas_params.initia_stdlib,
-                gas_params.table,
-                abs_val_size_gas_params,
-            ),
+            all_natives(gas_params, misc_gas_params),
             None,
             self.test_config.compute_coverage,
             &mut std::io::stdout(),

@@ -1,18 +1,25 @@
-use initia_gas::gas_params::type_info::*;
-use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     gas_algebra::NumBytes,
     language_storage::{StructTag, TypeTag},
 };
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    natives::function::NativeResult,
     values::{Struct, Value},
 };
 
 use smallvec::{smallvec, SmallVec};
-use std::{collections::VecDeque, fmt::Write, sync::Arc};
+use std::{collections::VecDeque, fmt::Write};
+
+use crate::interface::{
+    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+};
+
+// See stdlib/error.move
+const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
+
+// native errors always start from 100
+const EXPECTED_STRUCT_TYPE_TAG: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 
 fn type_of_internal(struct_tag: &StructTag) -> Result<SmallVec<[Value; 1]>, std::fmt::Error> {
     let mut name = struct_tag.name.to_string();
@@ -42,32 +49,27 @@ fn type_of_internal(struct_tag: &StructTag) -> Result<SmallVec<[Value; 1]>, std:
  *
  **************************************************************************************************/
 fn native_type_of(
-    gas_params: &TypeOfGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    arguments: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.type_info.type_of;
+
     debug_assert!(ty_args.len() == 1);
-    debug_assert!(arguments.is_empty());
+    debug_assert!(_arguments.is_empty());
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
-    let cost = gas_params.base + gas_params.unit * NumBytes::new(type_tag.to_string().len() as u64);
+    context.charge(
+        gas_params.base + gas_params.unit * NumBytes::new(type_tag.to_string().len() as u64),
+    )?;
 
     if let TypeTag::Struct(struct_tag) = type_tag {
-        Ok(NativeResult::ok(
-            cost,
-            type_of_internal(&struct_tag).expect("type_of should never fail."),
-        ))
+        Ok(type_of_internal(&struct_tag).expect("type_of should never fail."))
     } else {
-        Ok(NativeResult::err(
-            cost,
-            super::status::NFE_EXPECTED_STRUCT_TYPE_TAG,
-        ))
+        Err(SafeNativeError::Abort {
+            abort_code: EXPECTED_STRUCT_TYPE_TAG,
+        })
     }
-}
-
-pub fn make_native_type_of(gas_params: TypeOfGasParameters) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| native_type_of(&gas_params, context, ty_args, args))
 }
 
 /***************************************************************************************************
@@ -79,45 +81,43 @@ pub fn make_native_type_of(gas_params: TypeOfGasParameters) -> NativeFunction {
  *
  **************************************************************************************************/
 fn native_type_name(
-    gas_params: &TypeNameGasParameters,
-    context: &mut NativeContext,
+    context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
-    arguments: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib.type_info.type_name;
+
     debug_assert!(ty_args.len() == 1);
-    debug_assert!(arguments.is_empty());
+    debug_assert!(_arguments.is_empty());
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
     let type_name = type_tag.to_string();
 
-    let cost = gas_params.base + gas_params.unit * NumBytes::new(type_name.len() as u64);
+    context.charge(
+        gas_params.base + gas_params.unit * NumBytes::new(type_name.to_string().len() as u64),
+    )?;
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
     let type_name = type_tag.to_string();
 
-    Ok(NativeResult::ok(
-        cost,
-        smallvec![Value::struct_(Struct::pack(vec![Value::vector_u8(
-            type_name.as_bytes().to_vec()
-        )]))],
-    ))
-}
-
-pub fn make_native_type_name(gas_params: TypeNameGasParameters) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| native_type_name(&gas_params, context, ty_args, args))
+    Ok(smallvec![Value::struct_(Struct::pack(vec![
+        Value::vector_u8(type_name.as_bytes().to_vec())
+    ]))])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let natives = [
-        ("type_of", make_native_type_of(gas_params.type_of)),
-        ("type_name", make_native_type_name(gas_params.type_name)),
+        ("type_of", native_type_of as RawSafeNative),
+        ("type_name", native_type_name),
     ];
 
-    crate::helpers::make_module_natives(natives)
+    builder.make_named_natives(natives)
 }
 
 #[cfg(test)]

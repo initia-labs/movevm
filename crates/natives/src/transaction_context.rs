@@ -1,22 +1,14 @@
 use better_any::{Tid, TidAble};
-use initia_gas::gas_params::transaction_context::{
-    GasParameters, GenerateUniqueAddressGasParameters, GetTransactionHashGasParameters,
-};
-use move_binary_format::errors::{PartialVMError, PartialVMResult};
+use move_binary_format::errors::PartialVMError;
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
-use move_vm_types::{
-    loaded_data::runtime_types::Type, natives::function::NativeResult, values::Value,
-};
+use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
 use sha3::{Digest, Sha3_256};
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 
 use std::collections::VecDeque;
 
-use crate::{helpers::make_module_natives, util::make_native_from_func};
-
-#[cfg(feature = "testing")]
-use crate::util::make_test_only_native_from_func;
+use crate::interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult};
 
 /// UID prefix is used to generate unique address from the txn hash.
 const UID_PREFIX: [u8; 4] = [0, 0, 0, 1];
@@ -51,18 +43,22 @@ impl NativeTransactionContext {
  *
  **************************************************************************************************/
 fn native_get_transaction_hash(
-    gas_params: &GetTransactionHashGasParameters,
-    context: &mut NativeContext,
-    mut _ty_args: Vec<Type>,
-    _args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    let cost: initia_gas::GasQuantity<initia_gas::InternalGasUnit> = gas_params.base;
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context
+        .native_gas_params
+        .initia_stdlib
+        .transaction_context
+        .get_transaction_hash;
+    context.charge(gas_params.base)?;
+
     let transaction_context = context.extensions().get::<NativeTransactionContext>();
 
-    Ok(NativeResult::ok(
-        cost,
-        smallvec![Value::vector_u8(transaction_context.tx_hash.to_vec())],
-    ))
+    Ok(smallvec![Value::vector_u8(
+        transaction_context.tx_hash.to_vec()
+    )])
 }
 
 /***************************************************************************************************
@@ -72,12 +68,16 @@ fn native_get_transaction_hash(
  *
  **************************************************************************************************/
 fn native_generate_unique_address(
-    gas_params: &GenerateUniqueAddressGasParameters,
-    context: &mut NativeContext,
-    mut _ty_args: Vec<Type>,
-    _args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    let cost: initia_gas::GasQuantity<initia_gas::InternalGasUnit> = gas_params.base;
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context
+        .native_gas_params
+        .initia_stdlib
+        .transaction_context
+        .generate_unique_address;
+    context.charge(gas_params.base)?;
 
     let transaction_context = context
         .extensions_mut()
@@ -98,54 +98,43 @@ fn native_generate_unique_address(
                 .with_message("Unable to generate unique address".to_string())
         })?;
 
-    Ok(NativeResult::ok(
-        cost,
-        smallvec![Value::address(unique_address)],
-    ))
+    Ok(smallvec![Value::address(unique_address)])
 }
 
 #[cfg(feature = "testing")]
 fn native_test_only_get_session_id(
-    context: &mut NativeContext,
-    mut _ty_args: Vec<Type>,
-    _args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    use initia_gas::InternalGas;
-
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let transaction_context = context.extensions().get::<NativeTransactionContext>();
 
-    Ok(NativeResult::ok(
-        InternalGas::zero(),
-        smallvec![Value::vector_u8(transaction_context.session_id.to_vec())],
-    ))
+    Ok(smallvec![Value::vector_u8(
+        transaction_context.session_id.to_vec()
+    )])
 }
 
 /***************************************************************************************************
  * module
  *
  **************************************************************************************************/
-pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+pub fn make_all(
+    builder: &SafeNativeBuilder,
+) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
-
     natives.extend([
         (
             "generate_unique_address",
-            make_native_from_func(
-                gas_params.generate_unique_address,
-                native_generate_unique_address,
-            ),
+            native_generate_unique_address as RawSafeNative,
         ),
-        (
-            "get_transaction_hash",
-            make_native_from_func(gas_params.get_transaction_hash, native_get_transaction_hash),
-        ),
+        ("get_transaction_hash", native_get_transaction_hash),
     ]);
 
     #[cfg(feature = "testing")]
     natives.extend([(
         "get_session_id",
-        make_test_only_native_from_func(native_test_only_get_session_id),
+        native_test_only_get_session_id as RawSafeNative,
     )]);
 
-    make_module_natives(natives)
+    builder.make_named_natives(natives)
 }

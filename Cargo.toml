@@ -90,6 +90,7 @@ serde_bytes = "0.11.9"
 serde_json = { version = "1.0.94" }
 serde-generate = { git = "https://github.com/aptos-labs/serde-reflection", rev = "73b6bbf748334b71ff6d7d09d06a29e3062ca075" }
 serde-reflection = { git = "https://github.com/aptos-labs/serde-reflection", rev = "73b6bbf748334b71ff6d7d09d06a29e3062ca075" }
+sha2 = "0.10.8"
 sha3 = "0.10.6"
 smallvec = "1.6.1"
 tempfile = "3.2.0"

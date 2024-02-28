@@ -182,24 +182,6 @@ module initia_std::cosmos {
         )
     }
 
-    public entry fun initiate_token_deposit (
-        sender: &signer,
-        bridge_id: u64,
-        to: address,
-        metadata: Object<Metadata>,
-        amount: u64,
-        data: vector<u8>,
-    ) {
-        initiate_token_deposit_internal(
-            bridge_id,
-            signer::address_of(sender),
-            to,
-            &metadata,
-            amount,
-            data,
-        )
-    }
-
     native fun stargate_internal (
         sender: address,
         data: vector<u8>,
@@ -270,14 +252,5 @@ module initia_std::cosmos {
         ack_fee_amount: u64,
         timeout_fee_metadata: &Object<Metadata>,
         timeout_fee_amount: u64,
-    );
-
-    native fun initiate_token_deposit_internal (
-        bridge_id: u64,
-        sender: address,
-        to: address,
-        metadata: &Object<Metadata>,
-        amount: u64,
-        data: vector<u8>,
     );
 }
