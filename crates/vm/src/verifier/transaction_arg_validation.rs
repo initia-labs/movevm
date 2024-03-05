@@ -107,7 +107,7 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
 /// 3. check arg types are allowed after signers
 ///
 /// after validation, add senders and non-signer arguments to generate the final args
-pub(crate) fn validate_combine_signer_and_txn_args(
+pub fn validate_combine_signer_and_txn_args(
     session: &mut Session,
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
@@ -231,7 +231,7 @@ pub(crate) fn construct_args(
     if types.len() != args.len() {
         return Err(invalid_signature());
     }
-    for (ty, arg) in types.iter().zip(args.into_iter()) {
+    for (ty, arg) in types.iter().zip(args) {
         let arg = construct_arg(
             session,
             &ty.subst(ty_args).unwrap(),
@@ -261,22 +261,23 @@ fn construct_arg(
     match ty {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => Ok(arg),
         Vector(_) | Struct { .. } | StructInstantiation { .. } => {
+            let initial_cursor_len = arg.len();
             let mut cursor = Cursor::new(&arg[..]);
             let mut new_arg = vec![];
-
+            let mut max_invocations = MAX_RECURSIVE_DEPTH; // Read from config in the future
             recursively_construct_arg(
                 session,
                 ty,
                 allowed_structs,
                 &mut cursor,
+                initial_cursor_len,
                 gas_meter,
+                &mut max_invocations,
                 &mut new_arg,
-                1,
             )?;
-
             // Check cursor has parsed everything
             // Unfortunately, is_empty is only enabled in nightly, so we check this way.
-            if cursor.position() != arg.len() as u64 {
+            if cursor.position() != initial_cursor_len as u64 {
                 return Err(VMStatus::error(
                     StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
                     Some(String::from(
@@ -297,6 +298,7 @@ fn construct_arg(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 // A Cursor is used to recursively walk the serialized arg manually and correctly. In effect we
 // are parsing the BCS serialized implicit constructor invocation tree, while serializing the
 // constructed types into the output parameter arg.
@@ -305,19 +307,12 @@ pub(crate) fn recursively_construct_arg(
     ty: &Type,
     allowed_structs: &ConstructorMap,
     cursor: &mut Cursor<&[u8]>,
+    initial_cursor_len: usize,
     gas_meter: &mut impl GasMeter,
+    max_invocations: &mut u64,
     arg: &mut Vec<u8>,
-    depth: u64,
 ) -> Result<(), VMStatus> {
     use move_vm_types::loaded_data::runtime_types::Type::*;
-
-    // check recursive depth
-    if depth == MAX_RECURSIVE_DEPTH {
-        return Err(VMStatus::error(
-            StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-            Some("reached MAX_RECURSIVE_DEPTH".to_string()),
-        ));
-    }
 
     match ty {
         Vector(inner) => {
@@ -330,9 +325,10 @@ pub(crate) fn recursively_construct_arg(
                     inner,
                     allowed_structs,
                     cursor,
+                    initial_cursor_len,
                     gas_meter,
+                    max_invocations,
                     arg,
-                    depth + 1,
                 )?;
                 len -= 1;
             }
@@ -344,7 +340,6 @@ pub(crate) fn recursively_construct_arg(
             let constructor = allowed_structs
                 .get(&full_name)
                 .ok_or_else(invalid_signature)?;
-
             // By appending the BCS to the output parameter we construct the correct BCS format
             // of the argument.
             arg.append(&mut validate_and_construct(
@@ -353,8 +348,9 @@ pub(crate) fn recursively_construct_arg(
                 constructor,
                 allowed_structs,
                 cursor,
+                initial_cursor_len,
                 gas_meter,
-                depth, // it's not recursive call, so pass current depth.
+                max_invocations,
             )?);
         }
         Bool | U8 => read_n_bytes(1, cursor, arg)?,
@@ -368,6 +364,7 @@ pub(crate) fn recursively_construct_arg(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 // A move function that constructs a type will return the BCS serialized representation of the
 // constructed value. This is the correct data to pass as the argument to a function taking
 // said struct as a parameter. In this function we execute the constructor constructing the
@@ -378,38 +375,65 @@ fn validate_and_construct(
     constructor: &FunctionId,
     allowed_structs: &ConstructorMap,
     cursor: &mut Cursor<&[u8]>,
+    initial_cursor_len: usize,
     gas_meter: &mut impl GasMeter,
-    depth: u64,
+    max_invocations: &mut u64,
 ) -> Result<Vec<u8>, VMStatus> {
+    if *max_invocations == 0 {
+        return Err(VMStatus::error(
+            StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
+            None,
+        ));
+    }
     // HACK mitigation of performance attack
     // To maintain compatibility with vector<string> or so on, we need to allow unlimited strings.
     // So we do not count the string constructor against the max_invocations, instead we
     // shortcut the string case to avoid the performance attack.
-    if constructor.module_id.name().as_str() == "string" && constructor.func_name.as_str() == "utf8"
-    {
-        // short cut for the utf8 constructor, which is a special case
+    if constructor.func_name.as_str() == "utf8" {
+        let constructor_error = || {
+            // A slight hack, to prevent additional piping of the feature flag through all
+            // function calls. We know the feature is active when more structs then just strings are
+            // allowed.
+            let are_struct_constructors_enabled = allowed_structs.len() > 1;
+            if are_struct_constructors_enabled {
+                PartialVMError::new(StatusCode::ABORTED)
+                    .with_sub_status(1)
+                    .at_code_offset(FunctionDefinitionIndex::new(0), 0)
+                    .finish(Location::Module(constructor.module_id.clone()))
+                    .into_vm_status()
+            } else {
+                VMStatus::error(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT, None)
+            }
+        };
+        // Short cut for the utf8 constructor, which is a special case.
         let len = get_len(cursor)?;
+        if !cursor
+            .position()
+            .checked_add(len as u64)
+            .is_some_and(|l| l <= initial_cursor_len as u64)
+        {
+            // We need to make sure we do not allocate more bytes than
+            // needed.
+            return Err(VMStatus::error(
+                StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
+                Some("String argument is too long".to_string()),
+            ));
+        }
+
         let mut arg = vec![];
         read_n_bytes(len, cursor, &mut arg)?;
-        std::str::from_utf8(&arg).map_err(|_| {
-            PartialVMError::new(StatusCode::ABORTED)
-                .with_sub_status(1)
-                .at_code_offset(FunctionDefinitionIndex::new(0), 0)
-                .finish(Location::Module(constructor.module_id.clone()))
-                .into_vm_status()
-        })?;
+        std::str::from_utf8(&arg).map_err(|_| constructor_error())?;
         return bcs::to_bytes(&arg)
             .map_err(|_| VMStatus::error(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT, None));
+    } else {
+        *max_invocations -= 1;
     }
 
-    // load function for the construction
     let (function, instantiation) = session.load_function_with_type_arg_inference(
         &constructor.module_id,
         constructor.func_name,
         expected_type,
     )?;
-
-    // prepare arguments of construction function
     let mut args = vec![];
     for param_type in &instantiation.parameters {
         let mut arg = vec![];
@@ -418,26 +442,22 @@ fn validate_and_construct(
             &param_type.subst(&instantiation.type_arguments).unwrap(),
             allowed_structs,
             cursor,
+            initial_cursor_len,
             gas_meter,
+            max_invocations,
             &mut arg,
-            depth + 1,
         )?;
         args.push(arg);
     }
-
-    // execute construction function
     let serialized_result =
         session.execute_instantiated_function(function, instantiation, args, gas_meter)?;
-
-    // We know ret_vals.len() == 1
     let mut ret_vals = serialized_result.return_values;
-    Ok(ret_vals
-        .pop()
-        .ok_or(VMStatus::error(
-            StatusCode::INTERNAL_TYPE_ERROR,
-            Some(String::from("Constructor did not return value")),
-        ))?
-        .0)
+    // We know ret_vals.len() == 1
+    let deserialize_error = VMStatus::error(
+        StatusCode::INTERNAL_TYPE_ERROR,
+        Some(String::from("Constructor did not return value")),
+    );
+    Ok(ret_vals.pop().ok_or(deserialize_error)?.0)
 }
 
 // String is a vector of bytes, so both string and vector carry a length in the serialized format.
@@ -462,12 +482,28 @@ fn serialize_uleb128(mut x: usize, dest: &mut Vec<u8>) {
 }
 
 fn read_n_bytes(n: usize, src: &mut Cursor<&[u8]>, dest: &mut Vec<u8>) -> Result<(), VMStatus> {
-    let len = dest.len();
-    dest.resize(len + n, 0);
-    src.read_exact(&mut dest[len..]).map_err(|_| {
+    let deserialization_error = |msg: &str| -> VMStatus {
         VMStatus::error(
             StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-            Some(String::from("Couldn't read bytes")),
+            Some(msg.to_string()),
         )
-    })
+    };
+    let len = dest.len();
+
+    // It is safer to limit the length under some big (but still reasonable
+    // number).
+    const MAX_NUM_BYTES: usize = 1_000_000;
+    if !len.checked_add(n).is_some_and(|s| s <= MAX_NUM_BYTES) {
+        return Err(deserialization_error(&format!(
+            "Couldn't read bytes: maximum limit of {} bytes exceeded",
+            MAX_NUM_BYTES
+        )));
+    }
+
+    // Ensure we have enough capacity for resizing.
+    dest.try_reserve(len + n)
+        .map_err(|e| deserialization_error(&format!("Couldn't read bytes: {}", e)))?;
+    dest.resize(len + n, 0);
+    src.read_exact(&mut dest[len..])
+        .map_err(|_| deserialization_error("Couldn't read bytes"))
 }

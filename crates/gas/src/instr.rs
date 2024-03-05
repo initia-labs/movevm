@@ -4,7 +4,7 @@
 
 use crate::algebra::InternalGasPerAbstractValueUnit;
 use move_binary_format::errors::PartialVMResult;
-use move_core_types::gas_algebra::{InternalGas, InternalGasPerArg, InternalGasPerByte};
+use move_core_types::gas_algebra::{InternalGas, InternalGasPerArg, InternalGasPerByte, InternalGasPerTypeNode};
 use move_vm_types::gas::SimpleInstruction;
 
 crate::params::define_gas_parameters!(
@@ -123,6 +123,7 @@ crate::params::define_gas_parameters!(
         [vec_pack_per_elem: InternalGasPerArg, "vec_pack.per_elem", 147],
         [vec_unpack_base: InternalGas, "vec_unpack.base", 1838],
         [vec_unpack_per_expected_elem: InternalGasPerArg, "vec_unpack.per_expected_elem", 147],
+        [subst_ty_per_node: InternalGasPerTypeNode, "subst_ty_per_node", 400],
     ]
 );
 

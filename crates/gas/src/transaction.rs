@@ -4,7 +4,7 @@
 use crate::{
     algebra::{GasScalingFactor, GasUnit},
     meter::GAS_UNIT_SCALING_FACTOR as SCALING,
-    AbstractValueSize,
+    AbstractValueSize, NumModules,
 };
 use move_core_types::gas_algebra::{
     InternalGas, InternalGasPerByte, InternalGasUnit, NumBytes, ToUnitWithParams,
@@ -43,6 +43,22 @@ crate::params::define_gas_parameters!(
             SCALING
         ],
         [memory_quota: AbstractValueSize, optional "memory_quota", 10_000_000],
+        [dependency_per_module: InternalGas, "dependency_per_module", 4_000],
+        [
+            dependency_per_byte: InternalGasPerByte,
+            "dependency_per_byte" ,
+            100,
+        ],
+        [
+            max_num_dependencies: NumModules,
+            "max_num_dependencies",
+            420,
+        ],
+        [
+            max_total_dependency_size: NumBytes,
+            "max_total_dependency_size",
+            1024 * 1024 * 12 / 10, // 1.2 MB
+        ],
     ]
 );
 

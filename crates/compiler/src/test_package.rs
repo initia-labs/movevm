@@ -8,6 +8,7 @@ use move_cli::base::{
     coverage::{Coverage, CoverageSummaryOptions},
     test::{run_move_unit_tests, Test, UnitTestResult},
 };
+use move_core_types::effects::ChangeSet;
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
@@ -43,6 +44,7 @@ impl TestPackage {
                 ..UnitTestingConfig::default_with_bound(None)
             },
             all_natives(gas_params, misc_gas_params),
+            ChangeSet::new(),
             None,
             self.test_config.compute_coverage,
             &mut std::io::stdout(),

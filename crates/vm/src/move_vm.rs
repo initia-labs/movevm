@@ -15,7 +15,7 @@ use move_core_types::{
 use move_vm_runtime::session::SerializedReturnValues;
 use move_vm_runtime::{
     config::VMConfig, native_extensions::NativeContextExtensions, runtime::VMRuntime,
-    session::Session, session_cache::SessionCache,
+    session_cache::SessionCache,
 };
 
 use std::{collections::BTreeSet, sync::Arc};
@@ -90,7 +90,7 @@ impl MoveVM {
         let runtime = VMRuntime::new(
             all_natives(gas_params, misc_params),
             VMConfig {
-                verifier: verifier_config(true),
+                verifier: verifier_config(),
                 module_cache_capacity,
                 script_cache_capacity,
                 ..Default::default()
@@ -140,7 +140,10 @@ impl MoveVM {
         extensions.add(NativeEventContext::default());
         extensions.add(NativeOracleContext::new(api));
 
-        SessionExt::new(Session::new(&self.runtime, resolver, extensions))
+        SessionExt::new(
+            self.runtime
+                .new_session_with_extensions(resolver, extensions),
+        )
     }
 
     #[allow(clippy::too_many_arguments)]

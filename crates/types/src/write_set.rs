@@ -6,33 +6,39 @@ use move_core_types::{
     effects::{ChangeSet, Op},
     language_storage::ModuleId,
 };
-use serde::{Deserialize, Serialize};
+use sha3::{Digest, Sha3_256};
 use std::collections::{btree_map, BTreeMap};
 
 pub type WriteOp = Op<Vec<u8>>;
 
-#[derive(Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct WriteSet(BTreeMap<AccessPath, WriteOp>);
 
 impl WriteSet {
     pub fn new(change_set: ChangeSet, table_change_set: TableChangeSet) -> anyhow::Result<Self> {
         let mut write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
         for (addr, account_changeset) in change_set.into_inner() {
-            let (modules, checksums, resources) = account_changeset.into_inner();
+            let (modules, resources) = account_changeset.into_inner();
             for (struct_tag, blob_opt) in resources {
                 let ap = AccessPath::resource_access_path(addr, struct_tag);
                 write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
 
-            for (name, blob_opt) in modules {
+            for (name, blob_opt) in modules.into_iter() {
+                // compute and write checksum changes
+                let checksum_ap = AccessPath::new(addr, DataPath::CodeChecksum(name.clone()));
+                let checksum_op = blob_opt.map_ref(|blob| {
+                    let mut sha3_256 = Sha3_256::new();
+                    sha3_256.update(blob);
+                    let checksum: [u8; 32] = sha3_256.finalize().into();
+                    checksum.to_vec()
+                });
+                write_set.insert(checksum_ap, checksum_op);
+
+                // write module bytes changes
                 let module_id = ModuleId::new(addr, name);
                 let ap = AccessPath::from(&module_id);
-                write_set.insert(ap, blob_opt.clone().map(|v| v.into()));
-            }
-
-            for (name, checksum) in checksums {
-                let ap = AccessPath::new(addr, DataPath::CodeChecksum(name));
-                write_set.insert(ap, checksum.clone().map(|v| v.to_vec()));
+                write_set.insert(ap, blob_opt.map(|v| v.into()));                
             }
         }
 
