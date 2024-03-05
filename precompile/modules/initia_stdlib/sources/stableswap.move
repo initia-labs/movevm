@@ -38,6 +38,7 @@ module initia_std::stableswap {
         mint_cap: coin::MintCapability,
     }
 
+    #[event]
     struct CreatePairEvent has drop, store {
         coins: vector<address>,
         liquidity_token: address,
@@ -45,6 +46,7 @@ module initia_std::stableswap {
         swap_fee_rate: Decimal128,
     }
 
+    #[event]
     struct ProvideEvent has drop, store {
         coins: vector<address>,
         coin_amounts: vector<u64>,
@@ -52,6 +54,7 @@ module initia_std::stableswap {
         liquidity: u64,
     }
 
+    #[event]
     struct WithdrawEvent has drop, store {
         coins: vector<address>,
         coin_amounts: vector<u64>,
@@ -59,6 +62,7 @@ module initia_std::stableswap {
         liquidity: u64,
     }
 
+    #[event]
     struct SwapEvent has drop, store {
         offer_coin: address,
         return_coin: address,

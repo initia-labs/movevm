@@ -85,6 +85,7 @@ module initia_std::vip_zapping {
     // Events
     //
 
+    #[event]
     struct LockEvent has drop, store {
         coin_metadata: address,
         bond_amount: u64,
@@ -92,6 +93,7 @@ module initia_std::vip_zapping {
         share: u64,
     }
 
+    #[event]
     struct ClaimEvent has drop, store {
         coin_metadata: address,
         reward_amount: u64,
@@ -99,6 +101,7 @@ module initia_std::vip_zapping {
         share: u64
     }
 
+    #[event]
     struct DepositEvent has drop, store {
         addr: address,
         delegation: DelegationInfo,
@@ -106,6 +109,7 @@ module initia_std::vip_zapping {
         share: u64
     }
 
+    #[event]
     struct WithdrawEvent has drop, store {
         addr: address,
         delegation: DelegationInfo,
@@ -120,6 +124,7 @@ module initia_std::vip_zapping {
         unclaimed_reward: u64,
     }
 
+    #[event]
     struct ZappingEvent has drop, store {
         zid: u64,
         account: address,

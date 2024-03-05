@@ -162,6 +162,7 @@ module initia_std::vip_reward {
     // Events
     //
 
+    #[event]
     /// Event emitted when a user claimed the rewards.
     struct ClaimEvent has drop, store {
         account: address,
@@ -179,6 +180,7 @@ module initia_std::vip_reward {
         l2_score: u64,
     }
 
+    #[event]
     struct FundEvent has drop, store {
         bridge_id: u64,
         reward_address: address,

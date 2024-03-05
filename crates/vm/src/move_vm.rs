@@ -1,4 +1,5 @@
 use move_binary_format::{
+    access::ModuleAccess,
     compatibility::Compatibility,
     errors::{Location, PartialVMError, VMResult},
     CompiledModule,
@@ -12,18 +13,22 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{StatusCode, VMStatus},
 };
-use move_vm_runtime::session::SerializedReturnValues;
 use move_vm_runtime::{
     config::VMConfig, native_extensions::NativeContextExtensions, runtime::VMRuntime,
     session_cache::SessionCache,
 };
+use move_vm_runtime::{
+    module_traversal::{TraversalContext, TraversalStorage},
+    session::SerializedReturnValues,
+};
+use move_vm_types::gas::GasMeter;
 
 use std::{collections::BTreeSet, sync::Arc};
 
-use initia_move_gas::MiscGasParameters;
 use initia_move_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
 };
+use initia_move_gas::{MiscGasParameters, NumBytes};
 use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
     all_natives,
@@ -63,7 +68,8 @@ use crate::{
     convert::convert_move_value_to_serde_value,
     session::{SessionExt, SessionOutput},
     verifier::{
-        config::verifier_config, errors::metadata_validation_error, metadata::get_vm_metadata,
+        config::verifier_config, errors::metadata_validation_error,
+        event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata,
         module_init::verify_module_init_function, module_metadata::validate_publish_request,
         transaction_arg_validation::validate_combine_signer_and_txn_args,
         view_function::validate_view_function,
@@ -166,6 +172,8 @@ impl MoveVM {
         let mut gas_meter = InitiaGasMeter::new(gas_params, gas_limit);
 
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
+        let traversal_storage = TraversalStorage::new();
+        let mut traversal_context = TraversalContext::new(&traversal_storage);
 
         let publish_request = PublishRequest {
             check_compat: false,
@@ -174,8 +182,12 @@ impl MoveVM {
             module_bundle,
         };
 
-        let published_module_ids =
-            self.resolve_pending_code_publish(&mut session, &mut gas_meter, publish_request)?;
+        let published_module_ids = self.resolve_pending_code_publish(
+            &mut session,
+            &mut gas_meter,
+            publish_request,
+            &mut traversal_context,
+        )?;
 
         // execute code::init_genesis to properly store module metadata.
         {
@@ -225,6 +237,8 @@ impl MoveVM {
     ) -> Result<MessageOutput, VMStatus> {
         let senders = msg.senders().to_vec();
         let mut gas_meter = InitiaGasMeter::new(self.gas_params.clone(), gas_limit);
+        let traversal_storage = TraversalStorage::new();
+        let mut traversal_context = TraversalContext::new(&traversal_storage);
 
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((msg.size() as u64).into())?;
@@ -237,6 +251,7 @@ impl MoveVM {
             senders,
             msg.payload(),
             &mut gas_meter,
+            &mut traversal_context,
         );
 
         res
@@ -299,14 +314,27 @@ impl MoveVM {
         senders: Vec<AccountAddress>,
         payload: &MessagePayload,
         gas_meter: &mut InitiaGasMeter,
+        traversal_context: &mut TraversalContext,
     ) -> Result<MessageOutput, VMStatus> {
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
         let res = match payload {
             MessagePayload::Script(script) => {
+                session.check_script_dependencies_and_check_gas(
+                    gas_meter,
+                    traversal_context,
+                    script.code(),
+                )?;
+
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
                 let func_inst = session.load_script(script.code(), script.ty_args().to_vec())?;
+
+                verify_no_event_emission_in_script(
+                    script.code(),
+                    &session.get_vm_config().deserializer_config,
+                )?;
+
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     senders,
@@ -322,6 +350,15 @@ impl MoveVM {
                 )
             }
             MessagePayload::Execute(entry_fn) => {
+                let module_id = traversal_context
+                    .referenced_module_ids
+                    .alloc(entry_fn.module().clone());
+                session.check_dependencies_and_charge_gas(
+                    gas_meter,
+                    traversal_context,
+                    [(module_id.address(), module_id.name())],
+                )?;
+
                 let func_inst = session.load_function(
                     entry_fn.module(),
                     entry_fn.function(),
@@ -355,7 +392,12 @@ impl MoveVM {
         }
 
         if let Some(publish_request) = session.extract_publish_request() {
-            self.resolve_pending_code_publish(&mut session, gas_meter, publish_request)?;
+            self.resolve_pending_code_publish(
+                &mut session,
+                gas_meter,
+                publish_request,
+                traversal_context,
+            )?;
         }
 
         let session_output = session.finish()?;
@@ -377,6 +419,7 @@ impl MoveVM {
         session: &mut SessionExt,
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
+        traversal_context: &mut TraversalContext,
     ) -> VMResult<Vec<String>> {
         let PublishRequest {
             destination,
@@ -391,12 +434,65 @@ impl MoveVM {
         // directly pass CompiledModule.
         let sorted_module_bundle = module_bundle.sorted_code_and_modules();
         let modules = self.deserialize_module_bundle(&sorted_module_bundle)?;
+        let modules: &Vec<CompiledModule> =
+            traversal_context.referenced_module_bundles.alloc(modules);
+
+        // Note: Feature gating is needed here because the traversal of the dependencies could
+        //       result in shallow-loading of the modules and therefore subtle changes in
+        //       the error semantics.
+        {
+            // Charge old versions of the modules, in case of upgrades.
+            session.check_dependencies_and_charge_gas_non_recursive_optional(
+                gas_meter,
+                traversal_context,
+                modules
+                    .iter()
+                    .map(|module| (module.self_addr(), module.self_name())),
+            )?;
+
+            // Charge all modules in the bundle that is about to be published.
+            for (module, blob) in modules.iter().zip(sorted_module_bundle.iter()) {
+                let module_id = &module.self_id();
+                gas_meter
+                    .charge_dependency(
+                        true,
+                        module_id.address(),
+                        module_id.name(),
+                        NumBytes::new(blob.code().len() as u64),
+                    )
+                    .map_err(|err| err.finish(Location::Undefined))?;
+            }
+
+            // Charge all dependencies.
+            //
+            // Must exclude the ones that are in the current bundle because they have not
+            // been published yet.
+            let module_ids_in_bundle = modules
+                .iter()
+                .map(|module| (module.self_addr(), module.self_name()))
+                .collect::<BTreeSet<_>>();
+
+            session.check_dependencies_and_charge_gas(
+                gas_meter,
+                traversal_context,
+                modules
+                    .iter()
+                    .flat_map(|module| {
+                        module
+                            .immediate_dependencies_iter()
+                            .chain(module.immediate_friends_iter())
+                    })
+                    .filter(|addr_and_name| !module_ids_in_bundle.contains(addr_and_name)),
+            )?;
+
+            // TODO: Revisit the order of traversal. Consider switching to alphabetical order.
+        }
 
         // validate modules are properly compiled with metadata
-        validate_publish_request(&modules)?;
+        validate_publish_request(session, modules)?;
 
         if let Some(mut expected_modules) = expected_modules {
-            for m in &modules {
+            for m in modules {
                 if !expected_modules.remove(m.self_id().short_str_lossless().as_str()) {
                     return Err(metadata_validation_error(&format!(
                         "unregistered module: '{}'",
@@ -409,7 +505,7 @@ impl MoveVM {
         // Check what modules exist before publishing.
         let mut exists = BTreeSet::new();
         let mut published_module_ids = vec![];
-        for m in &modules {
+        for m in modules {
             let id = m.self_id();
             published_module_ids.push(id.short_str_lossless());
 
@@ -418,8 +514,7 @@ impl MoveVM {
             }
         }
 
-        // need to invalidate cache if tx failed and publish module executed
-        // in previous message.
+        // publish and cache the modules on loader cache.
         session.publish_module_bundle_with_compat_config(
             sorted_module_bundle.into_inner(),
             destination,
@@ -432,7 +527,7 @@ impl MoveVM {
         )?;
 
         // call init function of the each module
-        self.execute_module_initialization(session, gas_meter, &modules, exists, &[destination])?;
+        self.execute_module_initialization(session, gas_meter, modules, exists, &[destination])?;
 
         Ok(published_module_ids)
     }
