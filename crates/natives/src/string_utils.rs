@@ -364,7 +364,7 @@ fn native_format(
         single_line,
         include_int_type,
     };
-    native_format_impl(&gas_params, &mut format_context, &ty, v, 0, &mut out)?;
+    native_format_impl(gas_params, &mut format_context, &ty, v, 0, &mut out)?;
     let move_str = Value::struct_(Struct::pack(vec![Value::vector_u8(out.into_bytes())]));
     Ok(smallvec![move_str])
 }
@@ -455,7 +455,7 @@ fn native_format_list(
                     single_line: true,
                     include_int_type: false,
                 };
-                native_format_impl(&gas_params, &mut format_context, &ty, car, 0, &mut out)?;
+                native_format_impl(gas_params, &mut format_context, &ty, car, 0, &mut out)?;
                 continue;
             } else if c != '{' {
                 return Err(SafeNativeError::Abort {

@@ -14,8 +14,6 @@ use once_cell::sync::Lazy;
 use std::io::Read;
 use std::{collections::BTreeMap, io::Cursor};
 
-const MAX_RECURSIVE_DEPTH: u64 = 10;
-
 pub(crate) struct FunctionId {
     module_id: ModuleId,
     func_name: &'static IdentStr,
@@ -264,7 +262,7 @@ fn construct_arg(
             let initial_cursor_len = arg.len();
             let mut cursor = Cursor::new(&arg[..]);
             let mut new_arg = vec![];
-            let mut max_invocations = MAX_RECURSIVE_DEPTH; // Read from config in the future
+            let mut max_invocations = 10; // Read from config in the future
             recursively_construct_arg(
                 session,
                 ty,

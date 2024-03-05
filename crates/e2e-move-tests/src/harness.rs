@@ -274,7 +274,8 @@ impl MoveHarness {
         let resolver = StateViewImpl::new(&state);
         let mut table_resolver = TableViewImpl::new(&mut table_state);
 
-        let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> = Gas::new(100_000_000u64);
+        let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> =
+            Gas::new(100_000_000u64);
         self.vm.execute_message(
             &self.api,
             &env,

@@ -38,7 +38,7 @@ impl WriteSet {
                 // write module bytes changes
                 let module_id = ModuleId::new(addr, name);
                 let ap = AccessPath::from(&module_id);
-                write_set.insert(ap, blob_opt.map(|v| v.into()));                
+                write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
         }
 
