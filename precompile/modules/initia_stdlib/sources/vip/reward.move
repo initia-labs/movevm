@@ -179,6 +179,13 @@ module initia_std::vip_reward {
         remaining_reward: u64,
         initial_reward: u64
     }
+
+    struct VestingChange has drop, store {
+        vesting_start_stage: u64,
+        initial_reward: u64,
+        remaining_reward: u64,
+    }
+
     //
     // Events
     //
@@ -194,10 +201,10 @@ module initia_std::vip_reward {
         vesting_reward_amount: u64,
         // accumulated claimed vesting reward that was previously distributed.
         vested_reward_amount: u64,
-        // reward coin metadata
-        metadata: Object<Metadata>,
         // l2 score
         l2_score: u64,
+        // vesting changes
+        vesting_changes: vector<VestingChange>,
     }
 
     struct FundEvent has drop, store {
@@ -205,15 +212,6 @@ module initia_std::vip_reward {
         reward_address: address,
         stage: u64,
         reward_amount: u64,
-    }
-
-    struct VestingEvent has drop, store {
-        account: address,
-        bridge_id: u64,
-        claim_stage: u64,
-        vesting_start_stage: u64,
-        initial_reward: u64,
-        remaining_reward: u64,
     }
 
     //
@@ -419,12 +417,11 @@ module initia_std::vip_reward {
     }
 
     fun vest_reward(
-        account: address,
-        bridge_id: u64,
         stage: u64,
         l2_score: u64,
         vestings: &mut table::Table<vector<u8>, VestingScore>,
         vestings_finalized: &mut table::Table<vector<u8>, VestingScore>,
+        vesting_changes: &mut vector<VestingChange>,
     ) : u64 {
         let vested_reward = 0u64;
         let iter = table::iter_mut(vestings, option::none(), option::none(), 1);
@@ -451,22 +448,16 @@ module initia_std::vip_reward {
             // 
             // vest_ratio = max_ratio * score_ratio
             // vest_amount = value.initial_reward * vest_ratio
-
             let vest_amount = calculate_vest(value, l2_score);
             
             vested_reward = vested_reward + vest_amount;
             value.remaining_reward = value.remaining_reward - vest_amount;
 
-            event::emit(
-                VestingEvent {
-                    account,
-                    bridge_id,
-                    claim_stage: stage,
-                    vesting_start_stage: value.start_stage,
-                    initial_reward: value.initial_reward,
-                    remaining_reward: value.remaining_reward,
-                }
-            );
+            vector::push_back(vesting_changes, VestingChange {
+                vesting_start_stage: value.start_stage,
+                initial_reward: value.initial_reward,
+                remaining_reward: value.remaining_reward,
+            });
         };
         vested_reward
     }
@@ -518,13 +509,13 @@ module initia_std::vip_reward {
         
         // Vest previous vesting rewards.
         let reward_signer = &object::generate_signer_for_extending(&reward_store.extend_ref);
+        let vesting_changes = vector::empty<VestingChange>();
         let amount = vest_reward(
-            account_addr,
-            bridge_id,
             stage,
             l2_score,
             &mut vesting_store.vestings,
             &mut vesting_store.vestings_finalized,
+            &mut vesting_changes,
         );
         let vested_reward = fungible_asset::withdraw(reward_signer, reward_store.reward, amount);
 
@@ -555,8 +546,8 @@ module initia_std::vip_reward {
                 stage,
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
-                metadata: reward_metadata(),
-                l2_score
+                l2_score,
+                vesting_changes,
             }
         );
 
