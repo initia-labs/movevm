@@ -11,6 +11,7 @@ use initia_move_natives::{
     transaction_context::NativeTransactionContext,
 };
 use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
+use move_core_types::effects::ChangeSet;
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::{
     native_extensions::NativeContextExtensions, native_functions::NativeFunctionTable,
@@ -60,6 +61,7 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         },
         UnitTestingConfig::default_with_bound(Some(100_000)),
         initia_move_test_natives(),
+        ChangeSet::new(),
         // TODO(Gas): we may want to switch to non-zero costs in the future
         None,
         /* compute_coverage */ false,

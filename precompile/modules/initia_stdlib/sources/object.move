@@ -562,6 +562,7 @@ module initia_std::object {
     #[test_only]
     const EWEAPON_DOES_NOT_EXIST: u64 = 0x101;
 
+    #[event]
     #[test_only]
     struct HeroEquipEvent has drop, store {
         weapon_id: Option<Object<Weapon>>,
