@@ -32,7 +32,7 @@ module initia_std::vip_zapping {
     //  Constants
     //
     const ZAPPING_PREFIX: u8  = 0xf5;
-    const DEFAULT_LOCK_PERIOD: u64 = 60 * 60 * 24 * 7 * 52; // 52 weeks
+    const DEFAULT_LOCK_PERIOD: u64 = 60 * 60 * 24 * 7 * 26; // 26 weeks
 
     struct ModuleStore has key {
         extend_ref: ExtendRef,
