@@ -1,10 +1,8 @@
 use crate::gas_params::table::*;
 
 crate::natives::define_gas_parameters_for_natives!(GasParameters, "table", [
-    // Note(Gas): These are legacy parameters for loading from storage so they do not
-    //            need to be multiplied.
-    [.common.load_base, "common.load.base", 302385],
-    [.common.load_per_byte, "common.load.per_byte", 151],
+    [.common.load_base, "common.load.base", 4411],
+    [.common.load_per_byte, "common.load.per_byte", 36],
     [.common.load_failure, "common.load.failure", 0],
 
     [.new_table_handle.base, "new_table_handle.base", 3676],
