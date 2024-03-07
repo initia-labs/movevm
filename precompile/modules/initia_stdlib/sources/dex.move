@@ -119,6 +119,11 @@ module initia_std::dex {
         coin_b_weight: Decimal128,
     }
 
+    struct PairMetadataResponse has drop {
+        coin_a_metadata: Object<Metadata>,
+        coin_b_metadata: Object<Metadata>,
+    }
+
     #[event]
     struct CreatePairEvent has drop, store {
         coin_a: address,
@@ -198,25 +203,17 @@ module initia_std::dex {
     const MAX_FEE_RATE: u128 = 50_000_000_000_000_000; // 5%
 
     #[view]
-    public fun pool_info(pair: Object<Config>, lbp_assertion: bool): (u64, u64, Decimal128, Decimal128, Decimal128) acquires Config, Pool {
-        let pair_addr = object::object_address(pair);
-        let config = borrow_global<Config>(pair_addr);
-        if (lbp_assertion) {
-            // assert LBP start time
-            let (_, timestamp) = get_block_info();
-            assert!(timestamp >= config.weights.weights_before.timestamp, error::invalid_state(ELBP_NOT_STARTED));
-        };
+    public fun get_pair_metadata(
+        pair: Object<Config>,
+    ): PairMetadataResponse acquires Pool {
+        let pool = borrow_global_mut<Pool>(object::object_address(pair));
+        let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
+        let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
 
-        let pool = borrow_global<Pool>(pair_addr);
-        let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
-
-        (
-            fungible_asset::balance(pool.coin_a_store),
-            fungible_asset::balance(pool.coin_b_store),
-            coin_a_weight,
-            coin_b_weight,
-            config.swap_fee_rate,
-        )
+        PairMetadataResponse {
+            coin_a_metadata,
+            coin_b_metadata,
+        }
     }
 
     #[view]
@@ -1184,6 +1181,28 @@ module initia_std::dex {
         } else {
             (weights.weights_after.coin_a_weight, weights.weights_after.coin_b_weight)
         }
+    }
+
+    /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
+    public fun pool_info(pair: Object<Config>, lbp_assertion: bool): (u64, u64, Decimal128, Decimal128, Decimal128) acquires Config, Pool {
+        let pair_addr = object::object_address(pair);
+        let config = borrow_global<Config>(pair_addr);
+        if (lbp_assertion) {
+            // assert LBP start time
+            let (_, timestamp) = get_block_info();
+            assert!(timestamp >= config.weights.weights_before.timestamp, error::invalid_state(ELBP_NOT_STARTED));
+        };
+
+        let pool = borrow_global<Pool>(pair_addr);
+        let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
+
+        (
+            fungible_asset::balance(pool.coin_a_store),
+            fungible_asset::balance(pool.coin_b_store),
+            coin_a_weight,
+            coin_b_weight,
+            config.swap_fee_rate,
+        )
     }
 
     /// Calculate out amount
