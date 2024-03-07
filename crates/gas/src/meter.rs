@@ -21,6 +21,7 @@ use move_core_types::{
     language_storage::ModuleId,
     vm_status::StatusCode,
 };
+use move_vm_test_utils::gas_schedule::TestGasMeter;
 use move_vm_types::{
     gas::{GasMeter, SimpleInstruction},
     views::{TypeView, ValueView},
@@ -34,7 +35,7 @@ use std::collections::BTreeMap;
 ///
 /// Cosmos gas is 100x bigger than Aptos gas unit
 ///
-pub(crate) const GAS_UNIT_SCALING_FACTOR: u64 = 100;
+pub const GAS_UNIT_SCALING_FACTOR: u64 = 100;
 
 /// A trait for converting from a map representation of the on-chain gas schedule.
 pub trait FromOnChainGasSchedule: Sized {
@@ -80,7 +81,7 @@ impl ToOnChainGasSchedule for NativeGasParameters {
     fn to_on_chain_gas_schedule(&self) -> Vec<(String, u64)> {
         let mut entries = self.move_stdlib.to_on_chain_gas_schedule();
         entries.extend(self.initia_stdlib.to_on_chain_gas_schedule());
-        // entries.extend(self.table.to_on_chain_gas_schedule());
+        entries.extend(self.table.to_on_chain_gas_schedule());
         entries
     }
 }
@@ -163,6 +164,14 @@ impl InitialGasSchedule for InitiaGasParameters {
     }
 }
 
+#[derive(Clone)]
+struct Frame {
+    module_id: ModuleId,
+    start_gas: InternalGas, /* start_gas */
+    call_gas: InternalGas,  /* call_gas which is gas_used during inner call */
+}
+
+#[derive(Clone)]
 /// The official gas meter used inside the Initia VM.
 /// It maintains an internal gas counter, measured in internal gas units, and carries an environment
 /// consisting all the gas parameters, which it can lookup when performing gas calcuations.
@@ -185,10 +194,16 @@ pub struct InitiaGasMeter {
     total_dependency_size: NumBytes,
 }
 
-struct Frame {
-    module_id: ModuleId,
-    start_gas: InternalGas, /* start_gas */
-    call_gas: InternalGas,  /* call_gas which is gas_used during inner call */
+// gas meter required for testing gas metering
+impl TestGasMeter for InitiaGasMeter {
+    fn instantiate(&self) -> Self {
+        self.clone()
+    }
+
+    fn remaining_gas(&self) -> move_vm_test_utils::gas_schedule::Gas {
+        let remaining_gas: u64 = self.balance().into();
+        remaining_gas.into()
+    }
 }
 
 impl InitiaGasMeter {

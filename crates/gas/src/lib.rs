@@ -36,7 +36,7 @@ pub use algebra::*;
 pub use instr::InstructionGasParameters;
 pub use meter::{
     FromOnChainGasSchedule, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule,
-    NativeGasParameters, ToOnChainGasSchedule,
+    NativeGasParameters, ToOnChainGasSchedule, GAS_UNIT_SCALING_FACTOR,
 };
 pub use misc::{AbstractValueSizeGasParameters, MiscGasParameters};
 pub use move_core_types::gas_algebra::{
