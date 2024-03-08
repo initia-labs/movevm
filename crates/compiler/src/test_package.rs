@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::bail;
 use initia_move_gas::{
-    Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, MiscGasParameters,
-    NativeGasParameters,
+    InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters,
 };
 use initia_move_natives::all_natives;
 use initia_move_types::metadata;
@@ -15,7 +14,7 @@ use move_core_types::effects::ChangeSet;
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
-use crate::extensions::configure_for_unit_test;
+use crate::{extensions::configure_for_unit_test, gas_meter::TestInitiaGasMeter};
 
 pub struct TestPackage {
     pub package_path: PathBuf,
@@ -36,7 +35,7 @@ impl TestPackage {
 
         let gas_limit = 1_000_000_000u64;
         let gas_params = InitiaGasParameters::initial();
-        let gas_meter = InitiaGasMeter::new(gas_params, Gas::new(gas_limit));
+        let gas_meter = TestInitiaGasMeter::new(gas_params, gas_limit);
 
         let native_gas_params = NativeGasParameters::initial();
         let misc_gas_params = MiscGasParameters::initial();
@@ -49,6 +48,7 @@ impl TestPackage {
                 report_statistics: self.test_config.report_statistics,
                 report_storage_on_error: self.test_config.report_storage_on_error,
                 ignore_compile_warnings: self.test_config.ignore_compile_warnings,
+                verbose: self.test_config.verbose_mode,
                 ..UnitTestingConfig::default_with_bound(Some(gas_limit))
             },
             all_natives(native_gas_params, misc_gas_params),

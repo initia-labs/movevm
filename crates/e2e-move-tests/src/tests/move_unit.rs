@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
+use initia_move_compiler::TestInitiaGasMeter;
 use initia_move_gas::{
-    Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, MiscGasParameters,
-    NativeGasParameters,
+    InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters,
 };
 use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
@@ -50,7 +50,7 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
 
     let gas_limit = 1_000_000_000u64;
     let gas_params = InitiaGasParameters::initial();
-    let gas_meter = InitiaGasMeter::new(gas_params, Gas::new(gas_limit));
+    let gas_meter = TestInitiaGasMeter::new(gas_params, gas_limit.into());
 
     let native_gas_params = NativeGasParameters::initial();
     let misc_gas_params = MiscGasParameters::initial();

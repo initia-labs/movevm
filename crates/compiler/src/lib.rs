@@ -7,17 +7,19 @@ pub mod command;
 pub mod compiler;
 pub mod docgen;
 pub mod extended_checks;
+pub mod extensions;
 pub mod new;
 pub mod prover;
 pub mod test_package;
 
-pub mod extensions;
+mod gas_meter;
 mod mocks;
 
 pub use clean::Clean;
 pub use command::Command;
 pub use compiler::execute;
 pub use new::New;
+pub use gas_meter::TestInitiaGasMeter;
 
 #[cfg(test)]
 mod tests;
