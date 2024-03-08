@@ -21,7 +21,6 @@ use move_core_types::{
     language_storage::ModuleId,
     vm_status::StatusCode,
 };
-use move_vm_test_utils::gas_schedule::TestGasMeter;
 use move_vm_types::{
     gas::{GasMeter, SimpleInstruction},
     views::{TypeView, ValueView},
@@ -192,18 +191,6 @@ pub struct InitiaGasMeter {
     // dependency calculation
     num_dependencies: NumModules,
     total_dependency_size: NumBytes,
-}
-
-// gas meter required for testing gas metering
-impl TestGasMeter for InitiaGasMeter {
-    fn instantiate(&self) -> Self {
-        self.clone()
-    }
-
-    fn remaining_gas(&self) -> move_vm_test_utils::gas_schedule::Gas {
-        let remaining_gas: u64 = self.balance().into();
-        remaining_gas.into()
-    }
 }
 
 impl InitiaGasMeter {

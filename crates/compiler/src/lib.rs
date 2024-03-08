@@ -7,11 +7,12 @@ pub mod command;
 pub mod compiler;
 pub mod docgen;
 pub mod extended_checks;
+pub mod extensions;
 pub mod new;
 pub mod prover;
 pub mod test_package;
 
-pub mod extensions;
+mod gas_meter;
 mod mocks;
 
 pub use clean::Clean;

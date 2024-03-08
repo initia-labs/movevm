@@ -21,6 +21,7 @@ use initia_move_types::script::Script;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_vm::MoveVM;
 use move_cli::base::build::Build;
+use move_cli::base::test::Test;
 use move_cli::Move;
 use move_core_types::account_address::AccountAddress;
 use move_package::BuildConfig;
@@ -307,8 +308,12 @@ pub extern "C" fn test_move_package(
     compiler_args: CompilerArgument,
     test_opt: CompilerTestOption,
 ) -> UnmanagedVector {
-    let cmd = Command::Test(test_opt.into());
+    let mut test_cmd: Test = test_opt.into();
+    if compiler_args.verbose {
+        test_cmd.verbose_mode = compiler_args.verbose;
+    }
 
+    let cmd = Command::Test(test_cmd);
     let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
         compiler::execute(compiler_args.into(), cmd)
     }))
