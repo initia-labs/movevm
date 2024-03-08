@@ -17,9 +17,6 @@ type TestConfig struct {
 
 	// Collect coverage information for later use with the various `package coverage` subcommands
 	ComputeCoverage bool
-
-	// Verbose mode
-	Verbose bool
 }
 
 // DefaultTestConfig returns TestConfig with default value
@@ -63,11 +60,5 @@ func WithIgnoreCompileWarnings() func(*TestConfig) {
 func WithComputeCoverage() func(*TestConfig) {
 	return func(tc *TestConfig) {
 		tc.ComputeCoverage = true
-	}
-}
-
-func WithVerbose() func(*TestConfig) {
-	return func(tc *TestConfig) {
-		tc.Verbose = true
 	}
 }

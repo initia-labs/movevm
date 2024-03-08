@@ -308,12 +308,12 @@ pub extern "C" fn test_move_package(
     compiler_args: CompilerArgument,
     test_opt: CompilerTestOption,
 ) -> UnmanagedVector {
-    let mut test_cmd: Test = test_opt.into();
+    let mut test_opt: Test = test_opt.into();
     if compiler_args.verbose {
-        test_cmd.verbose_mode = compiler_args.verbose;
+        test_opt.verbose_mode = compiler_args.verbose;
     }
 
-    let cmd = Command::Test(test_cmd);
+    let cmd = Command::Test(test_opt);
     let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
         compiler::execute(compiler_args.into(), cmd)
     }))
