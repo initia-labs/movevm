@@ -81,6 +81,7 @@ module initia_std::stableswap {
 
     struct PairResponse has copy, drop, store {
         coin_metadata: vector<Object<Metadata>>,
+        coin_denoms: vector<String>,
         coin_balances: vector<u64>,
         current_ann: u64,
         swap_fee_rate: Decimal128,
@@ -141,37 +142,49 @@ module initia_std::stableswap {
     const MAX_FEE_RATE: u128 = 10_000_000_000_000_000; // 1%
 
     #[view]
-    public fun pool_info(pair: Object<Pool>): (vector<Object<Metadata>>, vector<u64>, u64, Decimal128) acquires Pool {
-        let pair_addr = object::object_address(pair);
-        let pool = borrow_global<Pool>(pair_addr);
-
-        let ann = get_current_ann(&pool.ann);
-        let pool_amounts = get_pool_amounts(pair_addr, pool.coin_metadata);
-
-        (
-            pool.coin_metadata,
-            pool_amounts,
-            ann,
-            pool.swap_fee_rate,
-        )
-    }
-
-    #[view]
     /// Return swap simulation result
     public fun get_swap_simulation(
         pair: Object<Pool>,
         offer_metadata: Object<Metadata>,
-        return_coin_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
         offer_amount: u64,
     ): u64 acquires Pool {
         let (return_amount, fee_amount) = swap_simulation(
             pair,
             offer_metadata,
-            return_coin_metadata,
+            return_metadata,
             offer_amount,
         );
 
         return_amount - fee_amount
+    }
+
+    #[view]
+    public fun get_swap_simulation_by_denom(
+        pair: Object<Pool>,
+        offer_denom: String,
+        return_denom: String,
+        offer_amount: u64,
+    ): u64 acquires Pool {
+        let offer_metadata = coin::denom_to_metadata(offer_denom);
+        let return_metadata = coin::denom_to_metadata(return_denom);
+        get_swap_simulation(pair, offer_metadata, return_metadata, offer_amount)
+    }
+
+    #[view]
+    public fun get_pair(
+        pool: Object<Pool>,
+    ): PairResponse acquires Pool {
+        let (coin_metadata, coin_balances, current_ann, swap_fee_rate) = pool_info(pool);
+        let coin_denoms = vector::map(coin_metadata, |metadata| coin::metadata_to_denom(metadata));
+
+        PairResponse {
+            coin_metadata,
+            coin_denoms,
+            coin_balances,
+            current_ann,
+            swap_fee_rate
+        }
     }
 
     #[view]
@@ -197,8 +210,8 @@ module initia_std::stableswap {
 
         while (vector::length(&res) < (limit as u64) && table::prepare<address, bool>(&mut pairs_iter)) {
             let (key, _) = table::next<address, bool>(&mut pairs_iter);
-            let (coin_metadata, coin_balances, current_ann, swap_fee_rate) = pool_info(object::address_to_object<Pool>(key));
-            vector::push_back(&mut res, PairResponse { coin_metadata, coin_balances, current_ann, swap_fee_rate })
+            let pair_response = get_pair(object::address_to_object<Pool>(key));
+            vector::push_back(&mut res, pair_response)
         };
 
         res
@@ -208,9 +221,10 @@ module initia_std::stableswap {
         move_to(chain, ModuleStore { pairs: table::new(), pair_count: 0 })
     }
 
-    public fun unpack_pair_response(pair_response: &PairResponse): (vector<Object<Metadata>>, vector<u64>, u64, Decimal128) {
+    public fun unpack_pair_response(pair_response: &PairResponse): (vector<Object<Metadata>>, vector<String>, vector<u64>, u64, Decimal128) {
         (
             pair_response.coin_metadata,
+            pair_response.coin_denoms,
             pair_response.coin_balances,
             pair_response.current_ann,
             pair_response.swap_fee_rate,
@@ -558,6 +572,21 @@ module initia_std::stableswap {
         );
 
         return return_coin
+    }
+
+    public fun pool_info(pair: Object<Pool>): (vector<Object<Metadata>>, vector<u64>, u64, Decimal128) acquires Pool {
+        let pair_addr = object::object_address(pair);
+        let pool = borrow_global<Pool>(pair_addr);
+
+        let ann = get_current_ann(&pool.ann);
+        let pool_amounts = get_pool_amounts(pair_addr, pool.coin_metadata);
+
+        (
+            pool.coin_metadata,
+            pool_amounts,
+            ann,
+            pool.swap_fee_rate,
+        )
     }
 
     inline fun borrow_pool(pair: Object<Pool>): &Pool {

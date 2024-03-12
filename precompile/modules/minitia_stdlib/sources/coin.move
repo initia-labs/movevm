@@ -1,7 +1,10 @@
 /// TODO - make is_module_account or some blacklist from freeze.
 module minitia_std::coin {
+    use std::bcs;
+    use std::from_bcs;
     use std::option::Option;
     use std::string::{Self, String};
+    use std::vector;
 
     use minitia_std::event;
     use minitia_std::primary_fungible_store;
@@ -269,5 +272,86 @@ module minitia_std::coin {
     public fun is_coin_initialized(metadata: Object<Metadata>): bool {
         let metadata_addr = object::object_address(metadata);
         exists<ManagingRefs>(metadata_addr)
+    }
+    #[view]
+    public fun metadata_to_denom(metadata: Object<Metadata>): String {
+        let metadata_addr = object::object_address(metadata);
+        let symbol = symbol(metadata);
+        let std_metadata_addr = metadata_address(@minitia_std, symbol);
+
+        if (std_metadata_addr == metadata_addr) {
+            return symbol
+        };
+
+        let denom = string::utf8(b"move/");
+        let addr_bytes = bcs::to_bytes(&metadata_addr);
+        let addr_string = string::utf8(hash_to_utf8(addr_bytes));
+        string::append(&mut denom, addr_string);
+        return denom
+    }
+
+    #[view]
+    public fun denom_to_metadata(denom: String): Object<Metadata> {
+        let addr = if (&b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
+            let len = string::length(&denom);
+            let utf8 = string::bytes(&string::sub_string(&denom, 5, len));
+            from_bcs::to_address(utf8_to_hash(*utf8))
+        } else {
+            metadata_address(@minitia_std, denom)
+        };
+
+        object::address_to_object(addr)
+    }
+
+    fun hash_to_utf8(hash: vector<u8>): vector<u8> {
+        let vec: vector<u8> = vector[];
+        let len = vector::length(&hash);
+        let index = 0;
+        while(index < len) {
+            let val = *vector::borrow(&hash, index);
+            let h = val / 0x10;
+            let l = val % 0x10;
+            vector::push_back(&mut vec, hex_num_to_utf8(h));
+            vector::push_back(&mut vec, hex_num_to_utf8(l));
+            index = index + 1;
+        };
+
+        vec
+    }
+
+    fun utf8_to_hash(utf8: vector<u8>): vector<u8> {
+        let vec: vector<u8> = vector[];
+        let len = vector::length(&utf8);
+        let index = len - 1;
+        while(index + 2 < len) {
+            let l = utf8_to_hex_num(*vector::borrow(&utf8, index));
+            let h = if (index == 0) {
+                0
+            } else {
+                utf8_to_hex_num(*vector::borrow(&utf8, index - 1))
+            };
+
+            vector::push_back(&mut vec, l + (h << 4));
+            if (index == 1) break;
+            index = index - 2
+        };
+
+        vec
+    }
+
+    fun hex_num_to_utf8(num: u8): u8 {
+        if (num < 10) {
+            0x30 + num
+        } else {
+            0x57 + num
+        }
+    }
+
+    fun utf8_to_hex_num(num: u8): u8 {
+        if (num < 0x3a) {
+            num - 0x30
+        } else {
+            num - 0x57
+        }
     }
 }

@@ -124,6 +124,11 @@ module minitia_std::dex {
         coin_b_metadata: Object<Metadata>,
     }
 
+    struct PairDenomResponse has drop {
+        coin_a_denom: String,
+        coin_b_denom: String,
+    }
+
     #[event]
     struct CreatePairEvent has drop, store {
         coin_a: address,
@@ -217,6 +222,18 @@ module minitia_std::dex {
     }
 
     #[view]
+    public fun get_pair_denom(
+        pair: Object<Config>,
+    ): PairDenomResponse acquires Pool {
+        let pair_metadata = get_pair_metadata(pair);
+
+        PairDenomResponse {
+            coin_a_denom: coin::metadata_to_denom(pair_metadata.coin_a_metadata),
+            coin_b_denom: coin::metadata_to_denom(pair_metadata.coin_b_metadata),
+        }
+    }
+
+    #[view]
     /// Calculate spot price
     /// https://balancer.fi/whitepaper.pdf (2)
     public fun get_spot_price(
@@ -242,6 +259,15 @@ module minitia_std::dex {
             decimal128::mul_u64(&base_weight, quote_pool), 
             decimal128::mul_u64(&quote_weight, base_pool),
         )
+    }
+
+    #[view]
+    public fun get_spot_price_by_denom(
+        pair: Object<Config>,
+        base_coin: String,
+    ): Decimal128 acquires Config, Pool {
+        let base_coin = coin::denom_to_metadata(base_coin);
+        get_spot_price(pair, base_coin)
     }
 
     #[view]
@@ -277,6 +303,16 @@ module minitia_std::dex {
     }
 
     #[view]
+    public fun get_swap_simulation_by_denom(
+        pair: Object<Config>,
+        offer_denom: String,
+        offer_amount: u64,
+    ): u64 acquires Config, Pool {
+        let offer_metadata = coin::denom_to_metadata(offer_denom);
+        get_swap_simulation(pair, offer_metadata, offer_amount)
+    }
+
+    #[view]
     /// Return swap simulation result
     public fun get_swap_simulation_given_out(
         pair: Object<Config>,
@@ -306,6 +342,16 @@ module minitia_std::dex {
         );
 
         offer_amount
+    }
+
+    #[view]
+    public fun get_swap_simulation_given_out_by_denom(
+        pair: Object<Config>,
+        offer_denom: String,
+        return_amount: u64,
+    ): u64 acquires Config, Pool {
+        let offer_metadata = coin::denom_to_metadata(offer_denom);
+        get_swap_simulation_given_out(pair, offer_metadata, return_amount)
     }
 
     #[view]

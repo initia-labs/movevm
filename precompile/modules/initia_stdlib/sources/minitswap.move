@@ -8,7 +8,7 @@ module initia_std::minitswap {
     use initia_std::decimal128::{Self, Decimal128};
     use initia_std::table::{Self, Table};
     use initia_std::object::{Self, ExtendRef, Object};
-    use initia_std::string;
+    use initia_std::string::{Self, String};
     use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
     use initia_std::primary_fungible_store;
     use initia_std::coin;
@@ -154,6 +154,15 @@ module initia_std::minitswap {
     }
 
     #[view]
+    public fun get_pool_amount_by_denom(
+        l2_init_denom: String,
+        after_peg_keeper_swap: bool,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let l2_init_metadata = coin::denom_to_metadata(l2_init_denom);
+        get_pool_amount(l2_init_metadata, after_peg_keeper_swap)
+    }
+
+    #[view]
     public fun get_peg_keeper_balance(
         l2_init_metadata: Object<Metadata>,
         after_peg_keeper_swap: bool,
@@ -167,6 +176,15 @@ module initia_std::minitswap {
         };
 
         return (pool.virtual_l1_balance + swap_amount, pool.virtual_l2_balance + return_amount)
+    }
+
+    #[view]
+    public fun get_peg_keeper_balance_by_denom(
+        l2_init_denom: String,
+        after_peg_keeper_swap: bool,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let l2_init_metadata = coin::denom_to_metadata(l2_init_denom);
+        get_peg_keeper_balance(l2_init_metadata, after_peg_keeper_swap)
     }
 
     #[view]
@@ -202,6 +220,17 @@ module initia_std::minitswap {
         };
 
         (return_amount, fee_amount)
+    }
+
+    #[view]
+    public fun swap_simulation_by_denom(
+        offer_denom: String,
+        return_denom: String,
+        offer_amount: u64,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let offer_metadata = coin::denom_to_metadata(offer_denom);
+        let return_metadata = coin::denom_to_metadata(return_denom);
+        swap_simulation(offer_metadata, return_metadata, offer_amount)
     }
 
     //
@@ -836,9 +865,6 @@ module initia_std::minitswap {
             assert!(amount >= option::extract(&mut min_return), error::invalid_state(EMIN_RETURN))
         }
     }
-
-    #[test_only]
-    use std::string::String;
 
     #[test_only]
     fun initialized_coin(

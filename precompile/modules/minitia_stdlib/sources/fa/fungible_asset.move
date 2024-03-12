@@ -4,11 +4,10 @@ module minitia_std::fungible_asset {
     use minitia_std::event;
     use minitia_std::object::{Self, Object, ConstructorRef, DeleteRef, ExtendRef};
 
-    use std::string;
     use std::error;
     use std::option::{Self, Option};
     use std::signer;
-    use std::string::String;
+    use std::string::{Self, String};
 
     /// The transfer ref and the fungible asset do not match.
     const ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH: u64 = 2;
