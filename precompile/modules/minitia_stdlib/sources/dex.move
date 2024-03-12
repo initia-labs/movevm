@@ -256,7 +256,7 @@ module minitia_std::dex {
         };
 
         decimal128::from_ratio_u64(
-            decimal128::mul_u64(&base_weight, quote_pool), 
+            decimal128::mul_u64(&base_weight, quote_pool),
             decimal128::mul_u64(&quote_weight, base_pool),
         )
     }
@@ -403,7 +403,7 @@ module minitia_std::dex {
         };
 
         assert!(
-            option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after) 
+            option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after)
                 && option::is_some(&coin_b_start_after) == option::is_some(&liquidity_token_start_after),
             ESTART_AFTER
         );
@@ -616,7 +616,7 @@ module minitia_std::dex {
             weights_before: Weight {
                 coin_a_weight: coin_a_start_weight,
                 coin_b_weight: coin_b_start_weight,
-                timestamp: start_time, 
+                timestamp: start_time,
             },
             weights_after: Weight {
                 coin_a_weight: coin_a_end_weight,
@@ -927,7 +927,7 @@ module minitia_std::dex {
             error::invalid_state(EMIN_LIQUIDITY),
         );
 
-        // emit events        
+        // emit events
         event::emit<SingleAssetProvideEvent>(
             SingleAssetProvideEvent {
                 coin_a: pair_key.coin_a,
@@ -950,7 +950,7 @@ module minitia_std::dex {
         pair: Object<Config>,
         offer_coin: FungibleAsset,
     ): FungibleAsset acquires Config, Pool {
-        let offer_amount = fungible_asset::amount(&offer_coin);        
+        let offer_amount = fungible_asset::amount(&offer_coin);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_address = object::object_address(offer_metadata);
         let pair_key = generate_pair_key(pair);
@@ -1113,7 +1113,7 @@ module minitia_std::dex {
                 swap_fee_rate,
             },
         );
-        
+
         liquidity_token
     }
 
@@ -1210,7 +1210,7 @@ module minitia_std::dex {
 
             // when timestamp_before < timestamp < timestamp_after
             // weight = a * timestamp + b
-            // m = (a * timestamp_before + b) * (timestamp_after - timestamp) 
+            // m = (a * timestamp_before + b) * (timestamp_after - timestamp)
             //   = a * t_b * t_a - a * t_b * t + b * t_a - b * t
             // n = (a * timestamp_after + b) * (timestamp - timestamp_before)
             //   = a * t_a * t - a * t_a * t_b + b * t - b * t_b
@@ -1284,7 +1284,7 @@ module minitia_std::dex {
         let base = decimal128::from_ratio_u64(pool_amount_out, pool_amount_out - amount_out);
         let base_exp = pow(&base, &exp);
         let adjusted_amount_in = decimal128::val(&decimal128::sub(&base_exp, &one)) * (pool_amount_in as u128) ;
-        let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);                                                                                                                                                                                
+        let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);
 
         let amount_in = ( adjusted_amount_in / decimal128::val(&sub_one_fee) as u64);
         let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
@@ -1629,7 +1629,7 @@ module minitia_std::dex {
             3,
         );
     }
-    
+
 
     #[test(chain = @0x1)]
     fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore {
@@ -1737,28 +1737,28 @@ module minitia_std::dex {
         let res = get_all_pairs(option::none(), option::none(), option::none(), 10);
         assert!(
             res == vector[
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_1_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_2_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: c_addr,
                     liquidity_token: pair_3_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: c_addr,
                     liquidity_token: pair_4_addr,
@@ -1777,21 +1777,21 @@ module minitia_std::dex {
         );
         assert!(
             res == vector[
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_2_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: c_addr,
                     liquidity_token: pair_3_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: c_addr,
                     liquidity_token: pair_4_addr,
@@ -1810,28 +1810,28 @@ module minitia_std::dex {
         );
         assert!(
             res == vector[
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_1_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_2_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: c_addr,
                     liquidity_token: pair_3_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: c_addr,
                     liquidity_token: pair_4_addr,
@@ -1850,14 +1850,14 @@ module minitia_std::dex {
         );
         assert!(
             res == vector[
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_1_addr,
                     weights,
                     swap_fee_rate,
                 },
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_2_addr,
@@ -1876,7 +1876,7 @@ module minitia_std::dex {
         );
         assert!(
             res == vector[
-                PairResponse { 
+                PairResponse {
                     coin_a: a_addr,
                     coin_b: b_addr,
                     liquidity_token: pair_2_addr,
