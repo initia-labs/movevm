@@ -200,7 +200,12 @@ module initia_std::minitswap {
             offer_metadata
         };
 
+        let (_, pool) = borrow_all(l2_init_metadata);
+        let (peg_keeper_offer_amount, peg_keeper_return_amount) = calc_peg_keeper_swap(pool);
+
         let (l1_pool_amount, l2_pool_amount) = get_pool_amount(l2_init_metadata, true);
+        l1_pool_amount = l1_pool_amount + peg_keeper_offer_amount;
+        l2_pool_amount = l2_pool_amount - peg_keeper_return_amount;
 
         let (module_store, pool) = borrow_all(l2_init_metadata);
         let fee_amount = 0;
