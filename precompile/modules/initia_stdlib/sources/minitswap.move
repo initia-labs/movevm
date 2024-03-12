@@ -56,7 +56,7 @@ module initia_std::minitswap {
         /// R_max max recover ratio
         max_ratio: Decimal128,
         /// f. Flexibility
-        recover_param: Decimal128, 
+        recover_param: Decimal128,
         /// Virtual pool amount of L1 INIT
         l1_pool_amount: u64,
         /// Virtual pool amount of L2 INIT
@@ -127,8 +127,8 @@ module initia_std::minitswap {
             extend_ref,
             pools: table::new(),
             l1_init_amount: 0,
-            swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1% 
-            max_change_rate: decimal128::from_ratio(1, 10), // 10% 
+            swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1%
+            max_change_rate: decimal128::from_ratio(1, 10), // 10%
             mint_cap,
             burn_cap,
         });
@@ -351,7 +351,7 @@ module initia_std::minitswap {
                 - L1 and L2 balances of peg keepers -> + for L1 and even for L2
                 - Ratio of pool -> L2 price decrease
             */
-            
+
             // 1. swap to make 5:5
             let l1_swap_amount = pool.pool_size - pool.l1_pool_amount;
             let l2_return_amount =  pool.l2_pool_amount - pool.pool_size;
@@ -365,7 +365,7 @@ module initia_std::minitswap {
             pool.l2_pool_amount = new_pool_size;
             pool.pool_size = new_pool_size;
 
-            // 3. swap back 
+            // 3. swap back
             let return_amount = get_return_amount(l2_return_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
             pool.l2_pool_amount = pool.l2_pool_amount + l2_return_amount;
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
@@ -537,7 +537,7 @@ module initia_std::minitswap {
         pool.virtual_l1_balance = pool.virtual_l1_balance + peg_keeper_offer_amount;
         pool.virtual_l2_balance = pool.virtual_l2_balance + peg_keeper_return_amount;
         pool.last_recovered_timestamp = timestamp;
-        
+
         let module_addr = signer::address_of(&module_signer);
         let pool_addr = signer::address_of(&pool_signer);
 
@@ -718,7 +718,7 @@ module initia_std::minitswap {
         // d = (ann * sum - d_prod) / (ann - 1)
         while (i < 255) {
             let d_prev = d;
-            // D ** (n + 1) / (n ** n * prod) in our case, always n = 2 
+            // D ** (n + 1) / (n ** n * prod) in our case, always n = 2
             let d_prod = d * d * d / 4 / l1_init_amount / l2_init_amount;
 
             d = (ann * sum / A_PRECISION + d_prod * 2) * d / ((ann - A_PRECISION) * d / A_PRECISION + 3 * d_prod);
@@ -755,9 +755,9 @@ module initia_std::minitswap {
 
         // y = (y**2 + c) / (2*y + b)
 
-        let c = d * d * d * A_PRECISION / ann / 4 / x; // d ** (2 + 1) / ann / 2 ** 2  / x 
+        let c = d * d * d * A_PRECISION / ann / 4 / x; // d ** (2 + 1) / ann / 2 ** 2  / x
         let b_plus_d = x + d * A_PRECISION / ann; // need to sub d but sub later due to value must be less than 0
-        
+
         let y_prev;
         let y = d;
 
@@ -900,12 +900,12 @@ module initia_std::minitswap {
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
         let l2_1_metadata = coin::metadata(chain_addr, string::utf8(b"L2 1"));
         let l2_2_metadata = coin::metadata(chain_addr, string::utf8(b"L2 2"));
-        
+
         coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
         coin::mint_to(&l2_1_mint_cap, chain_addr, 1000000000);
         coin::mint_to(&l2_2_mint_cap, chain_addr, 1000000000);
         provide(&chain, 15000000, option::none());
-        
+
 
         create_pool(
             &chain,

@@ -19,7 +19,7 @@ module initia_std::coin {
 
     /// Only fungible asset metadata owner can make changes.
     const ERR_NOT_OWNER: u64 = 1;
-    
+
     /// ManagingRefs is not found.
     const ERR_MANAGING_REFS_NOT_FOUND: u64 = 2;
 
@@ -79,7 +79,7 @@ module initia_std::coin {
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
             constructor_ref,
             maximum_supply,
-            name, 
+            name,
             symbol,
             decimals,
             icon_uri,
@@ -151,7 +151,7 @@ module initia_std::coin {
     /// Mint FAs as the owner of metadat object to the primary fungible store of the given recipient.
     public fun mint_to(
         mint_cap: &MintCapability,
-        recipient: address, 
+        recipient: address,
         amount: u64,
     ) acquires ManagingRefs {
         let metadata = mint_cap.metadata;
@@ -273,8 +273,8 @@ module initia_std::coin {
         let metadata_addr = object::object_address(metadata);
         exists<ManagingRefs>(metadata_addr)
     }
-    #[view]
 
+    #[view]
     public fun metadata_to_denom(metadata: Object<Metadata>): String {
         let metadata_addr = object::object_address(metadata);
         let symbol = symbol(metadata);
@@ -293,9 +293,10 @@ module initia_std::coin {
 
     #[view]
     public fun denom_to_metadata(denom: String): Object<Metadata> {
-        let addr = if (&b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
+        let addr = if (string::length(&denom) > 5 && &b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
             let len = string::length(&denom);
             let utf8 = string::bytes(&string::sub_string(&denom, 5, len));
+            std::debug::print(&utf8_to_hash(*utf8));
             from_bcs::to_address(utf8_to_hash(*utf8))
         } else {
             metadata_address(@initia_std, denom)
@@ -324,7 +325,7 @@ module initia_std::coin {
         let vec: vector<u8> = vector[];
         let len = vector::length(&utf8);
         let index = len - 1;
-        while(index + 2 < len) {
+        while(index > 0) {
             let l = utf8_to_hex_num(*vector::borrow(&utf8, index));
             let h = if (index == 0) {
                 0
@@ -336,7 +337,7 @@ module initia_std::coin {
             if (index == 1) break;
             index = index - 2
         };
-
+        vector::reverse(&mut vec);
         vec
     }
 
@@ -354,5 +355,41 @@ module initia_std::coin {
         } else {
             num - 0x57
         }
+    }
+
+    #[test_only]
+    fun initialized_coin(
+        account: &signer,
+        symbol: String,
+    ): (BurnCapability, FreezeCapability, MintCapability) {
+        let (mint_cap, burn_cap, freeze_cap, _) = initialize_and_generate_extend_ref (
+            account,
+            std::option::none(),
+            string::utf8(b""),
+            symbol,
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+
+        return (burn_cap, freeze_cap, mint_cap)
+    }
+
+    #[test(chain = @0x1, not_chain = @0x2)]
+    fun test_denom_metadata_convert(
+        chain: signer,
+        not_chain: signer,
+    ) {
+        initia_std::primary_fungible_store::init_module_for_test(&chain);
+        initialized_coin(&chain, string::utf8(b"INIT"));
+        initialized_coin(&not_chain, string::utf8(b"INIT"));
+        let metadata = metadata(std::signer::address_of(&chain), string::utf8(b"INIT"));
+        let metadata_ = metadata(std::signer::address_of(&not_chain), string::utf8(b"INIT"));
+        let denom = metadata_to_denom(metadata);
+        let denom_ = metadata_to_denom(metadata_);
+        let metadata_from_denom = denom_to_metadata(denom);
+        let metadata_from_denom_ = denom_to_metadata(denom_);
+        assert!(metadata == metadata_from_denom, 0);
+        assert!(metadata_ == metadata_from_denom_, 1);
     }
 }

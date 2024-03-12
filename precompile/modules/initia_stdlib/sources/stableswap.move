@@ -271,7 +271,7 @@ module initia_std::stableswap {
     }
 
     public entry fun provide_liquidity_script(
-        account: &signer, 
+        account: &signer,
         pair: Object<Pool>,
         coin_amounts: vector<u64>,
         min_liquidity: Option<u64>,
@@ -411,7 +411,7 @@ module initia_std::stableswap {
                 swap_fee_rate,
             },
         );
-        
+
         return liquidity_token
     }
 
@@ -461,7 +461,7 @@ module initia_std::stableswap {
                 i = i + 1;
             };
 
-            let d_real = get_d(pool_amounts_after, ann); 
+            let d_real = get_d(pool_amounts_after, ann);
             (mul_div_u128(total_supply, (d_real - d_before as u128), (d_before as u128)) as u64)
         } else {
             d_ideal
@@ -603,7 +603,7 @@ module initia_std::stableswap {
         if (timestamp >= ann.timestamp_after) {
             return ann.ann_after
         };
-            
+
         if (ann.ann_after > ann.ann_before) {
             return ann.ann_before + (ann.ann_after - ann.ann_before) * (timestamp - ann.timestamp_before) / (ann.timestamp_after - ann.timestamp_before)
         } else {
@@ -647,7 +647,7 @@ module initia_std::stableswap {
             let amount = fungible_asset::amount(vector::borrow(coins, i));
             vector::push_back(&mut amounts, amount);
             i = i + 1;
-        }; 
+        };
 
         return amounts
     }
@@ -660,7 +660,7 @@ module initia_std::stableswap {
             let addr = object::object_address(*vector::borrow(&coin_metadata, i));
             vector::push_back(&mut addresses, addr);
             i = i + 1;
-        }; 
+        };
 
         return addresses
     }
@@ -707,7 +707,7 @@ module initia_std::stableswap {
     /// get counterparty's amount
     fun get_y(offer_index: u64, return_index: u64, offer_amount: u64, pool_amounts: vector<u64>, ann: u64): u64 {
         let d = (get_d(pool_amounts, ann) as u256);
-        
+
         let ann = (ann as u256);
         // Done by solving quadratic equation iteratively.
         // x_1**2 + x_1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
@@ -737,7 +737,7 @@ module initia_std::stableswap {
 
         c = c * d * A_PRECISION / ann / (n as u256);
         let b_plus_d = sum + d * A_PRECISION / ann; // need to sub d but sub later due to value must be less than 0
-        
+
         let y_prev;
         let y = d;
 
