@@ -54,7 +54,8 @@ module initia_std::vip {
     const EVESTING_IN_PROGRESS: u64 = 26;
     const EVESTING_STORE_ALREADY_EXISTS: u64 = 27;
     const ESNAPSHOT_ALREADY_EXISTS: u64 = 28;
-
+    const EINVALID_BATCH_ARGUMENT: u64 = 29;
+    
     //
     //  Constants
     //
@@ -544,6 +545,8 @@ module initia_std::vip {
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
             let bridge_balance = if (bridge_balance > module_store.maximum_tvl) {
                 module_store.maximum_tvl
+            } else if (bridge_balance < module_store.minimum_tvl){
+                0
             } else {
                 bridge_balance
             };
@@ -765,6 +768,41 @@ module initia_std::vip {
         coin::deposit(signer::address_of(account), vested_reward);
     }
 
+    public entry fun batch_claim_operator_reward_script(
+        operator: &signer,
+        bridge_id: u64,
+        stage: vector<u64>,
+    ) acquires ModuleStore {
+        vector::enumerate_ref(&stage, |_i, s| {
+            claim_operator_reward_script(
+                operator,
+                bridge_id,
+                *s,
+            );
+        });
+    }
+
+    public entry fun batch_claim_user_reward_script (
+        account: &signer,
+        bridge_id: u64,
+        stage: vector<u64>,
+        merkle_proofs: vector<vector<vector<u8>>>,
+        l2_score: vector<u64>,
+    ) acquires ModuleStore {
+        assert!(vector::length(&stage) == vector::length(&merkle_proofs) && 
+            vector::length(&merkle_proofs) == vector::length(&l2_score), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        
+        vector::enumerate_ref(&stage, |i, s| {
+            claim_user_reward_script(
+                account,
+                bridge_id,
+                *s,
+                *vector::borrow(&merkle_proofs, i),
+                *vector::borrow(&l2_score, i),
+            );
+        });
+    }
+
     public entry fun update_vip_weight(
         chain: &signer,
         bridge_id: u64,
@@ -859,6 +897,40 @@ module initia_std::vip {
             stakelisted_amount,
             stakelisted_metadata,
         );
+    }
+
+    public entry fun batch_zapping_script(
+        account: &signer,
+        bridge_id: u64,
+        lp_metadata: vector<Object<Metadata>>,
+        min_liquidity: vector<option::Option<u64>>,
+        validator: vector<string::String>,
+        stage: vector<u64>,
+        zapping_amount: vector<u64>, 
+        stakelisted_amount: vector<u64>,
+        stakelisted_metadata: vector<Object<Metadata>>,
+    ) {
+        let batch_length = vector::length(&stage);
+        assert!(vector::length(&lp_metadata) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&min_liquidity) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&validator) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&zapping_amount) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&stakelisted_amount) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&stakelisted_metadata) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+
+        vector::enumerate_ref(&stage, |i, s| {
+            zapping(
+                account,
+                bridge_id,
+                *vector::borrow(&lp_metadata, i),
+                *vector::borrow(&min_liquidity, i),
+                *vector::borrow(&validator, i),
+                *s,
+                *vector::borrow(&zapping_amount, i),
+                *vector::borrow(&stakelisted_amount, i),
+                *vector::borrow(&stakelisted_metadata, i),
+            );
+        });
     }
 
     public entry fun update_operator_commission(
@@ -1330,6 +1402,40 @@ module initia_std::vip {
         
         claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
         claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+    }
+
+    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_batch_claim(chain: &signer, operator: &signer, receiver: &signer) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,  
+            operator,
+            1,
+            @0x99,  
+            1_000_000_000_000,
+        );
+
+        let score_merkle_proofs = test_setup_merkle_scene2(chain, bridge_id, 0);
+
+        batch_claim_user_reward_script(
+            receiver,
+            bridge_id,
+            vector[1, 2, 3, 4, 5, 6],
+            vector[
+                score_merkle_proofs,
+                score_merkle_proofs,
+                score_merkle_proofs,
+                score_merkle_proofs,
+                score_merkle_proofs,
+                score_merkle_proofs
+            ],
+            vector[1_000, 1_000, 500, 500, 100, 100],
+        );
+
+        batch_claim_operator_reward_script(
+            receiver,
+            bridge_id,
+            vector[1, 2, 3, 4, 5, 6]
+        );
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -1882,12 +1988,11 @@ module initia_std::vip {
     }
 
 
-    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37, relayer=@0x3d18d54532fc42e567090852db6eb21fa528f952)]
+    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_full_vesting_zapping(
         chain: &signer, 
         operator: &signer, 
         receiver: &signer,
-        relayer: &signer
     ) acquires ModuleStore {
         let vesting_period = DEFAULT_USER_VESTING_PERIOD_FOR_TEST;
         let (bridge_id, _reward_metadata, stakelisted_metadata, lp_metadata, validator) = test_setup_for_zapping(
@@ -1904,29 +2009,41 @@ module initia_std::vip {
         let release_time = 0; 
         vector::push_back(&mut score_merkle_proofs, x"0eec1ad534458dec5903786734a61f3d47bde6342f9cd22e6575021aed5cd8bf");
 
-        while (idx <= vesting_period) {
+        let batch_lp_metadata = vector::empty<Object<Metadata>>();
+        let batch_min_liquidity = vector::empty<option::Option<u64>>();
+        let batch_validator = vector::empty<string::String>();
+        let batch_stage = vector::empty<u64>();
+        let batch_zapping_amount = vector::empty<u64>();
+        let batch_stakelisted_amount = vector::empty<u64>();
+        let batch_stakelisted_metadata = vector::empty<Object<Metadata>>();
+        
+
+        while (idx < vesting_period - 1) {
             fund_reward_script(chain, idx, release_time, release_time);
             submit_snapshot(chain, bridge_id, idx, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
-
-            claim_user_reward_script(receiver, bridge_id, idx, score_merkle_proofs, 800_000);
-
-            zapping_script(
-                receiver,
-                bridge_id,
-                lp_metadata,
-                option::none(),
-                validator,
-                idx,
-                zapping_amount,
-                zapping_amount,
-                stakelisted_metadata,
-            );
-
-            let staking_reward_amount = 100_000_000;
-            staking::fund_reward_coin(chain, signer::address_of(relayer), staking_reward_amount);
-            staking::deposit_reward_for_chain(chain, lp_metadata, vector[validator], vector[staking_reward_amount]);
+            claim_user_reward_script(receiver, bridge_id, idx, score_merkle_proofs, 800_000);            
             
+            vector::push_back(&mut batch_lp_metadata, lp_metadata);
+            vector::push_back(&mut batch_min_liquidity, option::none());
+            vector::push_back(&mut batch_validator, validator);
+            vector::push_back(&mut batch_stage, idx);
+            vector::push_back(&mut batch_zapping_amount, zapping_amount);
+            vector::push_back(&mut batch_stakelisted_amount, zapping_amount);
+            vector::push_back(&mut batch_stakelisted_metadata, stakelisted_metadata);
+
             idx = idx+1;
         };
+        
+        batch_zapping_script(
+            receiver,
+            bridge_id,
+            batch_lp_metadata,
+            batch_min_liquidity,
+            batch_validator,
+            batch_stage,
+            batch_zapping_amount,
+            batch_stakelisted_amount,
+            batch_stakelisted_metadata,
+        );
     }
 }

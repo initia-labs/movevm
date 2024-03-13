@@ -80,7 +80,7 @@ module initia_std::vip_vesting {
     //
 
     #[event]
-    struct ClaimEvent has drop, store {
+    struct VestingClaimEvent has drop, store {
         account: address,
         bridge_id: u64,
         // claimed stage.
@@ -409,7 +409,7 @@ module initia_std::vip_vesting {
         };
 
         event::emit(
-            ClaimEvent {
+            VestingClaimEvent {
                 account: account_addr,
                 bridge_id,
                 stage: start_stage,
@@ -442,7 +442,7 @@ module initia_std::vip_vesting {
         );
 
         event::emit(
-            ClaimEvent {
+            VestingClaimEvent {
                 account: account_addr,
                 bridge_id,
                 stage: start_stage,
@@ -767,7 +767,7 @@ module initia_std::vip_vesting {
     
     #[test_only]
     use initia_std::fungible_asset::Metadata;
-    
+
     #[test_only]
     struct TestVesting has copy, drop, store{
         initial_reward: u64,
