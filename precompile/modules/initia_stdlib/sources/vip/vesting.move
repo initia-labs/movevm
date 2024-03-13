@@ -6,9 +6,8 @@ module initia_std::vip_vesting {
     use std::option;
     use std::event;
 
-    use initia_std::coin;
-    use initia_std::object::{Self, Object};
-    use initia_std::fungible_asset::{Self, Metadata, FungibleAsset};
+    use initia_std::object;
+    use initia_std::fungible_asset::{Self, FungibleAsset};
     use initia_std::primary_fungible_store;
     use initia_std::table;
     use initia_std::table_key;
@@ -395,15 +394,19 @@ module initia_std::vip_vesting {
             l2_score,
         );
 
-        let vesting_reward_amount = add_user_vesting(
-            account_addr,
-            bridge_id,
-            start_stage,
-            end_stage,
-            l2_score,
-            total_l2_score,
-            proportion
-        );
+
+        let vesting_reward_amount = 0; 
+        if (l2_score >= 0) {
+            vesting_reward_amount = add_user_vesting(
+                account_addr,
+                bridge_id,
+                start_stage,
+                end_stage,
+                l2_score,
+                total_l2_score,
+                proportion
+            );
+        };
 
         event::emit(
             ClaimEvent {
@@ -755,6 +758,15 @@ module initia_std::vip_vesting {
     //
     // Tests
     // 
+
+    #[test_only]
+    use initia_std::coin;
+
+    #[test_only]
+    use initia_std::object::Object;
+    
+    #[test_only]
+    use initia_std::fungible_asset::Metadata;
     
     #[test_only]
     struct TestVesting has copy, drop, store{

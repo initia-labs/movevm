@@ -497,7 +497,6 @@ module initia_std::vip {
     }
 
     fun fund_reward(
-        agent: &signer,
         module_store: &mut ModuleStore,
         stage: u64,
         initial_reward: FungibleAsset
@@ -687,7 +686,6 @@ module initia_std::vip {
         let total_reward = vip_vault::claim(stage);
         
         let (total_operator_funded_reward, total_user_funded_reward) = fund_reward(
-            agent,
             module_store,
             stage,
             total_reward

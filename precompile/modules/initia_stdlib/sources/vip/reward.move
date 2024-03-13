@@ -3,7 +3,6 @@ module initia_std::vip_reward {
     use std::string;
     use std::signer;
     use std::vector;
-    use std::option;
 
     use initia_std::object::{Self, Object, ExtendRef};
     use initia_std::fungible_asset::{Metadata, FungibleAsset, FungibleStore};

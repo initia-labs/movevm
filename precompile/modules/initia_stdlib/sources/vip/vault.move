@@ -1,13 +1,10 @@
 module initia_std::vip_vault {
     use std::error;
-    use std::string;
     use std::signer;
-    use std::option;
 
-    use initia_std::object::{Self, Object, ExtendRef};
-    use initia_std::fungible_asset::{Metadata, FungibleAsset};
+    use initia_std::object::{Self, ExtendRef};
+    use initia_std::fungible_asset::FungibleAsset;
     use initia_std::primary_fungible_store;
-    use initia_std::coin;
     use initia_std::fungible_asset;
     use initia_std::vip_reward;
 
@@ -135,6 +132,21 @@ module initia_std::vip_vault {
     //
     // Tests
     //
+
+    #[test_only]
+    use std::string;
+
+    #[test_only]
+    use std::option;
+
+    #[test_only]
+    use initia_std::coin;
+
+    #[test_only]
+    use initia_std::fungible_asset::Metadata;
+
+    #[test_only]
+    use initia_std::object::Object;
 
     #[test_only]
     public fun init_module_for_test(chain: &signer){

@@ -13,9 +13,8 @@ module initia_std::vip_zapping {
     use initia_std::dex;
     use initia_std::primary_fungible_store;
     use initia_std::object::{Self, ExtendRef, Object};
-    use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
     use initia_std::simple_map::{Self, SimpleMap};
-    use initia_std::vip_reward;
+    use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
 
     friend initia_std::vip;
     
@@ -519,6 +518,9 @@ module initia_std::vip_zapping {
 
     #[test_only]
     use std::string;
+
+    #[test_only]
+    use initia_std::vip_reward;
 
     #[test_only]
     public fun init_module_for_test(chain: &signer) {

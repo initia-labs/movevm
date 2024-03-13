@@ -1,6 +1,5 @@
 module initia_std::vip_operator {
     use std::error;
-    use std::string;
     use std::signer;
     use std::vector;
     use std::event;
@@ -226,6 +225,9 @@ module initia_std::vip_operator {
     //
     // Tests
     //
+
+    #[test_only]
+    use std::string;
 
     #[test(chain=@0x1, operator=@0x999)]
     fun test_update_operator_commission(
