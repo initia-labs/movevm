@@ -60,7 +60,7 @@ module initia_std::vip_reward {
     }
 
     //
-    // Implementations
+    // Helper Functions
     //
 
     fun generate_reward_store_seed<Vesting: copy + drop + store>(bridge_id: u64): vector<u8>{
@@ -83,7 +83,7 @@ module initia_std::vip_reward {
     // Friend Functions
     //
 
-    public (friend) fun register_reward_store<Vesting: copy + drop + store>(
+    public(friend) fun register_reward_store<Vesting: copy + drop + store>(
         chain: &signer,
         bridge_id: u64,
     ) {
@@ -105,17 +105,7 @@ module initia_std::vip_reward {
         );
     }
 
-    public (friend) fun is_reward_store_registered<Vesting: copy + drop + store>(bridge_id: u64): bool {
-        exists<RewardStore>(create_reward_store_address<Vesting>(bridge_id))
-    }
-    
-    public (friend) fun get_reward_store_address<Vesting: copy + drop + store>(bridge_id: u64): address {
-        let reward_addr = create_reward_store_address<Vesting>(bridge_id);
-        assert!(exists<RewardStore>(reward_addr), error::not_found(EREWARD_STORE_NOT_FOUND));
-        reward_addr
-    }
-
-    public (friend) fun add_reward_per_stage(
+    public(friend) fun add_reward_per_stage(
         reward_store_addr: address,
         stage: u64,
         reward: u64
@@ -125,7 +115,7 @@ module initia_std::vip_reward {
         *stage_reward = *stage_reward + reward;
     }
 
-    public (friend) fun withdraw(
+    public(friend) fun withdraw(
         reward_store_addr: address,
         amount: u64,
     ): FungibleAsset acquires RewardStore {
@@ -150,5 +140,17 @@ module initia_std::vip_reward {
         
         let stage_reward = table::borrow_with_default(&reward_store.reward_per_stage, table_key::encode_u64(stage), &0);
         *stage_reward
+    }
+
+    #[view]
+    public fun is_reward_store_registered<Vesting: copy + drop + store>(bridge_id: u64): bool {
+        exists<RewardStore>(create_reward_store_address<Vesting>(bridge_id))
+    }
+
+    #[view]
+    public fun get_reward_store_address<Vesting: copy + drop + store>(bridge_id: u64): address {
+        let reward_addr = create_reward_store_address<Vesting>(bridge_id);
+        assert!(exists<RewardStore>(reward_addr), error::not_found(EREWARD_STORE_NOT_FOUND));
+        reward_addr
     }
 }

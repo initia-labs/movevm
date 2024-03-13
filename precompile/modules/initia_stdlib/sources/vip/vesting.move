@@ -150,7 +150,7 @@ module initia_std::vip_vesting {
         let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
         assert!(table::contains(&vesting_store.claimed_stages, table_key::encode_u64(stage)), error::unavailable(EVESTING_NOT_CLAIMED));
-        
+
         let vesting = table::remove(&mut vesting_store.vestings, table_key::encode_u64(stage));
         table::add(&mut vesting_store.vestings_finalized, table_key::encode_u64(stage), vesting);
     }
@@ -173,9 +173,8 @@ module initia_std::vip_vesting {
         // vest_amount = value.initial_reward * vest_ratio        
         let vesting_period = value.end_stage - value.start_stage;
         let vest_ratio = decimal256::div_u64(&decimal256::one(), vesting_period);
-        assert!(decimal256::val(&vest_ratio) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_VEST_RATIO));
         let vest_amount = decimal256::mul_u64(&vest_ratio, value.initial_reward);
-        
+
         if (vest_amount > value.remaining_reward) {
             vest_amount = value.remaining_reward;
         };
@@ -205,9 +204,8 @@ module initia_std::vip_vesting {
         let vesting_period = value.end_stage - value.start_stage;
         let max_ratio = decimal256::div_u64(&decimal256::one(), vesting_period);
         let vest_ratio = decimal256::mul(&max_ratio, &score_ratio);
-        assert!(decimal256::val(&vest_ratio) <= decimal256::val(&max_ratio), error::invalid_argument(EINVALID_VEST_RATIO));
         let vest_amount = decimal256::mul_u64(&vest_ratio, value.initial_reward);
-        
+
         if (vest_amount > value.remaining_reward) {
             vest_amount = value.remaining_reward;
         };
@@ -217,7 +215,6 @@ module initia_std::vip_vesting {
 
     fun get_vesting<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64, stage: u64): Vesting acquires VestingStore {
         let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
-        assert!(exists<VestingStore<Vesting>>(vesting_store_addr), error::not_found(EVESTING_STORE_NOT_FOUND));
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
 
         assert!(table::contains(&mut vesting_store.vestings, table_key::encode_u64(stage)), error::not_found(EVESTING_NOT_FOUND));
@@ -227,8 +224,7 @@ module initia_std::vip_vesting {
     }
 
     fun get_vesting_finalized<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64, stage: u64): Vesting acquires VestingStore {
-        let vesting_store_addr = create_vesting_store_address<Vesting>(account_addr, bridge_id);
-        assert!(exists<VestingStore<Vesting>>(vesting_store_addr), error::not_found(EVESTING_STORE_NOT_FOUND));
+        let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
 
         assert!(table::contains(&mut vesting_store.vestings_finalized, table_key::encode_u64(stage)), error::not_found(EVESTING_NOT_FOUND));
@@ -238,9 +234,9 @@ module initia_std::vip_vesting {
     }
 
     fun get_last_claimed_stage<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64): u64 acquires VestingStore {
-        let vesting_store_addr = create_vesting_store_address<Vesting>(account_addr, bridge_id);
-        assert!(exists<VestingStore<Vesting>>(vesting_store_addr), error::not_found(EVESTING_STORE_NOT_FOUND));
+        let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
+
         let iter = table::iter(&mut vesting_store.claimed_stages, option::none(), option::none(), 2);
         if (!table::prepare<vector<u8>, bool>(&mut iter)) {
             return 0
@@ -249,38 +245,6 @@ module initia_std::vip_vesting {
         table_key::decode_u64(key)
     }
 
-    //
-    // Public Functions
-    //
-
-    public (friend) fun register_user_vesting_store(
-        account: &signer,
-        bridge_id: u64
-    ) {
-        register_vesting_store<UserVesting>(account, bridge_id);
-    }
-
-    public (friend) fun register_operator_vesting_store(
-        account: &signer,
-        bridge_id: u64
-    ) {
-        register_vesting_store<OperatorVesting>(account, bridge_id);
-    }
-    
-    public (friend) fun is_user_vesting_store_registered(
-        addr: address,
-        bridge_id: u64
-    ): bool {
-        exists<VestingStore<UserVesting>>(create_vesting_store_address<UserVesting>(addr, bridge_id))
-    }
-
-    public (friend) fun is_operator_vesting_store_registered(
-        addr: address,
-        bridge_id: u64
-    ): bool {
-        exists<VestingStore<OperatorVesting>>(create_vesting_store_address<OperatorVesting>(addr, bridge_id))
-    }
-    
     fun vest_user_reward(
         account_addr: address,
         bridge_id: u64,
@@ -304,7 +268,7 @@ module initia_std::vip_vesting {
                 finalize_vesting<UserVesting>(account_addr, bridge_id, value.start_stage);
                 continue
             };
-            
+
             let vest_amount = calculate_user_vest(value, l2_score);   
 
             vested_reward = vested_reward + vest_amount;
@@ -356,103 +320,6 @@ module initia_std::vip_vesting {
         };
 
         (vested_reward, vesting_changes)
-    }
-
-    public (friend) fun supply_reward_on_user(
-        bridge_id: u64,
-        stage: u64,
-        reward: FungibleAsset,
-    ) {
-        let reward_store_addr = get_user_reward_store_address(bridge_id);
-        vip_reward::add_reward_per_stage(reward_store_addr, stage, fungible_asset::amount(&reward));
-        primary_fungible_store::deposit(reward_store_addr, reward);
-    }
-
-    public (friend) fun supply_reward_on_operator(
-        bridge_id: u64,
-        stage: u64,
-        reward: FungibleAsset,
-    ) {
-        let reward_store_addr = get_operator_reward_store_address(bridge_id);
-        vip_reward::add_reward_per_stage(reward_store_addr, stage, fungible_asset::amount(&reward));
-        primary_fungible_store::deposit(reward_store_addr, reward);
-    }
-
-    public (friend) fun claim_user_reward(
-        account_addr: address,
-        bridge_id: u64,
-        start_stage: u64,
-        end_stage: u64,
-        l2_score: u64,
-        total_l2_score: u64,
-        proportion: Decimal256,
-    ): FungibleAsset acquires VestingStore{
-        let (vested_reward, vesting_changes) = claim_previous_user_vestings(
-            account_addr,
-            bridge_id,
-            start_stage,
-            l2_score,
-        );
-
-
-        let vesting_reward_amount = 0; 
-        if (l2_score >= 0) {
-            vesting_reward_amount = add_user_vesting(
-                account_addr,
-                bridge_id,
-                start_stage,
-                end_stage,
-                l2_score,
-                total_l2_score,
-                proportion
-            );
-        };
-
-        event::emit(
-            ClaimEvent {
-                account: account_addr,
-                bridge_id,
-                stage: start_stage,
-                vesting_reward_amount,
-                vested_reward_amount: fungible_asset::amount(&vested_reward),
-                vesting_changes,
-            }
-        );
-
-        vested_reward
-    }
-
-    public (friend) fun claim_operator_reward(
-        account_addr: address,
-        bridge_id: u64,
-        start_stage: u64,
-        end_stage: u64,
-    ): FungibleAsset acquires VestingStore{
-        let (vested_reward, vesting_changes) = claim_previous_operator_vestings(
-            account_addr,
-            bridge_id,
-            start_stage,
-        );
-
-        let vesting_reward_amount = add_operator_vesting(
-            account_addr,
-            bridge_id,
-            start_stage,
-            end_stage,
-        );
-
-        event::emit(
-            ClaimEvent {
-                account: account_addr,
-                bridge_id,
-                stage: start_stage,
-                vesting_reward_amount,
-                vested_reward_amount: fungible_asset::amount(&vested_reward),
-                vesting_changes,
-            }
-        );
-
-        vested_reward
     }
 
     fun claim_previous_operator_vestings (
@@ -522,7 +389,7 @@ module initia_std::vip_vesting {
         vesting_reward_amount
     }
     
-    public (friend) fun add_operator_vesting(
+    fun add_operator_vesting(
         account_addr: address,
         bridge_id: u64,
         start_stage: u64,
@@ -541,7 +408,162 @@ module initia_std::vip_vesting {
         stage_reward
     }
 
-    public (friend) fun zapping_vesting(
+    //
+    // Public Functions
+    //
+
+    public fun register_user_vesting_store(
+        account: &signer,
+        bridge_id: u64
+    ) {
+        register_vesting_store<UserVesting>(account, bridge_id);
+    }
+
+    public fun register_operator_vesting_store(
+        account: &signer,
+        bridge_id: u64
+    ) {
+        register_vesting_store<OperatorVesting>(account, bridge_id);
+    }
+    
+    public fun is_user_vesting_store_registered(
+        addr: address,
+        bridge_id: u64
+    ): bool {
+        exists<VestingStore<UserVesting>>(create_vesting_store_address<UserVesting>(addr, bridge_id))
+    }
+
+    public fun is_operator_vesting_store_registered(
+        addr: address,
+        bridge_id: u64
+    ): bool {
+        exists<VestingStore<OperatorVesting>>(create_vesting_store_address<OperatorVesting>(addr, bridge_id))
+    }
+
+    public fun is_user_reward_store_registered(bridge_id: u64): bool {
+        vip_reward::is_reward_store_registered<UserVesting>(bridge_id)
+    }
+
+    public fun is_operator_reward_store_registered(bridge_id: u64): bool {
+        vip_reward::is_reward_store_registered<OperatorVesting>(bridge_id)
+    }
+
+    //
+    // Friends Functions
+    //
+
+    public(friend) fun register_user_reward_store(
+        chain: &signer,
+        bridge_id: u64,
+    ) {
+        vip_reward::register_reward_store<UserVesting>(chain, bridge_id)
+    }
+
+    public(friend) fun register_operator_reward_store(
+        chain: &signer,
+        bridge_id: u64,
+    ) {
+        vip_reward::register_reward_store<OperatorVesting>(chain, bridge_id)
+    }
+
+    public(friend) fun supply_reward_on_user(
+        bridge_id: u64,
+        stage: u64,
+        reward: FungibleAsset,
+    ) {
+        let reward_store_addr = get_user_reward_store_address(bridge_id);
+        vip_reward::add_reward_per_stage(reward_store_addr, stage, fungible_asset::amount(&reward));
+        primary_fungible_store::deposit(reward_store_addr, reward);
+    }
+
+    public(friend) fun supply_reward_on_operator(
+        bridge_id: u64,
+        stage: u64,
+        reward: FungibleAsset,
+    ) {
+        let reward_store_addr = get_operator_reward_store_address(bridge_id);
+        vip_reward::add_reward_per_stage(reward_store_addr, stage, fungible_asset::amount(&reward));
+        primary_fungible_store::deposit(reward_store_addr, reward);
+    }
+
+    public(friend) fun claim_user_reward(
+        account_addr: address,
+        bridge_id: u64,
+        start_stage: u64,
+        end_stage: u64,
+        l2_score: u64,
+        total_l2_score: u64,
+        proportion: Decimal256,
+    ): FungibleAsset acquires VestingStore{
+        let (vested_reward, vesting_changes) = claim_previous_user_vestings(
+            account_addr,
+            bridge_id,
+            start_stage,
+            l2_score,
+        );
+
+
+        let vesting_reward_amount = 0; 
+        if (l2_score >= 0) {
+            vesting_reward_amount = add_user_vesting(
+                account_addr,
+                bridge_id,
+                start_stage,
+                end_stage,
+                l2_score,
+                total_l2_score,
+                proportion
+            );
+        };
+
+        event::emit(
+            ClaimEvent {
+                account: account_addr,
+                bridge_id,
+                stage: start_stage,
+                vesting_reward_amount,
+                vested_reward_amount: fungible_asset::amount(&vested_reward),
+                vesting_changes,
+            }
+        );
+
+        vested_reward
+    }
+
+    public(friend) fun claim_operator_reward(
+        account_addr: address,
+        bridge_id: u64,
+        start_stage: u64,
+        end_stage: u64,
+    ): FungibleAsset acquires VestingStore{
+        let (vested_reward, vesting_changes) = claim_previous_operator_vestings(
+            account_addr,
+            bridge_id,
+            start_stage,
+        );
+
+        let vesting_reward_amount = add_operator_vesting(
+            account_addr,
+            bridge_id,
+            start_stage,
+            end_stage,
+        );
+
+        event::emit(
+            ClaimEvent {
+                account: account_addr,
+                bridge_id,
+                stage: start_stage,
+                vesting_reward_amount,
+                vested_reward_amount: fungible_asset::amount(&vested_reward),
+                vesting_changes,
+            }
+        );
+
+        vested_reward
+    }
+
+    public(friend) fun zapping_vesting(
         account_addr: address,
         bridge_id: u64,
         stage: u64,
@@ -559,41 +581,16 @@ module initia_std::vip_vesting {
         vip_reward::withdraw(reward_store_addr, zapping_amount)
     }
 
-    public (friend) fun register_user_reward_store(
-        chain: &signer,
-        bridge_id: u64,
-    ) {
-        vip_reward::register_reward_store<UserVesting>(chain, bridge_id)
-    }
-
-    public (friend) fun register_operator_reward_store(
-        chain: &signer,
-        bridge_id: u64,
-    ) {
-        vip_reward::register_reward_store<OperatorVesting>(chain, bridge_id)
-    }
-
-    public (friend) fun is_user_reward_store_registered(bridge_id: u64): bool {
-        vip_reward::is_reward_store_registered<UserVesting>(bridge_id)
-    }
-
-    public (friend) fun is_operator_reward_store_registered(bridge_id: u64): bool {
-        vip_reward::is_reward_store_registered<OperatorVesting>(bridge_id)
-    }
-
-    public (friend) fun get_user_reward_store_address(bridge_id: u64): address {
-        vip_reward::get_reward_store_address<UserVesting>(bridge_id)
-    }
-
-    public (friend) fun get_operator_reward_store_address(bridge_id: u64): address {
-        vip_reward::get_reward_store_address<OperatorVesting>(bridge_id)
-    }
-
     // 
     // View Functions
     //
 
     // <-- USER ----->
+
+    #[view]
+    public fun get_user_reward_store_address(bridge_id: u64): address {
+        vip_reward::get_reward_store_address<UserVesting>(bridge_id)
+    }
 
     #[view]
     public fun get_user_last_claimed_stage(
@@ -679,6 +676,11 @@ module initia_std::vip_vesting {
     // <-- OPERATOR ----->
 
     #[view]
+    public fun get_operator_reward_store_address(bridge_id: u64): address {
+        vip_reward::get_reward_store_address<OperatorVesting>(bridge_id)
+    }
+
+    #[view]
     public fun get_operator_last_claimed_stage(
         account_addr: address,
         bridge_id: u64,
@@ -752,8 +754,6 @@ module initia_std::vip_vesting {
         let vesting = get_vesting<OperatorVesting>(account_addr, bridge_id, stage);
         vesting.remaining_reward
     }
-
-
 
     //
     // Tests
