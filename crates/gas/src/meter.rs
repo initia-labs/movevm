@@ -6,7 +6,7 @@ use crate::{
     algebra::Gas, instr::InstructionGasParameters, misc::MiscGasParameters,
     transaction::TransactionGasParameters,
 };
-use crate::{AbstractValueSize, GasUnit};
+use crate::{AbstractValueSize, GasUnit, NumModules};
 
 use initia_move_types::access_path::AccessPath;
 use initia_move_types::gas_usage::GasUsageSet;
@@ -14,6 +14,8 @@ use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMRe
 use move_binary_format::file_format::CodeOffset;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
+use move_core_types::gas_algebra::NumTypeNodes;
+use move_core_types::identifier::IdentStr;
 use move_core_types::{
     gas_algebra::{InternalGas, NumArgs, NumBytes},
     language_storage::ModuleId,
@@ -32,7 +34,7 @@ use std::collections::BTreeMap;
 ///
 /// Cosmos gas is 100x bigger than Aptos gas unit
 ///
-pub(crate) const GAS_UNIT_SCALING_FACTOR: u64 = 100;
+pub const GAS_UNIT_SCALING_FACTOR: u64 = 100;
 
 /// A trait for converting from a map representation of the on-chain gas schedule.
 pub trait FromOnChainGasSchedule: Sized {
@@ -78,7 +80,7 @@ impl ToOnChainGasSchedule for NativeGasParameters {
     fn to_on_chain_gas_schedule(&self) -> Vec<(String, u64)> {
         let mut entries = self.move_stdlib.to_on_chain_gas_schedule();
         entries.extend(self.initia_stdlib.to_on_chain_gas_schedule());
-        // entries.extend(self.table.to_on_chain_gas_schedule());
+        entries.extend(self.table.to_on_chain_gas_schedule());
         entries
     }
 }
@@ -161,6 +163,14 @@ impl InitialGasSchedule for InitiaGasParameters {
     }
 }
 
+#[derive(Clone)]
+struct Frame {
+    module_id: ModuleId,
+    start_gas: InternalGas, /* start_gas */
+    call_gas: InternalGas,  /* call_gas which is gas_used during inner call */
+}
+
+#[derive(Clone)]
 /// The official gas meter used inside the Initia VM.
 /// It maintains an internal gas counter, measured in internal gas units, and carries an environment
 /// consisting all the gas parameters, which it can lookup when performing gas calcuations.
@@ -177,12 +187,10 @@ pub struct InitiaGasMeter {
     // and compute `gas_used` at `drop_frame` and `charge_native_function`.
     gas_usages: BTreeMap<ModuleId, InternalGas>,
     call_stack: Vec<Frame>,
-}
 
-struct Frame {
-    module_id: ModuleId,
-    start_gas: InternalGas, /* start_gas */
-    call_gas: InternalGas,  /* call_gas which is gas_used during inner call */
+    // dependency calculation
+    num_dependencies: NumModules,
+    total_dependency_size: NumBytes,
 }
 
 impl InitiaGasMeter {
@@ -199,6 +207,8 @@ impl InitiaGasMeter {
             is_call_table: false,
             gas_usages: BTreeMap::new(),
             call_stack: Vec::new(),
+            num_dependencies: 0.into(),
+            total_dependency_size: 0.into(),
         }
     }
 
@@ -738,6 +748,34 @@ impl GasMeter for InitiaGasMeter {
 
         Ok(())
     }
+
+    #[inline]
+    fn charge_create_ty(&mut self, num_nodes: NumTypeNodes) -> PartialVMResult<()> {
+        let cost = self.gas_params.instr.subst_ty_per_node * num_nodes;
+
+        self.charge(cost)
+    }
+
+    #[inline]
+    fn charge_dependency(
+        &mut self,
+        _is_new: bool,
+        addr: &AccountAddress,
+        _name: &IdentStr,
+        size: NumBytes,
+    ) -> PartialVMResult<()> {
+        // Modules under special addresses are considered system modules that should always
+        // be loaded, and are therefore excluded from gas charging.
+        if !addr.is_special() {
+            self.charge(
+                self.gas_params.txn.dependency_per_module
+                    + self.gas_params.txn.dependency_per_byte * size,
+            )?;
+            self.count_dependency(size)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl InitiaGasMeter {
@@ -770,5 +808,21 @@ impl InitiaGasMeter {
                 })
                 .collect::<BTreeMap<ModuleId, u64>>(),
         )
+    }
+}
+
+impl InitiaGasMeter {
+    fn count_dependency(&mut self, size: NumBytes) -> PartialVMResult<()> {
+        self.num_dependencies += 1.into();
+        self.total_dependency_size += size;
+
+        if self.num_dependencies > self.gas_params.txn.max_num_dependencies {
+            return Err(PartialVMError::new(StatusCode::DEPENDENCY_LIMIT_REACHED));
+        }
+        if self.total_dependency_size > self.gas_params.txn.max_total_dependency_size {
+            return Err(PartialVMError::new(StatusCode::DEPENDENCY_LIMIT_REACHED));
+        }
+
+        Ok(())
     }
 }

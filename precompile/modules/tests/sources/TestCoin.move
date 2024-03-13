@@ -9,6 +9,7 @@ module TestAccount::TestCoin {
         test: bool,
     }
 
+    #[event]
     /// Event emitted when some amount of coins are withdrawn from an Collateral.
     struct MintEvent has drop, store {
         amount: u64,

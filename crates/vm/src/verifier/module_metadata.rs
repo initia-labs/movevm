@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use initia_move_types::metadata::{KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
+use initia_move_types::metadata::{
+    KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0,
+};
 use move_binary_format::{
     access::ModuleAccess,
     errors::VMResult,
@@ -9,12 +11,14 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::identifier::Identifier;
+use move_vm_runtime::session::Session;
 
 use super::{
     errors::{
         entry_function_validation_error, metadata_validation_error, AttributeValidationError,
         EntryFunctionValidationError, MalformedError, MetaDataValidationError,
     },
+    event_validation::validate_module_events,
     metadata::get_metadata_from_compiled_module,
 };
 
@@ -27,10 +31,15 @@ const IDENT_CHAR_COST: usize = 1;
 /// Overall budget for module complexity, calibrated via tests
 const COMPLEXITY_BUDGET: usize = 200000000;
 
-pub(crate) fn validate_publish_request(modules: &[CompiledModule]) -> VMResult<()> {
+pub(crate) fn validate_publish_request(
+    session: &Session,
+    modules: &[CompiledModule],
+) -> VMResult<()> {
     for m in modules {
         validate_module_metadata(m).map_err(|e| metadata_validation_error(&e.to_string()))?;
         validate_entry_function(m).map_err(|e| entry_function_validation_error(&e.to_string()))?;
+        validate_module_events(session, modules)
+            .map_err(|e| metadata_validation_error(&e.to_string()))?;
     }
 
     Ok(())

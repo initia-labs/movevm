@@ -3,18 +3,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
-use initia_move_gas::NativeGasParameters;
+use initia_move_compiler::TestInitiaGasMeter;
+use initia_move_gas::{
+    InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters,
+};
 use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
     staking::NativeStakingContext, table::NativeTableContext,
     transaction_context::NativeTransactionContext,
 };
-use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
+use move_cli::base::test::{run_move_unit_tests_with_gas_meter, UnitTestResult};
+use move_core_types::effects::ChangeSet;
 use move_unit_test::UnitTestingConfig;
-use move_vm_runtime::{
-    native_extensions::NativeContextExtensions, native_functions::NativeFunctionTable,
-};
+use move_vm_runtime::native_extensions::NativeContextExtensions;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
@@ -41,29 +43,32 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeOracleContext::new(&BLANK_API.oracle_api));
 }
 
-fn initia_move_test_natives() -> NativeFunctionTable {
-    configure_for_unit_test();
-    let gas_params = NativeGasParameters::zeros();
-    let misc_gas_params = initia_move_gas::MiscGasParameters::zeros();
-    all_natives(gas_params, misc_gas_params)
-}
-
 fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
     let pkg_path = path_in_crate(path_to_pkg);
 
-    let res = run_move_unit_tests(
+    configure_for_unit_test();
+
+    let gas_limit = 1_000_000_000u64;
+    let gas_params = InitiaGasParameters::initial();
+    let gas_meter = TestInitiaGasMeter::new(gas_params, gas_limit.into());
+
+    let native_gas_params = NativeGasParameters::initial();
+    let misc_gas_params = MiscGasParameters::initial();
+    let res = run_move_unit_tests_with_gas_meter(
         &pkg_path,
         move_package::BuildConfig {
             test_mode: true,
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
             ..Default::default()
         },
-        UnitTestingConfig::default_with_bound(Some(100_000)),
-        initia_move_test_natives(),
+        UnitTestingConfig::default_with_bound(Some(gas_limit)),
+        all_natives(native_gas_params, misc_gas_params),
+        ChangeSet::new(),
         // TODO(Gas): we may want to switch to non-zero costs in the future
         None,
         /* compute_coverage */ false,
         &mut std::io::stdout(),
+        Some(gas_meter),
     )
     .unwrap();
 
