@@ -26,7 +26,6 @@ module initia_std::vip_vault {
 
     const VAULT_PREFIX: u8  = 0xf1;
     const REWARD_SYMBOL: vector<u8> = b"uinit";
-    const DEFAULT_REWARD_PER_STAGE: u64 = 100_000_000_000;
 
     //
     // Resources
@@ -53,7 +52,7 @@ module initia_std::vip_vault {
         move_to(chain, ModuleStore {
             extend_ref,
             claimable_stage: 1,
-            reward_per_stage: DEFAULT_REWARD_PER_STAGE,
+            reward_per_stage: 0, // set zero for safety
             vault_store_addr
         });
     }
@@ -71,17 +70,17 @@ module initia_std::vip_vault {
     // Friend Functions
     //
     
-    public (friend) fun get_vault_store_address(): address acquires ModuleStore{
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        module_store.vault_store_addr
+    public(friend) fun get_vault_store_address(): address acquires ModuleStore{
+        borrow_global<ModuleStore>(@initia_std).vault_store_addr
     }
     
-    public (friend) fun claim(
+    public(friend) fun claim(
         stage: u64,
     ): FungibleAsset acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(stage == module_store.claimable_stage, error::invalid_argument(EINVALID_STAGE));
-        
+        assert!(module_store.reward_per_stage > 0, error::invalid_state(EINVALID_REWARD_PER_STAGE));
+
         module_store.claimable_stage = stage + 1;
         let vault_signer = object::generate_signer_for_extending(&module_store.extend_ref);
         let vault_store = primary_fungible_store::ensure_primary_store_exists(module_store.vault_store_addr, vip_reward::reward_metadata());
@@ -128,7 +127,6 @@ module initia_std::vip_vault {
         primary_fungible_store::balance(vault_store_addr, vip_reward::reward_metadata())
     }
 
-
     //
     // Tests
     //
@@ -171,6 +169,4 @@ module initia_std::vip_vault {
 
         (burn_cap, freeze_cap, mint_cap, metadata)
     }
-
-    
 }

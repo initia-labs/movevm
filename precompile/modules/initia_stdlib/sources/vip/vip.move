@@ -60,7 +60,6 @@ module initia_std::vip {
     //  Constants
     //
 
-    const REWARD_PREFIX: u8  = 0xf3;
     const PROOF_LENGTH: u64 = 32;
     const REWARD_SYMBOL: vector<u8> = b"uinit";
     const DEFAULT_POOL_SPLIT_RATIO: vector<u8> = b"0.4";
@@ -363,16 +362,6 @@ module initia_std::vip {
         );
     }
 
-    fun is_first_register(
-        operator: address,
-        bridge_id: u64
-    ): bool {
-        !vip_vesting::is_operator_reward_store_registered(bridge_id) &&
-        !vip_vesting::is_user_reward_store_registered(bridge_id) &&
-        !vip_operator::is_operator_store_registered(operator, bridge_id) &&
-        !vip_vesting::is_operator_vesting_store_registered(@initia_std, bridge_id)
-    }
-    
     fun extract_commission(
         operator_addr: address,
         bridge_id: u64,
@@ -394,7 +383,6 @@ module initia_std::vip {
         balance_pool_reward: FungibleAsset,
         weight_pool_reward: FungibleAsset,
     ): (u64, u64) {
-        let index = 0;
         let reward_distributions = vector::empty<RewardDistribution>();
 
         let initial_balance_pool_reward_amount = fungible_asset::amount(&balance_pool_reward);
@@ -402,13 +390,14 @@ module initia_std::vip {
         let total_user_funded_reward = 0;
         let total_operator_funded_reward = 0;
 
+        let index = 0;
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(&mut iter)){
                 break
             };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
 
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             let balance_reward = split_reward_with_share(
                 balance_shares, 
@@ -624,13 +613,12 @@ module initia_std::vip {
         operator_commission_rate: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
+
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(!table::contains(&module_store.bridges, table_key::encode_u64(bridge_id)), error::already_exists(EALREADY_REGISTERED));
 
-        // register store
-        if (is_first_register(operator, bridge_id)) {
-            vip_vesting::register_operator_reward_store(chain, bridge_id);
-            vip_vesting::register_user_reward_store(chain, bridge_id);
+        // register chain stores
+        if (!vip_operator::is_operator_store_registered(operator, bridge_id)) {
             vip_operator::register_operator_store(
                 chain,
                 operator,
@@ -640,7 +628,12 @@ module initia_std::vip {
                 operator_commission_max_change_rate,
                 operator_commission_rate,
             );
-            vip_vesting::register_operator_vesting_store(chain, bridge_id);
+        };
+        if (!vip_vesting::is_operator_reward_store_registered(bridge_id)) {
+            vip_vesting::register_operator_reward_store(chain, bridge_id);
+        };
+        if (!vip_vesting::is_user_reward_store_registered(bridge_id)) {
+            vip_vesting::register_user_reward_store(chain, bridge_id);
         };
 
         // add bridge info
@@ -687,7 +680,6 @@ module initia_std::vip {
         assert!(stage == module_store.stage, error::invalid_argument(EINVALID_FUND_STAGE));
         
         let total_reward = vip_vault::claim(stage);
-        
         let (total_operator_funded_reward, total_user_funded_reward) = fund_reward(
             module_store,
             stage,
@@ -867,8 +859,7 @@ module initia_std::vip {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
-            decimal256::val(&pool_split_ratio) >= decimal256::val(&decimal256::zero())
-            && decimal256::val(&pool_split_ratio) <= decimal256::val(&decimal256::one()),
+            decimal256::val(&pool_split_ratio) <= decimal256::val(&decimal256::one()),
             error::invalid_argument(EINVALID_PROPORTION)
         );
 
@@ -1059,10 +1050,13 @@ module initia_std::vip {
     #[test_only]
     const DEFAULT_OPERATOR_VESTING_PERIOD_FOR_TEST: u64 = 52;
 
+    #[test_only]
+    const DEFAULT_REWARD_PER_STAGE: u64 = 100_000_000_000;
 
     #[test_only]
     public fun init_module_for_test(chain: &signer){
         vip_vault::init_module_for_test(chain);
+        vip_vault::update_reward_per_stage(chain, DEFAULT_REWARD_PER_STAGE);
         init_module(chain);
     }
 
@@ -1591,7 +1585,7 @@ module initia_std::vip {
             freeze_cap,
             mint_cap,
         });
-        
+
         let cap = borrow_global<TestCapability>(signer::address_of(chain));
         let operator_addr = signer::address_of(operator);
         let (bridge_id1, bridge_id2) = (1, 2);

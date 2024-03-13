@@ -35,7 +35,6 @@ module initia_std::vip_zapping {
     // Constants
     //
 
-    const ZAPPING_PREFIX: u8  = 0xf5;
     const DEFAULT_LOCK_PERIOD: u64 = 60 * 60 * 24 * 7 * 26; // 26 weeks
 
     //
@@ -230,8 +229,12 @@ module initia_std::vip_zapping {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.lock_period = lock_period;
     }
+
+    //
+    // Friend Functions
+    //
     
-    public (friend) fun zapping(
+    public(friend) fun zapping(
         account: &signer,
         bridge_id: u64,
         lp_metadata: Object<Metadata>,
@@ -290,6 +293,10 @@ module initia_std::vip_zapping {
             }
         );
     }
+
+    //
+    // Implementations
+    //
 
     fun register(account: &signer) {
         assert!(!exists<LSStore>(signer::address_of(account)), error::already_exists(ELS_STORE_ALREADY_EXISTS));
