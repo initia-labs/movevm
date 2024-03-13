@@ -21,6 +21,7 @@ pub mod object;
 pub mod oracle;
 pub mod query;
 pub mod staking;
+pub mod string_utils;
 pub mod table;
 pub mod transaction_context;
 pub mod type_info;
@@ -67,6 +68,7 @@ pub fn initia_move_natives(
     );
     add_natives_from_module!("query", query::make_all(builder));
     add_natives_from_module!("oracle", oracle::make_all(builder));
+    add_natives_from_module!("string_utils", string_utils::make_all(builder));
 
     make_table_from_iter(initia_std_addr, natives)
 }

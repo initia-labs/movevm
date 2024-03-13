@@ -15,3 +15,8 @@ pub type GasScalingFactor = GasQuantity<UnitDiv<InternalGasUnit, GasUnit>>;
 pub type Fee = GasQuantity<Hexa>;
 
 pub type FeePerGasUnit = GasQuantity<UnitDiv<Hexa, GasUnit>>;
+
+/// Unit of module
+pub enum Module {}
+
+pub type NumModules = GasQuantity<Module>;

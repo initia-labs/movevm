@@ -116,6 +116,9 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     [.block.get_block_info.base_cost, "block.get_block_info.base", 100 * SCALING],
     [.oracle.get_price.base_cost, "oracle.get_prices.base_cost", 1500 * SCALING],
     [.oracle.get_price.per_byte, "oracle.get_prices.per_byte", 18],
+
+    [.string_utils.format.base, "string_utils.format.base", 1102],
+    [.string_utils.format.per_byte, "string_utils.format.per_byte", 3],
 ]);
 
 use crate::gas_params::*;
@@ -138,6 +141,7 @@ pub struct GasParameters {
     pub json: json::GasParameters,
     pub query: query::GasParameters,
     pub oracle: oracle::GasParameters,
+    pub string_utils: string_utils::GasParameters,
 }
 
 impl GasParameters {
@@ -353,6 +357,12 @@ impl GasParameters {
             oracle: oracle::GasParameters {
                 get_price: oracle::GetPricesGasParameters {
                     base_cost: 0.into(),
+                    per_byte: 0.into(),
+                },
+            },
+            string_utils: string_utils::GasParameters {
+                format: string_utils::FormatGasParameters {
+                    base: 0.into(),
                     per_byte: 0.into(),
                 },
             },

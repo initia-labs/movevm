@@ -8,7 +8,7 @@ module initia_std::vip {
     use std::event;
     use std::block;
 
-    use initia_std::object::{Self, Object};
+    use initia_std::object::{Object};
     use initia_std::fungible_asset::{Self, Metadata, FungibleAsset};
     use initia_std::primary_fungible_store;
     use initia_std::table;
@@ -384,7 +384,6 @@ module initia_std::vip {
     }
     
     fun split_reward(
-        agent: &signer,
         module_store: &mut ModuleStore,
         stage: u64,
         balance_shares: &vector<u64>,
@@ -518,7 +517,6 @@ module initia_std::vip {
         let weight_pool_reward = initial_reward;
         
         let (total_operator_funded_reward, total_user_funded_reward) = split_reward(
-            agent,
             module_store,
             stage,
             &balance_shares,

@@ -12,6 +12,7 @@ pub mod object;
 pub mod oracle;
 pub mod query;
 pub mod staking;
+pub mod string_utils;
 pub mod table;
 pub mod transaction_context;
 pub mod type_info;

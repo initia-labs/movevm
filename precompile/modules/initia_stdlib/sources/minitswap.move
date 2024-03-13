@@ -73,18 +73,21 @@ module initia_std::minitswap {
         active: bool,
     }
 
+    #[event]
     /// Event emitted when provide.
     struct ProvideEvent has drop, store {
         provide_amount: u64,
         share_amount: u64,
     }
 
+    #[event]
     /// Event emitted when withdraw.
     struct WithdrawEvent has drop, store {
         withdraw_amount: u64,
         share_amount: u64,
     }
 
+    #[event]
     /// Event emitted when swap token.
     struct SwapEvent has drop, store {
         offer_coin: Object<Metadata>,
@@ -96,6 +99,7 @@ module initia_std::minitswap {
         fee_amount: u64,
     }
 
+    #[event]
     /// Event emitted when rebalance peg keeper's balances.
     struct RebalanceEvent has drop, store {
         offer_coin: Object<Metadata>, // always l1 init

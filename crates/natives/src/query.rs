@@ -1,5 +1,5 @@
 use better_any::{Tid, TidAble};
-use initia_move_gas::InternalGas;
+use initia_move_gas::{InternalGas, GAS_UNIT_SCALING_FACTOR};
 use initia_move_types::query::*;
 use move_binary_format::errors::PartialVMError;
 use move_core_types::gas_algebra::NumBytes;
@@ -18,9 +18,6 @@ use crate::{
     },
     safely_pop_arg,
 };
-
-// defined in initia_move_gas::meter
-const GAS_UNIT_SCALING_FACTOR: u64 = 100;
 
 // See stdlib/error.move
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
