@@ -9,7 +9,6 @@ module minitia_std::vip_score {
     use minitia_std::simple_map::{Self, SimpleMap};
 
     struct ModuleStore has key {
-        // deployers: vector<address>,
         deployers: SimpleMap<address, bool>,
         scores: table::Table<u64 /* stage */, Scores>,
     }
@@ -44,7 +43,7 @@ module minitia_std::vip_score {
     // Constants
     //
     const MAX_MODULE_NAME_LENGTH: u64 = 128;
-    const BOARD_PREFIX: u8  = 0xf6;
+    const BOARD_PREFIX: u8  = 0xf7;
 
     //
     // Helper functions.
