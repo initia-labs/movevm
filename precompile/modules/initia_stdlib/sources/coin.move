@@ -275,6 +275,17 @@ module initia_std::coin {
     }
 
     #[view]
+    public fun is_coin(metadata_addr: address): bool {
+        exists<ManagingRefs>(metadata_addr)
+    }
+
+   #[view]
+    public fun is_coin_by_symbol(creator: address, symbol: String): bool {
+        let metadata_addr = metadata_address(creator, symbol);
+        exists<ManagingRefs>(metadata_addr)
+    }
+
+    #[view]
     public fun metadata_to_denom(metadata: Object<Metadata>): String {
         let metadata_addr = object::object_address(metadata);
         let symbol = symbol(metadata);
