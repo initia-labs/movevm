@@ -76,16 +76,58 @@ module initia_std::vip_vesting {
     //
 
     #[event]
-    struct VestingClaimEvent has drop, store {
+    struct UserVestingCreateEvent has drop, store {
         account: address,
         bridge_id: u64,
-        // claimed stage.
+        start_stage: u64,
+        end_stage: u64,
+        l2_score: u64,
+        minimum_score: u64,
+        initial_reward: u64,
+    }
+
+    #[event]
+    struct OperatorVestingCreateEvent has drop, store {
+        account: address,
+        bridge_id: u64,
+        start_stage: u64,
+        end_stage: u64,
+        initial_reward: u64,
+    }
+
+    #[event]
+    struct UserVestingFinalizedEvent has drop, store {
+        account: address,
+        bridge_id: u64,
         stage: u64,
-        // newly vested reward amount.
+        remaining_reward: u64,
+    }
+
+    #[event]
+    struct OperatorVestingFinalizedEvent has drop, store {
+        account: address,
+        bridge_id: u64,
+        stage: u64,
+        remaining_reward: u64,
+    }
+
+    #[event]
+    struct UserVestingClaimEvent has drop, store {
+        account: address,
+        bridge_id: u64,
+        stage: u64,
         vesting_reward_amount: u64,
-        // accumulated claimed vesting reward that was previously distributed.
         vested_reward_amount: u64,
-        // vesting changes
+        vesting_changes: vector<VestingChange>,
+    }
+
+    #[event]
+    struct OperatorVestingClaimEvent has drop, store {
+        account: address,
+        bridge_id: u64,
+        stage: u64,
+        vesting_reward_amount: u64,
+        vested_reward_amount: u64,
         vesting_changes: vector<VestingChange>,
     }
     
@@ -261,6 +303,14 @@ module initia_std::vip_vesting {
 
             // move vesting if end stage is over or the left reward is empty 
             if ( stage > value.end_stage || value.remaining_reward == 0) {
+                event::emit(
+                    UserVestingFinalizedEvent {
+                        account: account_addr,
+                        bridge_id,
+                        stage: value.start_stage,
+                        remaining_reward: value.remaining_reward,
+                    }
+                );
                 finalize_vesting<UserVesting>(account_addr, bridge_id, value.start_stage);
                 continue
             };
@@ -299,6 +349,14 @@ module initia_std::vip_vesting {
 
             // move vesting if end stage is over or the left reward is empty 
             if ( stage > value.end_stage || value.remaining_reward == 0) {
+                event::emit(
+                    OperatorVestingFinalizedEvent {
+                        account: account_addr,
+                        bridge_id,
+                        stage: value.start_stage,
+                        remaining_reward: value.remaining_reward,
+                    }
+                );
                 finalize_vesting<OperatorVesting>(account_addr, bridge_id, value.start_stage);
                 continue
             };
@@ -382,6 +440,18 @@ module initia_std::vip_vesting {
             minimum_score,
         });
         
+        event::emit(
+            UserVestingCreateEvent {
+                account: account_addr,
+                bridge_id,
+                start_stage,
+                end_stage,
+                l2_score,
+                minimum_score,
+                initial_reward: vesting_reward_amount,
+            }
+        );
+
         vesting_reward_amount
     }
     
@@ -400,6 +470,16 @@ module initia_std::vip_vesting {
             start_stage,
             end_stage,
         });
+
+        event::emit(
+            OperatorVestingCreateEvent {
+                account: account_addr,
+                bridge_id,
+                start_stage,
+                end_stage,
+                initial_reward: stage_reward,
+            }
+        );
 
         stage_reward
     }
@@ -499,7 +579,9 @@ module initia_std::vip_vesting {
         );
 
 
-        let vesting_reward_amount = 0; 
+        let vesting_reward_amount = 0;
+        
+        // if l2_score is less than 0, do not create new position
         if (l2_score >= 0) {
             vesting_reward_amount = add_user_vesting(
                 account_addr,
@@ -513,7 +595,7 @@ module initia_std::vip_vesting {
         };
 
         event::emit(
-            VestingClaimEvent {
+            UserVestingClaimEvent {
                 account: account_addr,
                 bridge_id,
                 stage: start_stage,
@@ -531,7 +613,7 @@ module initia_std::vip_vesting {
         bridge_id: u64,
         start_stage: u64,
         end_stage: u64,
-    ): FungibleAsset acquires VestingStore{
+    ): FungibleAsset acquires VestingStore {
         let (vested_reward, vesting_changes) = claim_previous_operator_vestings(
             account_addr,
             bridge_id,
@@ -546,7 +628,7 @@ module initia_std::vip_vesting {
         );
 
         event::emit(
-            VestingClaimEvent {
+            OperatorVestingClaimEvent {
                 account: account_addr,
                 bridge_id,
                 stage: start_stage,

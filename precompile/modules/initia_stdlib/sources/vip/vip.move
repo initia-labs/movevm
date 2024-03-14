@@ -1741,6 +1741,7 @@ module initia_std::vip {
         let (bridge_address1, bridge_address2) = (@0x999, @0x1000);
         let mint_amount = 1_000_000_000_000;
         let release_time = 0;
+        
         coin::mint_to(&cap.mint_cap, signer::address_of(chain), mint_amount);
         vip_vault::deposit(chain, mint_amount);
         coin::mint_to(&cap.mint_cap, signer::address_of(operator), mint_amount);
