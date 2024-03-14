@@ -14,24 +14,17 @@ module initia_std::vip_reward {
     use initia_std::fungible_asset;
     use initia_std::type_info;
 
-    //
-    // Errors
-    //
-
-    const EVESTING_STORE_ALREADY_EXISTS: u64 = 1;
-    const EVESTING_STORE_NOT_FOUND: u64 = 2;
-    const EREWARD_STORE_ALREADY_EXISTS: u64 = 3;
-    const EREWARD_STORE_NOT_FOUND: u64 = 4;
-    const EREWARD_ALREADY_UPDATED: u64 = 5;
-    const EVESTING_ALREADY_CLAIMED: u64 = 6;
-    const EVESTING_NOT_FOUND: u64 = 7;
-    const EVESTING_NOT_CLAIMED: u64 = 8;
-    const EINVALID_VEST_RATIO: u64 = 9;
-
     friend initia_std::vip_vesting;
     friend initia_std::vip_zapping;
     friend initia_std::vip_vault;
     friend initia_std::vip;
+    
+    //
+    // Errors
+    //
+
+    const EREWARD_STORE_ALREADY_EXISTS: u64 = 1;
+    const EREWARD_STORE_NOT_FOUND: u64 = 2;
 
     //
     //  Constants

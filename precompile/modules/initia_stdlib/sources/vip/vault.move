@@ -14,11 +14,10 @@ module initia_std::vip_vault {
     // Errors
     //
     
-    const EVAULT_ALREADY_EXISTS: u64 = 1;
-    const EINVALID_AMOUNT: u64 = 2;
-    const EINVALID_STAGE: u64 = 3;
-    const EUNAUTHORIZED: u64 = 4;
-    const EINVALID_REWARD_PER_STAGE: u64 = 5;
+    const EINVALID_AMOUNT: u64 = 1;
+    const EINVALID_STAGE: u64 = 2;
+    const EUNAUTHORIZED: u64 = 3;
+    const EINVALID_REWARD_PER_STAGE: u64 = 4;
 
     //
     // Constants

@@ -24,15 +24,11 @@ module initia_std::vip_vesting {
 
     const EVESTING_STORE_ALREADY_EXISTS: u64 = 1;
     const EVESTING_STORE_NOT_FOUND: u64 = 2;
-    const EREWARD_STORE_ALREADY_EXISTS: u64 = 3;
-    const EREWARD_STORE_NOT_FOUND: u64 = 4;
-    const EREWARD_ALREADY_UPDATED: u64 = 5;
-    const EVESTING_ALREADY_CLAIMED: u64 = 6;
-    const EVESTING_NOT_FOUND: u64 = 7;
-    const EVESTING_NOT_CLAIMED: u64 = 8;
-    const EINVALID_VEST_RATIO: u64 = 9;
-    const ESTAGE_ALREADY_CLAIMED: u64 = 10;
-    const EREWARD_NOT_ENOUGH: u64 = 11;
+    const EVESTING_ALREADY_CLAIMED: u64 = 3;
+    const EVESTING_NOT_FOUND: u64 = 4;
+    const EVESTING_NOT_CLAIMED: u64 = 5;
+    const ESTAGE_ALREADY_CLAIMED: u64 = 6;
+    const EREWARD_NOT_ENOUGH: u64 = 7;
     
     //
     // Constants
@@ -875,7 +871,7 @@ module initia_std::vip_vesting {
     }
 
     #[test(chain=@0x1)]
-    #[expected_failure(abort_code = 0x80003, location = initia_std::vip_reward)]
+    #[expected_failure(abort_code = 0x80001, location = initia_std::vip_reward)]
     fun failed_register_reward_store_twice(
         chain: &signer,
     ) {

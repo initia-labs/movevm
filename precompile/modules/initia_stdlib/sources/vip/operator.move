@@ -74,10 +74,6 @@ module initia_std::vip_operator {
             decimal256::val(rate) <= decimal256::val(&decimal256::one()),
             error::invalid_argument(EINVALID_COMMISSION_RATE)
         );
-        assert!(
-            decimal256::val(rate) >= decimal256::val(&decimal256::zero()),
-            error::invalid_argument(EINVALID_COMMISSION_RATE)
-        );
     }
 
     fun is_valid_commission_rates(

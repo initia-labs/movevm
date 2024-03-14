@@ -42,7 +42,6 @@ module minitia_std::vip_score {
     //
     // Constants
     //
-    const MAX_MODULE_NAME_LENGTH: u64 = 128;
     const BOARD_PREFIX: u8  = 0xf7;
 
     //

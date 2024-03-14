@@ -15,6 +15,7 @@ module initia_std::vip {
     use initia_std::table_key;
     use initia_std::coin;
     use initia_std::decimal256::{Self, Decimal256};
+    use initia_std::simple_map::{Self, SimpleMap};
     use initia_std::bcs;
     use initia_std::vip_zapping;
     use initia_std::vip_operator;
@@ -26,35 +27,24 @@ module initia_std::vip {
     // Errors
     //
 
-    const EREWARD_STORE_NOT_FOUND: u64 = 1;
-    const EREWARD_STORE_ALREADY_EXISTS: u64 = 2;
-    const EREWARD_NOT_ENOUGH: u64 = 3;
-    const ESTAGE_DATA_NOT_FOUND: u64 = 4;
-    const ESTAGE_DATA_ALREADY_EXISTS: u64 = 5;
-    const ESTAGE_ALREADY_CLAIMED: u64 = 6;
-    const ESTAGE_NOT_FOUND: u64 = 7;
-    const EINVALID_MERKLE_PROOFS: u64 = 8;
-    const EINVALID_PROOF_LENGTH: u64 = 9;
-    const EINVALID_REWARD_METADATA: u64 = 10;
-    const EINVALID_VEST_RATIO: u64 = 11;
-    const EINVALID_VEST_PERIOD: u64 = 12;
-    const EOPERATOR_STORE_NOT_FOUND: u64 = 13;
-    const EVESTING_NOT_FOUND: u64 = 14;
-    const EVESTING_STORE_NOT_FOUND: u64 = 15;
-    const EUNAUTHORIZED: u64 = 16;
-    const EINVALID_MIN_TVL: u64 = 17;
-    const EINVALID_MAX_TVL: u64 = 18;
-    const EINVALID_PROPORTION: u64 = 19;
-    const EINVALID_TOTAL_SHARE: u64 = 20;
-    const EALREADY_FUNDED: u64 = 21;
-    const EINVALID_FUND_STAGE: u64 = 22;
-    const EZAPPING_STAKELISTED_NOT_ENOUGH: u64 = 23;
-    const EALREADY_REGISTERED: u64 = 24;
-    const EBRIDGE_NOT_FOUND: u64 = 25;
-    const EVESTING_IN_PROGRESS: u64 = 26;
-    const EVESTING_STORE_ALREADY_EXISTS: u64 = 27;
-    const ESNAPSHOT_ALREADY_EXISTS: u64 = 28;
-    const EINVALID_BATCH_ARGUMENT: u64 = 29;
+    const ESTAGE_DATA_NOT_FOUND: u64 = 1;
+    const EINVALID_MERKLE_PROOFS: u64 = 2;
+    const EINVALID_PROOF_LENGTH: u64 = 3;
+    const EINVALID_VEST_PERIOD: u64 = 4;
+    const EUNAUTHORIZED: u64 = 5;
+    const EINVALID_MIN_TVL: u64 = 6;
+    const EINVALID_MAX_TVL: u64 = 7;
+    const EINVALID_PROPORTION: u64 = 8;
+    const EINVALID_TOTAL_SHARE: u64 = 9;
+    const EALREADY_FUNDED: u64 = 10;
+    const EINVALID_FUND_STAGE: u64 = 11;
+    const EZAPPING_STAKELISTED_NOT_ENOUGH: u64 = 12;
+    const EALREADY_REGISTERED: u64 = 13;
+    const EBRIDGE_NOT_FOUND: u64 = 14;
+    const EVESTING_IN_PROGRESS: u64 = 15;
+    const ESNAPSHOT_ALREADY_EXISTS: u64 = 16;
+    const EINVALID_BATCH_ARGUMENT: u64 = 17;
+    const EINVALID_TOTAL_REWARD: u64 = 18;
     
     //
     //  Constants
@@ -219,15 +209,19 @@ module initia_std::vip {
     }
 
     fun score_hash(
+        bridge_id: u64,
+        stage: u64,
         account_addr: address,
         l2_score: u64,
-        reward_addr: address,
+        total_l2_score: u64,
     ): vector<u8> {
         let target_hash = {
             let score_data = vector::empty<u8>();
+            vector::append(&mut score_data, bcs::to_bytes(&bridge_id));
+            vector::append(&mut score_data, bcs::to_bytes(&stage));
             vector::append(&mut score_data, bcs::to_bytes(&account_addr));
             vector::append(&mut score_data, bcs::to_bytes(&l2_score));
-            vector::append(&mut score_data, bcs::to_bytes(&reward_addr));
+            vector::append(&mut score_data, bcs::to_bytes(&total_l2_score));
 
             sha3_256(score_data)
         };
@@ -303,11 +297,12 @@ module initia_std::vip {
         let snapshot = table::borrow(&stage_data.snapshots, table_key::encode_u64(bridge_id));
         assert!(block_time >= stage_data.user_vesting_release_time , error::unavailable(EVESTING_IN_PROGRESS));
         
-        let reward_store_addr = vip_vesting::get_user_reward_store_address(bridge_id);
         let target_hash = score_hash(
+            bridge_id,
+            stage,
             account_addr,
             l2_score,
-            reward_store_addr,
+            snapshot.total_l2_score,
         );
 
         assert_merkle_proofs(
@@ -376,8 +371,8 @@ module initia_std::vip {
     fun split_reward(
         module_store: &mut ModuleStore,
         stage: u64,
-        balance_shares: &vector<u64>,
-        weight_shares: &vector<u64>,
+        balance_shares: &SimpleMap<u64, u64>,
+        weight_shares: &SimpleMap<u64, u64>,
         total_balance: u64,
         total_weight: u64,
         balance_pool_reward: FungibleAsset,
@@ -401,7 +396,7 @@ module initia_std::vip {
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             let balance_reward = split_reward_with_share(
                 balance_shares, 
-                index, 
+                bridge_id, 
                 total_balance, 
                 initial_balance_pool_reward_amount, 
                 &mut balance_pool_reward
@@ -414,7 +409,7 @@ module initia_std::vip {
 
             let weight_reward = split_reward_with_share(
                 weight_shares, 
-                index, 
+                bridge_id, 
                 total_weight, 
                 initial_weight_pool_reward_amount, 
                 &mut weight_pool_reward
@@ -474,16 +469,26 @@ module initia_std::vip {
     }
 
     fun split_reward_with_share(
-        shares: &vector<u64>,
-        index: u64,
+        shares: &SimpleMap<u64, u64>,
+        bridge_id: u64,
         total_share: u64,
         total_reward_amount: u64,
         reward: &mut FungibleAsset,
     ): FungibleAsset {
-        let share_amount = *vector::borrow(shares, index);
+        let split_amount = split_reward_with_share_internal(shares, bridge_id, total_share, total_reward_amount);
+        fungible_asset::extract(reward, split_amount)
+    }
+
+    fun split_reward_with_share_internal(
+        shares: &SimpleMap<u64, u64>,
+        bridge_id: u64,
+        total_share: u64,
+        total_reward_amount: u64,
+    ): u64 {
+        let share_amount = *simple_map::borrow(shares, &bridge_id);
         let share_ratio = decimal256::from_ratio_u64(share_amount, total_share);
         let split_amount = decimal256::mul_u64(&share_ratio, total_reward_amount);
-        fungible_asset::extract(reward, split_amount)
+        split_amount
     }
 
     fun fund_reward(
@@ -493,8 +498,8 @@ module initia_std::vip {
     ): (u64, u64) {
         let initial_amount = fungible_asset::amount(&initial_reward);
         
-        let balance_shares = vector::empty<u64>();
-        let weight_shares = vector::empty<u64>();
+        let balance_shares = simple_map::create<u64, u64>();
+        let weight_shares = simple_map::create<u64, u64>();
         
         let total_balance = calculate_balance_share(module_store, &mut balance_shares); 
         assert!(total_balance > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
@@ -520,8 +525,8 @@ module initia_std::vip {
     }
 
     fun calculate_balance_share(
-        module_store: &mut ModuleStore,
-        balance_shares: &mut vector<u64>
+        module_store: &ModuleStore,
+        balance_shares: &mut SimpleMap<u64, u64>
     ): u64 {
         let total_balance = 0;
         
@@ -530,7 +535,9 @@ module initia_std::vip {
             if (!table::prepare<vector<u8>, Bridge>(&mut iter)){
                 break
             };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let bridge_id = table_key::decode_u64(bridge_id_vec);
+            
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
             let bridge_balance = if (bridge_balance > module_store.maximum_tvl) {
                 module_store.maximum_tvl
@@ -541,15 +548,15 @@ module initia_std::vip {
             };
 
             total_balance = total_balance + bridge_balance;
-            vector::push_back(balance_shares, bridge_balance);
+            simple_map::add(balance_shares, bridge_id, bridge_balance);
         };
         
         (total_balance)
     }
 
     fun calculate_weight_share(
-        module_store: &mut ModuleStore,
-        weight_shares: &mut vector<u64>
+        module_store: &ModuleStore,
+        weight_shares: &mut SimpleMap<u64, u64>
     ): u64 {
         let total_weight = 0;
         
@@ -558,7 +565,9 @@ module initia_std::vip {
             if (!table::prepare<vector<u8>, Bridge>(&mut iter)){
                 break
             };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let bridge_id = table_key::decode_u64(bridge_id_vec);
+
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
             let weight = if (bridge_balance < module_store.minimum_tvl) {
                 0
@@ -567,7 +576,7 @@ module initia_std::vip {
             };
 
             total_weight = total_weight + weight;
-            vector::push_back(weight_shares, weight);
+            simple_map::add(weight_shares, bridge_id, weight);
         };
         
         (total_weight)
@@ -938,6 +947,29 @@ module initia_std::vip {
     //
     
     #[view]
+    public fun get_expected_reward(bridge_id: u64, fund_reward_amount: u64): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let balance_shares = simple_map::create<u64, u64>();
+        let weight_shares = simple_map::create<u64, u64>();
+        
+        let total_balance = calculate_balance_share(module_store, &mut balance_shares); 
+        let total_weight = calculate_weight_share(module_store, &mut weight_shares);
+
+        assert!(fund_reward_amount > 0, error::invalid_argument(EINVALID_TOTAL_REWARD));
+        assert!(total_balance > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
+        assert!(total_weight > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
+
+        let weight_ratio = decimal256::sub(&decimal256::one(), &module_store.pool_split_ratio);
+        let balance_pool_reward_amount = decimal256::mul_u64(&module_store.pool_split_ratio, fund_reward_amount);
+        let weight_pool_reward_amount = decimal256::mul_u64(&weight_ratio, fund_reward_amount);
+
+        let balance_split_amount = split_reward_with_share_internal(&balance_shares, bridge_id, total_balance, balance_pool_reward_amount);
+        let weight_split_amount = split_reward_with_share_internal(&weight_shares, bridge_id, total_weight, weight_pool_reward_amount);
+
+        balance_split_amount + weight_split_amount
+    }
+
+    #[view]
     public fun get_stage_data(stage: u64): StageDataResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_data = table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
@@ -1018,7 +1050,7 @@ module initia_std::vip {
 
     #[test_only]
     use initia_std::decimal128;
-    
+
     #[test_only]
     struct TestCapability has key {
         burn_cap: BurnCapability,
@@ -1051,12 +1083,12 @@ module initia_std::vip {
     const DEFAULT_OPERATOR_VESTING_PERIOD_FOR_TEST: u64 = 52;
 
     #[test_only]
-    const DEFAULT_REWARD_PER_STAGE: u64 = 100_000_000_000;
+    const DEFAULT_REWARD_PER_STAGE_FOR_TEST: u64 = 100_000_000_000;
 
     #[test_only]
     public fun init_module_for_test(chain: &signer){
         vip_vault::init_module_for_test(chain);
-        vip_vault::update_reward_per_stage(chain, DEFAULT_REWARD_PER_STAGE);
+        vip_vault::update_reward_per_stage(chain, DEFAULT_REWARD_PER_STAGE_FOR_TEST);
         init_module(chain);
     }
 
@@ -1149,54 +1181,128 @@ module initia_std::vip {
     }
 
     #[test_only]
-    public fun test_setup_merkle_scene1(
-        agent: &signer,
-        bridge_id: u64, 
-        release_time: u64,
-    ): vector<vector<u8>> acquires ModuleStore {
-        fund_reward_script(agent, 1, release_time, release_time);
-        fund_reward_script(agent, 2, release_time, release_time);
-        fund_reward_script(agent, 3, release_time, release_time);
-        fund_reward_script(agent, 4, release_time, release_time);
-        fund_reward_script(agent, 5, release_time, release_time);
-        fund_reward_script(agent, 6, release_time, release_time);
+    public fun merkle_root_and_proof_scene1(): 
+        (SimpleMap<u64, vector<u8>>, SimpleMap<u64, vector<vector<u8>>>, SimpleMap<u64, u64>, SimpleMap<u64, u64>) {
+        
+        let root_map = simple_map::create<u64, vector<u8>>();
+        let proofs_map = simple_map::create<u64, vector<vector<u8>>>();
+        let score_map = simple_map::create<u64, u64>();
+        let total_score_map = simple_map::create<u64, u64>();
+        
+        simple_map::add(&mut root_map, 1, x"fb9eab6b9b5f195d0927c8a7301682b1475425249bb6b8bb31afd0dbb2dd4d09");
+        simple_map::add(&mut root_map, 2, x"0ac37a58eb526e4577e78f59c46e70b3d0fd54b78c06905345bd7e14e75da42b");
+        simple_map::add(&mut root_map, 3, x"42c600b41e6ff29ee44e1d61d460f6c78db862c0f3abe42d14df858649a1eea9");
+        simple_map::add(&mut root_map, 4, x"dda4a2cd3385326bb304d1a6a62c35d39bb28d5acef58b5552e73b3c968e0c79");
+        simple_map::add(&mut root_map, 5, x"469bdc31f3b0fbc1fb1f2ab9337af4ecf1643d6173cdecee95b235c9ca232017");
+        simple_map::add(&mut root_map, 6, x"d2197ca826f0ee6084555f86fdd185a16788d68d8c512b025cb5829770682bd7");
+        simple_map::add(&mut root_map, 7, x"998d5df26676a108e6581d1bc6dab1c7fab86fbdbcc5f1b8e4847ebe74f29341");
+        simple_map::add(&mut root_map, 8, x"c41ff3aa918e489fc64a62d07915dab0c04b205e05dc6c9e4a8b7997091fdbdc");
+        simple_map::add(&mut root_map, 9, x"c363c5b4393942032b841d5d0f68213d475e285b2fd7e31a4128c97b91cef97a");
+        simple_map::add(&mut root_map, 10, x"2c4cc1daece91ee14d55d35595d17b8cc0bd6741b967ff82f73f6330c8b25b8a");
 
-        submit_snapshot(agent, bridge_id, 1, x"12ef9b3fe0c373e7d0ec4fffbd1696abe94dbb298437d2c1a3565f4fd837b849", 800_000);
-        submit_snapshot(agent, bridge_id, 2, x"12ef9b3fe0c373e7d0ec4fffbd1696abe94dbb298437d2c1a3565f4fd837b849", 800_000);
-        submit_snapshot(agent, bridge_id, 3, x"79d8bf18eff20739d15b3ad0b260b986db2372f8d757c6dc5e591d00d82b3b5e", 400_000);
-        submit_snapshot(agent, bridge_id, 4, x"79d8bf18eff20739d15b3ad0b260b986db2372f8d757c6dc5e591d00d82b3b5e", 400_000);
-        submit_snapshot(agent, bridge_id, 5, x"12ef9b3fe0c373e7d0ec4fffbd1696abe94dbb298437d2c1a3565f4fd837b849", 800_000);
-        submit_snapshot(agent, bridge_id, 6, x"12ef9b3fe0c373e7d0ec4fffbd1696abe94dbb298437d2c1a3565f4fd837b849", 800_000);
+        simple_map::add(&mut proofs_map, 1, vector[x"0bb9c560686ab3b4e1ac1a41bbc74ccd4d348634985a1a312590346900a6c93e"]);
+        simple_map::add(&mut proofs_map, 2, vector[x"66ffc3bb14e3bc65e022401feed6e2644082ccf69ccb40d1842fc6ca2d4c24fd"]);
+        simple_map::add(&mut proofs_map, 3, vector[x"70ed0c868798b88361b42895df358f64c4b4dd074f0af7146ef8898a675fee4e"]);
+        simple_map::add(&mut proofs_map, 4, vector[x"3e304abd07a33f4fab39537a4ac75c8886a89be9d8aaa96035675775a784b23e"]);
+        simple_map::add(&mut proofs_map, 5, vector[x"2911095fa7f35a563471cfff4135031f5d648372cc384b6288a19d8216baa3fa"]);
+        simple_map::add(&mut proofs_map, 6, vector[x"25a20d529493d2aef8beef43221b00231a0e8d07990e3d43b93fbf9cfd54de73"]);
+        simple_map::add(&mut proofs_map, 7, vector[x"61a55e6aac46c32a47c96b0dc4fd5de1f705e7400460957acb10457904a4a990"]);
+        simple_map::add(&mut proofs_map, 8, vector[x"96187ed75a9b83537e045912573bf3efee0a6369a663f1cb4d4ec7798c9f6299"]);
+        simple_map::add(&mut proofs_map, 9, vector[x"759ac8ad2821f2dbeb253e0872c07ffc6ccd3f69b80d19b04f0e49d6a0ea8da7"]);
+        simple_map::add(&mut proofs_map, 10, vector[x"98b1fed6531d027c0efb53d54941c83f8ceb9694b9ec199ee07278200c943eb1"]);
+        
+        simple_map::add(&mut score_map, 1, 800_000);
+        simple_map::add(&mut score_map, 2, 800_000);
+        simple_map::add(&mut score_map, 3, 400_000);
+        simple_map::add(&mut score_map, 4, 400_000);
+        simple_map::add(&mut score_map, 5, 800_000);
+        simple_map::add(&mut score_map, 6, 800_000);
+        simple_map::add(&mut score_map, 7, 800_000);
+        simple_map::add(&mut score_map, 8, 800_000);
+        simple_map::add(&mut score_map, 9, 800_000);
+        simple_map::add(&mut score_map, 10, 800_000);
 
-        let score_merkle_proofs: vector<vector<u8>> = vector::empty<vector<u8>>();
-        vector::push_back(&mut score_merkle_proofs, x"089619e5a2aa63651f4c7968fb1b0b1cc3393c58f48bdde5621f509afacdf78c");
+        simple_map::add(&mut total_score_map, 1, 8_000_000);
+        simple_map::add(&mut total_score_map, 2, 8_000_000);
+        simple_map::add(&mut total_score_map, 3, 4_000_000);
+        simple_map::add(&mut total_score_map, 4, 4_000_000);
+        simple_map::add(&mut total_score_map, 5, 8_000_000);
+        simple_map::add(&mut total_score_map, 6, 8_000_000);
+        simple_map::add(&mut total_score_map, 7, 8_000_000);
+        simple_map::add(&mut total_score_map, 8, 8_000_000);
+        simple_map::add(&mut total_score_map, 9, 8_000_000);
+        simple_map::add(&mut total_score_map, 10, 8_000_000);
 
-        score_merkle_proofs
+        (root_map, proofs_map, score_map, total_score_map)
     }
 
     #[test_only]
-    public fun test_setup_merkle_scene2(
+    public fun merkle_root_and_proof_scene2(): 
+        (SimpleMap<u64, vector<u8>>, SimpleMap<u64, vector<vector<u8>>>, SimpleMap<u64, u64>, SimpleMap<u64, u64>) {
+        let root_map = simple_map::create<u64, vector<u8>>();
+        let proofs_map = simple_map::create<u64, vector<vector<u8>>>();
+        let total_score_map = simple_map::create<u64, u64>();
+
+        simple_map::add(&mut root_map, 1, x"da8a26abe037981b46c77de776621601ea78ae2e9e4d095f4f6887d7b8fb4229");
+        simple_map::add(&mut root_map, 2, x"edbea69a471f721622e7c64d086b901a52b6edb058b97c8a776cd7f3180e1659");
+        simple_map::add(&mut root_map, 3, x"ecd24a0e9fe1ec83999cbdc0641f15cda95d40589073a6e8cc3234fde9357e65");
+        simple_map::add(&mut root_map, 4, x"5725135c9c856f4241a05027c815a64fe687525f496dcdc6c57f23a87d5e4ac1");
+        simple_map::add(&mut root_map, 5, x"183e88a1ca56d8a51d9390d8460621fe651997d63bf26392912e29e7323b08b0");
+        simple_map::add(&mut root_map, 6, x"9de1fd227b37e6ad88c1eae0f4fd97f8436900befa9c80f4f66735e9e8646f54");
+
+        simple_map::add(&mut proofs_map, 1, vector[]);
+        simple_map::add(&mut proofs_map, 2, vector[]);
+        simple_map::add(&mut proofs_map, 3, vector[]);
+        simple_map::add(&mut proofs_map, 4, vector[]);
+        simple_map::add(&mut proofs_map, 5, vector[]);
+        simple_map::add(&mut proofs_map, 6, vector[]);
+
+        simple_map::add(&mut total_score_map, 1, 1_000);
+        simple_map::add(&mut total_score_map, 2, 1_000);
+        simple_map::add(&mut total_score_map, 3, 500);
+        simple_map::add(&mut total_score_map, 4, 500);
+        simple_map::add(&mut total_score_map, 5, 100);
+        simple_map::add(&mut total_score_map, 6, 100);
+
+        (root_map, proofs_map, total_score_map, total_score_map)
+    }
+
+    #[test_only]
+    public fun test_setup_scene1(
         agent: &signer,
         bridge_id: u64, 
         release_time: u64,
-    ): vector<vector<u8>> acquires ModuleStore {
-        fund_reward_script(agent, 1, release_time, release_time);
-        fund_reward_script(agent, 2, release_time, release_time);
-        fund_reward_script(agent, 3, release_time, release_time);
-        fund_reward_script(agent, 4, release_time, release_time);
-        fund_reward_script(agent, 5, release_time, release_time);
-        fund_reward_script(agent, 6, release_time, release_time);
+    ) acquires ModuleStore {
+        let idx = 1;
+        let (merkle_root_map, _, _, total_score_map) = merkle_root_and_proof_scene1();
+        
+        while(idx <= simple_map::length(&merkle_root_map)) {
+            let total_l2_score = *simple_map::borrow(&total_score_map, &idx);
+            let merkle_root = *simple_map::borrow(&merkle_root_map, &idx);
 
-        submit_snapshot(agent, bridge_id, 1, x"50205dc795f39f3d18ceee9fd3179537502a96cecd601a80f1a7fb2340d116d3", 1_000);
-        submit_snapshot(agent, bridge_id, 2, x"50205dc795f39f3d18ceee9fd3179537502a96cecd601a80f1a7fb2340d116d3", 1_000);
-        submit_snapshot(agent, bridge_id, 3, x"a70878c7858585714b610636dbd6d2993f69bc943e8cecbf849d0714b451b017", 500);
-        submit_snapshot(agent, bridge_id, 4, x"a70878c7858585714b610636dbd6d2993f69bc943e8cecbf849d0714b451b017", 500);
-        submit_snapshot(agent, bridge_id, 5, x"501144e43811cda651126fae45d489a974196b81768cafbd2b34ab970c1ad8fa", 100);
-        submit_snapshot(agent, bridge_id, 6, x"501144e43811cda651126fae45d489a974196b81768cafbd2b34ab970c1ad8fa", 100);
+            fund_reward_script(agent, idx, release_time, release_time);
+            submit_snapshot(agent, bridge_id, idx, merkle_root, total_l2_score);
+            idx = idx + 1;
+        };
+    }
 
+    #[test_only]
+    public fun test_setup_scene2(
+        agent: &signer,
+        bridge_id: u64, 
+        release_time: u64,
+    ) acquires ModuleStore {
+        let idx = 1;
+        let (merkle_root_map, _, _, total_score_map) = merkle_root_and_proof_scene2();
+        
+        while(idx <= simple_map::length(&merkle_root_map)) {
+            let total_l2_score = *simple_map::borrow(&total_score_map, &idx);
+            let merkle_root = *simple_map::borrow(&merkle_root_map, &idx);
 
-        let score_merkle_proofs: vector<vector<u8>> = vector::empty<vector<u8>>();
-        score_merkle_proofs
+            fund_reward_script(agent, idx, release_time, release_time);
+            submit_snapshot(agent, bridge_id, idx, merkle_root, total_l2_score);
+            idx = idx + 1;
+        };
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
@@ -1251,30 +1357,30 @@ module initia_std::vip {
         ); 
         let release_time = 0;
 
-        let score_merkle_proofs: vector<vector<u8>> = vector::empty<vector<u8>>();
-        vector::push_back(&mut score_merkle_proofs, x"089619e5a2aa63651f4c7968fb1b0b1cc3393c58f48bdde5621f509afacdf78c");
+        let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
 
         fund_reward_script(chain, 1, release_time, release_time);
         fund_reward_script(chain, 2, release_time, release_time);
-        submit_snapshot(chain, bridge_id, 1, x"12ef9b3fe0c373e7d0ec4fffbd1696abe94dbb298437d2c1a3565f4fd837b849", 800_000);
-        submit_snapshot(chain, bridge_id, 2, x"12ef9b3fe0c373e7d0ec4fffbd1696abe94dbb298437d2c1a3565f4fd837b849", 800_000);
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000);
-        assert!(vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver), bridge_id, 1) == 800_000, 1);
-        assert!(vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver), bridge_id, 2) == 800_000, 2);
+        submit_snapshot(chain, bridge_id, 1, *simple_map::borrow(&merkle_root_map, &1), *simple_map::borrow(&total_score_map, &1));
+        submit_snapshot(chain, bridge_id, 2, *simple_map::borrow(&merkle_root_map, &2), *simple_map::borrow(&total_score_map, &2));
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
+        assert!(vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver), bridge_id, 1) == *simple_map::borrow(&score_map, &1), 1);
+        assert!(vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver), bridge_id, 2) == *simple_map::borrow(&score_map, &2), 2);
 
         update_proportion(chain, decimal256::from_string(&string::utf8(b"10")));
 
         fund_reward_script(chain, 3, release_time, release_time);
-        submit_snapshot(chain, bridge_id, 3, x"79d8bf18eff20739d15b3ad0b260b986db2372f8d757c6dc5e591d00d82b3b5e", 400_000);
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 400_000);
+        submit_snapshot(chain, bridge_id, 3, *simple_map::borrow(&merkle_root_map, &3), *simple_map::borrow(&total_score_map, &3));
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
         assert!(vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver), bridge_id, 3) == 4_000_000, 3);
 
         update_proportion(chain, decimal256::from_string(&string::utf8(b"0.5")));
 
         fund_reward_script(chain, 4, release_time, release_time);
-        submit_snapshot(chain, bridge_id, 4, x"79d8bf18eff20739d15b3ad0b260b986db2372f8d757c6dc5e591d00d82b3b5e", 400_000);
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs, 400_000);
+        submit_snapshot(chain, bridge_id, 4, *simple_map::borrow(&merkle_root_map, &4), *simple_map::borrow(&total_score_map, &4));
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &3));
+        
         assert!(vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver), bridge_id, 4) == 200_000, 4);  
     }
 
@@ -1287,19 +1393,20 @@ module initia_std::vip {
             @0x99,
             1_000_000_000_000,
         );
-
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
         
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
+        
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
         assert!(vip_vesting::get_user_last_claimed_stage(signer::address_of(receiver), bridge_id) == 1, 1);
 
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
         assert!(vip_vesting::get_user_last_claimed_stage(signer::address_of(receiver), bridge_id) == 2, 2);
 
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 400_000);
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
         assert!(vip_vesting::get_user_last_claimed_stage(signer::address_of(receiver), bridge_id) == 3, 3);
 
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs, 400_000);
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &4));
         assert!(vip_vesting::get_user_last_claimed_stage(signer::address_of(receiver), bridge_id) == 4, 4);
     }
 
@@ -1313,24 +1420,30 @@ module initia_std::vip {
             1_000_000_000_000,
         );
         
-        let reward_per_stage = 100_000_000_000;
+        let total_reward_per_stage = 100_000_000_000;
+        let portion = 10;
+        let reward_per_stage = total_reward_per_stage/portion;
         let vesting_period = 10;
         update_vesting_period(chain, vesting_period, vesting_period);
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
+
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
         
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 400_000);
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs, 400_000);
-        claim_user_reward_script(receiver, bridge_id, 5, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &4));
+        claim_user_reward_script(receiver, bridge_id, 5, *simple_map::borrow(&merkle_proof_map, &5), *simple_map::borrow(&score_map, &5));
 
         assert!(get_stage_data(1).user_vesting_period == vesting_period, 1);
+        
         let expected_reward = (
             reward_per_stage/vesting_period + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) + reward_per_stage/vesting_period // stage 1
             + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) + reward_per_stage/vesting_period // stage 2
             + reward_per_stage/vesting_period + reward_per_stage/vesting_period // stage 3
             + reward_per_stage/vesting_period // stage 4
         );
+
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == expected_reward, 2);
     }
 
@@ -1346,17 +1459,19 @@ module initia_std::vip {
         
         let vesting_period = 2;
         update_vesting_period(chain, vesting_period, vesting_period);
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
+        
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
 
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000); // vesting 1 created
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000); // vesting 2 created
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1)); // vesting 1 created
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2)); // vesting 2 created
 
         vip_vesting::get_user_vesting(signer::address_of(receiver), bridge_id, 1);
         vip_vesting::get_user_vesting(signer::address_of(receiver), bridge_id, 2);
         
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 400_000);
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs, 400_000); // vesting 1 finalized
-        claim_user_reward_script(receiver, bridge_id, 5, score_merkle_proofs, 800_000); // vesting 2 finalized
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &4)); // vesting 1 finalized
+        claim_user_reward_script(receiver, bridge_id, 5, *simple_map::borrow(&merkle_proof_map, &5), *simple_map::borrow(&score_map, &5)); // vesting 2 finalized
 
         vip_vesting::get_user_vesting_finalized(signer::address_of(receiver), bridge_id, 1);
         vip_vesting::get_user_vesting_finalized(signer::address_of(receiver), bridge_id, 2);
@@ -1373,16 +1488,18 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
+
         update_minimum_tvl(chain, 1_000);
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
 
         update_minimum_tvl(chain, 100_000_000_000);
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x1000A, location = initia_std::vip_vesting)]
+    #[expected_failure(abort_code = 0x10006, location = initia_std::vip_vesting)]
     fun failed_claim_already_claimed(chain: &signer, operator: &signer, receiver: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,  
@@ -1392,10 +1509,11 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
         
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -1408,19 +1526,20 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        let score_merkle_proofs = test_setup_merkle_scene2(chain, bridge_id, 0);
+        let (_, merkle_proof_map, _, _) = merkle_root_and_proof_scene2();
+        test_setup_scene2(chain, bridge_id, 0);
 
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[1, 2, 3, 4, 5, 6],
             vector[
-                score_merkle_proofs,
-                score_merkle_proofs,
-                score_merkle_proofs,
-                score_merkle_proofs,
-                score_merkle_proofs,
-                score_merkle_proofs
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &2),
+                *simple_map::borrow(&merkle_proof_map, &3),
+                *simple_map::borrow(&merkle_proof_map, &4),
+                *simple_map::borrow(&merkle_proof_map, &5),
+                *simple_map::borrow(&merkle_proof_map, &6),
             ],
             vector[1_000, 1_000, 500, 500, 100, 100],
         );
@@ -1443,18 +1562,21 @@ module initia_std::vip {
         );
 
         let vesting_period = 5;
-        let reward_per_stage = 100_000_000_000;
+        let total_reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST;
+        let reward_per_stage = total_reward_per_stage;
 
         update_proportion(chain, decimal256::from_string(&string::utf8(b"0.3")));
         update_vesting_period(chain, vesting_period, vesting_period);
-        let score_merkle_proofs = test_setup_merkle_scene2(chain, bridge_id, 0);
         
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 1_000);
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 1_000);
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 500);
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs, 500);
-        claim_user_reward_script(receiver, bridge_id, 5, score_merkle_proofs, 100);
-        claim_user_reward_script(receiver, bridge_id, 6, score_merkle_proofs, 100);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene2();
+        test_setup_scene2(chain, bridge_id, 0);
+        
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &4));
+        claim_user_reward_script(receiver, bridge_id, 5, *simple_map::borrow(&merkle_proof_map, &5), *simple_map::borrow(&score_map, &5));
+        claim_user_reward_script(receiver, bridge_id, 6, *simple_map::borrow(&merkle_proof_map, &6), *simple_map::borrow(&score_map, &6));
         
         let initia_reward_amount = vip_vesting::get_user_vesting_initial_reward(
             signer::address_of(receiver), 
@@ -1489,12 +1611,16 @@ module initia_std::vip {
             1_000_000_000_000, 
         );
 
-        let reward_per_stage = 100_000_000_000;
+        let total_reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST;
+        let reward_per_stage = total_reward_per_stage / 10;
+
         let vesting_period = DEFAULT_USER_VESTING_PERIOD;
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
         
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 400_000);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
+        
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == (reward_per_stage/(vesting_period*2)), 1);
     }
     
@@ -1554,9 +1680,9 @@ module initia_std::vip {
         fund_reward_script(chain, 1, release_time, release_time);
 
         // 1 is round error for each weight pool
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(1)) == 44_999_999_999, 0); // (balance_pool_amount/2 + weight_pool_amount/3) 
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(2)) == 27_499_999_999, 0); // (balance_pool_amount/4 + weight_pool_amount/3)
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(3)) == 27_499_999_999, 0); // (balance_pool_amount/4 + weight_pool_amount/3)
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(1)) == get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0); // (balance_pool_amount/2 + weight_pool_amount/3) 
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(2)) == get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0); // (balance_pool_amount/4 + weight_pool_amount/3)
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(3)) == get_expected_reward(3, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0); // (balance_pool_amount/4 + weight_pool_amount/3)
 
         fund_reward_script(chain, 2, release_time, release_time);
         assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(1)) == 0, 0);
@@ -1621,9 +1747,8 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
         );
 
-        let score_merkle_proofs: vector<vector<u8>> = vector::empty<vector<u8>>();
-        vector::push_back(&mut score_merkle_proofs, x"0eec1ad534458dec5903786734a61f3d47bde6342f9cd22e6575021aed5cd8bf");
-        
+        let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
+
         update_agent(chain, signer::address_of(agent));
 
         fund_reward_script(agent, 1, release_time, release_time);
@@ -1647,13 +1772,22 @@ module initia_std::vip {
 
         fund_reward_script(agent, 5, release_time, release_time);
 
-        submit_snapshot(agent, bridge_id1, 1, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
-        submit_snapshot(agent, bridge_id1, 2, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
-        submit_snapshot(agent, bridge_id1, 5, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000); // skip 3,4 stage
+        submit_snapshot(agent, bridge_id1, 1, 
+            *simple_map::borrow(&merkle_root_map, &1), 
+            *simple_map::borrow(&total_score_map, &1)
+        );
+        submit_snapshot(agent, bridge_id1, 2, 
+            *simple_map::borrow(&merkle_root_map, &2), 
+            *simple_map::borrow(&total_score_map, &2)
+        );
+        submit_snapshot(agent, bridge_id1, 5, 
+            *simple_map::borrow(&merkle_root_map, &5), 
+            *simple_map::borrow(&total_score_map, &5)
+        ); // skip 3,4 stage
 
-        claim_user_reward_script(receiver, bridge_id1, 1, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id1, 2, score_merkle_proofs, 800_000);
-        claim_user_reward_script(receiver, bridge_id1, 5, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id1, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        claim_user_reward_script(receiver, bridge_id1, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
+        claim_user_reward_script(receiver, bridge_id1, 5, *simple_map::borrow(&merkle_proof_map, &5), *simple_map::borrow(&score_map, &5));
     }
 
 
@@ -1670,30 +1804,33 @@ module initia_std::vip {
             1_000_000_000_000, 
         );
 
-        let reward_per_stage = 100_000_000_000;
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
+        let total_reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST;
+        let reward_per_stage = total_reward_per_stage / 10;
         
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
+        
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == 0, 1);
 
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == (reward_per_stage/vesting_period), 3);
 
         // half score
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs, 400_000);
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == (
             reward_per_stage/vesting_period + reward_per_stage/(vesting_period*2) 
             + reward_per_stage/(vesting_period*2)
         ), 4);
 
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs, 400_000);
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &4));
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == (
             reward_per_stage/vesting_period + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) // stage 1
             + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) // stage 2
             + reward_per_stage/vesting_period // stage 3
         ), 5);
 
-        claim_user_reward_script(receiver, bridge_id, 5, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 5, *simple_map::borrow(&merkle_proof_map, &5), *simple_map::borrow(&score_map, &5));
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) == (
             reward_per_stage/vesting_period + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) + reward_per_stage/vesting_period // stage 1
             + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) + reward_per_stage/vesting_period // stage 2
@@ -1709,7 +1846,7 @@ module initia_std::vip {
             && bridge_info.operator_addr == operator_addr
             && bridge_info.vip_weight == DEFAULT_VIP_WEIGHT_FOR_TEST
             && bridge_info.bridge_addr == @0x99, 7);
-        assert!(vip_reward::get_stage_reward(user_reward_store_addr, 1) == reward_per_stage, 8);
+        assert!(vip_reward::get_stage_reward(user_reward_store_addr, 1) == total_reward_per_stage, 8);
         assert!(vip_reward::get_stage_reward(user_reward_store_addr, 100) == 0, 9); // not exists
     }
 
@@ -1732,18 +1869,15 @@ module initia_std::vip {
 
         update_proportion(chain, decimal256::from_string(&string::utf8(b"0.5")));
         let share_portion = 10;
-        let total_reward_per_stage = 100_000_000_000;
-        let reward_per_stage = total_reward_per_stage / share_portion;
+        let total_reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST;
+        let reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST / share_portion;
         let reward_per_stage_by_vesting = reward_per_stage / vesting_period;
         let release_time = 0;
 
-        let score_merkle_proofs: vector<vector<u8>> = vector::empty<vector<u8>>();
-        vector::push_back(&mut score_merkle_proofs, x"0eec1ad534458dec5903786734a61f3d47bde6342f9cd22e6575021aed5cd8bf");
-        let score_merkle_proofs2: vector<vector<u8>> = vector::empty<vector<u8>>();
-        vector::push_back(&mut score_merkle_proofs2, x"d475faabc9cc4c342df1482a697aa52ddb843abfa27c1843d756dc3f56d40c19");
-        
-        update_agent(chain, signer::address_of(agent));
+        let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
 
+        update_agent(chain, signer::address_of(agent));
+        
         fund_reward_script(agent, 1, release_time, release_time);
         
         vip_vault::update_reward_per_stage(chain, total_reward_per_stage/2);
@@ -1758,30 +1892,30 @@ module initia_std::vip {
         fund_reward_script(agent, 4, release_time, release_time);
         fund_reward_script(agent, 5, release_time, release_time);
 
-        submit_snapshot(agent, bridge_id, 1, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
-        submit_snapshot(agent, bridge_id, 2, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
-        submit_snapshot(agent, bridge_id, 3, x"9c5f011a1d226a48db5d423b5324276dad6f0842f8a500c95c6d1a7f92c049ca", 4_000_000);
-        submit_snapshot(agent, bridge_id, 4, x"9c5f011a1d226a48db5d423b5324276dad6f0842f8a500c95c6d1a7f92c049ca", 4_000_000);
-        submit_snapshot(agent, bridge_id, 5, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
+        submit_snapshot(agent, bridge_id, 1, *simple_map::borrow(&merkle_root_map, &1), *simple_map::borrow(&total_score_map, &1));
+        submit_snapshot(agent, bridge_id, 2, *simple_map::borrow(&merkle_root_map, &2), *simple_map::borrow(&total_score_map, &2));
+        submit_snapshot(agent, bridge_id, 3, *simple_map::borrow(&merkle_root_map, &3), *simple_map::borrow(&total_score_map, &3));
+        submit_snapshot(agent, bridge_id, 4, *simple_map::borrow(&merkle_root_map, &4), *simple_map::borrow(&total_score_map, &4));
+        submit_snapshot(agent, bridge_id, 5, *simple_map::borrow(&merkle_root_map, &5), *simple_map::borrow(&total_score_map, &5));
 
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
         assert!(vip_vesting::get_user_locked_reward(signer::address_of(receiver), bridge_id, 1) == reward_per_stage, 0);    
-        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 1, 800_000) == 0, 0);
+        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 1, *simple_map::borrow(&score_map, &1)) == 0, 0);
 
-        claim_user_reward_script(receiver, bridge_id, 2, score_merkle_proofs, 800_000);
-        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 2, 800_000) == (
+        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
+        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 2, *simple_map::borrow(&score_map, &2)) == (
             reward_per_stage_by_vesting
         ), 0);
 
-        claim_user_reward_script(receiver, bridge_id, 3, score_merkle_proofs2, 400_000);
-        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 3, 400_000) == (
+        claim_user_reward_script(receiver, bridge_id, 3, *simple_map::borrow(&merkle_proof_map, &3), *simple_map::borrow(&score_map, &3));
+        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 3, *simple_map::borrow(&score_map, &3)) == (
             reward_per_stage_by_vesting 
             + (reward_per_stage_by_vesting/2)
         ), 0);
         
-        claim_user_reward_script(receiver, bridge_id, 4, score_merkle_proofs2, 400_000);
+        claim_user_reward_script(receiver, bridge_id, 4, *simple_map::borrow(&merkle_proof_map, &4), *simple_map::borrow(&score_map, &4));
         claim_operator_reward_script(operator, bridge_id, 4);
-        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 4, 400_000) == (
+        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 4, *simple_map::borrow(&score_map, &4)) == (
             reward_per_stage_by_vesting 
             + (reward_per_stage_by_vesting/2)
             + reward_per_stage_by_vesting
@@ -1794,9 +1928,9 @@ module initia_std::vip {
             decimal256::mul_u64(&commission_rate, total_reward_per_stage)
         ), 0);
         
-        claim_user_reward_script(receiver, bridge_id, 5, score_merkle_proofs, 800_000);
+        claim_user_reward_script(receiver, bridge_id, 5, *simple_map::borrow(&merkle_proof_map, &5), *simple_map::borrow(&score_map, &5));
         claim_operator_reward_script(operator, bridge_id, 5);
-        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 5, 800_000) == (
+        assert!(vip_vesting::get_user_unlocked_reward(signer::address_of(receiver), bridge_id, 5, *simple_map::borrow(&score_map, &5)) == (
             reward_per_stage_by_vesting 
             + (reward_per_stage_by_vesting/2)
             + reward_per_stage_by_vesting
@@ -1939,8 +2073,9 @@ module initia_std::vip {
             mint_amount,
         );
 
-        let score_merkle_proofs = test_setup_merkle_scene1(chain, bridge_id, 0);
-        claim_user_reward_script(receiver, bridge_id, 1, score_merkle_proofs, 800_000);
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+        test_setup_scene1(chain, bridge_id, 0);
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
         
         let stage = 1;
         let start_time = 100;
@@ -1988,20 +2123,18 @@ module initia_std::vip {
         operator: &signer, 
         receiver: &signer,
     ) acquires ModuleStore {
-        let vesting_period = DEFAULT_USER_VESTING_PERIOD_FOR_TEST;
+        let vesting_period = 10;
         let (bridge_id, _reward_metadata, stakelisted_metadata, lp_metadata, validator) = test_setup_for_zapping(
             chain,
             operator,
             receiver,
             1,
             @0x99,
-            5_200_000_000_000,
+            1_000_000_000_000,
         );
         let idx = 1; 
         let zapping_amount = 100_000_000;
-        let score_merkle_proofs: vector<vector<u8>> = vector::empty<vector<u8>>();
         let release_time = 0; 
-        vector::push_back(&mut score_merkle_proofs, x"0eec1ad534458dec5903786734a61f3d47bde6342f9cd22e6575021aed5cd8bf");
 
         let batch_lp_metadata = vector::empty<Object<Metadata>>();
         let batch_min_liquidity = vector::empty<option::Option<u64>>();
@@ -2010,12 +2143,25 @@ module initia_std::vip {
         let batch_zapping_amount = vector::empty<u64>();
         let batch_stakelisted_amount = vector::empty<u64>();
         let batch_stakelisted_metadata = vector::empty<Object<Metadata>>();
-        
+        let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
 
-        while (idx < vesting_period - 1) {
+        while (idx <= vesting_period) {
             fund_reward_script(chain, idx, release_time, release_time);
-            submit_snapshot(chain, bridge_id, idx, x"f0f9d6238591d0fec30dc4502be3e5aa7bb611047d87355559d8fdc74211bfe6", 8_000_000);
-            claim_user_reward_script(receiver, bridge_id, idx, score_merkle_proofs, 800_000);            
+            submit_snapshot(
+                chain, 
+                bridge_id, 
+                idx, 
+                *simple_map::borrow(&merkle_root_map, &idx), 
+                *simple_map::borrow(&total_score_map, &idx)
+            );
+            
+            claim_user_reward_script(
+                receiver,
+                bridge_id, 
+                idx, 
+                *simple_map::borrow(&merkle_proof_map, &idx), 
+                *simple_map::borrow(&score_map, &idx)
+            );            
             
             vector::push_back(&mut batch_lp_metadata, lp_metadata);
             vector::push_back(&mut batch_min_liquidity, option::none());
