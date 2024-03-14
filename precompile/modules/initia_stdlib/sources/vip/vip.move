@@ -1517,6 +1517,29 @@ module initia_std::vip {
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[expected_failure(abort_code = 0xD000F, location = Self)]
+    fun failed_vesting_in_progress(
+        chain: &signer, 
+        operator: &signer, 
+        receiver: &signer
+    ) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain, 
+            operator, 
+            1, 
+            @0x99, 
+            1_000_000_000_000,
+        );
+
+        let release_time = 100;
+        let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
+
+        fund_reward_script(chain, 1, release_time, release_time);
+        submit_snapshot(chain, bridge_id, 1, *simple_map::borrow(&merkle_root_map, &1), *simple_map::borrow(&total_score_map, &1));
+        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+    }
+    
+    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_batch_claim(chain: &signer, operator: &signer, receiver: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,  
@@ -1873,7 +1896,7 @@ module initia_std::vip {
         let reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST / share_portion;
         let reward_per_stage_by_vesting = reward_per_stage / vesting_period;
         let release_time = 0;
-
+        
         let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
 
         update_agent(chain, signer::address_of(agent));
