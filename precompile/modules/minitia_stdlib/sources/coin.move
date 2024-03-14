@@ -1,5 +1,7 @@
 /// TODO - make is_module_account or some blacklist from freeze.
 module minitia_std::coin {
+    use std::bcs;
+    use std::from_bcs;
     use std::option::Option;
     use std::string::{Self, String};
 
@@ -7,6 +9,7 @@ module minitia_std::coin {
     use minitia_std::primary_fungible_store;
     use minitia_std::fungible_asset::{Self, MintRef, BurnRef, TransferRef, FungibleAsset, Metadata};
     use minitia_std::object::{Self, Object, ExtendRef};
+    use minitia_std::hex;
 
     struct ManagingRefs has key {
         mint_ref: MintRef,
@@ -16,7 +19,7 @@ module minitia_std::coin {
 
     /// Only fungible asset metadata owner can make changes.
     const ERR_NOT_OWNER: u64 = 1;
-    
+
     /// ManagingRefs is not found.
     const ERR_MANAGING_REFS_NOT_FOUND: u64 = 2;
 
@@ -76,7 +79,7 @@ module minitia_std::coin {
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
             constructor_ref,
             maximum_supply,
-            name, 
+            name,
             symbol,
             decimals,
             icon_uri,
@@ -148,7 +151,7 @@ module minitia_std::coin {
     /// Mint FAs as the owner of metadat object to the primary fungible store of the given recipient.
     public fun mint_to(
         mint_cap: &MintCapability,
-        recipient: address, 
+        recipient: address,
         amount: u64,
     ) acquires ManagingRefs {
         let metadata = mint_cap.metadata;
@@ -269,5 +272,82 @@ module minitia_std::coin {
     public fun is_coin_initialized(metadata: Object<Metadata>): bool {
         let metadata_addr = object::object_address(metadata);
         exists<ManagingRefs>(metadata_addr)
+    }
+
+    #[view]
+    public fun is_coin(metadata_addr: address): bool {
+        exists<ManagingRefs>(metadata_addr)
+    }
+
+   #[view]
+    public fun is_coin_by_symbol(creator: address, symbol: String): bool {
+        let metadata_addr = metadata_address(creator, symbol);
+        exists<ManagingRefs>(metadata_addr)
+    }
+
+    #[view]
+    public fun metadata_to_denom(metadata: Object<Metadata>): String {
+        let metadata_addr = object::object_address(metadata);
+        let symbol = symbol(metadata);
+        let std_metadata_addr = metadata_address(@minitia_std, symbol);
+
+        if (std_metadata_addr == metadata_addr) {
+            return symbol
+        };
+
+        let denom = string::utf8(b"move/");
+        let addr_bytes = bcs::to_bytes(&metadata_addr);
+        let addr_string = hex::encode_to_string(&addr_bytes);
+        string::append(&mut denom, addr_string);
+        return denom
+    }
+
+    #[view]
+    public fun denom_to_metadata(denom: String): Object<Metadata> {
+        let addr = if (string::length(&denom) > 5 && &b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
+            let len = string::length(&denom);
+            let hex_string = string::sub_string(&denom, 5, len);
+            from_bcs::to_address(hex::decode_string(&hex_string))
+        } else {
+            metadata_address(@minitia_std, denom)
+        };
+
+        object::address_to_object(addr)
+    }
+
+    #[test_only]
+    fun initialized_coin(
+        account: &signer,
+        symbol: String,
+    ): (BurnCapability, FreezeCapability, MintCapability) {
+        let (mint_cap, burn_cap, freeze_cap, _) = initialize_and_generate_extend_ref (
+            account,
+            std::option::none(),
+            string::utf8(b""),
+            symbol,
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+
+        return (burn_cap, freeze_cap, mint_cap)
+    }
+
+    #[test(chain = @0x1, not_chain = @0x2)]
+    fun test_denom_metadata_convert(
+        chain: signer,
+        not_chain: signer,
+    ) {
+        minitia_std::primary_fungible_store::init_module_for_test(&chain);
+        initialized_coin(&chain, string::utf8(b"INIT"));
+        initialized_coin(&not_chain, string::utf8(b"INIT"));
+        let metadata = metadata(std::signer::address_of(&chain), string::utf8(b"INIT"));
+        let metadata_ = metadata(std::signer::address_of(&not_chain), string::utf8(b"INIT"));
+        let denom = metadata_to_denom(metadata);
+        let denom_ = metadata_to_denom(metadata_);
+        let metadata_from_denom = denom_to_metadata(denom);
+        let metadata_from_denom_ = denom_to_metadata(denom_);
+        assert!(metadata == metadata_from_denom, 0);
+        assert!(metadata_ == metadata_from_denom_, 1);
     }
 }

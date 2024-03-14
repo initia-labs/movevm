@@ -4,11 +4,10 @@ module initia_std::fungible_asset {
     use initia_std::event;
     use initia_std::object::{Self, Object, ConstructorRef, DeleteRef, ExtendRef};
 
-    use std::string;
     use std::error;
     use std::option::{Self, Option};
     use std::signer;
-    use std::string::String;
+    use std::string::{Self, String};
 
     /// The transfer ref and the fungible asset do not match.
     const ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH: u64 = 2;
@@ -225,6 +224,12 @@ module initia_std::fungible_asset {
     public fun generate_transfer_ref(constructor_ref: &ConstructorRef): TransferRef {
         let metadata = object::object_from_constructor_ref<Metadata>(constructor_ref);
         TransferRef { metadata }
+    }
+
+    #[view]
+    /// Retrun true if given address has Metadata else return false
+    public fun is_fungible_asset(metadata_addr: address): bool {
+        exists<Metadata>(metadata_addr)
     }
 
     #[view]
