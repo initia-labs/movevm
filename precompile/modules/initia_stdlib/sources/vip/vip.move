@@ -166,6 +166,19 @@ module initia_std::vip {
         reward_distribution: vector<RewardDistribution>
     }
 
+    #[event]
+    struct StageAdvanceEvent has drop, store {
+        stage: u64,
+        pool_split_ratio: Decimal256,
+        total_operator_funded_reward: u64,
+        total_user_funded_reward: u64,
+        user_vesting_period: u64,
+        operator_vesting_period: u64,
+        user_vesting_release_time: u64,
+        operator_vesting_release_time: u64,
+        proportion: Decimal256,
+    }
+
     //
     // Implementations
     //
@@ -708,6 +721,21 @@ module initia_std::vip {
             proportion: module_store.proportion,
             snapshots: table::new<vector<u8>, Snapshot>(),
         });
+
+        event::emit(
+            StageAdvanceEvent {
+                stage,
+                pool_split_ratio: module_store.pool_split_ratio,
+                total_operator_funded_reward,
+                total_user_funded_reward,
+                user_vesting_period: module_store.user_vesting_period,
+                operator_vesting_period: module_store.operator_vesting_period,
+                user_vesting_release_time,
+                operator_vesting_release_time,
+                proportion: module_store.proportion,
+            }
+        );
+
         module_store.stage = stage + 1;
     }
 
