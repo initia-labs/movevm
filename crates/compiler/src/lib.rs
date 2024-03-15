@@ -18,8 +18,8 @@ mod mocks;
 pub use clean::Clean;
 pub use command::Command;
 pub use compiler::execute;
-pub use new::New;
 pub use gas_meter::TestInitiaGasMeter;
+pub use new::New;
 
 #[cfg(test)]
 mod tests;

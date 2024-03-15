@@ -78,7 +78,7 @@ fn native_query_custom(
     })?;
 
     #[cfg(feature = "testing")]
-    if name.len() > 0 {
+    if !name.is_empty() {
         match name.as_str() {
             "to_sdk_address" => {
                 return to_sdk_address(&data);
@@ -217,7 +217,7 @@ struct FromSDKAddressResponse {
 #[cfg(feature = "testing")]
 fn to_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let req: ToSDKAddressRequest =
-        serde_json::from_slice(&data).map_err(|_| SafeNativeError::Abort {
+        serde_json::from_slice(data).map_err(|_| SafeNativeError::Abort {
             abort_code: UNABLE_TO_PARSE_STRING,
         })?;
     let vm_addr =
@@ -231,13 +231,13 @@ fn to_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
 
     let sdk_addr = bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), addr_bytes).unwrap();
     let res_bytes = serde_json::to_vec(&ToSDKAddressResponse { sdk_addr }).unwrap();
-    return Ok(smallvec![Value::vector_u8(res_bytes)]);
+    Ok(smallvec![Value::vector_u8(res_bytes)])
 }
 
 #[cfg(feature = "testing")]
 fn from_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let req: FromSDKAddressRequest =
-        serde_json::from_slice(&data).map_err(|_| SafeNativeError::Abort {
+        serde_json::from_slice(data).map_err(|_| SafeNativeError::Abort {
             abort_code: UNABLE_TO_PARSE_STRING,
         })?;
     let (_, mut addr_bytes) =
@@ -257,5 +257,5 @@ fn from_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
         vm_addr: vm_addr.to_canonical_string(),
     })
     .unwrap();
-    return Ok(smallvec![Value::vector_u8(res_bytes)]);
+    Ok(smallvec![Value::vector_u8(res_bytes)])
 }
