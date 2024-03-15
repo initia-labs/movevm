@@ -13,6 +13,7 @@ initia-move-gas = { workspace = true }
 
 anyhow = { workspace = true }
 bcs = { workspace = true }
+bech32 = { workspace = true }
 better_any = { workspace = true }
 serde = { workspace = true }
 serde_bytes = { workspace = true }

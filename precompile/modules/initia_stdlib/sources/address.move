@@ -53,6 +53,20 @@ module initia_std::address {
         assert!(from_string(addr_str) == addr, 0)
     }
 
+    #[test]
+    fun test_to_sdk() {
+        let addr = @0x123abc;
+        let addr_sdk = string::utf8(b"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqpyw4utfmfp0");
+        assert!(to_sdk(addr) == addr_sdk, 0)
+    }
+
+    #[test]
+    fun test_from_sdk() {
+        let addr = @0x123abc;
+        let addr_sdk = string::utf8(b"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqpyw4utfmfp0");
+        assert!(addr == from_sdk(addr_sdk), 0)
+    }
+
     public native fun to_string(addr: address): String;
     public native fun from_string(addr_str: String): address;
 }

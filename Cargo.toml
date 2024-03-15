@@ -100,6 +100,7 @@ bytes = "1.4.0"
 parking_lot = "0.12.1"
 base64 = "0.21.7"
 bigdecimal = "0.4"
+bech32 = "0.11"
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES

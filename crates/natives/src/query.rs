@@ -1,14 +1,16 @@
+use bech32::{Bech32, Hrp};
 use better_any::{Tid, TidAble};
 use initia_move_gas::{InternalGas, GAS_UNIT_SCALING_FACTOR};
 use initia_move_types::query::*;
 use move_binary_format::errors::PartialVMError;
-use move_core_types::gas_algebra::NumBytes;
 use move_core_types::vm_status::StatusCode;
+use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{Value, Vector},
 };
+use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -74,6 +76,23 @@ fn native_query_custom(
     let name = String::from_utf8(name_bytes).map_err(|_| SafeNativeError::Abort {
         abort_code: UNABLE_TO_PARSE_STRING,
     })?;
+
+    #[cfg(feature = "testing")]
+    if name.len() > 0 {
+        match name.as_str() {
+            "to_sdk_address" => {
+                return to_sdk_address(&data);
+            }
+            "from_sdk_address" => {
+                return from_sdk_address(&data);
+            }
+            _ => {
+                return Err(SafeNativeError::Abort {
+                    abort_code: UNKNOWN_QUERY,
+                })
+            }
+        }
+    }
 
     let custom_query = CustomQuery { name, data };
     let req = QueryRequest::Custom(custom_query);
@@ -166,4 +185,77 @@ pub fn make_all(
 
 fn partial_error(code: StatusCode, msg: impl ToString) -> PartialVMError {
     PartialVMError::new(code).with_message(msg.to_string())
+}
+
+#[cfg(feature = "testing")]
+const UNKNOWN_QUERY: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 110;
+
+#[cfg(feature = "testing")]
+#[derive(Deserialize)]
+struct ToSDKAddressRequest {
+    vm_addr: String,
+}
+
+#[cfg(feature = "testing")]
+#[derive(Serialize)]
+struct ToSDKAddressResponse {
+    sdk_addr: String,
+}
+
+#[cfg(feature = "testing")]
+#[derive(Deserialize)]
+struct FromSDKAddressRequest {
+    sdk_addr: String,
+}
+
+#[cfg(feature = "testing")]
+#[derive(Serialize)]
+struct FromSDKAddressResponse {
+    vm_addr: String,
+}
+
+#[cfg(feature = "testing")]
+fn to_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let req: ToSDKAddressRequest =
+        serde_json::from_slice(&data).map_err(|_| SafeNativeError::Abort {
+            abort_code: UNABLE_TO_PARSE_STRING,
+        })?;
+    let vm_addr =
+        AccountAddress::from_hex_literal(&req.vm_addr).map_err(|_| SafeNativeError::Abort {
+            abort_code: UNABLE_TO_PARSE_STRING,
+        })?;
+    let mut addr_bytes = vm_addr.as_slice();
+    if addr_bytes.starts_with(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) {
+        addr_bytes = &addr_bytes[12..];
+    }
+
+    let sdk_addr = bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), addr_bytes).unwrap();
+    let res_bytes = serde_json::to_vec(&ToSDKAddressResponse { sdk_addr }).unwrap();
+    return Ok(smallvec![Value::vector_u8(res_bytes)]);
+}
+
+#[cfg(feature = "testing")]
+fn from_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let req: FromSDKAddressRequest =
+        serde_json::from_slice(&data).map_err(|_| SafeNativeError::Abort {
+            abort_code: UNABLE_TO_PARSE_STRING,
+        })?;
+    let (_, mut addr_bytes) =
+        bech32::decode(&req.sdk_addr).map_err(|_| SafeNativeError::Abort {
+            abort_code: UNABLE_TO_PARSE_STRING,
+        })?;
+
+    if addr_bytes.len() < AccountAddress::LENGTH {
+        let mut zero_padding = vec![0u8; AccountAddress::LENGTH - addr_bytes.len()];
+        zero_padding.append(&mut addr_bytes);
+
+        addr_bytes = zero_padding;
+    }
+
+    let vm_addr = AccountAddress::from_bytes(addr_bytes).unwrap();
+    let res_bytes = serde_json::to_vec(&FromSDKAddressResponse {
+        vm_addr: vm_addr.to_canonical_string(),
+    })
+    .unwrap();
+    return Ok(smallvec![Value::vector_u8(res_bytes)]);
 }
