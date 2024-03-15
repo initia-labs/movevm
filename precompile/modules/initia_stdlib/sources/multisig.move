@@ -30,6 +30,8 @@ module initia_std::multisig {
 
     const ENOT_PASS: u64 = 8;
 
+    const EPROPOSAL_NOT_FOUND: u64 = 8;
+
     // constants
 
     const STATUS: vector<vector<u8>> = vector[
@@ -43,8 +45,8 @@ module initia_std::multisig {
     // structs
 
     /// `Period` represents a time period with optional expiry conditions.
-    /// If both `height` and `timestamp` are `None`, the period never expires.
-    /// If both `height` and `timestamp` are set and only one of them is expired, the period is considered expired.
+    /// If both `height` and `timestamp` are `None`, the period is considered to never expire.
+    /// If both `height` and `timestamp` are set, and only one of them has expired, the period is considered expired.
     struct Period has copy, drop, store {
         height: Option<u64>,
         timestamp: Option<u64>,
@@ -183,7 +185,7 @@ module initia_std::multisig {
     /// Create new multisig account
     public entry fun create_multisig_account(
         account: &signer,
-        name: String, // name for make fixed multisig address (account_addr + name)
+        name: String, // name for make deterministic multisig address (account_addr + name)
         members: vector<address>,
         threshold: u64,
         max_voting_period_height: Option<u64>,
@@ -234,6 +236,7 @@ module initia_std::multisig {
         let addr = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
         assert_member(&multisig_wallet.members, &addr);
+
         let (height, timestamp) = get_block_info();
         let config_version = multisig_wallet.config_version;
 
@@ -278,7 +281,9 @@ module initia_std::multisig {
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
         assert_member(&multisig_wallet.members, &voter);
 
+        assert!(table::contains(&multisig_wallet.proposals, proposal_id), error::invalid_argument(EPROPOSAL_NOT_FOUND));
         let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
+
         assert_config_version(multisig_wallet.config_version, proposal);
         assert_proposal(&multisig_wallet.max_voting_period, proposal);
 
@@ -304,9 +309,17 @@ module initia_std::multisig {
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
         assert_member(&multisig_wallet.members, &executor);
 
+        assert!(table::contains(&multisig_wallet.proposals, proposal_id), error::invalid_argument(EPROPOSAL_NOT_FOUND));
         let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
+
         assert_config_version(multisig_wallet.config_version, proposal);
         assert_proposal(&multisig_wallet.max_voting_period, proposal);
+
+        // check passed 
+        assert!(
+            yes_vote_count(&proposal.votes, &multisig_wallet.members) >= multisig_wallet.threshold,
+            error::invalid_state(ENOT_PASS),
+        );
 
         let multisig_signer = &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
         move_execute(
@@ -316,11 +329,6 @@ module initia_std::multisig {
             proposal.function_name,
             proposal.type_args,
             proposal.args,
-        );
-
-        assert!(
-            yes_vote_count(&proposal.votes, &multisig_wallet.members) >= multisig_wallet.threshold,
-            error::invalid_state(ENOT_PASS),
         );
 
         proposal.status = 1; // executed
