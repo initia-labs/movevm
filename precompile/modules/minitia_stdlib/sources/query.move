@@ -97,4 +97,23 @@ module minitia_std::query {
     /// query_custom examples are in initia_stdlib::address module
     native public fun query_custom(name: vector<u8>, data: vector<u8>): vector<u8>;
     native public fun query_stargate(path: vector<u8>, data: vector<u8>): vector<u8>;
+
+    #[test_only]
+    native public fun set_query_response(path_or_name: vector<u8>, data: vector<u8>, response: vector<u8>);
+
+    #[test]
+    fun test_query_custom() {
+        set_query_response(b"path", b"data123", b"output");
+
+        let res = query_custom(b"path", b"data123");
+        assert!(res == b"output", 0);
+    }
+
+    #[test]
+    fun test_query_stargate() {
+        set_query_response(b"path", b"data123", b"output");
+
+        let res = query_stargate(b"path", b"data123");
+        assert!(res == b"output", 0);
+    }
 }

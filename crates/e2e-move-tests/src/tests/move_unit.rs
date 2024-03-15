@@ -11,7 +11,7 @@ use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
     staking::NativeStakingContext, table::NativeTableContext,
-    transaction_context::NativeTransactionContext,
+    transaction_context::NativeTransactionContext, query::NativeQueryContext,
 };
 use move_cli::base::test::{run_move_unit_tests_with_gas_meter, UnitTestResult};
 use move_core_types::effects::ChangeSet;
@@ -41,6 +41,7 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeTransactionContext::new([0; 32], [0; 32]));
     exts.add(NativeEventContext::default());
     exts.add(NativeOracleContext::new(&BLANK_API.oracle_api));
+    exts.add(NativeQueryContext::new(&BLANK_API.query_api));
 }
 
 fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
