@@ -99,7 +99,7 @@ module minitia_std::query {
     native public fun query_stargate(path: vector<u8>, data: vector<u8>): vector<u8>;
 
     #[test_only]
-    native public fun set_query_response(path_or_name: vector<u8>, data: vector<u8>, response: vector<u8>): vector<u8>;
+    native public fun set_query_response(path_or_name: vector<u8>, data: vector<u8>, response: vector<u8>);
 
     #[test]
     fun test_query_custom() {
