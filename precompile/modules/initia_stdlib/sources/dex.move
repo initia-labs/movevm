@@ -481,7 +481,7 @@ module initia_std::dex {
         coin_b_start_after: Option<String>,
         liquidity_token_start_after: Option<String>,
         limit: u8,
-    ): vector<PairResponse> acquires ModuleStore {
+    ): vector<PairByDenomResponse> acquires ModuleStore {
         if (limit > MAX_LIMIT) {
             limit = MAX_LIMIT;
         };
@@ -522,7 +522,13 @@ module initia_std::dex {
         while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
             let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
             if (&key != option::borrow(&start_after)) {
-                vector::push_back(&mut res, *value)
+                vector::push_back(&mut res, PairByDenomResponse {
+                    coin_a: coin::metadata_to_denom(object::address_to_object(value.coin_a)),
+                    coin_b: coin::metadata_to_denom(object::address_to_object(value.coin_b)),
+                    liquidity_token: coin::metadata_to_denom(object::address_to_object(value.liquidity_token)),
+                    weights: value.weights,
+                    swap_fee_rate: value.swap_fee_rate,
+                })
             }
         };
 
