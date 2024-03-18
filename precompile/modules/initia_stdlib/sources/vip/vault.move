@@ -9,7 +9,7 @@ module initia_std::vip_vault {
     use initia_std::vip_reward;
 
     friend initia_std::vip;
-
+    
     //
     // Errors
     //
@@ -125,7 +125,7 @@ module initia_std::vip_vault {
         let vault_store_addr = get_vault_store_address();
         primary_fungible_store::balance(vault_store_addr, vip_reward::reward_metadata())
     }
-
+    
     //
     // Tests
     //
