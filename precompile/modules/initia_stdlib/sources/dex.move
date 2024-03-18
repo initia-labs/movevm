@@ -52,6 +52,14 @@ module initia_std::dex {
         swap_fee_rate: Decimal128,
     }
 
+    struct PairByDenomResponse has copy, drop, store {
+        coin_a: String,
+        coin_b: String,
+        liquidity_token: String,
+        weights: Weights,
+        swap_fee_rate: Decimal128,
+    }
+
     /// Coin capabilities
     struct CoinCapabilities has key {
         burn_cap: coin::BurnCapability,
@@ -263,11 +271,12 @@ module initia_std::dex {
 
     #[view]
     public fun get_spot_price_by_denom(
-        pair: Object<Config>,
+        pair_denom: String,
         base_coin: String,
     ): Decimal128 acquires Config, Pool {
-        let base_coin = coin::denom_to_metadata(base_coin);
-        get_spot_price(pair, base_coin)
+        let pair_metadata = coin::denom_to_metadata(pair_denom);
+        let base_metadata = coin::denom_to_metadata(base_coin);
+        get_spot_price(object::convert(pair_metadata), base_metadata)
     }
 
     #[view]
@@ -304,12 +313,13 @@ module initia_std::dex {
 
     #[view]
     public fun get_swap_simulation_by_denom(
-        pair: Object<Config>,
+        pair_denom: String,
         offer_denom: String,
         offer_amount: u64,
     ): u64 acquires Config, Pool {
+        let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
-        get_swap_simulation(pair, offer_metadata, offer_amount)
+        get_swap_simulation(object::convert(pair_metadata), offer_metadata, offer_amount)
     }
 
     #[view]
@@ -346,12 +356,13 @@ module initia_std::dex {
 
     #[view]
     public fun get_swap_simulation_given_out_by_denom(
-        pair: Object<Config>,
+        pair_denom: String,
         offer_denom: String,
         return_amount: u64,
     ): u64 acquires Config, Pool {
+        let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
-        get_swap_simulation_given_out(pair, offer_metadata, return_amount)
+        get_swap_simulation_given_out(object::convert(pair_metadata), offer_metadata, return_amount)
     }
 
     #[view]
@@ -367,6 +378,13 @@ module initia_std::dex {
     }
 
     #[view]
+    /// get pool info
+    public fun get_pool_info_by_denom(pair_denom: String): PoolInfoResponse acquires Pool {
+        let pair_metadata = coin::denom_to_metadata(pair_denom);
+        get_pool_info(object::convert(pair_metadata))
+    }
+
+    #[view]
     /// get config
     public fun get_config(pair: Object<Config>): ConfigResponse acquires Config {
         let pair_addr = object::object_address(pair);
@@ -379,6 +397,13 @@ module initia_std::dex {
     }
 
     #[view]
+    /// get config
+    public fun get_config_by_denom(pair_denom: String): ConfigResponse acquires Config {
+        let pair_metadata = coin::denom_to_metadata(pair_denom);
+        get_config(object::convert(pair_metadata))
+    }
+
+    #[view]
     public fun get_current_weight(pair: Object<Config>): CurrentWeightResponse acquires Config {
         let pair_addr = object::object_address(pair);
         let config = borrow_global<Config>(pair_addr);
@@ -387,6 +412,12 @@ module initia_std::dex {
             coin_a_weight,
             coin_b_weight,
         }
+    }
+
+    #[view]
+    public fun get_current_weight_by_denom(pair_denom: String): CurrentWeightResponse acquires Config {
+        let pair_metadata = coin::denom_to_metadata(pair_denom);
+        get_current_weight(object::convert(pair_metadata))
     }
 
     #[view]
@@ -415,6 +446,62 @@ module initia_std::dex {
                 coin_a: option::extract(&mut coin_a_start_after),
                 coin_b: option::extract(&mut coin_b_start_after),
                 liquidity_token: option::extract(&mut liquidity_token_start_after),
+            })
+        } else {
+            option::some(PairKey {
+                coin_a: @0x0,
+                coin_b: @0x0,
+                liquidity_token: @0x0,
+            })
+        };
+
+        let res = vector[];
+        let pairs_iter = table::iter(
+            &module_store.pairs,
+            start_after,
+            option::none(),
+            1,
+        );
+
+        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
+            let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
+            if (&key != option::borrow(&start_after)) {
+                vector::push_back(&mut res, *value)
+            }
+        };
+
+        res
+    }
+
+    #[view]
+    // get all kinds of pair
+    // return vector of PairResponse
+    public fun get_all_pairs_by_denom(
+        coin_a_start_after: Option<String>,
+        coin_b_start_after: Option<String>,
+        liquidity_token_start_after: Option<String>,
+        limit: u8,
+    ): vector<PairResponse> acquires ModuleStore {
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT;
+        };
+
+        assert!(
+            option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after)
+                && option::is_some(&coin_b_start_after) == option::is_some(&liquidity_token_start_after),
+            ESTART_AFTER
+        );
+
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+
+        let start_after = if (option::is_some(&coin_a_start_after)) {
+            let coin_a_start_after = coin::denom_to_metadata(option::extract(&mut coin_a_start_after));
+            let coin_b_start_after = coin::denom_to_metadata(option::extract(&mut coin_b_start_after));
+            let liquidity_token_start_after = coin::denom_to_metadata(option::extract(&mut liquidity_token_start_after));
+            option::some(PairKey {
+                coin_a: object::object_address(coin_a_start_after),
+                coin_b: object::object_address(coin_b_start_after),
+                liquidity_token: object::object_address(liquidity_token_start_after),
             })
         } else {
             option::some(PairKey {
