@@ -1,18 +1,24 @@
-use bech32::{Bech32, Hrp};
 use better_any::{Tid, TidAble};
 use initia_move_gas::{InternalGas, GAS_UNIT_SCALING_FACTOR};
 use initia_move_types::query::*;
 use move_binary_format::errors::PartialVMError;
+use move_core_types::gas_algebra::NumBytes;
 use move_core_types::vm_status::StatusCode;
-use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{Value, Vector},
 };
-use serde::{Deserialize, Serialize};
+
 use smallvec::{smallvec, SmallVec};
 use std::collections::{BTreeMap, VecDeque};
+
+#[cfg(feature = "testing")]
+use bech32::{Bech32, Hrp};
+#[cfg(feature = "testing")]
+use move_core_types::account_address::AccountAddress;
+#[cfg(feature = "testing")]
+use serde::{Deserialize, Serialize};
 
 use crate::{
     interface::{
