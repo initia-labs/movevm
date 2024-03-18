@@ -13,12 +13,15 @@ module initia_std::vip_zapping {
     use initia_std::dex;
     use initia_std::primary_fungible_store;
     use initia_std::object::{Self, ExtendRef, Object};
-    use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
     use initia_std::simple_map::{Self, SimpleMap};
+    use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
 
-    friend initia_std::vip_reward;
+    friend initia_std::vip;
     
+    //
     // Errors
+    //
+
     const ELOCK_STAKING_END: u64 = 1; 
     const ELOCK_STAKING_IN_PROGRESS: u64 = 2;
     const ELS_STORE_NOT_FOUND: u64 = 3;
@@ -29,10 +32,14 @@ module initia_std::vip_zapping {
     const EINVALID_ZAPPING_AMOUNT: u64 = 8;
 
     //
-    //  Constants
+    // Constants
     //
-    const ZAPPING_PREFIX: u8  = 0xf5;
+
     const DEFAULT_LOCK_PERIOD: u64 = 60 * 60 * 24 * 7 * 26; // 26 weeks
+
+    //
+    // Resources
+    //
 
     struct ModuleStore has key {
         extend_ref: ExtendRef,
@@ -52,6 +59,12 @@ module initia_std::vip_zapping {
         stakelisted_metadata: Object<Metadata>,
         delegation: Delegation,
         share: u64,
+    }
+    
+    struct DelegationInfo has drop, store {
+        validator: String,
+        share: u64,
+        unclaimed_reward: u64,
     }
 
     struct LSStore has key {
@@ -94,7 +107,8 @@ module initia_std::vip_zapping {
     }
 
     #[event]
-    struct ClaimEvent has drop, store {
+    struct ZappingClaimEvent has drop, store {
+        zid: u64,
         coin_metadata: address,
         reward_amount: u64,
         delegation_reward_amount: u64,
@@ -102,7 +116,15 @@ module initia_std::vip_zapping {
     }
 
     #[event]
+    struct RewardClaimEvent has drop, store {
+        zid: u64,
+        coin_metadata: address,
+        reward_amount: u64,
+    }
+
+    #[event]
     struct DepositEvent has drop, store {
+        zid: u64,
         addr: address,
         delegation: DelegationInfo,
         release_time: u64,
@@ -111,17 +133,11 @@ module initia_std::vip_zapping {
 
     #[event]
     struct WithdrawEvent has drop, store {
+        zid: u64,
         addr: address,
         delegation: DelegationInfo,
         release_time: u64,
         share: u64
-    }
-
-    // copy structure of DelegationResponse with store
-    struct DelegationInfo has drop, store {
-        validator: String,
-        share: u64,
-        unclaimed_reward: u64,
     }
 
     #[event]
@@ -138,7 +154,9 @@ module initia_std::vip_zapping {
         release_time: u64,
     }
 
-    // helper functions
+    //
+    // Helper Functions
+    //
     
     fun check_chain_permission(chain: &signer) {
         assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
@@ -159,6 +177,7 @@ module initia_std::vip_zapping {
     // Entry Functions
     //
 
+    // deposit zapping delegation to user's staking
     public entry fun claim_zapping_script(
         account: &signer,
         zid: u64,
@@ -167,19 +186,19 @@ module initia_std::vip_zapping {
         let zapping = withdraw_zapping(account, zid);
         
         // claim delegation with lock staking rewards
-        let (delegation, reward) = claim(zapping);
+        let (delegation, reward) = claim(zapping, zid);
 
         // deposit delegation to user address
         let d_reward = staking::deposit_delegation(account_addr, delegation);
 
         // merge delegation rewards with lock staking rewards
         fungible_asset::merge(&mut reward, d_reward);
-
+        
         // deposit rewards to account coin store
         primary_fungible_store::deposit(account_addr, reward);
     }
 
-    public entry fun staking_reward_claim_script(account: &signer, zid: u64) acquires ModuleStore, LSStore {
+    public entry fun claim_reward_script(account: &signer, zid: u64) acquires ModuleStore, LSStore {
         let account_addr = signer::address_of(account);
 
         assert!(exists<LSStore>(account_addr), error::not_found(ELS_STORE_NOT_FOUND));
@@ -190,6 +209,15 @@ module initia_std::vip_zapping {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let zapping = table::borrow_mut(&mut module_store.zappings, zid);
         let reward = staking::claim_reward(&mut zapping.delegation);
+        
+        event::emit<RewardClaimEvent>(
+            RewardClaimEvent {
+                zid,
+                coin_metadata: object::object_address(fungible_asset::asset_metadata(&reward)),
+                reward_amount: fungible_asset::amount(&reward)
+            }
+        );
+
         coin::deposit(account_addr, reward);
     }
 
@@ -202,8 +230,11 @@ module initia_std::vip_zapping {
         module_store.lock_period = lock_period;
     }
 
-    /// friend functions 
-    public (friend) fun zapping(
+    //
+    // Friend Functions
+    //
+    
+    public(friend) fun zapping(
         account: &signer,
         bridge_id: u64,
         lp_metadata: Object<Metadata>,
@@ -262,6 +293,10 @@ module initia_std::vip_zapping {
             }
         );
     }
+
+    //
+    // Implementations
+    //
 
     fun register(account: &signer) {
         assert!(!exists<LSStore>(signer::address_of(account)), error::already_exists(ELS_STORE_ALREADY_EXISTS));
@@ -402,6 +437,7 @@ module initia_std::vip_zapping {
 
         event::emit(
             DepositEvent {
+                zid,
                 addr: account_addr,
                 delegation: delegation_res_to_delegation_info(&delegation_res),
                 release_time,
@@ -420,11 +456,12 @@ module initia_std::vip_zapping {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let zapping = table::remove(&mut module_store.zappings, zid);
         simple_map::remove(&mut ls_store.entries, &zid);
-
+        
         let delegation_res = staking::get_delegation_response_from_delegation(&zapping.delegation);
 
         event::emit<WithdrawEvent>(
             WithdrawEvent {
+                zid,
                 addr: account_addr,
                 delegation: delegation_res_to_delegation_info(&delegation_res),
                 release_time: zapping.release_time,
@@ -436,7 +473,7 @@ module initia_std::vip_zapping {
     }
 
     /// Claim lock staking rewards with Delegation
-    public fun claim(zapping: Zapping): (Delegation, FungibleAsset) {
+    public fun claim(zapping: Zapping, zid: u64): (Delegation, FungibleAsset) {
         let (_, block_time) = block::get_block_info();
         assert!(block_time >= zapping.release_time, error::unavailable(ELOCK_STAKING_IN_PROGRESS));
 
@@ -456,8 +493,9 @@ module initia_std::vip_zapping {
 
         let delegation_res = staking::get_delegation_response_from_delegation(&delegation);
 
-        event::emit<ClaimEvent>(
-            ClaimEvent {
+        event::emit<ZappingClaimEvent>(
+            ZappingClaimEvent {
+                zid,
                 coin_metadata: object::object_address(fungible_asset::asset_metadata(&reward)),
                 reward_amount: fungible_asset::amount(&reward),
                 delegation_reward_amount: staking::get_unclaimed_reward_from_delegation_response(&delegation_res),
@@ -500,6 +538,18 @@ module initia_std::vip_zapping {
         }
     }
     
+    #[view]
+    public fun get_delegation_info(zid: u64): DelegationInfo acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        assert!(table::contains(&module_store.zappings, zid), error::not_found(EZAPPING_NOT_EXIST));
+        let zapping = table::borrow(&module_store.zappings, zid);
+        
+        let delegation_res = staking::get_delegation_response_from_delegation(&zapping.delegation);
+        let delegation_info = delegation_res_to_delegation_info(&delegation_res);
+        
+        delegation_info
+    }
+
     //
     // Test Functions
     //
@@ -511,12 +561,15 @@ module initia_std::vip_zapping {
     use std::string;
 
     #[test_only]
+    use initia_std::vip_reward;
+
+    #[test_only]
     public fun init_module_for_test(chain: &signer) {
         init_module(chain);
     }
 
     #[test_only]
-    fun test_initialize_coin(
+    fun initialize_coin(
         account: &signer,
         symbol: String,
     ): (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability) {
@@ -544,10 +597,10 @@ module initia_std::vip_zapping {
         staking::test_setup(chain);
         init_module_for_test(chain);
 
-        let (_burn_cap, _freeze_cap, mint_cap) = test_initialize_coin(chain,string::utf8(b"INIT"));
+        let (_burn_cap, _freeze_cap, mint_cap) = initialize_coin(chain,string::utf8(b"INIT"));
         coin::mint_to(&mint_cap, signer::address_of(chain), esinit_amount);
         coin::mint_to(&mint_cap, signer::address_of(account), esinit_amount);
-        let (_burn_cap, _freeze_cap, mint_cap) = test_initialize_coin(chain,string::utf8(b"USDC"));
+        let (_burn_cap, _freeze_cap, mint_cap) = initialize_coin(chain,string::utf8(b"USDC"));
         coin::mint_to(&mint_cap, signer::address_of(chain), stakelisted_amount);
         coin::mint_to(&mint_cap, signer::address_of(account), stakelisted_amount);
         
@@ -575,9 +628,6 @@ module initia_std::vip_zapping {
 
         (esinit_metadata, stakelisted_metadata, lp_metadata, validator)
     }
-
-    ////////////////////////////////////////////////////////
-    // CONFIG TEST
 
     #[test(chain = @0x1, account = @0x999)]
     fun test_zapping(
@@ -673,7 +723,7 @@ module initia_std::vip_zapping {
     }
 
     #[test(chain = @0x1, account = @0x3, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
-    fun test_staking_reward_claim(
+    fun test_claim_reward(
         chain: &signer,
         account: &signer,
         relayer: &signer,
@@ -704,14 +754,14 @@ module initia_std::vip_zapping {
             stakelisted,
         );
 
-        staking::deposit_reward_for_chain(chain, l_m, vector[val], vector[1_000_000]);
-        staking_reward_claim_script(account, 0);
-        assert!(primary_fungible_store::balance(signer::address_of(account), staking::reward_metadata()) == 1_000_000, 1);
+        let validator_reward = 1_000_000;
+        staking::deposit_reward_for_chain(chain, l_m, vector[val], vector[validator_reward]);
+        let zapping_reward = get_delegation_info(0).unclaimed_reward;
+        assert!(validator_reward == zapping_reward, 0);
+
+        claim_reward_script(account, 0);
+        assert!(primary_fungible_store::balance(signer::address_of(account), vip_reward::reward_metadata()) == zapping_reward, 0);
     }
-
-    // ////////////////////////////////////////////////////////
-    // // Claim TEST
-
 
     #[test(chain = @0x1, user_a = @0x998, user_b = @0x999, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
     fun test_zapping_claim(
@@ -754,7 +804,7 @@ module initia_std::vip_zapping {
 
         let esinit = primary_fungible_store::withdraw(user_b, e_m, 250_000_000);
         let stakelisted = primary_fungible_store::withdraw(user_b, s_m, 250_000_000);
-
+        
         zapping(
             user_b,
             1,
@@ -768,11 +818,13 @@ module initia_std::vip_zapping {
 
         block::set_block_info(2, release_time + 1);
 
-        assert!(primary_fungible_store::balance(signer::address_of(user_a), staking::reward_metadata()) == 0, 2);
+        assert!(primary_fungible_store::balance(signer::address_of(user_a), vip_reward::reward_metadata()) == 0, 2);
         staking::fund_reward_coin(chain, signer::address_of(relayer), 2_000_000);
-        staking::deposit_reward_for_chain(chain, l_m, vector[val], vector[1_000_000]);
+        
+        let validator_reward = 1_000_000; 
+        staking::deposit_reward_for_chain(chain, l_m, vector[val], vector[validator_reward]);
         claim_zapping_script(user_a, 0);
-        assert!(primary_fungible_store::balance(signer::address_of(user_a), staking::reward_metadata()) == 666_666, 3);   
+        assert!(primary_fungible_store::balance(signer::address_of(user_a), vip_reward::reward_metadata()) == (validator_reward*2)/3, 3);   
     }
 
     #[test(chain = @0x1, account = @0x2)]
