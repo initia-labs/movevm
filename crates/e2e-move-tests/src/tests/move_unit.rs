@@ -10,8 +10,8 @@ use initia_move_gas::{
 use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
-    staking::NativeStakingContext, table::NativeTableContext,
-    transaction_context::NativeTransactionContext, query::NativeQueryContext,
+    query::NativeQueryContext, staking::NativeStakingContext, table::NativeTableContext,
+    transaction_context::NativeTransactionContext,
 };
 use move_cli::base::test::{run_move_unit_tests_with_gas_meter, UnitTestResult};
 use move_core_types::effects::ChangeSet;
