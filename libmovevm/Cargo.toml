@@ -1,29 +1,29 @@
 [package]
 name = "movevm"
 version = "0.1.0"
-edition = "2021"
-rust-version = { workspace = true }
-description = "Initia VM Engine"
+publish = false
+description = "Initia Move VM Engine"
 homepage = "https://initia.xyz/"
 repository = "https://github.com/initia-labs/movevm"
-license-file = "LICENSE"
 exclude = [".gitignore"]
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+edition = { workspace = true }
+rust-version = { workspace = true }
 
 # the example is to allow us to compile a muslc static lib with the same codebase as we compile the
 # normal dynamic libs (best workaround I could find to override crate-type on the command line)
 [[example]]
-name = "muslc"
-path = "src/lib.rs"
+name = "movevmstatic"
+path = "src/examples/movevmstatic.rs"
 crate-type = ["staticlib"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
 # This feature requires Rust nightly because it depends on the unstable backtrace feature.
 backtraces = []
-
-[lib]
-crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = { workspace = true }
@@ -40,7 +40,6 @@ log = { workspace = true, features = [
     "release_max_level_warn",
 ] }
 
-initia-move-compiler = { workspace = true }
 initia-move-vm = { workspace = true, features = ["backtraces"] }
 initia-move-natives = { workspace = true }
 initia-move-types = { workspace = true }
@@ -48,9 +47,6 @@ initia-move-gas = { workspace = true }
 initia-move-storage = { workspace = true }
 
 move-core-types = { workspace = true }
-move-cli = { workspace = true }
-move-docgen = { workspace = true }
-move-package = { workspace = true }
 move-resource-viewer = { workspace = true }
 move-binary-format = { workspace = true }
 

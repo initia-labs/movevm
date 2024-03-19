@@ -1,11 +1,11 @@
 [package]
 name = "initia-move-compiler"
 version = "0.1.0"
-edition = "2021"
-repository = "https://github.com/initia-labs/movevm/tree/main/crates/compiler"
-rust-version = { workspace = true }
+description = "Initia Move Compiler"
+repository = "https://github.com/initia-labs/movevm"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = { workspace = true }
+rust-version = { workspace = true }
 
 [dependencies]
 anyhow = { workspace = true }
@@ -23,15 +23,16 @@ log = { workspace = true }
 tempfile = { workspace = true }
 once_cell = { workspace = true }
 
-initia-move-natives = { workspace = true }
-initia-move-gas = { workspace = true }
+initia-move-natives = { workspace = true, features = ["testing"] }
+initia-move-gas = { workspace = true, features = ["testing"] }
 initia-move-types = { workspace = true }
+
 move-command-line-common = { workspace = true }
 move-cli = { workspace = true }
 move-core-types = { workspace = true }
 move-package = { workspace = true }
 move-unit-test = { workspace = true }
-move-vm-runtime = { workspace = true }
+move-vm-runtime = { workspace = true, features = ["testing"] }
 move-vm-types = { workspace = true }
 move-vm-test-utils = { workspace = true }
 move-binary-format = { workspace = true }
@@ -46,11 +47,3 @@ move-resource-viewer = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
-initia-move-natives = { workspace = true, features = ["testing"] }
-initia-move-gas = { workspace = true, features = ["testing"] }
-move-vm-runtime = { workspace = true, features = ["testing"] }
-
-[build-dependencies]
-initia-move-natives = { workspace = true, features = ["testing"] }
-initia-move-gas = { workspace = true, features = ["testing"] }
-move-vm-runtime = { workspace = true, features = ["testing"] }

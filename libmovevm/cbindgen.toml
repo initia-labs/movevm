@@ -12,7 +12,7 @@ language = "C"
 
 ############## Options for Wrapping the Contents of the Header #################
 
-header = "/* (c) 2022 initia labs. Licensed under BUSL-1.1 */"
+header = "/* (c) 2024 initia labs. Licensed under BUSL-1.1 */"
 # trailer = "/* Text to put at the end of the generated file */"
 include_guard = "__LIBMOVEVM__"
 # pragma_once = true
@@ -58,7 +58,7 @@ usize_is_size_t = true
 
 [export]
 # FIXME: not sure why they are not exported by default.
-include = ["ByteSliceView", "U8SliceView", "Db", "db_t", "GoError", "ErrnoValue", "GoApi", "CoverageOption", "InitiaCompilerArgument", "InitiaCompilerBuildConfig", "InitiaCompilerTestOption", "InitiaCompilerProveOption", "InitiaConcretizeMode", "InitiaExperimentalSubcommandType", "AccountType"]
+include = ["ByteSliceView", "U8SliceView", "Db", "db_t", "GoError", "ErrnoValue", "GoApi"]
 exclude = []
 item_types = []
 renaming_overrides_prefixing = false

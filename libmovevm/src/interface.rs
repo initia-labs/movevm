@@ -1,18 +1,11 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::path::Path;
 
 use crate::args::VM_ARG;
-use crate::compiler::{
-    self, CompilerArgument, CompilerCoverageBytecodeOption, CompilerCoverageSourceOption,
-    CompilerCoverageSummaryOption, CompilerDocgenOption, CompilerProveOption, CompilerTestOption,
-};
 use crate::error::handle_c_error_default;
 use crate::error::{handle_c_error_binary, Error};
 use crate::move_api::handler as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
 
-use crate::compiler::Command;
-use initia_move_compiler::{self, New};
 use initia_move_types::entry_function::EntryFunction;
 use initia_move_types::env::Env;
 use initia_move_types::message::Message;
@@ -20,11 +13,7 @@ use initia_move_types::module::ModuleBundle;
 use initia_move_types::script::Script;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_vm::MoveVM;
-use move_cli::base::build::Build;
-use move_cli::base::test::Test;
-use move_cli::Move;
 use move_core_types::account_address::AccountAddress;
-use move_package::BuildConfig;
 
 #[allow(non_camel_case_types)]
 #[repr(C)]
@@ -287,172 +276,6 @@ pub extern "C" fn decode_script_bytes(
 }
 
 #[no_mangle]
-pub extern "C" fn build_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-) -> UnmanagedVector {
-    let cmd = Command::Build(Build);
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn test_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    test_opt: CompilerTestOption,
-) -> UnmanagedVector {
-    let mut test_opt: Test = test_opt.into();
-    if compiler_args.verbose {
-        test_opt.verbose_mode = compiler_args.verbose;
-    }
-
-    let cmd = Command::Test(test_opt);
-    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn coverage_summary_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    coverage_opt: CompilerCoverageSummaryOption,
-) -> UnmanagedVector {
-    let cmd = Command::Coverage(coverage_opt.into());
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn coverage_source_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    coverage_opt: CompilerCoverageSourceOption,
-) -> UnmanagedVector {
-    let cmd = Command::Coverage(coverage_opt.into());
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn coverage_bytecode_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    coverage_opt: CompilerCoverageBytecodeOption,
-) -> UnmanagedVector {
-    let cmd = Command::Coverage(coverage_opt.into());
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn docgen_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    docgen_opt: CompilerDocgenOption,
-) -> UnmanagedVector {
-    let cmd = Command::Document(docgen_opt.into());
-
-    let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn create_new_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    name_view: ByteSliceView,
-) -> UnmanagedVector {
-    let name: Option<String> = name_view.into();
-
-    let cmd = Command::New(New {
-        name: name.unwrap_or_default(),
-    });
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn clean_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    clean_cache: bool,
-    clean_byproduct: bool,
-    force: bool,
-) -> UnmanagedVector {
-    let cmd = Command::Clean(initia_move_compiler::Clean {
-        clean_cache,
-        clean_byproduct,
-        force,
-    });
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
-pub extern "C" fn prove_move_package(
-    errmsg: Option<&mut UnmanagedVector>,
-    compiler_args: CompilerArgument,
-    prove_opt: CompilerProveOption,
-) -> UnmanagedVector {
-    let cmd = Command::Prove(prove_opt.into());
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        compiler::execute(compiler_args.into(), cmd)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
 pub extern "C" fn parse_struct_tag(
     errmsg: Option<&mut UnmanagedVector>,
     struct_tag_str: ByteSliceView,
@@ -480,24 +303,4 @@ pub extern "C" fn stringify_struct_tag(
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
-}
-
-//
-// internal functions
-//
-
-#[allow(dead_code)]
-fn generate_default_move_cli(package_path_slice: Option<ByteSliceView>, verbose: bool) -> Move {
-    let package_path = match package_path_slice {
-        None => None,
-        Some(slice) => slice
-            .read()
-            .map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf()),
-    };
-
-    Move {
-        package_path,
-        verbose,
-        build_config: BuildConfig::default(),
-    }
 }

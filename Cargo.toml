@@ -2,6 +2,7 @@
 resolver = "2"
 
 members = [
+    "libcompiler",
     "libmovevm",
     "crates/compiler",
     "crates/gas",
@@ -13,7 +14,6 @@ members = [
     "tools/generate-bcs-go",
     "tools/precompile",
 ]
-exclude = []
 
 [profile.release]
 opt-level = 3
@@ -45,6 +45,7 @@ codegen-units = 16
 version = "0.1.0"
 edition = "2021"
 license = "BUSL-1.1"
+license-file = "LICENSE"
 homepage = "https://initia.xyz"
 repository = "https://github.com/initia-labs/movevm"
 rust-version = "1.76.0"
