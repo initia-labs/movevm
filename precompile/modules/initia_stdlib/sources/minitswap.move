@@ -833,6 +833,12 @@ module initia_std::minitswap {
             // when fully recovered rate is too close to 0.5 y can be same with sim_size
             if (y == sim_size) break;
 
+            // when fully recovered rate is too close to 0.5 x can be slightly higher than sim_size
+            if (x > sim_size) {
+                x = sim_size;
+                break
+            };
+
             if (x > x_prev) {
                 if (x - x_prev <= 1) break
             } else {
