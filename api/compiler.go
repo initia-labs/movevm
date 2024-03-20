@@ -1,7 +1,7 @@
 package api
 
 // #include <stdlib.h>
-// #include "bindings.h"
+// #include "bindings_compiler.h"
 import "C"
 
 import (

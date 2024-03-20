@@ -1,10 +1,12 @@
 use log::LevelFilter;
-use move_docgen::DocgenOptions;
 use std::{path::Path, str::FromStr};
 
-use crate::{error::Error, ByteSliceView};
-
 use initia_move_compiler::{self, prover::ProverOptions};
+
+use move_docgen::DocgenOptions;
+
+use crate::error::CompilerError;
+use crate::memory::ByteSliceView;
 
 use move_cli::{
     base::{
@@ -17,7 +19,7 @@ use move_package::{Architecture, BuildConfig, CompilerConfig};
 
 pub use initia_move_compiler::Command;
 
-pub fn execute(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
+pub fn execute(move_args: Move, cmd: Command) -> Result<Vec<u8>, CompilerError> {
     let action = cmd.to_string();
     let verbose = move_args.verbose;
 
@@ -25,12 +27,12 @@ pub fn execute(move_args: Move, cmd: Command) -> Result<Vec<u8>, Error> {
         Ok(_) => Ok(Vec::from("ok")),
         Err(e) => {
             if verbose {
-                Err(Error::backend_failure(format!(
+                Err(CompilerError::compiler_failure(format!(
                     "failed to {}: {:?}",
                     action, e
                 )))
             } else {
-                Err(Error::backend_failure(format!(
+                Err(CompilerError::compiler_failure(format!(
                     "failed to {}: {}",
                     action, e
                 )))

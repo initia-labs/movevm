@@ -1,24 +1,24 @@
 [package]
-name = "movevm"
+name = "compiler"
 version = "0.1.0"
 publish = false
-description = "Initia Move VM Engine"
+description = "Initia Move Compiler"
 homepage = "https://initia.xyz/"
 repository = "https://github.com/initia-labs/movevm"
 exclude = [".gitignore"]
 
-edition = { workspace = true }
+edition = { workspace =  true }
 rust-version = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 # the example is to allow us to compile a muslc static lib with the same codebase as we compile the
 # normal dynamic libs (best workaround I could find to override crate-type on the command line)
 [[example]]
-name = "movevmstatic"
-path = "src/examples/movevmstatic.rs"
+name = "compilerstatic"
+path = "src/examples/compilerstatic.rs"
 crate-type = ["staticlib"]
-
-[lib]
-crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
@@ -26,29 +26,19 @@ default = []
 backtraces = []
 
 [dependencies]
-anyhow = { workspace = true }
-bytes = { workspace = true }
-bcs = { workspace = true }
 errno = { workspace = true }
-hex = { workspace = true }
-serde = { workspace = true, features = ["derive", "alloc"] }
-serde_bytes = { workspace = true }
-serde_json = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true, features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
 
-initia-move-vm = { workspace = true, features = ["backtraces"] }
-initia-move-natives = { workspace = true }
-initia-move-types = { workspace = true }
-initia-move-gas = { workspace = true }
-initia-move-storage = { workspace = true }
+initia-move-compiler = { workspace = true }
 
 move-core-types = { workspace = true }
-move-resource-viewer = { workspace = true }
-move-binary-format = { workspace = true }
+move-cli = { workspace = true }
+move-docgen = { workspace = true }
+move-package = { workspace = true }
 
 [build-dependencies]
 cbindgen = { workspace = true }

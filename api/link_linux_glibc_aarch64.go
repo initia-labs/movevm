@@ -2,5 +2,5 @@
 
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lmovevm.aarch64
+// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lmovevm.aarch64 -lcompiler.aarch64
 import "C"

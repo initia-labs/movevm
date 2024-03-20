@@ -2,5 +2,5 @@
 
 package api
 
-// #cgo LDFLAGS: -lmovevm
+// #cgo LDFLAGS: -lmovevm -lcompiler
 import "C"

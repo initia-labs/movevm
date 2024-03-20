@@ -15,8 +15,10 @@ export CC=clang
 export CXX=clang++
 export OPENSSL_STATIC=1
 export OPENSSL_DIR=/opt/x86_64-openssl
-cargo build --release --target x86_64-unknown-linux-gnu
-cp ../target/x86_64-unknown-linux-gnu/release/libmovevm.so artifacts/libmovevm.x86_64.so
+(cd libmovevm && cargo build --release --target x86_64-unknown-linux-gnu)
+(cd libcompiler && cargo build --release --target x86_64-unknown-linux-gnu)
+cp ./target/x86_64-unknown-linux-gnu/release/libmovevm.so artifacts/libmovevm.x86_64.so
+cp ./target/x86_64-unknown-linux-gnu/release/libcompiler.so artifacts/libcompiler.x86_64.so
 
 echo "Starting aarch64-unknown-linux-gnu build"
 export qemu_aarch64="qemu-aarch64 -L /usr/aarch64-linux-gnu"
@@ -29,5 +31,7 @@ export OPENSSL_STATIC=1
 export OPENSSL_DIR=/opt/aarch64-openssl
 
 # build libmovevm for aarch64
-cargo build --release --target aarch64-unknown-linux-gnu
-cp -R ../target/aarch64-unknown-linux-gnu/release/libmovevm.so artifacts/libmovevm.aarch64.so
+(cd libmovevm && cargo build --release --target aarch64-unknown-linux-gnu)
+(cd libcompiler && cargo build --release --target aarch64-unknown-linux-gnu)
+cp -R ./target/aarch64-unknown-linux-gnu/release/libmovevm.so artifacts/libmovevm.aarch64.so
+cp -R ./target/aarch64-unknown-linux-gnu/release/libcompiler.so artifacts/libcompiler.aarch64.so

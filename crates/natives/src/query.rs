@@ -11,14 +11,7 @@ use move_vm_types::{
 };
 
 use smallvec::{smallvec, SmallVec};
-use std::collections::{BTreeMap, VecDeque};
-
-#[cfg(feature = "testing")]
-use bech32::{Bech32, Hrp};
-#[cfg(feature = "testing")]
-use move_core_types::account_address::AccountAddress;
-#[cfg(feature = "testing")]
-use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 use crate::{
     interface::{
@@ -231,6 +224,15 @@ pub fn make_all(
 fn partial_error(code: StatusCode, msg: impl ToString) -> PartialVMError {
     PartialVMError::new(code).with_message(msg.to_string())
 }
+
+#[cfg(feature = "testing")]
+use bech32::{Bech32, Hrp};
+#[cfg(feature = "testing")]
+use move_core_types::account_address::AccountAddress;
+#[cfg(feature = "testing")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "testing")]
+use std::collections::BTreeMap;
 
 #[cfg(feature = "testing")]
 use sha3::{Digest, Sha3_256};

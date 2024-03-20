@@ -118,34 +118,6 @@ impl From<ByteSliceView> for Option<Vec<TransactionArgument>> {
     }
 }
 
-/// A view into a `Option<&[u8]>`, created and maintained by Rust.
-///
-/// This can be copied into a []byte in Go.
-#[repr(C)]
-pub struct U8SliceView {
-    /// True if and only if this is None. If this is true, the other fields must be ignored.
-    is_none: bool,
-    ptr: *const u8,
-    len: usize,
-}
-
-impl U8SliceView {
-    pub fn new(source: Option<&[u8]>) -> Self {
-        match source {
-            Some(data) => Self {
-                is_none: false,
-                ptr: data.as_ptr(),
-                len: data.len(),
-            },
-            None => Self {
-                is_none: true,
-                ptr: std::ptr::null::<u8>(),
-                len: 0,
-            },
-        }
-    }
-}
-
 /// An optional Vector type that requires explicit creation and destruction
 /// and can be sent via FFI.
 /// It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.

@@ -9,6 +9,7 @@ on:
       - "crates/**"
       - '!crates/e2e-move-tests/**'
       - "libmovevm/**"
+      - "libcompiler/**"
       - "Cargo.toml"
 
 concurrency:
@@ -69,6 +70,6 @@ jobs:
       - name: Commit shared libraries
         uses: EndBug/add-and-commit@v9
         with:
-          add: '["api/libmovevm.dylib", "api/libmovevm.aarch64.so", "api/libmovevm.x86_64.so"]'
+          add: '["api/libmovevm.dylib", "api/libmovevm.aarch64.so", "api/libmovevm.x86_64.so", "api/libcompiler.dylib", "api/libcompiler.aarch64.so", "api/libcompiler.x86_64.so"]'
           default_author: github_actions
           message: "update shared libraries"
