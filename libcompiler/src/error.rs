@@ -25,7 +25,7 @@ impl CompilerError {
 
 /// cbindgen:prefix-with-name
 #[repr(i32)]
-enum ErrnoValue {
+pub enum ErrnoValue {
     Success = 0,
     Other = 1,
 }

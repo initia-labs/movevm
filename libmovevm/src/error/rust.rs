@@ -141,7 +141,7 @@ impl From<std::string::FromUtf8Error> for RustError {
 
 /// cbindgen:prefix-with-name
 #[repr(i32)]
-enum ErrnoValue {
+pub enum ErrnoValue {
     Success = 0,
     Other = 1,
 }

@@ -10,3 +10,6 @@ mod memory;
 // exports. There are no guarantees those exports are stable.
 // We keep them here such that we can access them in the docs (`cargo doc`).
 pub use memory::{destroy_unmanaged_vector, new_unmanaged_vector, ByteSliceView, UnmanagedVector};
+
+#[cfg(test)]
+mod tests;

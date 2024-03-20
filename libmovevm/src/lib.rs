@@ -12,7 +12,6 @@ mod move_api;
 mod result;
 mod storage;
 mod table_storage;
-mod version;
 mod vm;
 
 // We only interact with this crate via `extern "C"` interfaces, not those public

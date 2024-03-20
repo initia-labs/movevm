@@ -286,11 +286,4 @@ void release_vm(vm_t *vm);
 
 UnmanagedVector stringify_struct_tag(UnmanagedVector *errmsg, ByteSliceView struct_tag);
 
-/**
- * Returns a version number of this library as a C string.
- *
- * The string is owned by libmovevm and must not be mutated or destroyed by the caller.
- */
-const char *version_str(void);
-
 #endif /* __LIBMOVEVM__ */
