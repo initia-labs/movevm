@@ -25,7 +25,6 @@ codegen-units = 16
 panic = 'unwind'
 incremental = true
 overflow-checks = true
-strip = "debuginfo"
 
 [profile.bench]
 debug = true

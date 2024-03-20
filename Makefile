@@ -124,10 +124,10 @@ release-build-alpine:
 	docker run --rm -u $(USER_ID):$(USER_GROUP)  \
 		-v $(shell pwd):/code/ \
 		$(BUILDERS_PREFIX)-alpine
-	cp libmovevm/artifacts/libmovevm_muslc.x86_64.a api
-	cp libmovevm/artifacts/libmovevm_muslc.aarch64.a api
-	cp libcompiler/artifacts/libcompiler_muslc.x86_64.a api
-	cp libcompiler/artifacts/libcompiler_muslc.aarch64.a api
+	cp artifacts/libmovevm_muslc.x86_64.a api
+	cp artifacts/libmovevm_muslc.aarch64.a api
+	cp artifacts/libcompiler_muslc.x86_64.a api
+	cp artifacts/libcompiler_muslc.aarch64.a api
 	make update-bindings
 	# try running go tests using this lib with muslc
 	# docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
@@ -140,10 +140,10 @@ release-build-linux:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) \
 		-v $(shell pwd):/code/ \
 		$(BUILDERS_PREFIX)-centos7
-	cp libmovevm/artifacts/libmovevm.x86_64.so api
-	cp libmovevm/artifacts/libmovevm.aarch64.so api
-	cp libcompiler/artifacts/libcompiler.x86_64.so api
-	cp libcompiler/artifacts/libcompiler.aarch64.so api
+	cp artifacts/libmovevm.x86_64.so api
+	cp artifacts/libmovevm.aarch64.so api
+	cp artifacts/libcompiler.x86_64.so api
+	cp artifacts/libcompiler.aarch64.so api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
@@ -153,8 +153,8 @@ release-build-macos:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) \
 		-v $(shell pwd):/code/ \
 		$(BUILDERS_PREFIX)-cross build_macos.sh
-	cp libmovevm/artifacts/libmovevm.dylib api
-	cp libcompiler/artifacts/libcompiler.dylib api
+	cp artifacts/libmovevm.dylib api
+	cp artifacts/libcompiler.dylib api
 	make update-bindings
 
 release-build:
