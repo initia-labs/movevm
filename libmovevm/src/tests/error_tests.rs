@@ -1,4 +1,7 @@
-use crate::{error::{handle_c_error_binary, handle_c_error_default, GoError}, UnmanagedVector};
+use crate::{
+    error::{handle_c_error_binary, handle_c_error_default, GoError},
+    UnmanagedVector,
+};
 use initia_move_types::errors::BackendError;
 
 // GoError test
@@ -90,7 +93,7 @@ fn go_error_into_result_works() {
 
 // RustError tests
 
-use crate::error::{Error as RustError, ErrnoValue};
+use crate::error::{ErrnoValue, Error as RustError};
 use errno::errno;
 use std::str;
 
@@ -147,7 +150,6 @@ fn vm_err_works_for_strings() {
         _ => panic!("expect different error"),
     }
 }
-
 
 // Tests of `impl From<X> for RustError` converters
 
@@ -297,7 +299,7 @@ fn handle_c_error_default_works() {
     // Ok (unit)
     let mut error_msg = UnmanagedVector::default();
     let res: Result<(), RustError> = Ok(());
-    let _data = handle_c_error_default(res, Some(&mut error_msg));
+    handle_c_error_default(res, Some(&mut error_msg));
     assert_eq!(errno().0, ErrnoValue::Success as i32);
     assert!(error_msg.is_none());
     let _ = error_msg.consume();
@@ -323,7 +325,7 @@ fn handle_c_error_default_works() {
     // Err (unit)
     let mut error_msg = UnmanagedVector::default();
     let res: Result<(), RustError> = Err(RustError::panic());
-    let _data = handle_c_error_default(res, Some(&mut error_msg));
+    handle_c_error_default(res, Some(&mut error_msg));
     assert_eq!(errno().0, ErrnoValue::Other as i32);
     assert!(error_msg.is_some());
     let _ = error_msg.consume();
