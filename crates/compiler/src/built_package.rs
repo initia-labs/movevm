@@ -84,6 +84,7 @@ impl BuiltPackage {
 
         // Run extended checks as well derive runtime metadata
         let model = &model_opt.expect("move model");
+        let runtime_metadata = extended_checks::run_extended_checks(model);
         if model.diag_count(Severity::Warning) > 0 {
             let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
             model.report_diag(&mut error_writer, Severity::Warning);
@@ -92,7 +93,6 @@ impl BuiltPackage {
             }
         }
 
-        let runtime_metadata = extended_checks::run_extended_checks(model);
         let compiled_pkg_path = package
             .compiled_package_info
             .build_flags
