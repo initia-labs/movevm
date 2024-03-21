@@ -60,7 +60,7 @@ use initia_move_types::{
     metadata::INIT_MODULE_FUNCTION_NAME,
     module::ModuleBundle,
     staking_change_set::StakingChangeSet,
-    view_function::ViewFunction,
+    view_function::{ViewFunction, ViewOutput},
     write_set::WriteSet,
 };
 
@@ -269,7 +269,7 @@ impl MoveVM {
         table_view_impl: &mut TableViewImpl<'_, T>,
         view_fn: &ViewFunction,
         gas_limit: Gas,
-    ) -> Result<String, VMStatus> {
+    ) -> Result<ViewOutput, VMStatus> {
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
         let func_inst =
@@ -296,8 +296,20 @@ impl MoveVM {
             &mut gas_meter,
         )?;
 
-        let output = serialize_response_to_json(res)?.expect("view function must return value");
-        Ok(output)
+        let session_output = session.finish()?;
+        let (events, _, _, _, _, session_cache) = session_output;
+        let json_events = self.serialize_events_to_json(events, &session_cache)?;
+        let ret = serialize_response_to_json(res)?.expect("view function must return value");
+        let gas_used = gas_meter
+            .gas_limit()
+            .checked_sub(gas_meter.balance())
+            .unwrap();
+
+        Ok(ViewOutput::new(
+            ret,
+            json_events.into_inner(),
+            gas_used.into(),
+        ))
     }
 
     #[allow(clippy::too_many_arguments)]

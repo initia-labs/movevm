@@ -2082,6 +2082,53 @@ func BcsDeserializeViewFunction(input []byte) (ViewFunction, error) {
 	}
 	return obj, err
 }
+
+type ViewOutput struct {
+	Ret string
+	Events []JsonEvent
+	GasUsed uint64
+}
+
+func (obj *ViewOutput) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeStr(obj.Ret); err != nil { return err }
+	if err := serialize_vector_JsonEvent(obj.Events, serializer); err != nil { return err }
+	if err := serializer.SerializeU64(obj.GasUsed); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *ViewOutput) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeViewOutput(deserializer serde.Deserializer) (ViewOutput, error) {
+	var obj ViewOutput
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Ret = val } else { return obj, err }
+	if val, err := deserialize_vector_JsonEvent(deserializer); err == nil { obj.Events = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.GasUsed = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeViewOutput(input []byte) (ViewOutput, error) {
+	if input == nil {
+		var obj ViewOutput
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeViewOutput(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
 func serialize_array32_u8_array(value [32]uint8, serializer serde.Serializer) error {
 	for _, item := range(value) {
 		if err := serializer.SerializeU8(item); err != nil { return err }

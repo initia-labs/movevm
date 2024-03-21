@@ -10,6 +10,7 @@ mod output;
 mod staking;
 mod std_coin;
 mod table;
+mod view_output;
 
 #[cfg(feature = "testing")]
 mod move_unit;

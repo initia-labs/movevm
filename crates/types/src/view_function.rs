@@ -1,3 +1,4 @@
+use crate::json_event::JsonEvent;
 use crate::serde_helper::vec_bytes;
 
 use move_core_types::identifier::{IdentStr, Identifier};
@@ -47,5 +48,36 @@ impl ViewFunction {
     }
     pub fn into_inner(self) -> (ModuleId, Identifier, Vec<TypeTag>, Vec<Vec<u8>>) {
         (self.module, self.function, self.ty_args, self.args)
+    }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct ViewOutput {
+    ret: String,
+    events: Vec<JsonEvent>,
+
+    /// The amount of gas used during execution.
+    gas_used: u64,
+}
+
+impl ViewOutput {
+    pub fn new(ret: String, events: Vec<JsonEvent>, gas_used: u64) -> Self {
+        ViewOutput {
+            ret,
+            events,
+            gas_used,
+        }
+    }
+
+    pub fn ret(&self) -> &String {
+        &self.ret
+    }
+
+    pub fn events(&self) -> &Vec<JsonEvent> {
+        &self.events
+    }
+
+    pub fn gas_used(&self) -> u64 {
+        self.gas_used
     }
 }

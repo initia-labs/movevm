@@ -4,7 +4,7 @@
 use bytes::Bytes;
 use initia_move_compiler::built_package::BuiltPackage;
 use initia_move_types::env::Env;
-use initia_move_types::view_function::ViewFunction;
+use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
@@ -134,6 +134,15 @@ impl MoveHarness {
 
     pub fn run_view_function(&mut self, view_fn: ViewFunction) -> Result<String, VMStatus> {
         let state = self.chain.create_state();
+        let output = self.run_view_function_with_state(view_fn, &state)?;
+        Ok(output.ret().clone())
+    }
+
+    pub fn run_view_function_get_events(
+        &mut self,
+        view_fn: ViewFunction,
+    ) -> Result<ViewOutput, VMStatus> {
+        let state = self.chain.create_state();
         self.run_view_function_with_state(view_fn, &state)
     }
 
@@ -141,7 +150,7 @@ impl MoveHarness {
         &mut self,
         view_fn: ViewFunction,
         state: &MockState,
-    ) -> Result<String, VMStatus> {
+    ) -> Result<ViewOutput, VMStatus> {
         let mut table_state = MockTableState::new(state);
 
         let resolver = StateViewImpl::new(state);

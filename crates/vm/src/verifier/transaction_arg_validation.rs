@@ -262,7 +262,8 @@ fn construct_arg(
             let initial_cursor_len = arg.len();
             let mut cursor = Cursor::new(&arg[..]);
             let mut new_arg = vec![];
-            let mut max_invocations = 10; // Read from config in the future
+            let mut max_invocations = 1000; // Read from config in the future
+            let max_depth = 10;
             recursively_construct_arg(
                 session,
                 ty,
@@ -271,6 +272,7 @@ fn construct_arg(
                 initial_cursor_len,
                 gas_meter,
                 &mut max_invocations,
+                max_depth,
                 &mut new_arg,
             )?;
             // Check cursor has parsed everything
@@ -308,9 +310,17 @@ pub(crate) fn recursively_construct_arg(
     initial_cursor_len: usize,
     gas_meter: &mut impl GasMeter,
     max_invocations: &mut u64,
+    max_depth: u64,
     arg: &mut Vec<u8>,
 ) -> Result<(), VMStatus> {
     use move_vm_types::loaded_data::runtime_types::Type::*;
+
+    if max_depth == 0 {
+        return Err(VMStatus::error(
+            StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
+            None,
+        ));
+    }
 
     match ty {
         Vector(inner) => {
@@ -326,6 +336,7 @@ pub(crate) fn recursively_construct_arg(
                     initial_cursor_len,
                     gas_meter,
                     max_invocations,
+                    max_depth - 1,
                     arg,
                 )?;
                 len -= 1;
@@ -349,6 +360,7 @@ pub(crate) fn recursively_construct_arg(
                 initial_cursor_len,
                 gas_meter,
                 max_invocations,
+                max_depth,
             )?);
         }
         Bool | U8 => read_n_bytes(1, cursor, arg)?,
@@ -376,6 +388,7 @@ fn validate_and_construct(
     initial_cursor_len: usize,
     gas_meter: &mut impl GasMeter,
     max_invocations: &mut u64,
+    max_depth: u64,
 ) -> Result<Vec<u8>, VMStatus> {
     if *max_invocations == 0 {
         return Err(VMStatus::error(
@@ -443,6 +456,7 @@ fn validate_and_construct(
             initial_cursor_len,
             gas_meter,
             max_invocations,
+            max_depth - 1,
             &mut arg,
         )?;
         args.push(arg);

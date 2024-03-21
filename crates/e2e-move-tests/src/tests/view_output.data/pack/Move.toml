@@ -1,0 +1,10 @@
+[package]
+name = "ViewOutputTests"
+version = "0.0.0"
+
+[dependencies]
+InitiaStdlib = { local = "../../../../../../precompile/modules/initia_stdlib" }
+
+[addresses]
+std =  "0x1"
+test = "0x2"
