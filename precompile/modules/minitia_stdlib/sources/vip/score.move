@@ -15,6 +15,7 @@ module minitia_std::vip_score {
 
     struct Scores has store {
         total_score: u64,
+        is_finalized: bool,
         score: table::Table<address /* user */, u64>,
     }
 
@@ -42,6 +43,9 @@ module minitia_std::vip_score {
 
     /// The score is invalid.
     const EINVALID_SCORE: u64 = 7;
+
+    /// The stage is already finalized.
+    const EFINALIED_STAGE: u64 = 8;
 
     //
     // Events
@@ -126,6 +130,7 @@ module minitia_std::vip_score {
         if (!table::contains(&module_store.scores, stage)) {
             table::add(&mut module_store.scores, stage, Scores {
                 total_score: 0,
+                is_finalized: false,
                 score: table::new<address, u64>()
             });
         };
@@ -144,7 +149,10 @@ module minitia_std::vip_score {
         assert!(table::contains(&module_store.scores, stage), error::invalid_argument(EINVALID_STAGE));
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
+        assert!(!scores.is_finalized, error::invalid_argument(EFINALIED_STAGE));
+        
         let score = table::borrow_mut_with_default(&mut scores.score, addr, 0);
+
         *score = *score + amount;
         scores.total_score = scores.total_score + amount;
 
@@ -171,6 +179,8 @@ module minitia_std::vip_score {
         assert!(table::contains(&module_store.scores, stage), error::invalid_argument(EINVALID_STAGE));
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
+        assert!(!scores.is_finalized, error::invalid_argument(EFINALIED_STAGE));
+
         let score = table::borrow_mut(&mut scores.score, addr);
         assert!(*score >= amount, error::invalid_argument(EINSUFFICIENT_SCORE));
         *score = *score - amount;
@@ -193,12 +203,14 @@ module minitia_std::vip_score {
         amount: u64
     ) acquires ModuleStore {
         check_deployer_permission(deployer);
-        assert!(amount > 0, error::invalid_argument(EINVALID_SCORE));
+        assert!(amount >= 0, error::invalid_argument(EINVALID_SCORE));
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(table::contains(&module_store.scores, stage), error::invalid_argument(EINVALID_STAGE));
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
+        assert!(!scores.is_finalized, error::invalid_argument(EFINALIED_STAGE));
+
         let score = table::borrow_mut_with_default(&mut scores.score, addr, 0);
         
         if (*score > amount) {
@@ -222,6 +234,18 @@ module minitia_std::vip_score {
     //
     // Entry functions
     //
+    public entry fun finalize_script(
+        deployer: &signer,
+        stage: u64
+    ) acquires ModuleStore {
+        check_deployer_permission(deployer);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        assert!(table::contains(&module_store.scores, stage), error::invalid_argument(EINVALID_STAGE));
+
+        let scores = table::borrow_mut(&mut module_store.scores, stage);
+        assert!(!scores.is_finalized, error::invalid_argument(EFINALIED_STAGE));
+        scores.is_finalized = true;
+    }
 
     public entry fun update_score_script(
         deployer: &signer,
@@ -339,6 +363,34 @@ module minitia_std::vip_score {
         init_module_for_test(chain);
         remove_deployer_script(chain, signer::address_of(deployer));
     }
+    
+    #[test(chain = @0x1, deployer = @0x2)]
+    #[expected_failure(abort_code = 0x10006, location = Self)]
+    fun failed_not_match_length(chain: &signer, deployer: &signer) acquires ModuleStore {
+        init_module_for_test(chain);
+        add_deployer_script(chain, signer::address_of(deployer));
+
+        update_score_script(
+            deployer, 
+            1,
+            vector[@0x123, @0x234],
+            vector[]
+        );
+    }
+
+    #[test(chain = @0x1, deployer = @0x2, user = @0x123)]
+    #[expected_failure(abort_code = 0x10008, location = Self)]
+    fun failed_finalized_stage(chain: &signer, deployer: &signer, user: address) acquires ModuleStore {
+        init_module_for_test(chain);
+        add_deployer_script(chain, signer::address_of(deployer));
+        prepare_stage(deployer, 1);
+
+        increase_score(deployer, user, 1, 100);
+        assert!(get_score(user, 1) == 100, 1);
+        finalize_script(deployer, 1);
+        increase_score(deployer, user, 1, 100);
+    }
+
 
     #[test(chain = @0x1, deployer_a = @0x2, deployer_b = @0x3, user_a = @0x123, user_b = @0x456)]
     fun test_e2e(chain: &signer, deployer_a: &signer, deployer_b: &signer, user_a: address, user_b: address) acquires ModuleStore {
