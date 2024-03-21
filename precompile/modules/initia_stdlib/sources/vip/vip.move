@@ -45,6 +45,8 @@ module initia_std::vip {
     const ESNAPSHOT_ALREADY_EXISTS: u64 = 16;
     const EINVALID_BATCH_ARGUMENT: u64 = 17;
     const EINVALID_TOTAL_REWARD: u64 = 18;
+    const ESNAPSHOT_NOT_EXISTS: u64 = 19;
+    const EALREADY_RELEASED: u64 = 20;
     
     //
     //  Constants
@@ -132,6 +134,11 @@ module initia_std::vip {
         operator_vesting_period: u64,
         minimum_tvl: u64,
         maximum_tvl: u64,
+    }
+
+    struct SnapshotResponse has drop {
+        merkle_root: vector<u8>,
+        total_l2_score: u64
     }
 
     struct StageDataResponse has drop {
@@ -758,6 +765,28 @@ module initia_std::vip {
         });
     }
 
+    public entry fun update_snapshot(
+        agent: &signer,
+        bridge_id: u64,
+        stage: u64,
+        merkle_root: vector<u8>,
+        total_l2_score: u64,
+    )  acquires ModuleStore {
+        check_agent_permission(agent);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)), error::not_found(ESTAGE_DATA_NOT_FOUND));
+        let stage_data = table::borrow_mut(&mut module_store.stage_data, table_key::encode_u64(stage));
+
+        let (_, block_time) = block::get_block_info();
+        assert!(block_time < stage_data.user_vesting_release_time, error::unavailable(EALREADY_RELEASED));
+        assert!(block_time < stage_data.operator_vesting_release_time, error::unavailable(EALREADY_RELEASED));
+        assert!(table::contains(&stage_data.snapshots, table_key::encode_u64(bridge_id)), error::not_found(ESNAPSHOT_NOT_EXISTS));
+
+        let snapshot = table::borrow_mut(&mut stage_data.snapshots, table_key::encode_u64(bridge_id));
+        snapshot.merkle_root = merkle_root;
+        snapshot.total_l2_score = total_l2_score;
+    }
+
     public entry fun claim_operator_reward_script(
         operator: &signer,
         bridge_id: u64,
@@ -973,6 +1002,21 @@ module initia_std::vip {
     //
     // View Functions
     //
+
+    #[view]
+    public fun get_snapshot(bridge_id: u64, stage: u64): SnapshotResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+
+        assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)), error::not_found(ESTAGE_DATA_NOT_FOUND));
+        let snapshots = table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
+        assert!(table::contains(&snapshots.snapshots, table_key::encode_u64(bridge_id)), error::not_found(ESNAPSHOT_NOT_EXISTS));
+        let snapshot = table::borrow(&snapshots.snapshots, table_key::encode_u64(bridge_id));
+
+        SnapshotResponse {
+            merkle_root: snapshot.merkle_root,
+            total_l2_score: snapshot.total_l2_score,
+        }
+    }
     
     #[view]
     public fun get_expected_reward(bridge_id: u64, fund_reward_amount: u64): u64 acquires ModuleStore {
@@ -1992,6 +2036,47 @@ module initia_std::vip {
             decimal256::mul_u64(&commission_rate, total_reward_per_stage/operator_vesting_period)
         ), 0);
     }
+
+    #[test(chain=@0x1, operator=@0x111)]
+    fun test_update_snapshot(chain: &signer, operator: &signer) 
+        acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            1,
+            @0x1111,
+            10000000000000000,
+        );
+        let release_time = 1000;
+        fund_reward_script(chain, 1, release_time, release_time);
+        submit_snapshot(chain, bridge_id, 1, x"8888888888888888888888888888888888888888888888888888888888888888", 0);
+        let snapshot = get_snapshot(bridge_id, 1);
+        assert!(snapshot.merkle_root == x"8888888888888888888888888888888888888888888888888888888888888888", 0);
+        assert!(snapshot.total_l2_score == 0, 0);
+
+        update_snapshot(chain, bridge_id, 1, x"7777777777777777777777777777777777777777777777777777777777777777", 100);
+        let snapshot = get_snapshot(bridge_id, 1);
+        assert!(snapshot.merkle_root == x"7777777777777777777777777777777777777777777777777777777777777777", 100);
+        assert!(snapshot.total_l2_score == 100, 0);
+    }
+
+    #[test(chain=@0x1, operator=@0x111)]
+    #[expected_failure(abort_code = 0xD0014, location = Self)]
+    fun failed_update_snapshot(chain: &signer, operator: &signer) 
+        acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            1,
+            @0x1111,
+            10000000000000000,
+        );
+        let release_time = 0;
+        fund_reward_script(chain, 1, release_time, release_time);
+        submit_snapshot(chain, bridge_id, 1, x"8888888888888888888888888888888888888888888888888888888888888888", 0);
+        update_snapshot(chain, bridge_id, 1, x"7777777777777777777777777777777777777777777777777777777777777777", 100);
+    }
+
 
     #[test(chain=@0x1, operator=@0x111, operator2=@0x222)]
     fun test_get_next_stage(chain: &signer, operator: &signer, operator2: &signer) 
