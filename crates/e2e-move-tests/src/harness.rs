@@ -138,7 +138,10 @@ impl MoveHarness {
         Ok(output.ret().clone())
     }
 
-    pub fn run_view_function_get_events(&mut self, view_fn: ViewFunction) -> Result<ViewOutput, VMStatus> {
+    pub fn run_view_function_get_events(
+        &mut self,
+        view_fn: ViewFunction,
+    ) -> Result<ViewOutput, VMStatus> {
         let state = self.chain.create_state();
         self.run_view_function_with_state(view_fn, &state)
     }
