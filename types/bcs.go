@@ -1006,6 +1006,45 @@ func BcsDeserializeJsonEvent(input []byte) (JsonEvent, error) {
 	return obj, err
 }
 
+type JsonEvents []struct {Field0 TypeTag; Field1 string}
+
+func (obj *JsonEvents) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serialize_vector_tuple2_TypeTag_str((([]struct {Field0 TypeTag; Field1 string})(*obj)), serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *JsonEvents) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeJsonEvents(deserializer serde.Deserializer) (JsonEvents, error) {
+	var obj []struct {Field0 TypeTag; Field1 string}
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return (JsonEvents)(obj), err }
+	if val, err := deserialize_vector_tuple2_TypeTag_str(deserializer); err == nil { obj = val } else { return ((JsonEvents)(obj)), err }
+	deserializer.DecreaseContainerDepth()
+	return (JsonEvents)(obj), nil
+}
+
+func BcsDeserializeJsonEvents(input []byte) (JsonEvents, error) {
+	if input == nil {
+		var obj JsonEvents
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeJsonEvents(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type Module struct {
 	Code []uint8
 }
@@ -2082,6 +2121,53 @@ func BcsDeserializeViewFunction(input []byte) (ViewFunction, error) {
 	}
 	return obj, err
 }
+
+type ViewOutput struct {
+	Ret string
+	Events JsonEvents
+	GasUsed uint64
+}
+
+func (obj *ViewOutput) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeStr(obj.Ret); err != nil { return err }
+	if err := obj.Events.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeU64(obj.GasUsed); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *ViewOutput) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeViewOutput(deserializer serde.Deserializer) (ViewOutput, error) {
+	var obj ViewOutput
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Ret = val } else { return obj, err }
+	if val, err := DeserializeJsonEvents(deserializer); err == nil { obj.Events = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.GasUsed = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeViewOutput(input []byte) (ViewOutput, error) {
+	if input == nil {
+		var obj ViewOutput
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeViewOutput(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
 func serialize_array32_u8_array(value [32]uint8, serializer serde.Serializer) error {
 	for _, item := range(value) {
 		if err := serializer.SerializeU8(item); err != nil { return err }
@@ -2094,6 +2180,19 @@ func deserialize_array32_u8_array(deserializer serde.Deserializer) ([32]uint8, e
 	for i := range(obj) {
 		if val, err := deserializer.DeserializeU8(); err == nil { obj[i] = val } else { return obj, err }
 	}
+	return obj, nil
+}
+
+func serialize_tuple2_TypeTag_str(value struct {Field0 TypeTag; Field1 string}, serializer serde.Serializer) error {
+	if err := value.Field0.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeStr(value.Field1); err != nil { return err }
+	return nil
+}
+
+func deserialize_tuple2_TypeTag_str(deserializer serde.Deserializer) (struct {Field0 TypeTag; Field1 string}, error) {
+	var obj struct {Field0 TypeTag; Field1 string}
+	if val, err := DeserializeTypeTag(deserializer); err == nil { obj.Field0 = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Field1 = val } else { return obj, err }
 	return obj, nil
 }
 
@@ -2255,6 +2354,24 @@ func deserialize_vector_str(deserializer serde.Deserializer) ([]string, error) {
 	obj := make([]string, length)
 	for i := range(obj) {
 		if val, err := deserializer.DeserializeStr(); err == nil { obj[i] = val } else { return nil, err }
+	}
+	return obj, nil
+}
+
+func serialize_vector_tuple2_TypeTag_str(value []struct {Field0 TypeTag; Field1 string}, serializer serde.Serializer) error {
+	if err := serializer.SerializeLen(uint64(len(value))); err != nil { return err }
+	for _, item := range(value) {
+		if err := serialize_tuple2_TypeTag_str(item, serializer); err != nil { return err }
+	}
+	return nil
+}
+
+func deserialize_vector_tuple2_TypeTag_str(deserializer serde.Deserializer) ([]struct {Field0 TypeTag; Field1 string}, error) {
+	length, err := deserializer.DeserializeLen()
+	if err != nil { return nil, err }
+	obj := make([]struct {Field0 TypeTag; Field1 string}, length)
+	for i := range(obj) {
+		if val, err := deserialize_tuple2_TypeTag_str(deserializer); err == nil { obj[i] = val } else { return nil, err }
 	}
 	return obj, nil
 }

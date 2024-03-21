@@ -6,12 +6,9 @@ pub fn genesis_address() -> AccountAddress {
     CORE_CODE_ADDRESS
 }
 
-use anyhow::{format_err, Error, Result};
-
 use move_core_types::account_address::AccountAddress;
 
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 use crate::account::Accounts;
 use crate::cosmos::CosmosMessages;
@@ -87,31 +84,6 @@ pub enum MessagePayload {
     Execute(EntryFunction),
     /// Executes script.
     Script(Script),
-}
-
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-#[repr(u8)]
-pub enum MessagePayloadType {
-    Execute = 1,
-    Script = 2,
-}
-
-impl TryFrom<u8> for MessagePayloadType {
-    type Error = Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            1 => Ok(MessagePayloadType::Execute),
-            2 => Ok(MessagePayloadType::Script),
-            _ => Err(format_err!("invalid PayloadType")),
-        }
-    }
-}
-
-impl From<MessagePayloadType> for u8 {
-    fn from(t: MessagePayloadType) -> Self {
-        t as u8
-    }
 }
 
 #[derive(Default, Debug, Clone)]

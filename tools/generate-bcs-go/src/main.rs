@@ -16,7 +16,7 @@ use initia_move_types::{
     script::Script,
     staking_change_set::StakingDelta,
     table::TableInfo,
-    view_function::ViewFunction,
+    view_function::{ViewFunction, ViewOutput},
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -45,6 +45,7 @@ fn main() {
     tracer.trace_simple_type::<ExecutionResult>().unwrap();
     tracer.trace_simple_type::<EntryFunction>().unwrap();
     tracer.trace_simple_type::<ViewFunction>().unwrap();
+    tracer.trace_simple_type::<ViewOutput>().unwrap();
     tracer.trace_simple_type::<ModuleBundle>().unwrap();
     tracer.trace_simple_type::<Script>().unwrap();
     tracer.trace_simple_type::<Env>().unwrap();

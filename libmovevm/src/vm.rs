@@ -132,7 +132,7 @@ pub(crate) fn execute_view_function(
     let state_view_impl = StateViewImpl::new(&storage);
     let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
-    let return_val = vm.execute_view_function(
+    let output = vm.execute_view_function(
         &api,
         &env,
         &state_view_impl,
@@ -141,7 +141,7 @@ pub(crate) fn execute_view_function(
         gas_limit,
     )?;
 
-    to_vec(&return_val)
+    to_vec(&output)
 }
 
 /////////////////////////////////////////
