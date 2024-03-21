@@ -66,15 +66,15 @@ func (vm *VM) ExecuteViewFunction(
 	env types.Env,
 	gasLimit uint64,
 	payload types.ViewFunction,
-) (string, error) {
+) (types.ViewOutput, error) {
 	envBz, err := env.BcsSerialize()
 	if err != nil {
-		return "", err
+		return types.ViewOutput{}, err
 	}
 
 	bz, err := payload.BcsSerialize()
 	if err != nil {
-		return "", err
+		return types.ViewOutput{}, err
 	}
 
 	res, err := api.ExecuteViewFunction(
@@ -86,10 +86,10 @@ func (vm *VM) ExecuteViewFunction(
 		bz,
 	)
 	if err != nil {
-		return "", err
+		return types.ViewOutput{}, err
 	}
 
-	return types.DeserializeString(res)
+	return types.BcsDeserializeViewOutput(res)
 }
 
 // Execute calls a given contract.

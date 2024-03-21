@@ -362,7 +362,7 @@ func Test_QueryContract(t *testing.T) {
 		payload,
 	)
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("\"%d\"", mintAmount), res)
+	require.Equal(t, fmt.Sprintf("\"%d\"", mintAmount), res.Ret)
 }
 
 func Test_DecodeResource(t *testing.T) {
@@ -590,5 +590,5 @@ func Test_OracleAPI(t *testing.T) {
 		payload,
 	)
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("[\"%d\",\"%d\",\"%d\"]", price, updatedAt, decimals), res)
+	require.Equal(t, fmt.Sprintf("[\"%d\",\"%d\",\"%d\"]", price, updatedAt, decimals), res.Ret)
 }
