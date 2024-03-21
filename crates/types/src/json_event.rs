@@ -52,6 +52,6 @@ impl PartialEq for JsonEvents {
             }
         }
 
-        return true;
+        true
     }
 }
