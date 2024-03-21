@@ -19,12 +19,11 @@ func ReleaseVM(vm VM) {
 }
 
 // AllocateVM call ffi(`allocate_vm`) to allocate vm instance
-func AllocateVM(moduleCacheCapacity, scriptCacheCapacity uint64, allowArbitrary bool) VM {
+func AllocateVM(moduleCacheCapacity, scriptCacheCapacity uint64) VM {
 	return VM{
 		ptr: C.allocate_vm(
 			cusize(moduleCacheCapacity),
 			cusize(scriptCacheCapacity),
-			cbool(allowArbitrary),
 		),
 	}
 }

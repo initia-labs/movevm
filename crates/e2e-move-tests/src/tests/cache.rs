@@ -2,6 +2,15 @@ use crate::MoveHarness;
 use move_core_types::account_address::AccountAddress;
 
 #[test]
+fn test_check_compat() {
+    let mut h = MoveHarness::new();
+    h.initialize_with_check_compat(true);
+
+    let mut h = MoveHarness::new();
+    h.initialize_with_check_compat(false);
+}
+
+#[test]
 fn test_tx_module_cache() {
     let mut h = MoveHarness::new();
     let path = "src/tests/basic_coin.data/pack";

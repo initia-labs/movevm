@@ -40,12 +40,10 @@ pub extern "C" fn release_vm(vm: *mut vm_t) {
 pub extern "C" fn allocate_vm(
     module_cache_capacity: usize,
     script_cache_capacity: usize,
-    allow_arbitrary: bool,
 ) -> *mut vm_t {
     let vm = Box::into_raw(Box::new(MoveVM::new(
         module_cache_capacity,
         script_cache_capacity,
-        allow_arbitrary,
     )));
     vm as *mut vm_t
 }

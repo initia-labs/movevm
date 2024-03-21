@@ -85,7 +85,7 @@ pub struct MoveVM {
 
 impl Default for MoveVM {
     fn default() -> Self {
-        Self::new(1000, 100, false)
+        Self::new(1000, 100)
     }
 }
 
@@ -93,7 +93,6 @@ impl MoveVM {
     pub fn new(
         module_cache_capacity: usize,
         script_cache_capacity: usize,
-        allow_arbitrary: bool,
     ) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
@@ -103,7 +102,6 @@ impl MoveVM {
                 verifier: verifier_config(),
                 module_cache_capacity,
                 script_cache_capacity,
-                allow_arbitrary,
                 ..Default::default()
             },
         )
