@@ -779,6 +779,7 @@ module initia_std::vip {
 
         let (_, block_time) = block::get_block_info();
         assert!(block_time < stage_data.user_vesting_release_time, error::unavailable(EALREADY_RELEASED));
+        assert!(block_time < stage_data.operator_vesting_release_time, error::unavailable(EALREADY_RELEASED));
         assert!(table::contains(&stage_data.snapshots, table_key::encode_u64(bridge_id)), error::not_found(ESNAPSHOT_NOT_EXISTS));
 
         let snapshot = table::borrow_mut(&mut stage_data.snapshots, table_key::encode_u64(bridge_id));
