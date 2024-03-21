@@ -219,7 +219,7 @@ typedef struct {
   GoApi_vtable vtable;
 } GoApi;
 
-vm_t *allocate_vm(size_t module_cache_capacity, size_t script_cache_capacity);
+vm_t *allocate_vm(size_t module_cache_capacity, size_t script_cache_capacity, bool allow_arbitrary);
 
 UnmanagedVector convert_module_name(UnmanagedVector *errmsg,
                                     ByteSliceView precompiled,

@@ -85,12 +85,16 @@ pub struct MoveVM {
 
 impl Default for MoveVM {
     fn default() -> Self {
-        Self::new(1000, 100)
+        Self::new(1000, 100, false)
     }
 }
 
 impl MoveVM {
-    pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
+    pub fn new(
+        module_cache_capacity: usize,
+        script_cache_capacity: usize,
+        allow_arbitrary: bool,
+    ) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
         let runtime = VMRuntime::new(
@@ -99,6 +103,7 @@ impl MoveVM {
                 verifier: verifier_config(),
                 module_cache_capacity,
                 script_cache_capacity,
+                allow_arbitrary,
                 ..Default::default()
             },
         )
@@ -176,7 +181,7 @@ impl MoveVM {
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
         let publish_request = PublishRequest {
-            check_compat: false,
+            check_compat: true,
             destination: AccountAddress::ONE,
             expected_modules: None,
             module_bundle,

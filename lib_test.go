@@ -53,7 +53,7 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	kvStore := api.NewLookup()
 	blockTime := uint64(time.Now().Unix())
 
-	vm := vm.NewVM(1000, 100)
+	vm := vm.NewVM(1000, 100, false)
 	err = vm.Initialize(
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),
