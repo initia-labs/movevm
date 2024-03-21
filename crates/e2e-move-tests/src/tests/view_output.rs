@@ -49,5 +49,6 @@ fn test_view_output() {
             })),
             "{\"arg\":\"hello world\",\"type_arg\":\"u256\"}".to_string()
         )])
+        .into_inner(),
     );
 }

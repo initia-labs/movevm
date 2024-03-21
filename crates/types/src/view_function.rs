@@ -1,4 +1,4 @@
-use crate::json_event::JsonEvents;
+use crate::json_event::JsonEvent;
 use crate::serde_helper::vec_bytes;
 
 use move_core_types::identifier::{IdentStr, Identifier};
@@ -54,14 +54,14 @@ impl ViewFunction {
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct ViewOutput {
     ret: String,
-    events: JsonEvents,
+    events: Vec<JsonEvent>,
 
     /// The amount of gas used during execution.
     gas_used: u64,
 }
 
 impl ViewOutput {
-    pub fn new(ret: String, events: JsonEvents, gas_used: u64) -> Self {
+    pub fn new(ret: String, events: Vec<JsonEvent>, gas_used: u64) -> Self {
         ViewOutput {
             ret,
             events,
@@ -73,7 +73,7 @@ impl ViewOutput {
         &self.ret
     }
 
-    pub fn events(&self) -> &JsonEvents {
+    pub fn events(&self) -> &Vec<JsonEvent> {
         &self.events
     }
 

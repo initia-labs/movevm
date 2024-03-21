@@ -305,7 +305,11 @@ impl MoveVM {
             .checked_sub(gas_meter.balance())
             .unwrap();
 
-        Ok(ViewOutput::new(ret, json_events, gas_used.into()))
+        Ok(ViewOutput::new(
+            ret,
+            json_events.into_inner(),
+            gas_used.into(),
+        ))
     }
 
     #[allow(clippy::too_many_arguments)]
