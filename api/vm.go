@@ -21,7 +21,10 @@ func ReleaseVM(vm VM) {
 // AllocateVM call ffi(`allocate_vm`) to allocate vm instance
 func AllocateVM(moduleCacheCapacity, scriptCacheCapacity uint64) VM {
 	return VM{
-		ptr: C.allocate_vm(cusize(moduleCacheCapacity), cusize(scriptCacheCapacity)),
+		ptr: C.allocate_vm(
+			cusize(moduleCacheCapacity),
+			cusize(scriptCacheCapacity),
+		),
 	}
 }
 
