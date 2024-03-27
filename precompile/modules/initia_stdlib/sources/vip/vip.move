@@ -1493,6 +1493,7 @@ module initia_std::vip {
         );
         
         let total_reward_per_stage = 100_000_000_000;
+        assert!(vip_vault::reward_per_stage() == total_reward_per_stage, 0);
         let portion = 10;
         let reward_per_stage = total_reward_per_stage/portion;
         let vesting_period = 10;
