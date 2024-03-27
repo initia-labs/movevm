@@ -6,6 +6,7 @@ module initia_std::vip_zapping {
     use std::string::String;
     use std::table;
     use std::block;
+    use std::vector;
     
     use initia_std::staking::{Self, Delegation, DelegationResponse};
     use initia_std::coin;
@@ -175,6 +176,24 @@ module initia_std::vip_zapping {
     //
     // Entry Functions
     //
+
+    public entry fun batch_claim_zapping_script(
+        account: &signer,
+        zids: vector<u64>,
+    ) acquires ModuleStore, LSStore {
+        vector::enumerate_ref(&zids, |_i, zid| {
+            claim_zapping_script(account, *zid);
+        });
+    }
+
+    public entry fun batch_claim_reward_script(
+        account: &signer,
+        zids: vector<u64>,
+    ) acquires ModuleStore, LSStore {
+        vector::enumerate_ref(&zids, |_i, zid| {
+            claim_reward_script(account, *zid);
+        });
+    }
 
     // deposit zapping delegation to user's staking
     public entry fun claim_zapping_script(
@@ -774,8 +793,8 @@ module initia_std::vip_zapping {
         staking::deposit_reward_for_chain(chain, l_m, vector[val], vector[validator_reward]);
         let zapping_reward = get_delegation_info(0).unclaimed_reward;
         assert!(validator_reward == zapping_reward, 0);
-
-        claim_reward_script(account, 0);
+        
+        batch_claim_reward_script(account, vector[0]);
         assert!(primary_fungible_store::balance(signer::address_of(account), vip_reward::reward_metadata()) == zapping_reward, 0);
     }
 
@@ -839,7 +858,7 @@ module initia_std::vip_zapping {
         
         let validator_reward = 1_000_000; 
         staking::deposit_reward_for_chain(chain, l_m, vector[val], vector[validator_reward]);
-        claim_zapping_script(user_a, 0);
+        batch_claim_zapping_script(user_a, vector[0]);
         assert!(primary_fungible_store::balance(signer::address_of(user_a), vip_reward::reward_metadata()) == (validator_reward*2)/3, 3);   
     }
 
