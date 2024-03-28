@@ -679,6 +679,26 @@ module initia_std::vip_vesting {
     }
 
     #[view]
+    public fun get_user_claimed_stages(
+        account_addr: address,
+        bridge_id: u64,
+    ): vector<u64> acquires VestingStore {
+        let claimed_stages = vector::empty<u64>();
+        let vesting_store_addr = get_vesting_store_address<UserVesting>(account_addr, bridge_id);
+        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        let iter = table::iter(&mut vesting_store.claimed_stages, option::none(), option::none(), 1);
+        loop {
+            if (!table::prepare<vector<u8>, bool>(&mut iter)) {
+                break
+            };
+
+            let (key, _) = table::next<vector<u8>, bool>(&mut iter);
+            vector::push_back(&mut claimed_stages, table_key::decode_u64(key));
+        };
+        claimed_stages
+    }
+
+    #[view]
     public fun get_user_vesting(
         account_addr: address,
         bridge_id: u64,
@@ -764,6 +784,26 @@ module initia_std::vip_vesting {
         bridge_id: u64,
     ): u64 acquires VestingStore {
         get_last_claimed_stage<OperatorVesting>(account_addr, bridge_id)
+    }
+
+    #[view]
+    public fun get_operator_claimed_stages(
+        account_addr: address,
+        bridge_id: u64,
+    ): vector<u64> acquires VestingStore {
+        let claimed_stages = vector::empty<u64>();
+        let vesting_store_addr = get_vesting_store_address<OperatorVesting>(account_addr, bridge_id);
+        let vesting_store = borrow_global_mut<VestingStore<OperatorVesting>>(vesting_store_addr);
+        let iter = table::iter(&mut vesting_store.claimed_stages, option::none(), option::none(), 1);
+        loop {
+            if (!table::prepare<vector<u8>, bool>(&mut iter)) {
+                break
+            };
+
+            let (key, _) = table::next<vector<u8>, bool>(&mut iter);
+            vector::push_back(&mut claimed_stages, table_key::decode_u64(key));
+        };
+        claimed_stages
     }
 
     #[view]

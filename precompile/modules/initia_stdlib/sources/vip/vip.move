@@ -2124,6 +2124,12 @@ module initia_std::vip {
         assert!(vip_vesting::get_operator_unlocked_reward(signer::address_of(operator), bridge_id, 5) == (
             decimal256::mul_u64(&commission_rate, total_reward_per_stage/operator_vesting_period)
         ), 0);
+
+        let user_claimed_stages = vip_vesting::get_user_claimed_stages(signer::address_of(receiver), bridge_id);
+        let operator_claimed_stages = vip_vesting::get_operator_claimed_stages(signer::address_of(operator), bridge_id);
+        
+        assert!(user_claimed_stages == vector[1, 2, 3, 4, 5], 0);
+        assert!(operator_claimed_stages == vector[4, 5], 0);
     }
 
     #[test(chain=@0x1, operator=@0x111)]
