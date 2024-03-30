@@ -78,7 +78,16 @@ module initia_std::simple_json {
         object.index = json::get_next_index(&prev_index, child_length - 1);
     }
 
-    public fun find_and_set_index(object: &mut SimpleJsonObject, key: &String):bool {
+    public fun find_and_set_index(object: &mut SimpleJsonObject, key: &String) {
+        let (prev_index, _) = json::get_prev_index(&object.index);
+        let find_index = json::find(&object.obj, &prev_index, key);
+        
+        if ( !json::is_null_index(&find_index)) {
+            object.index = find_index;
+        }
+    }
+
+    public fun find_and_set_index_with_return(object: &mut SimpleJsonObject, key: &String):bool {
         let (prev_index, _) = json::get_prev_index(&object.index);
         let find_index = json::find(&object.obj, &prev_index, key);
         
@@ -243,7 +252,7 @@ module initia_std::simple_json {
     fun test_find_and_set_key0() {
         let obj = from_json_object(json::parse(string::utf8(b"{}")));
         increase_depth(&mut obj);
-        let ok = find_and_set_index(&mut obj, &string::utf8(b"move"));
+        let ok = find_and_set_index_with_return(&mut obj, &string::utf8(b"move"));
         assert!( !ok, 0);
 
         set_to_last_index(&mut obj);
@@ -259,7 +268,7 @@ module initia_std::simple_json {
     fun test_find_and_set_key1() {
         let obj = from_json_object(json::parse(string::utf8(b"{\"move\":{}}")));
         increase_depth(&mut obj);
-        let ok = find_and_set_index(&mut obj, &string::utf8(b"move"));
+        let ok = find_and_set_index_with_return(&mut obj, &string::utf8(b"move"));
         assert!( ok, 0);
 
         increase_depth(&mut obj);
@@ -273,7 +282,7 @@ module initia_std::simple_json {
     fun test_find_and_set_key3() {
         let obj = from_json_object(json::parse(string::utf8(b"{\"forward\": {\"receiver\": \"chain-c-bech32-address\"}, \"wasm\":{}}")));
         increase_depth(&mut obj);
-        let ok = find_and_set_index(&mut obj, &string::utf8(b"move"));
+        let ok = find_and_set_index_with_return(&mut obj, &string::utf8(b"move"));
         assert!( !ok, 0);
 
         set_to_last_index(&mut obj);
