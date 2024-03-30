@@ -70,9 +70,15 @@ module minitia_std::simple_json {
         object.index = json::get_next_index(&prev_index, position);
     }
 
-    public fun find_and_set_index(object: &mut SimpleJsonObject, key: &String) {
+    public fun find_and_set_index(object: &mut SimpleJsonObject, key: &String):bool {
         let (prev_index, _) = json::get_prev_index(&object.index);
-        object.index = json::find(&object.obj, &prev_index, key);
+        let find_index = json::find(&object.obj, &prev_index, key);
+        if ( json::is_null_index(&find_index)) {
+            false 
+        } else {
+            object.index = find_index;
+            true
+        }
     }
 
     public fun set_bool(object: &mut SimpleJsonObject, key: Option<String>, value: bool) {
@@ -222,5 +228,49 @@ module minitia_std::simple_json {
 
         let json_string = json::stringify(to_json_object(&obj));
         assert!(json_string == string::utf8(b"{}"), 0);
+    }
+
+    #[test]
+    fun test_find_and_set_key0() {
+        let obj = from_json_object(json::parse(string::utf8(b"{}")));
+        increase_depth(&mut obj);
+        let ok = find_and_set_index(&mut obj, &string::utf8(b"move"));
+        assert!( !ok, 0);
+
+        set_object(&mut obj, option::some(string::utf8(b"move")));
+        increase_depth(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"async_callback")));
+
+        let json_str = json::stringify(to_json_object(&obj));
+        assert!( json_str == string::utf8(b"{\"move\":{\"async_callback\":{}}}"), 1)
+    }
+
+    #[test]
+    fun test_find_and_set_key1() {
+        let obj = from_json_object(json::parse(string::utf8(b"{\"move\":{}}")));
+        increase_depth(&mut obj);
+        let ok = find_and_set_index(&mut obj, &string::utf8(b"move"));
+        assert!( ok, 0);
+
+        increase_depth(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"async_callback")));
+
+        let json_str = json::stringify(to_json_object(&obj));
+        assert!( json_str == string::utf8(b"{\"move\":{\"async_callback\":{}}}"), 1)
+    }
+
+    #[test]
+    fun test_find_and_set_key3() {
+        let obj = from_json_object(json::parse(string::utf8(b"{\"forward\": {\"receiver\": \"chain-c-bech32-address\"}}")));
+        increase_depth(&mut obj);
+        let ok = find_and_set_index(&mut obj, &string::utf8(b"move"));
+        assert!( !ok, 0);
+
+        set_object(&mut obj, option::some(string::utf8(b"move")));
+        increase_depth(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"async_callback")));
+
+        let json_str = json::stringify(to_json_object(&obj));
+        assert!( json_str == string::utf8(b"{\"forward\":{\"receiver\":\"chain-c-bech32-address\"},\"move\":{\"async_callback\":{}}}"), 1)
     }
 }

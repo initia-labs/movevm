@@ -232,8 +232,22 @@ module initia_std::json {
             };
             i = i + 1;
         };
-        assert!(i < elem.value.child_length, EKEY_NOT_FOUND);
-        get_next_index(index, i)
+
+        if( i >= elem.value.child_length) {
+            JsonIndex {
+                data: vector::empty(),
+            }
+        } else {
+            get_next_index(index, i)
+        }
+    }
+
+    public fun is_null_index(index: &JsonIndex): bool {
+        if( vector::length(&index.data) == 0) {
+            true
+        } else {
+            false
+        }
     }
 
     fun set_elem(object: &mut JsonObject, index: JsonIndex, elem: JsonElem) {
@@ -746,5 +760,17 @@ module initia_std::json {
 
         let json_string = stringify(&obj);
         assert!(json_string == string::utf8(b"{}"), 0);
+    }
+
+    #[test]
+    fun test_find_key() {
+        let test_str = string::utf8(b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
+        let obj = parse(test_str);
+        let index = start_index();
+        let idx = find(&obj, &index, &string::utf8(b"abc"));
+        assert!( !is_null_index(&idx), 0 );
+
+        let idx = find(&obj, &index, &string::utf8(b"a"));
+        assert!( is_null_index(&idx), 1 );
     }
 }
