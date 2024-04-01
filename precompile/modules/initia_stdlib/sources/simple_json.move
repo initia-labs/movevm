@@ -5,6 +5,8 @@ module initia_std::simple_json {
     use initia_std::decimal256::{Decimal256};
     use initia_std::string::{String};
 
+    const EKEY_NOT_FOUND: u64 = 0;
+
     struct SimpleJsonObject has copy, drop {
         obj: JsonObject,
         index: JsonIndex,
@@ -70,9 +72,32 @@ module initia_std::simple_json {
         object.index = json::get_next_index(&prev_index, position);
     }
 
+    // to travel object
+    public fun set_to_last_index(object: &mut SimpleJsonObject){
+        let (prev_index, _) = json::get_prev_index(&object.index);
+        let child_length = json::get_child_length(json::borrow(&object.obj, &prev_index));
+        if(child_length == 0) return;
+        object.index = json::get_next_index(&prev_index, child_length - 1);
+    }
+
     public fun find_and_set_index(object: &mut SimpleJsonObject, key: &String) {
         let (prev_index, _) = json::get_prev_index(&object.index);
-        object.index = json::find(&object.obj, &prev_index, key);
+        let find_index = json::find(&object.obj, &prev_index, key);
+        
+        assert!(!json::is_null_index(&find_index), EKEY_NOT_FOUND);
+        object.index = find_index;
+    }
+
+    public fun try_find_and_set_index(object: &mut SimpleJsonObject, key: &String):bool {
+        let (prev_index, _) = json::get_prev_index(&object.index);
+        let find_index = json::find(&object.obj, &prev_index, key);
+        
+        if ( json::is_null_index(&find_index)) {
+            false 
+        } else {
+            object.index = find_index;
+            true
+        }
     }
 
     public fun set_bool(object: &mut SimpleJsonObject, key: Option<String>, value: bool) {
@@ -222,5 +247,51 @@ module initia_std::simple_json {
 
         let json_string = json::stringify(to_json_object(&obj));
         assert!(json_string == string::utf8(b"{}"), 0);
+    }
+
+    #[test]
+    fun test_find_and_set_key0() {
+        let obj = from_json_object(json::parse(string::utf8(b"{}")));
+        increase_depth(&mut obj);
+        let ok = try_find_and_set_index(&mut obj, &string::utf8(b"move"));
+        assert!( !ok, 0);
+
+        set_to_last_index(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"move")));
+        increase_depth(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"async_callback")));
+
+        let json_str = json::stringify(to_json_object(&obj));
+        assert!( json_str == string::utf8(b"{\"move\":{\"async_callback\":{}}}"), 1)
+    }
+
+    #[test]
+    fun test_find_and_set_key1() {
+        let obj = from_json_object(json::parse(string::utf8(b"{\"move\":{}}")));
+        increase_depth(&mut obj);
+        let ok = try_find_and_set_index(&mut obj, &string::utf8(b"move"));
+        assert!( ok, 0);
+
+        increase_depth(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"async_callback")));
+
+        let json_str = json::stringify(to_json_object(&obj));
+        assert!( json_str == string::utf8(b"{\"move\":{\"async_callback\":{}}}"), 1)
+    }
+
+    #[test]
+    fun test_find_and_set_key3() {
+        let obj = from_json_object(json::parse(string::utf8(b"{\"forward\": {\"receiver\": \"chain-c-bech32-address\"}, \"wasm\":{}}")));
+        increase_depth(&mut obj);
+        let ok = try_find_and_set_index(&mut obj, &string::utf8(b"move"));
+        assert!( !ok, 0);
+
+        set_to_last_index(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"move")));
+        increase_depth(&mut obj);
+        set_object(&mut obj, option::some(string::utf8(b"async_callback")));
+
+        let json_str = json::stringify(to_json_object(&obj));
+        assert!( json_str == string::utf8(b"{\"forward\":{\"receiver\":\"chain-c-bech32-address\"},\"move\":{\"async_callback\":{}},\"wasm\":{}}"), 1)
     }
 }
