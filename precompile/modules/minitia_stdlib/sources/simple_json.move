@@ -5,6 +5,8 @@ module minitia_std::simple_json {
     use minitia_std::decimal256::{Decimal256};
     use minitia_std::string::{String};
 
+    const EKEY_NOT_FOUND: u64 = 0;
+
     struct SimpleJsonObject has copy, drop {
         obj: JsonObject,
         index: JsonIndex,
@@ -82,9 +84,8 @@ module minitia_std::simple_json {
         let (prev_index, _) = json::get_prev_index(&object.index);
         let find_index = json::find(&object.obj, &prev_index, key);
         
-        if ( !json::is_null_index(&find_index)) {
-            object.index = find_index;
-        }
+        assert!(!json::is_null_index(&find_index), EKEY_NOT_FOUND);
+        object.index = find_index;
     }
 
     public fun try_find_and_set_index(object: &mut SimpleJsonObject, key: &String):bool {
