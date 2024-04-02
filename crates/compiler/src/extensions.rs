@@ -1,3 +1,5 @@
+use std::ptr::addr_of_mut;
+
 use crate::mocks::{BlankAPIImpl, BlankTableViewImpl};
 use initia_move_natives::{
     account::NativeAccountContext, block::NativeBlockContext, code::NativeCodeContext,
@@ -19,7 +21,7 @@ pub fn configure_for_unit_test() {
 fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeAccountContext::new(&MOCK_API.account_api, 1));
     exts.add(NativeTableContext::new([0; 32], unsafe {
-        &mut BLANK_TABLE_RESOLVER
+        addr_of_mut!(BLANK_TABLE_RESOLVER).as_mut().unwrap()
     }));
     exts.add(NativeBlockContext::new(0, 0));
     exts.add(NativeCodeContext::default());
