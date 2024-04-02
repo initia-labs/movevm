@@ -122,8 +122,8 @@ module initia_std::vip_vault {
 
     #[view]
     public fun reward_per_stage(): u64 acquires ModuleStore {
-        let vault_store_addr = get_vault_store_address();
-        primary_fungible_store::balance(vault_store_addr, vip_reward::reward_metadata())
+        let vault_store = borrow_global<ModuleStore>(@initia_std);
+        vault_store.reward_per_stage
     }
     
     //
@@ -131,41 +131,7 @@ module initia_std::vip_vault {
     //
 
     #[test_only]
-    use std::string;
-
-    #[test_only]
-    use std::option;
-
-    #[test_only]
-    use initia_std::coin;
-
-    #[test_only]
-    use initia_std::fungible_asset::Metadata;
-
-    #[test_only]
-    use initia_std::object::Object;
-
-    #[test_only]
     public fun init_module_for_test(chain: &signer){
         init_module(chain);
-    }
-
-    #[test_only]
-    fun initialize_coin(
-        account: &signer,
-        symbol: string::String,
-    ): (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability, Object<Metadata>) {
-        let (mint_cap, burn_cap, freeze_cap) = coin::initialize(
-            account,
-            option::none(),
-            string::utf8(b""),
-            symbol,
-            6,
-            string::utf8(b""),
-            string::utf8(b""),
-        );
-        let metadata = coin::metadata(signer::address_of(account), symbol);
-
-        (burn_cap, freeze_cap, mint_cap, metadata)
     }
 }

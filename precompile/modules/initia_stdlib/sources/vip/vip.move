@@ -1106,6 +1106,65 @@ module initia_std::vip {
             maximum_tvl: module_store.maximum_tvl,
         }
     }
+
+    #[view]
+    public fun batch_simulate_user_claim_reward(
+        initial_reward: vector<u64>,
+        minimum_score: vector<u64>,
+        vesting_period: vector<u64>,
+        l2_scores: vector<vector<u64>>
+    ): (vector<u64>, vector<u64>) {
+        let batch_length = vector::length(&initial_reward);
+        assert!(vector::length(&minimum_score) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&vesting_period) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(vector::length(&l2_scores) == batch_length, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+        assert!(batch_length > 0, error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+
+        let claimable_list = vector::empty<u64>();
+        let remaining_list = vector::empty<u64>();
+        vector::enumerate_ref(&initial_reward, |i, reward| {
+            let (claimed_reward, remaining_reward) = simulate_user_claim_reward(
+                *reward,
+                *vector::borrow(&minimum_score, i),
+                *vector::borrow(&vesting_period, i),
+                *vector::borrow(&l2_scores, i),
+            );
+            vector::push_back(&mut claimable_list, claimed_reward);
+            vector::push_back(&mut remaining_list, remaining_reward);
+        });
+
+        (claimable_list, remaining_list)
+    }
+
+    #[view]
+    public fun simulate_user_claim_reward(
+        initial_reward: u64,
+        minimum_score: u64,
+        vesting_period: u64,
+        l2_scores: vector<u64>
+    ): (u64, u64) {
+        let total_claimed_reward = 0;
+        let remaining_reward = initial_reward;
+        vector::enumerate_ref(&l2_scores, |_i, l2_score| {
+            let score_ratio = if (*l2_score >= minimum_score) {
+                decimal256::one()
+            } else {
+                decimal256::from_ratio_u64(*l2_score, minimum_score)
+            }; 
+
+            let max_ratio = decimal256::div_u64(&decimal256::one(), vesting_period);
+            let vest_ratio = decimal256::mul(&max_ratio, &score_ratio);
+            let vest_amount = decimal256::mul_u64(&vest_ratio, initial_reward);
+
+            if (vest_amount > remaining_reward) {
+                vest_amount = remaining_reward;
+            };
+            remaining_reward = remaining_reward - vest_amount;
+            total_claimed_reward = total_claimed_reward + vest_amount;
+        });
+        (total_claimed_reward, remaining_reward)
+    }
+
     
     //
     // Test Functions
@@ -1493,6 +1552,7 @@ module initia_std::vip {
         );
         
         let total_reward_per_stage = 100_000_000_000;
+        assert!(vip_vault::reward_per_stage() == total_reward_per_stage, 0);
         let portion = 10;
         let reward_per_stage = total_reward_per_stage/portion;
         let vesting_period = 10;
@@ -1933,6 +1993,35 @@ module initia_std::vip {
             + reward_per_stage/vesting_period + reward_per_stage/vesting_period // stage 3
             + reward_per_stage/vesting_period // stage 4
         ), 6);
+        
+
+        let proportion = decimal256::from_string(&string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST));
+        let (claimable_list, _) = batch_simulate_user_claim_reward(
+            vector[reward_per_stage, reward_per_stage],
+            vector[
+                decimal256::mul_u64(&proportion, *simple_map::borrow(&score_map, &1)),
+                decimal256::mul_u64(&proportion, *simple_map::borrow(&score_map, &2)),
+            ],
+            vector[vesting_period, vesting_period],
+            vector[
+                vector[
+                    *simple_map::borrow(&score_map, &2),
+                    *simple_map::borrow(&score_map, &3),
+                    *simple_map::borrow(&score_map, &4),
+                    *simple_map::borrow(&score_map, &5)
+                ],
+                vector[
+                    *simple_map::borrow(&score_map, &3),
+                    *simple_map::borrow(&score_map, &4),
+                    *simple_map::borrow(&score_map, &5)
+                ],
+            ]
+        );
+
+        let claimable_v1 = *vector::borrow(&claimable_list, 0);
+        let claimable_v2 = *vector::borrow(&claimable_list, 1);
+        assert!(claimable_v1 == (reward_per_stage/vesting_period + reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) + reward_per_stage/vesting_period), 0);
+        assert!(claimable_v2 == (reward_per_stage/(vesting_period*2) + reward_per_stage/(vesting_period*2) + reward_per_stage/vesting_period), 0);
 
         let user_reward_store_addr = vip_vesting::get_user_reward_store_address(bridge_id);
         let operator_reward_store_addr = vip_vesting::get_operator_reward_store_address(bridge_id);
@@ -2035,6 +2124,12 @@ module initia_std::vip {
         assert!(vip_vesting::get_operator_unlocked_reward(signer::address_of(operator), bridge_id, 5) == (
             decimal256::mul_u64(&commission_rate, total_reward_per_stage/operator_vesting_period)
         ), 0);
+
+        let user_claimed_stages = vip_vesting::get_user_claimed_stages(signer::address_of(receiver), bridge_id);
+        let operator_claimed_stages = vip_vesting::get_operator_claimed_stages(signer::address_of(operator), bridge_id);
+        
+        assert!(user_claimed_stages == vector[1, 2, 3, 4, 5], 0);
+        assert!(operator_claimed_stages == vector[4, 5], 0);
     }
 
     #[test(chain=@0x1, operator=@0x111)]
