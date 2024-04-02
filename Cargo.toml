@@ -47,7 +47,7 @@ license = "BUSL-1.1"
 license-file = "LICENSE"
 homepage = "https://initia.xyz"
 repository = "https://github.com/initia-labs/movevm"
-rust-version = "1.76.0"
+rust-version = "1.77.1"
 
 [workspace.dependencies]
 # Internal crate dependencies.
