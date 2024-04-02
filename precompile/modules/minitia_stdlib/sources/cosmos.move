@@ -57,6 +57,26 @@ module minitia_std::cosmos {
             *string::bytes(&function_name),
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             args,
+            false,
+        )
+    }
+
+    public entry fun move_execute_with_json (
+        sender: &signer,
+        module_address: address,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<String>,
+    ) {
+        move_execute_internal(
+            signer::address_of(sender),
+            module_address,
+            *string::bytes(&module_name),
+            *string::bytes(&function_name),
+            vector::map_ref(&type_args, |v| *string::bytes(v)),
+            vector::map_ref(&args, |v| *string::bytes(v)),
+            true,
         )
     }
 
@@ -71,6 +91,22 @@ module minitia_std::cosmos {
             code_bytes,
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             args,
+            false,
+        )
+    }
+
+    public entry fun move_script_with_json (
+        sender: &signer,
+        code_bytes: vector<u8>,
+        type_args: vector<String>,
+        args: vector<String>,
+    ) {
+        move_script_internal(
+            signer::address_of(sender),
+            code_bytes,
+            vector::map_ref(&type_args, |v| *string::bytes(v)),
+            vector::map_ref(&args, |v| *string::bytes(v)),
+            false,
         )
     }
 
@@ -194,6 +230,7 @@ module minitia_std::cosmos {
         function_name: vector<u8>,
         type_args: vector<vector<u8>>,
         args: vector<vector<u8>>,
+        is_json: bool,
     );
 
     native fun move_script_internal (
@@ -201,6 +238,7 @@ module minitia_std::cosmos {
         code_bytes: vector<u8>,
         type_args: vector<vector<u8>>,
         args: vector<vector<u8>>,
+        is_json: bool,
     );
 
     native fun delegate_internal (

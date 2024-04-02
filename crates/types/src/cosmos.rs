@@ -42,12 +42,14 @@ pub enum MoveMessage {
         function_name: String,
         type_args: Vec<String>,
         args: Vec<Vec<u8>>,
+        is_json: bool,
     },
     Script {
         sender: AccountAddress,
         code_bytes: Vec<u8>,
         type_args: Vec<String>,
         args: Vec<Vec<u8>>,
+        is_json: bool,
     },
 }
 
