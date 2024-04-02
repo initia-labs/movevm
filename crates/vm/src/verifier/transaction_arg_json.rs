@@ -429,6 +429,19 @@ mod json_arg_testing {
     }
 
     #[test]
+    fn test_deserialize_json_args_vec_u8() {
+        let ty = Type::Vector(triomphe::Arc::new(Type::U8));
+        let arg = b"[0, 1, 2, 3]";
+        let result = deserialize_json_args(&ty, arg).unwrap();
+        assert_eq!(result, bcs::to_bytes(&vec![0u8, 1u8, 2u8, 3u8]).unwrap());
+
+        // hex string to vector<u8>
+        let arg = b"\"00010203\"";
+        let result = deserialize_json_args(&ty, arg).unwrap();
+        assert_eq!(result, bcs::to_bytes(&vec![0u8, 1u8, 2u8, 3u8]).unwrap());
+    }
+
+    #[test]
     fn test_deserialize_json_args_vec_address() {
         let ty = Type::Vector(triomphe::Arc::new(Type::Address));
         let arg = b"[\"0x1\", \"0x2\"]";
