@@ -7,24 +7,27 @@ use crate::serde_helper::vec_bytes;
 use move_core_types::language_storage::TypeTag;
 
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 /// Call a Move script.
-#[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Script {
     #[serde(with = "serde_bytes")]
     code: Vec<u8>,
     ty_args: Vec<TypeTag>,
     #[serde(with = "vec_bytes")]
     args: Vec<Vec<u8>>,
+
+    // whether the args are json encoded
+    is_json: bool,
 }
 
 impl Script {
-    pub fn new(code: Vec<u8>, ty_args: Vec<TypeTag>, args: Vec<Vec<u8>>) -> Self {
+    pub fn new(code: Vec<u8>, ty_args: Vec<TypeTag>, args: Vec<Vec<u8>>, is_json: bool) -> Self {
         Script {
             code,
             ty_args,
             args,
+            is_json,
         }
     }
 
@@ -43,14 +46,8 @@ impl Script {
     pub fn into_inner(self) -> (Vec<u8>, Vec<TypeTag>, Vec<Vec<u8>>) {
         (self.code, self.ty_args, self.args)
     }
-}
 
-impl fmt::Debug for Script {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Script")
-            .field("code", &hex::encode(&self.code))
-            .field("ty_args", &self.ty_args)
-            .field("args", &self.args)
-            .finish()
+    pub fn is_json(&self) -> bool {
+        self.is_json
     }
 }

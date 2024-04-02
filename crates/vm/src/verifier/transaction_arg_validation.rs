@@ -14,6 +14,8 @@ use once_cell::sync::Lazy;
 use std::io::Read;
 use std::{collections::BTreeMap, io::Cursor};
 
+use crate::verifier::transaction_arg_json::deserialize_json_args;
+
 pub(crate) struct FunctionId {
     module_id: ModuleId,
     func_name: &'static IdentStr,
@@ -110,6 +112,7 @@ pub fn validate_combine_signer_and_txn_args(
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
     func: &LoadedFunctionInstantiation,
+    is_json: bool,
 ) -> Result<Vec<Vec<u8>>, VMStatus> {
     // entry function should not return
     if !func.return_.is_empty() {
@@ -176,6 +179,7 @@ pub fn validate_combine_signer_and_txn_args(
         &func.type_arguments,
         allowed_structs,
         false,
+        is_json,
     )?;
 
     // Combine signer and non-signer arguments.
@@ -222,6 +226,7 @@ pub(crate) fn construct_args(
     ty_args: &[Type],
     allowed_structs: &ConstructorMap,
     is_view: bool,
+    is_json: bool,
 ) -> Result<Vec<Vec<u8>>, VMStatus> {
     // Perhaps in a future we should do proper gas metering here
     let mut gas_meter = UnmeteredGasMeter;
@@ -237,6 +242,7 @@ pub(crate) fn construct_args(
             arg,
             &mut gas_meter,
             is_view,
+            is_json,
         )?;
         res_args.push(arg);
     }
@@ -254,7 +260,12 @@ fn construct_arg(
     arg: Vec<u8>,
     gas_meter: &mut impl GasMeter,
     is_view: bool,
+    is_json: bool,
 ) -> Result<Vec<u8>, VMStatus> {
+    if is_json {
+        return deserialize_json_args(ty, &arg);
+    }
+
     use move_vm_types::loaded_data::runtime_types::Type::*;
     match ty {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => Ok(arg),

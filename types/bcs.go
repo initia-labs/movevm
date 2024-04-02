@@ -437,6 +437,7 @@ type EntryFunction struct {
 	Function Identifier
 	TyArgs []TypeTag
 	Args [][]byte
+	IsJson bool
 }
 
 func (obj *EntryFunction) Serialize(serializer serde.Serializer) error {
@@ -445,6 +446,7 @@ func (obj *EntryFunction) Serialize(serializer serde.Serializer) error {
 	if err := obj.Function.Serialize(serializer); err != nil { return err }
 	if err := serialize_vector_TypeTag(obj.TyArgs, serializer); err != nil { return err }
 	if err := serialize_vector_bytes(obj.Args, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IsJson); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -465,6 +467,7 @@ func DeserializeEntryFunction(deserializer serde.Deserializer) (EntryFunction, e
 	if val, err := DeserializeIdentifier(deserializer); err == nil { obj.Function = val } else { return obj, err }
 	if val, err := deserialize_vector_TypeTag(deserializer); err == nil { obj.TyArgs = val } else { return obj, err }
 	if val, err := deserialize_vector_bytes(deserializer); err == nil { obj.Args = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IsJson = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -1309,6 +1312,7 @@ type Script struct {
 	Code []byte
 	TyArgs []TypeTag
 	Args [][]byte
+	IsJson bool
 }
 
 func (obj *Script) Serialize(serializer serde.Serializer) error {
@@ -1316,6 +1320,7 @@ func (obj *Script) Serialize(serializer serde.Serializer) error {
 	if err := serializer.SerializeBytes(obj.Code); err != nil { return err }
 	if err := serialize_vector_TypeTag(obj.TyArgs, serializer); err != nil { return err }
 	if err := serialize_vector_bytes(obj.Args, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IsJson); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -1335,6 +1340,7 @@ func DeserializeScript(deserializer serde.Deserializer) (Script, error) {
 	if val, err := deserializer.DeserializeBytes(); err == nil { obj.Code = val } else { return obj, err }
 	if val, err := deserialize_vector_TypeTag(deserializer); err == nil { obj.TyArgs = val } else { return obj, err }
 	if val, err := deserialize_vector_bytes(deserializer); err == nil { obj.Args = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IsJson = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -2038,6 +2044,7 @@ type ViewFunction struct {
 	Function Identifier
 	TyArgs []TypeTag
 	Args [][]byte
+	IsJson bool
 }
 
 func (obj *ViewFunction) Serialize(serializer serde.Serializer) error {
@@ -2046,6 +2053,7 @@ func (obj *ViewFunction) Serialize(serializer serde.Serializer) error {
 	if err := obj.Function.Serialize(serializer); err != nil { return err }
 	if err := serialize_vector_TypeTag(obj.TyArgs, serializer); err != nil { return err }
 	if err := serialize_vector_bytes(obj.Args, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IsJson); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -2066,6 +2074,7 @@ func DeserializeViewFunction(deserializer serde.Deserializer) (ViewFunction, err
 	if val, err := DeserializeIdentifier(deserializer); err == nil { obj.Function = val } else { return obj, err }
 	if val, err := deserialize_vector_TypeTag(deserializer); err == nil { obj.TyArgs = val } else { return obj, err }
 	if val, err := deserialize_vector_bytes(deserializer); err == nil { obj.Args = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IsJson = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

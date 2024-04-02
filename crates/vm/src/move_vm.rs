@@ -90,10 +90,7 @@ impl Default for MoveVM {
 }
 
 impl MoveVM {
-    pub fn new(
-        module_cache_capacity: usize,
-        script_cache_capacity: usize,
-    ) -> Self {
+    pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
         let runtime = VMRuntime::new(
@@ -285,6 +282,7 @@ impl MoveVM {
             view_fn.function(),
             &func_inst,
             metadata.as_ref(),
+            view_fn.is_json(),
         )?;
 
         // first execution does not execute `charge_call`, so need to record call here
@@ -355,6 +353,7 @@ impl MoveVM {
                     senders,
                     script.args().to_vec(),
                     &func_inst,
+                    script.is_json(),
                 )?;
 
                 session.execute_script(
@@ -384,6 +383,7 @@ impl MoveVM {
                     senders,
                     entry_fn.args().to_vec(),
                     &func_inst,
+                    entry_fn.is_json(),
                 )?;
 
                 // first execution does not execute `charge_call`, so need to record call here

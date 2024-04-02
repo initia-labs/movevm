@@ -32,6 +32,7 @@ pub(crate) fn validate_view_function(
     fun_name: &IdentStr,
     fun_inst: &LoadedFunctionInstantiation,
     module_metadata: Option<&RuntimeModuleMetadataV0>,
+    is_string: bool,
 ) -> Result<Vec<Vec<u8>>, VMStatus> {
     // Must be marked as view function
     let is_view = determine_is_view(module_metadata, fun_name);
@@ -58,6 +59,7 @@ pub(crate) fn validate_view_function(
         &fun_inst.type_arguments,
         allowed_structs,
         true,
+        is_string,
     )?;
     Ok(args)
 }

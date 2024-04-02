@@ -13,6 +13,9 @@ pub struct EntryFunction {
     ty_args: Vec<TypeTag>,
     #[serde(with = "vec_bytes")]
     args: Vec<Vec<u8>>,
+
+    // whether the args are json encoded
+    is_json: bool,
 }
 
 impl EntryFunction {
@@ -21,12 +24,14 @@ impl EntryFunction {
         function: Identifier,
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
+        is_json: bool,
     ) -> Self {
         EntryFunction {
             module,
             function,
             ty_args,
             args,
+            is_json,
         }
     }
 
@@ -45,7 +50,12 @@ impl EntryFunction {
     pub fn args(&self) -> &[Vec<u8>] {
         &self.args
     }
+
     pub fn into_inner(self) -> (ModuleId, Identifier, Vec<TypeTag>, Vec<Vec<u8>>) {
         (self.module, self.function, self.ty_args, self.args)
+    }
+
+    pub fn is_json(&self) -> bool {
+        self.is_json
     }
 }
