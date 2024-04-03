@@ -65,7 +65,7 @@ use initia_move_types::{
 };
 
 use crate::{
-    convert::convert_move_value_to_serde_value,
+    json::move_to_json::convert_move_value_to_json_value,
     session::{SessionExt, SessionOutput},
     verifier::{
         config::verifier_config, errors::metadata_validation_error,
@@ -90,10 +90,7 @@ impl Default for MoveVM {
 }
 
 impl MoveVM {
-    pub fn new(
-        module_cache_capacity: usize,
-        script_cache_capacity: usize,
-    ) -> Self {
+    pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
         let runtime = VMRuntime::new(
@@ -285,6 +282,7 @@ impl MoveVM {
             view_fn.function(),
             &func_inst,
             metadata.as_ref(),
+            view_fn.is_json(),
         )?;
 
         // first execution does not execute `charge_call`, so need to record call here
@@ -355,6 +353,7 @@ impl MoveVM {
                     senders,
                     script.args().to_vec(),
                     &func_inst,
+                    script.is_json(),
                 )?;
 
                 session.execute_script(
@@ -384,6 +383,7 @@ impl MoveVM {
                     senders,
                     entry_fn.args().to_vec(),
                     &func_inst,
+                    entry_fn.is_json(),
                 )?;
 
                 // first execution does not execute `charge_call`, so need to record call here
@@ -652,7 +652,7 @@ impl MoveVM {
                 MoveValue::simple_deserialize(event.event_data(), &ty_layout).map_err(|_| {
                     PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
                 })?;
-            let serde_value = convert_move_value_to_serde_value(&move_val)?;
+            let serde_value = convert_move_value_to_json_value(&move_val, 1)?;
             res.push((event.type_tag().clone(), serde_value.to_string()));
         }
 
@@ -674,7 +674,7 @@ fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Opti
             let move_val = MoveValue::simple_deserialize(blob, type_layout).map_err(|_| {
                 PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
             })?;
-            let serde_value = convert_move_value_to_serde_value(&move_val)?;
+            let serde_value = convert_move_value_to_json_value(&move_val, 1)?;
             serde_vals.push(serde_value);
         }
         if serde_vals.is_empty() {

@@ -27,13 +27,13 @@ fn test_view_output() {
     let function_name = Identifier::from_str("emit_event").unwrap();
     let struct_name = Identifier::from_str("ViewEvent").unwrap();
 
-    let arg_bytes = bcs::to_bytes("hello world").unwrap();
     let out = h
         .run_view_function_get_events(ViewFunction::new(
             module_id,
             function_name,
             vec![TypeTag::U256],
-            vec![arg_bytes],
+            vec![b"\"hello world\"".to_vec()],
+            true,
         ))
         .expect("should success");
 

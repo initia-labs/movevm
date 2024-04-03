@@ -77,7 +77,9 @@ fn native_move_execute(
     context.charge(gas_params.base)?;
 
     debug_assert!(ty_args.is_empty());
-    debug_assert!(arguments.len() == 6);
+    debug_assert!(arguments.len() == 7);
+
+    let is_json = safely_pop_arg!(arguments, bool);
 
     let mut msg_args: Vec<Vec<u8>> = vec![];
     for msg_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
@@ -120,6 +122,7 @@ fn native_move_execute(
         function_name,
         type_args: msg_type_args,
         args: msg_args,
+        is_json,
     });
 
     // build cosmos message
@@ -138,7 +141,9 @@ fn native_move_script(
     context.charge(gas_params.base)?;
 
     debug_assert!(ty_args.is_empty());
-    debug_assert!(arguments.len() == 4);
+    debug_assert!(arguments.len() == 5);
+
+    let is_json = safely_pop_arg!(arguments, bool);
 
     let mut msg_args: Vec<Vec<u8>> = vec![];
     for msg_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
@@ -166,6 +171,7 @@ fn native_move_script(
         code_bytes,
         type_args: msg_type_args,
         args: msg_args,
+        is_json,
     });
 
     // build cosmos message

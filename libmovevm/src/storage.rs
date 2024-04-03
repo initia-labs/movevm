@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use initia_move_storage::state_view::StateView;
 use initia_move_types::access_path::AccessPath;
-use initia_move_vm::backend::BackendResult;
+use initia_move_types::errors::BackendError;
 
 use crate::db::Db;
 use crate::error::GoError;
@@ -17,15 +17,15 @@ pub trait Storage {
     ///
     /// Note: Support for differentiating between a non-existent key and a key with empty value
     /// is not great yet and might not be possible in all backends. But we're trying to get there.
-    fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>>;
+    fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, BackendError>;
 
-    fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()>;
+    fn set(&mut self, key: &[u8], value: &[u8]) -> Result<(), BackendError>;
 
     /// Removes a database entry at `key`.
     ///
     /// The current interface does not allow to differentiate between a key that existed
     /// before and one that didn't exist. See https://github.com/CosmWasm/cosmwasm/issues/290
-    fn remove(&mut self, key: &[u8]) -> BackendResult<()>;
+    fn remove(&mut self, key: &[u8]) -> Result<(), BackendError>;
 }
 
 pub struct GoStorage<'r> {
@@ -66,7 +66,7 @@ impl<'r> StateView for GoStorage<'r> {
 }
 
 impl<'r> Storage for GoStorage<'r> {
-    fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+    fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, BackendError> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let go_error: GoError = (self.db.vtable.read_db)(
@@ -91,7 +91,7 @@ impl<'r> Storage for GoStorage<'r> {
         Ok(output)
     }
 
-    fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
+    fn set(&mut self, key: &[u8], value: &[u8]) -> Result<(), BackendError> {
         let mut error_msg = UnmanagedVector::default();
         let go_error: GoError = (self.db.vtable.write_db)(
             self.db.state,
@@ -111,7 +111,7 @@ impl<'r> Storage for GoStorage<'r> {
         Ok(())
     }
 
-    fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
+    fn remove(&mut self, key: &[u8]) -> Result<(), BackendError> {
         let mut error_msg = UnmanagedVector::default();
         let go_error: GoError = (self.db.vtable.remove_db)(
             self.db.state,

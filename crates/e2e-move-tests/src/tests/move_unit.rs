@@ -17,10 +17,11 @@ use move_cli::base::test::{run_move_unit_tests_with_gas_meter, UnitTestResult};
 use move_core_types::effects::ChangeSet;
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
-use std::path::PathBuf;
-use tempfile::tempdir;
 
 use once_cell::sync::Lazy;
+use std::path::PathBuf;
+use std::ptr::addr_of_mut;
+use tempfile::tempdir;
 
 static mut BLANK_TABLE_RESOLVER: BlankTableViewImpl = BlankTableViewImpl {};
 static BLANK_API: Lazy<BlankAPIImpl> = Lazy::new(BlankAPIImpl::new);
@@ -32,7 +33,7 @@ pub fn configure_for_unit_test() {
 fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeAccountContext::new(&BLANK_API.account_api, 1));
     exts.add(NativeTableContext::new([0; 32], unsafe {
-        &mut BLANK_TABLE_RESOLVER
+        addr_of_mut!(BLANK_TABLE_RESOLVER).as_mut().unwrap()
     }));
     exts.add(NativeBlockContext::new(0, 0));
     exts.add(NativeCodeContext::default());

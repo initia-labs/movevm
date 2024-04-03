@@ -3,6 +3,8 @@ package movevm_test
 import (
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -99,22 +101,18 @@ func publishModuleBundle(
 	f4, err := os.ReadFile("./precompile/binaries/tests/TableTestData.mv")
 	require.NoError(t, err)
 
-	moduleIds, err := types.SerializeBytesVector([][]byte{
-		[]byte("0x2::TestCoin"),
-		[]byte("0x2::Bundle1"),
-		[]byte("0x2::Bundle2"),
-		[]byte("0x2::Bundle3"),
-		[]byte("0x2::TableTestData"),
+	moduleIds, err := json.Marshal([]string{"0x2::TestCoin", "0x2::Bundle1", "0x2::Bundle2", "0x2::Bundle3", "0x2::TableTestData"})
+	require.NoError(t, err)
+
+	modules, err := json.Marshal([]string{
+		hex.EncodeToString(f0), hex.EncodeToString(f1), hex.EncodeToString(f2), hex.EncodeToString(f3), hex.EncodeToString(f4),
 	})
 	require.NoError(t, err)
 
-	modules, err := types.SerializeBytesVector([][]byte{
-		f0, f1, f2, f3, f4,
-	})
+	upgradePolicy, err := json.Marshal(uint8(1))
 	require.NoError(t, err)
 
 	blockTime := uint64(time.Now().Unix())
-
 	res, err := vm.ExecuteEntryFunction(
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),
@@ -137,8 +135,9 @@ func publishModuleBundle(
 			Args: [][]byte{
 				moduleIds,
 				modules,
-				{uint8(1)},
+				upgradePolicy,
 			},
+			IsJson: true,
 		},
 	)
 	require.NoError(t, err)
@@ -159,7 +158,6 @@ func mintCoin(
 	require.NoError(t, err)
 
 	tyArg := types.TypeTag__Struct{Value: types.StructTag{Address: testAccount, Module: "TestCoin", Name: "Initia"}}
-	arg, _ := types.SerializeUint64(amount)
 
 	payload := types.EntryFunction{
 		Module: types.ModuleId{
@@ -168,7 +166,8 @@ func mintCoin(
 		},
 		Function: "mint",
 		TyArgs:   []types.TypeTag{&tyArg},
-		Args:     [][]byte{arg},
+		Args:     [][]byte{[]byte(fmt.Sprintf("\"%d\"", amount))},
+		IsJson:   true,
 	}
 
 	blockTime := uint64(time.Now().Unix())
@@ -243,7 +242,7 @@ func Test_FailOnExecute(t *testing.T) {
 	mintCoin(t, vm, kvStore, testAccount, amount)
 
 	tyArg := types.TypeTag__Struct{Value: types.StructTag{Address: testAccount, Module: "TestCoin", Name: "Initia"}}
-	arg, _ := types.SerializeUint64(amount)
+	arg, _ := json.Marshal(amount)
 	payload := types.EntryFunction{
 		Module: types.ModuleId{
 			Address: testAccount,
@@ -252,6 +251,7 @@ func Test_FailOnExecute(t *testing.T) {
 		Function: "mint2",
 		TyArgs:   []types.TypeTag{&tyArg},
 		Args:     [][]byte{arg},
+		IsJson:   true,
 	}
 
 	blockTime := uint64(time.Now().Unix())
@@ -288,7 +288,7 @@ func Test_OutOfGas(t *testing.T) {
 	require.NoError(t, err)
 
 	tyArg := types.TypeTag__Struct{Value: types.StructTag{Address: testAccount, Module: "TestCoin", Name: "Initia"}}
-	arg, _ := types.SerializeUint64(amount)
+	arg, _ := json.Marshal(amount)
 	payload := types.EntryFunction{
 		Module: types.ModuleId{
 			Address: testAccount,
@@ -297,6 +297,7 @@ func Test_OutOfGas(t *testing.T) {
 		Function: "mint2",
 		TyArgs:   []types.TypeTag{&tyArg},
 		Args:     [][]byte{arg},
+		IsJson:   true,
 	}
 
 	blockTime := uint64(time.Now().Unix())
@@ -333,6 +334,9 @@ func Test_QueryContract(t *testing.T) {
 	mintAmount := uint64(100)
 	mintCoin(t, vm, kvStore, testAccount, mintAmount)
 
+	testAccountArg, err := json.Marshal(testAccount.String())
+	require.NoError(t, err)
+
 	tyArg := types.TypeTag__Struct{Value: types.StructTag{Address: testAccount, Module: "TestCoin", Name: "Initia"}}
 	payload := types.ViewFunction{
 		Module: types.ModuleId{
@@ -341,7 +345,8 @@ func Test_QueryContract(t *testing.T) {
 		},
 		Function: "get",
 		TyArgs:   []types.TypeTag{&tyArg},
-		Args:     [][]byte{testAccount[:]},
+		Args:     [][]byte{testAccountArg},
+		IsJson:   true,
 	}
 
 	blockTime := uint64(time.Now().Unix())

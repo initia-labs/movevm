@@ -139,7 +139,19 @@ impl MoveHarness {
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
     ) -> Result<MessageOutput, VMStatus> {
-        let entry_function = self.create_entry_function(fun, ty_args, args);
+        let entry_function = MoveHarness::create_entry_function(fun, ty_args, args);
+        let msg = self.create_entry_function_message(senders, entry_function);
+        self.run_message(msg)
+    }
+
+    pub fn run_entry_function_with_json(
+        &mut self,
+        senders: Vec<AccountAddress>,
+        fun: MemberId,
+        ty_args: Vec<TypeTag>,
+        args: Vec<String>,
+    ) -> Result<MessageOutput, VMStatus> {
+        let entry_function = MoveHarness::create_entry_function_with_json(fun, ty_args, args);
         let msg = self.create_entry_function_message(senders, entry_function);
         self.run_message(msg)
     }
@@ -223,13 +235,14 @@ impl MoveHarness {
         module_ids: Vec<String>,
         modules: Vec<Vec<u8>>,
     ) -> Message {
-        let ef = self.create_entry_function(
+        let ef = MoveHarness::create_entry_function_with_json(
             str::parse("0x1::code::publish").unwrap(),
             vec![],
             vec![
-                bcs::to_bytes(&module_ids).unwrap(),
-                bcs::to_bytes(&modules).unwrap(),
-                bcs::to_bytes(&(1_u8)).unwrap(), // compatible upgrade policy
+                serde_json::to_string(&module_ids).unwrap(),
+                serde_json::to_string(&modules.iter().map(hex::encode).collect::<Vec<String>>())
+                    .unwrap(),
+                serde_json::to_string(&(1_u8)).unwrap(), // compatible upgrade policy
             ],
         );
         Message::execute(vec![sender], ef)
@@ -241,13 +254,13 @@ impl MoveHarness {
         code: Vec<u8>,
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
+        is_json: bool,
     ) -> Message {
-        let script = Script::new(code, ty_args, args);
+        let script = Script::new(code, ty_args, args, is_json);
         Message::script(vec![sender], script)
     }
 
     pub fn create_entry_function(
-        &mut self,
         fun: MemberId,
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
@@ -256,7 +269,25 @@ impl MoveHarness {
             module_id,
             member_id: function_id,
         } = fun;
-        EntryFunction::new(module_id, function_id, ty_args, args)
+
+        EntryFunction::new(module_id, function_id, ty_args, args, false)
+    }
+
+    pub fn create_entry_function_with_json(
+        fun: MemberId,
+        ty_args: Vec<TypeTag>,
+        args: Vec<String>,
+    ) -> EntryFunction {
+        let MemberId {
+            module_id,
+            member_id: function_id,
+        } = fun;
+
+        let args = args
+            .iter()
+            .map(|v| v.as_bytes().to_vec())
+            .collect::<Vec<Vec<u8>>>();
+        EntryFunction::new(module_id, function_id, ty_args, args, true)
     }
 
     pub fn create_entry_function_message(
@@ -277,7 +308,26 @@ impl MoveHarness {
             module_id,
             member_id: function_id,
         } = fun;
-        ViewFunction::new(module_id, function_id, ty_args, args)
+        ViewFunction::new(module_id, function_id, ty_args, args, false)
+    }
+
+    pub fn create_view_function_with_json(
+        &mut self,
+        fun: MemberId,
+        ty_args: Vec<TypeTag>,
+        args: Vec<String>,
+    ) -> ViewFunction {
+        let MemberId {
+            module_id,
+            member_id: function_id,
+        } = fun;
+
+        let args = args
+            .iter()
+            .map(|v| serde_json::from_str(v))
+            .collect::<Result<Vec<Vec<u8>>, _>>()
+            .unwrap();
+        ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 
     pub fn run_message(&mut self, message: Message) -> Result<MessageOutput, VMStatus> {
