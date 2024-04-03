@@ -16,7 +16,6 @@ use initia_move_types::errors::BackendError;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_types::write_set::WriteSet;
 use initia_move_types::{message::Message, module::ModuleBundle};
-use initia_move_vm::BackendResult;
 use initia_move_vm::MoveVM;
 
 use move_core_types::account_address::AccountAddress;
@@ -152,7 +151,7 @@ fn write_op(
     go_storage: &mut GoStorage,
     ap: &AccessPath,
     blob_opt: &Op<Vec<u8>>,
-) -> BackendResult<()> {
+) -> Result<(), BackendError> {
     let key = ap
         .to_bytes()
         .map_err(|_| BackendError::unknown("failed to encode access path"))?;
@@ -162,7 +161,10 @@ fn write_op(
     }
 }
 
-pub fn push_write_set(go_storage: &mut GoStorage, write_set: &WriteSet) -> BackendResult<()> {
+pub fn push_write_set(
+    go_storage: &mut GoStorage,
+    write_set: &WriteSet,
+) -> Result<(), BackendError> {
     for (ap, blob_opt) in write_set {
         write_op(go_storage, ap, blob_opt)?;
     }

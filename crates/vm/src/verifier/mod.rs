@@ -4,7 +4,6 @@ pub(crate) mod event_validation;
 pub(crate) mod metadata;
 pub(crate) mod module_init;
 pub(crate) mod module_metadata;
-pub(crate) mod transaction_arg_json;
 pub(crate) mod view_function;
 
 pub mod transaction_arg_validation;

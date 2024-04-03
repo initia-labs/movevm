@@ -1,47 +1,41 @@
 use std::str::FromStr;
 
-use bigdecimal::{
-    self,
-    num_bigint::{BigInt, ToBigInt, TryFromBigIntError},
-    BigDecimal, ParseBigDecimalError, Signed,
-};
-use move_core_types::{
-    account_address::{self, AccountAddress},
-    u256::{self, U256},
-    value::MoveValue,
-    vm_status::{StatusCode, VMStatus},
-};
+use bigdecimal::{self, num_bigint::ToBigInt, BigDecimal, Signed};
+use move_binary_format::errors::VMResult;
+use move_core_types::{account_address::AccountAddress, u256::U256, value::MoveValue};
 use move_vm_types::loaded_data::runtime_types::Type::{self, *};
 
-pub(crate) fn deserialize_json_args(ty: &Type, arg: &[u8]) -> Result<Vec<u8>, VMStatus> {
+use serde_json::Value as JSONValue;
+
+use crate::json::errors::{deserialization_error, deserialization_error_with_msg};
+
+// deserialize json argument to JSONValue and convert to MoveValue,
+// and then do bcs serialization.
+pub(crate) fn deserialize_json_args(ty: &Type, arg: &[u8]) -> VMResult<Vec<u8>> {
     const MAX_NUM_BYTES: usize = 1_000_000;
     if arg.len() > MAX_NUM_BYTES {
-        return Err(deserialization_error_with_msg(&format!(
+        return Err(deserialization_error_with_msg(format!(
             "maximum limit of {} bytes exceeded",
             MAX_NUM_BYTES
         )));
     }
 
-    let json_val: serde_json::Value =
-        serde_json::from_slice(arg).map_err(deserialization_error_with_json_error)?;
+    let json_val: JSONValue =
+        serde_json::from_slice(arg).map_err(deserialization_error_with_msg)?;
 
-    let move_val = convert_json_to_move_value(ty, json_val, 1)?;
-    bcs::to_bytes(&move_val).map_err(|e| {
-        VMStatus::error(
-            StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-            Some(format!("failed to convert utf8 to bcs {:?}", e.to_string())),
-        )
-    })
+    let move_val = convert_json_value_to_move_value(ty, json_val, 1)?;
+    bcs::to_bytes(&move_val).map_err(deserialization_error_with_msg)
 }
 
-pub(crate) fn convert_json_to_move_value(
+// convert JSONValue to MoveValue.
+pub(crate) fn convert_json_value_to_move_value(
     ty: &Type,
-    json_val: serde_json::Value,
+    json_val: JSONValue,
     depth: usize,
-) -> Result<MoveValue, VMStatus> {
+) -> VMResult<MoveValue> {
     const MAX_RECURSIVE_DEPTH: usize = 10;
     if depth > MAX_RECURSIVE_DEPTH {
-        return Err(deserialization_error_with_msg(&format!(
+        return Err(deserialization_error_with_msg(format!(
             "maximum recursive depth of {} exceeded",
             MAX_RECURSIVE_DEPTH
         )));
@@ -49,52 +43,43 @@ pub(crate) fn convert_json_to_move_value(
 
     Ok(match ty {
         Address => MoveValue::Address(
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?,
+            serde_json::from_value(json_val).map_err(deserialization_error_with_msg)?,
         ),
         Bool => MoveValue::Bool(
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?,
+            serde_json::from_value(json_val).map_err(deserialization_error_with_msg)?,
         ),
-        U8 => MoveValue::U8(
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?,
-        ),
+        U8 => {
+            MoveValue::U8(serde_json::from_value(json_val).map_err(deserialization_error_with_msg)?)
+        }
         U16 => MoveValue::U16(
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?,
+            serde_json::from_value(json_val).map_err(deserialization_error_with_msg)?,
         ),
         U32 => MoveValue::U32(
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?,
+            serde_json::from_value(json_val).map_err(deserialization_error_with_msg)?,
         ),
-        U64 => MoveValue::U64(if json_val.is_string() {
+        U64 => MoveValue::U64(
             json_val
                 .as_str()
                 .ok_or_else(deserialization_error)?
                 .parse()
-                .map_err(deserialization_error_with_parse_int_error)?
-        } else {
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?
-        }),
-        U128 => MoveValue::U128(if json_val.is_string() {
+                .map_err(deserialization_error_with_msg)?,
+        ),
+        U128 => MoveValue::U128(
             json_val
                 .as_str()
                 .ok_or_else(deserialization_error)?
                 .parse()
-                .map_err(deserialization_error_with_parse_int_error)?
-        } else {
-            serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?
-        }),
-        U256 => MoveValue::U256(if json_val.is_string() {
+                .map_err(deserialization_error_with_msg)?,
+        ),
+        U256 => MoveValue::U256(
             U256::from_str(json_val.as_str().ok_or_else(deserialization_error)?)
-                .map_err(deserialization_error_with_u256_error)?
-        } else {
-            let u128_val: u128 =
-                serde_json::from_value(json_val).map_err(deserialization_error_with_json_error)?;
-
-            U256::from(u128_val)
-        }),
+                .map_err(deserialization_error_with_msg)?,
+        ),
         Vector(ty) => {
             if &Type::U8 == ty.as_ref() && json_val.is_string() {
                 return Ok(MoveValue::vector_u8(
                     hex::decode(json_val.as_str().unwrap())
-                        .map_err(deserialization_error_with_from_hex_error)?,
+                        .map_err(deserialization_error_with_msg)?,
                 ));
             }
 
@@ -105,7 +90,7 @@ pub(crate) fn convert_json_to_move_value(
 
             let mut vec = Vec::new();
             for json_val in json_vals {
-                vec.push(convert_json_to_move_value(ty, json_val, depth + 1)?);
+                vec.push(convert_json_value_to_move_value(ty, json_val, depth + 1)?);
             }
             MoveValue::Vector(vec)
         }
@@ -119,55 +104,45 @@ pub(crate) fn convert_json_to_move_value(
                     AccountAddress::from_hex_literal(
                         json_val.as_str().ok_or_else(deserialization_error)?,
                     )
-                    .map_err(deserialization_error_with_account_address_parse_error)?,
+                    .map_err(deserialization_error_with_msg)?,
                 ),
                 "0x1::fixed_point32::FixedPoint32" => {
                     let s = json_val.as_str().ok_or_else(deserialization_error)?;
                     let bigint = bigdecimal::BigDecimal::from_str(s)
-                        .map(|v| v * BigDecimal::from(1u64 << 32))
-                        .map_err(deserialization_error_with_big_decimal_error)?
+                        .map(|v| v * (1u64 << 32))
+                        .map_err(deserialization_error_with_msg)?
                         .to_bigint()
                         .ok_or_else(deserialization_error)?;
 
-                    MoveValue::U64(
-                        bigint
-                            .try_into()
-                            .map_err(deserialization_error_with_try_from_error)?,
-                    )
+                    MoveValue::U64(bigint.try_into().map_err(deserialization_error_with_msg)?)
                 }
                 "0x1::fixed_point64::FixedPoint64" => {
                     let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                    let bigint = bigdecimal::BigDecimal::from_str(s)
-                        .map(|v| v * BigDecimal::from(1u128 << 64))
-                        .map_err(deserialization_error_with_big_decimal_error)?
+                    let bigint = BigDecimal::from_str(s)
+                        .map(|v| v * (1u128 << 64))
+                        .map_err(deserialization_error_with_msg)?
                         .to_bigint()
                         .ok_or_else(deserialization_error)?;
 
-                    MoveValue::U128(
-                        bigint
-                            .try_into()
-                            .map_err(deserialization_error_with_try_from_error)?,
-                    )
+                    MoveValue::U128(bigint.try_into().map_err(deserialization_error_with_msg)?)
                 }
                 "0x1::decimal128::Decimal128" => {
+                    const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
                     let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                    let bigint = bigdecimal::BigDecimal::from_str(s)
-                        .map(|v| v * BigDecimal::from(1_000_000_000_000_000_000u128))
-                        .map_err(deserialization_error_with_big_decimal_error)?
+                    let bigint = BigDecimal::from_str(s)
+                        .map(|v| v * DECIMAL_SCALE)
+                        .map_err(deserialization_error_with_msg)?
                         .to_bigint()
                         .ok_or_else(deserialization_error)?;
 
-                    MoveValue::U128(
-                        bigint
-                            .try_into()
-                            .map_err(deserialization_error_with_try_from_error)?,
-                    )
+                    MoveValue::U128(bigint.try_into().map_err(deserialization_error_with_msg)?)
                 }
                 "0x1::decimal256::Decimal256" => {
+                    const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
                     let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                    let bigint = bigdecimal::BigDecimal::from_str(s)
-                        .map(|v| v * BigDecimal::from(1_000_000_000_000_000_000u128))
-                        .map_err(deserialization_error_with_big_decimal_error)?
+                    let bigint = BigDecimal::from_str(s)
+                        .map(|v| v * DECIMAL_SCALE)
+                        .map_err(deserialization_error_with_msg)?
                         .to_bigint()
                         .ok_or_else(deserialization_error)?;
 
@@ -215,7 +190,7 @@ pub(crate) fn convert_json_to_move_value(
                         return Ok(MoveValue::Vector(vec![]));
                     } else if json_vals.len() == 1 {
                         let json_val = json_vals.into_iter().next().unwrap();
-                        return Ok(MoveValue::Vector(vec![convert_json_to_move_value(
+                        return Ok(MoveValue::Vector(vec![convert_json_value_to_move_value(
                             ty,
                             json_val,
                             depth + 1,
@@ -239,68 +214,6 @@ pub(crate) fn convert_json_to_move_value(
 //
 // helper functions for error handling
 //
-
-fn deserialization_error_with_big_decimal_error(e: ParseBigDecimalError) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
-
-fn deserialization_error_with_try_from_error(e: TryFromBigIntError<BigInt>) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
-
-fn deserialization_error() -> VMStatus {
-    VMStatus::error(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT, None)
-}
-
-fn deserialization_error_with_msg(msg: &str) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(msg.to_string()),
-    )
-}
-
-fn deserialization_error_with_json_error(e: serde_json::Error) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
-
-fn deserialization_error_with_u256_error(e: u256::U256FromStrError) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
-
-fn deserialization_error_with_account_address_parse_error(
-    e: account_address::AccountAddressParseError,
-) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
-
-fn deserialization_error_with_parse_int_error(e: std::num::ParseIntError) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
-
-fn deserialization_error_with_from_hex_error(e: hex::FromHexError) -> VMStatus {
-    VMStatus::error(
-        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT,
-        Some(e.to_string()),
-    )
-}
 
 #[cfg(test)]
 mod json_arg_testing {

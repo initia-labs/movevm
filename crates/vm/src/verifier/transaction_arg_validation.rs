@@ -14,7 +14,7 @@ use once_cell::sync::Lazy;
 use std::io::Read;
 use std::{collections::BTreeMap, io::Cursor};
 
-use crate::verifier::transaction_arg_json::deserialize_json_args;
+use crate::json::json_to_move::deserialize_json_args;
 
 pub(crate) struct FunctionId {
     module_id: ModuleId,
@@ -263,7 +263,7 @@ fn construct_arg(
     is_json: bool,
 ) -> Result<Vec<u8>, VMStatus> {
     if is_json {
-        return deserialize_json_args(ty, &arg);
+        return deserialize_json_args(ty, &arg).map_err(|e| e.into_vm_status());
     }
 
     use move_vm_types::loaded_data::runtime_types::Type::*;
