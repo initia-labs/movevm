@@ -1185,6 +1185,7 @@ type MoveMessage__Execute struct {
 	FunctionName string
 	TypeArgs []string
 	Args [][]uint8
+	IsJson bool
 }
 
 func (*MoveMessage__Execute) isMoveMessage() {}
@@ -1198,6 +1199,7 @@ func (obj *MoveMessage__Execute) Serialize(serializer serde.Serializer) error {
 	if err := serializer.SerializeStr(obj.FunctionName); err != nil { return err }
 	if err := serialize_vector_str(obj.TypeArgs, serializer); err != nil { return err }
 	if err := serialize_vector_vector_u8(obj.Args, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IsJson); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -1220,6 +1222,7 @@ func load_MoveMessage__Execute(deserializer serde.Deserializer) (MoveMessage__Ex
 	if val, err := deserializer.DeserializeStr(); err == nil { obj.FunctionName = val } else { return obj, err }
 	if val, err := deserialize_vector_str(deserializer); err == nil { obj.TypeArgs = val } else { return obj, err }
 	if val, err := deserialize_vector_vector_u8(deserializer); err == nil { obj.Args = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IsJson = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -1229,6 +1232,7 @@ type MoveMessage__Script struct {
 	CodeBytes []uint8
 	TypeArgs []string
 	Args [][]uint8
+	IsJson bool
 }
 
 func (*MoveMessage__Script) isMoveMessage() {}
@@ -1240,6 +1244,7 @@ func (obj *MoveMessage__Script) Serialize(serializer serde.Serializer) error {
 	if err := serialize_vector_u8(obj.CodeBytes, serializer); err != nil { return err }
 	if err := serialize_vector_str(obj.TypeArgs, serializer); err != nil { return err }
 	if err := serialize_vector_vector_u8(obj.Args, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IsJson); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -1260,6 +1265,7 @@ func load_MoveMessage__Script(deserializer serde.Deserializer) (MoveMessage__Scr
 	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.CodeBytes = val } else { return obj, err }
 	if val, err := deserialize_vector_str(deserializer); err == nil { obj.TypeArgs = val } else { return obj, err }
 	if val, err := deserialize_vector_vector_u8(deserializer); err == nil { obj.Args = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IsJson = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
