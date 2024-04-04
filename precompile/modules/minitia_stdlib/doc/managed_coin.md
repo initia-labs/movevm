@@ -1,5 +1,5 @@
 
-<a name="0x1_managed_coin"></a>
+<a id="0x1_managed_coin"></a>
 
 # Module `0x1::managed_coin`
 
@@ -26,7 +26,7 @@ By utilizing this current module, a developer can create his own coin and care l
 
 
 
-<a name="0x1_managed_coin_Capabilities"></a>
+<a id="0x1_managed_coin_Capabilities"></a>
 
 ## Resource `Capabilities`
 
@@ -39,7 +39,8 @@ The resource is stored on the account that initialized coin <code>CoinType</code
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -64,12 +65,14 @@ The resource is stored on the account that initialized coin <code>CoinType</code
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_managed_coin_EUNAUTHORIZED"></a>
+<a id="0x1_managed_coin_EUNAUTHORIZED"></a>
 
 Account is not a owner of metadata object.
 
@@ -79,7 +82,7 @@ Account is not a owner of metadata object.
 
 
 
-<a name="0x1_managed_coin_ENO_CAPABILITIES"></a>
+<a id="0x1_managed_coin_ENO_CAPABILITIES"></a>
 
 Metadata has no capabilities (burn/mint).
 
@@ -89,7 +92,7 @@ Metadata has no capabilities (burn/mint).
 
 
 
-<a name="0x1_managed_coin_initialize"></a>
+<a id="0x1_managed_coin_initialize"></a>
 
 ## Function `initialize`
 
@@ -102,7 +105,8 @@ Mint and Burn Capabilities will be stored under <code>metadata</code> in <code><
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_initialize">initialize</a>(
@@ -135,7 +139,9 @@ Mint and Burn Capabilities will be stored under <code>metadata</code> in <code><
 
 
 
-<a name="0x1_managed_coin_burn"></a>
+</details>
+
+<a id="0x1_managed_coin_burn"></a>
 
 ## Function `burn`
 
@@ -147,7 +153,8 @@ Withdraw an <code>amount</code> of metadata coin from <code><a href="account.md#
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_burn">burn</a>(
@@ -177,7 +184,9 @@ Withdraw an <code>amount</code> of metadata coin from <code><a href="account.md#
 
 
 
-<a name="0x1_managed_coin_mint"></a>
+</details>
+
+<a id="0x1_managed_coin_mint"></a>
 
 ## Function `mint`
 
@@ -189,7 +198,8 @@ Create new metadata coins and deposit them into dst_addr's account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint">mint</a>(
@@ -215,3 +225,7 @@ Create new metadata coins and deposit them into dst_addr's account.
     <a href="coin.md#0x1_coin_mint_to">coin::mint_to</a>(&capabilities.mint_cap, dst_addr, amount);
 }
 </code></pre>
+
+
+
+</details>

@@ -9,27 +9,9 @@ import (
 var files embed.FS
 
 const (
-	StdlibPath       = "binaries/stdlib"
-	MinlibPath       = "binaries/minlib"
-	CoinTypeFileName = "binaries/types/coin_type.mv"
-	NftTypeFileName  = "binaries/types/nft_type.mv"
-	SftTypeFileName  = "binaries/types/sft_type.mv"
+	StdlibPath = "binaries/stdlib"
+	MinlibPath = "binaries/minlib"
 )
-
-// ReadCoinType return coin_type module bytes
-func ReadCoinType() ([]byte, error) {
-	return files.ReadFile(CoinTypeFileName)
-}
-
-// ReadNftType return nft_type_module bytes
-func ReadNftType() ([]byte, error) {
-	return files.ReadFile(NftTypeFileName)
-}
-
-// ReadSftType return nft_type_module bytes
-func ReadSftType() ([]byte, error) {
-	return files.ReadFile(SftTypeFileName)
-}
 
 // ReadStdlib return stdlib module bytes
 func ReadStdlib() ([][]byte, error) {

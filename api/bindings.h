@@ -272,7 +272,6 @@ void initialize(vm_t *vm_ptr,
                 GoApi api,
                 ByteSliceView env_payload,
                 ByteSliceView module_bundle_payload,
-                bool allow_arbitrary,
                 ByteSliceView allowed_publishers_payload,
                 UnmanagedVector *errmsg);
 

@@ -11,7 +11,6 @@ module initia_std::code {
     // Code Publishing
 
     struct ModuleStore has key {
-        allow_arbitrary: bool,
         /// It is a list of addresses with permission to distribute contracts, 
         /// and an empty list is interpreted as allowing anyone to distribute.
         allowed_publishers: vector<address>,
@@ -38,8 +37,8 @@ module initia_std::code {
     /// Cannot downgrade a package's upgradability policy.
     const EUPGRADE_WEAKER_POLICY: u64 = 0x2;
 
-    /// Creating a package with incompatible upgrade policy is disabled.
-    const EINCOMPATIBLE_POLICY_DISABLED: u64 = 0x3;
+    /// Upgrade policy is not specified.
+    const EUPGRADE_POLICY_UNSPECIFIED: u64 = 0x3;
 
     /// The publish request args are invalid.
     const EINVALID_ARGUMENTS: u64 = 0x4;
@@ -49,13 +48,10 @@ module initia_std::code {
 
     /// allowed_publishers argument is invalid.
     const EINVALID_ALLOWED_PUBLISHERS: u64 = 0x6;
-
-    /// Whether unconditional code upgrade with no compatibility check is allowed. This
-    /// publication mode should only be used for modules which aren't shared with user others.
-    /// The developer is responsible for not breaking memory layout of any resources he already
-    /// stored on chain.
-    const UPGRADE_POLICY_ARBITRARY:  u8 = 0;
     
+    /// The upgrade policy is unspecified.
+    const UPGRADE_POLICY_UNSPECIFIED: u8 = 0;
+
     /// Whether a compatibility check should be performed for upgrades. The check only passes if
     /// a new module has (a) the same public functions (b) for existing resources, no layout change.
     const UPGRADE_POLICY_COMPATIBLE: u8 = 1;
@@ -71,7 +67,6 @@ module initia_std::code {
 
     fun init_module(chain: &signer) {
         move_to(chain, ModuleStore {
-            allow_arbitrary: false,
             allowed_publishers: vector[],
         });
     } 
@@ -79,7 +74,6 @@ module initia_std::code {
     public entry fun init_genesis(
         chain: &signer, 
         module_ids: vector<String>, 
-        allow_arbitrary: bool,
         allowed_publishers: vector<address>,
     ) acquires ModuleStore {
         assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EINVALID_CHAIN_OPERATOR));
@@ -97,15 +91,7 @@ module initia_std::code {
             metadata: metadata_table,
         });
 
-        set_allow_arbitrary(chain, allow_arbitrary);
         set_allowed_publishers(chain, allowed_publishers);
-    }
-
-    public entry fun set_allow_arbitrary(chain: &signer, allow_arbitrary: bool) acquires ModuleStore {
-        assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EINVALID_CHAIN_OPERATOR));
-
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.allow_arbitrary = allow_arbitrary;
     }
 
     public entry fun set_allowed_publishers(chain: &signer, allowed_publishers: vector<address>) acquires ModuleStore {
@@ -137,8 +123,8 @@ module initia_std::code {
         // Check whether arbitrary publish is allowed or not.
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(
-            module_store.allow_arbitrary || upgrade_policy > UPGRADE_POLICY_ARBITRARY,
-            error::invalid_argument(EINCOMPATIBLE_POLICY_DISABLED),
+            upgrade_policy > UPGRADE_POLICY_UNSPECIFIED,
+            error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED),
         );
 
         let addr = signer::address_of(owner);

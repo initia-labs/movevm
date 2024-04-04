@@ -33,10 +33,6 @@ impl<'block, S: StateView> StateViewImpl<'block, S> {
             PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(err.to_string())
         })
     }
-
-    pub fn check_compat(&self) -> PartialVMResult<bool> {
-        self.get_check_compat()
-    }
 }
 
 impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
@@ -77,10 +73,7 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
     }
 
     fn get_check_compat(&self) -> PartialVMResult<bool> {
-        match self.get(&AccessPath::check_compat_path())? {
-            Some(bytes) => Ok(bytes.starts_with(&[0])),
-            None => Ok(true),
-        }
+        Ok(true)
     }
 }
 

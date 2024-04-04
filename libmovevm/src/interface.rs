@@ -56,7 +56,6 @@ pub extern "C" fn initialize(
     api: GoApi,
     env_payload: ByteSliceView,
     module_bundle_payload: ByteSliceView,
-    allow_arbitrary: bool,
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) {
@@ -74,7 +73,6 @@ pub extern "C" fn initialize(
                 api,
                 env,
                 module_bundle,
-                allow_arbitrary,
                 allowed_publishers,
             )
         }))

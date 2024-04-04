@@ -1,5 +1,5 @@
 
-<a name="0x1_coin"></a>
+<a id="0x1_coin"></a>
 
 # Module `0x1::coin`
 
@@ -33,10 +33,17 @@ TODO - make is_module_account or some blacklist from freeze.
 -  [Function `metadata_address`](#0x1_coin_metadata_address)
 -  [Function `metadata`](#0x1_coin_metadata)
 -  [Function `is_coin_initialized`](#0x1_coin_is_coin_initialized)
+-  [Function `is_coin`](#0x1_coin_is_coin)
+-  [Function `is_coin_by_symbol`](#0x1_coin_is_coin_by_symbol)
+-  [Function `metadata_to_denom`](#0x1_coin_metadata_to_denom)
+-  [Function `denom_to_metadata`](#0x1_coin_denom_to_metadata)
 
 
-<pre><code><b>use</b> <a href="event.md#0x1_event">0x1::event</a>;
+<pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs">0x1::bcs</a>;
+<b>use</b> <a href="event.md#0x1_event">0x1::event</a>;
+<b>use</b> <a href="from_bcs.md#0x1_from_bcs">0x1::from_bcs</a>;
 <b>use</b> <a href="fungible_asset.md#0x1_fungible_asset">0x1::fungible_asset</a>;
+<b>use</b> <a href="hex.md#0x1_hex">0x1::hex</a>;
 <b>use</b> <a href="object.md#0x1_object">0x1::object</a>;
 <b>use</b> <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option">0x1::option</a>;
 <b>use</b> <a href="primary_fungible_store.md#0x1_primary_fungible_store">0x1::primary_fungible_store</a>;
@@ -45,7 +52,7 @@ TODO - make is_module_account or some blacklist from freeze.
 
 
 
-<a name="0x1_coin_ManagingRefs"></a>
+<a id="0x1_coin_ManagingRefs"></a>
 
 ## Resource `ManagingRefs`
 
@@ -56,7 +63,8 @@ TODO - make is_module_account or some blacklist from freeze.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -81,7 +89,9 @@ TODO - make is_module_account or some blacklist from freeze.
 </dl>
 
 
-<a name="0x1_coin_CoinCreatedEvent"></a>
+</details>
+
+<a id="0x1_coin_CoinCreatedEvent"></a>
 
 ## Struct `CoinCreatedEvent`
 
@@ -93,7 +103,8 @@ TODO - make is_module_account or some blacklist from freeze.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -106,7 +117,9 @@ TODO - make is_module_account or some blacklist from freeze.
 </dl>
 
 
-<a name="0x1_coin_MintCapability"></a>
+</details>
+
+<a id="0x1_coin_MintCapability"></a>
 
 ## Struct `MintCapability`
 
@@ -117,7 +130,8 @@ TODO - make is_module_account or some blacklist from freeze.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -130,7 +144,9 @@ TODO - make is_module_account or some blacklist from freeze.
 </dl>
 
 
-<a name="0x1_coin_BurnCapability"></a>
+</details>
+
+<a id="0x1_coin_BurnCapability"></a>
 
 ## Struct `BurnCapability`
 
@@ -141,7 +157,8 @@ TODO - make is_module_account or some blacklist from freeze.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -154,7 +171,9 @@ TODO - make is_module_account or some blacklist from freeze.
 </dl>
 
 
-<a name="0x1_coin_FreezeCapability"></a>
+</details>
+
+<a id="0x1_coin_FreezeCapability"></a>
 
 ## Struct `FreezeCapability`
 
@@ -165,7 +184,8 @@ TODO - make is_module_account or some blacklist from freeze.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -178,12 +198,14 @@ TODO - make is_module_account or some blacklist from freeze.
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_coin_ERR_MANAGING_REFS_NOT_FOUND"></a>
+<a id="0x1_coin_ERR_MANAGING_REFS_NOT_FOUND"></a>
 
 ManagingRefs is not found.
 
@@ -193,7 +215,7 @@ ManagingRefs is not found.
 
 
 
-<a name="0x1_coin_ERR_NOT_OWNER"></a>
+<a id="0x1_coin_ERR_NOT_OWNER"></a>
 
 Only fungible asset metadata owner can make changes.
 
@@ -203,7 +225,7 @@ Only fungible asset metadata owner can make changes.
 
 
 
-<a name="0x1_coin_initialize"></a>
+<a id="0x1_coin_initialize"></a>
 
 ## Function `initialize`
 
@@ -214,7 +236,8 @@ Only fungible asset metadata owner can make changes.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_initialize">initialize</a> (
@@ -242,7 +265,9 @@ Only fungible asset metadata owner can make changes.
 
 
 
-<a name="0x1_coin_initialize_and_generate_extend_ref"></a>
+</details>
+
+<a id="0x1_coin_initialize_and_generate_extend_ref"></a>
 
 ## Function `initialize_and_generate_extend_ref`
 
@@ -253,7 +278,8 @@ Only fungible asset metadata owner can make changes.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_initialize_and_generate_extend_ref">initialize_and_generate_extend_ref</a> (
@@ -266,7 +292,7 @@ Only fungible asset metadata owner can make changes.
     project_uri: String,
 ): (<a href="coin.md#0x1_coin_MintCapability">MintCapability</a>, <a href="coin.md#0x1_coin_BurnCapability">BurnCapability</a>, <a href="coin.md#0x1_coin_FreezeCapability">FreezeCapability</a>, ExtendRef) {
     // create <a href="object.md#0x1_object">object</a> for fungible asset metadata
-    <b>let</b> constructor_ref = &<a href="object.md#0x1_object_create_named_object">object::create_named_object</a>(creator, *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&symbol));
+    <b>let</b> constructor_ref = &<a href="object.md#0x1_object_create_named_object">object::create_named_object</a>(creator, *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&symbol), <b>false</b>);
 
     <a href="primary_fungible_store.md#0x1_primary_fungible_store_create_primary_store_enabled_fungible_asset">primary_fungible_store::create_primary_store_enabled_fungible_asset</a>(
         constructor_ref,
@@ -301,7 +327,9 @@ Only fungible asset metadata owner can make changes.
 
 
 
-<a name="0x1_coin_withdraw"></a>
+</details>
+
+<a id="0x1_coin_withdraw"></a>
 
 ## Function `withdraw`
 
@@ -312,7 +340,8 @@ Only fungible asset metadata owner can make changes.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_withdraw">withdraw</a> (
@@ -326,7 +355,9 @@ Only fungible asset metadata owner can make changes.
 
 
 
-<a name="0x1_coin_deposit"></a>
+</details>
+
+<a id="0x1_coin_deposit"></a>
 
 ## Function `deposit`
 
@@ -337,7 +368,8 @@ Only fungible asset metadata owner can make changes.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_deposit">deposit</a> (
@@ -350,7 +382,9 @@ Only fungible asset metadata owner can make changes.
 
 
 
-<a name="0x1_coin_transfer"></a>
+</details>
+
+<a id="0x1_coin_transfer"></a>
 
 ## Function `transfer`
 
@@ -361,7 +395,8 @@ Only fungible asset metadata owner can make changes.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="coin.md#0x1_coin_transfer">transfer</a> (
@@ -376,7 +411,9 @@ Only fungible asset metadata owner can make changes.
 
 
 
-<a name="0x1_coin_mint"></a>
+</details>
+
+<a id="0x1_coin_mint"></a>
 
 ## Function `mint`
 
@@ -388,7 +425,8 @@ Mint FAs as the owner of metadat object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_mint">mint</a>(
@@ -407,7 +445,9 @@ Mint FAs as the owner of metadat object.
 
 
 
-<a name="0x1_coin_mint_to"></a>
+</details>
+
+<a id="0x1_coin_mint_to"></a>
 
 ## Function `mint_to`
 
@@ -419,7 +459,8 @@ Mint FAs as the owner of metadat object to the primary fungible store of the giv
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_mint_to">mint_to</a>(
@@ -439,7 +480,9 @@ Mint FAs as the owner of metadat object to the primary fungible store of the giv
 
 
 
-<a name="0x1_coin_burn"></a>
+</details>
+
+<a id="0x1_coin_burn"></a>
 
 ## Function `burn`
 
@@ -451,7 +494,8 @@ Burn FAs as the owner of metadat object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_burn">burn</a>(
@@ -470,7 +514,9 @@ Burn FAs as the owner of metadat object.
 
 
 
-<a name="0x1_coin_freeze_coin_store"></a>
+</details>
+
+<a id="0x1_coin_freeze_coin_store"></a>
 
 ## Function `freeze_coin_store`
 
@@ -482,7 +528,8 @@ Freeze the primary store of an account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_freeze_coin_store">freeze_coin_store</a>(
@@ -501,7 +548,9 @@ Freeze the primary store of an account.
 
 
 
-<a name="0x1_coin_unfreeze_coin_store"></a>
+</details>
+
+<a id="0x1_coin_unfreeze_coin_store"></a>
 
 ## Function `unfreeze_coin_store`
 
@@ -513,7 +562,8 @@ Unfreeze the primary store of an account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_unfreeze_coin_store">unfreeze_coin_store</a>(
@@ -532,7 +582,9 @@ Unfreeze the primary store of an account.
 
 
 
-<a name="0x1_coin_balance"></a>
+</details>
+
+<a id="0x1_coin_balance"></a>
 
 ## Function `balance`
 
@@ -544,7 +596,8 @@ Unfreeze the primary store of an account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_balance">balance</a>(<a href="account.md#0x1_account">account</a>: <b>address</b>, metadata: Object&lt;Metadata&gt;): u64 {
@@ -554,7 +607,9 @@ Unfreeze the primary store of an account.
 
 
 
-<a name="0x1_coin_is_frozen"></a>
+</details>
+
+<a id="0x1_coin_is_frozen"></a>
 
 ## Function `is_frozen`
 
@@ -566,7 +621,8 @@ Unfreeze the primary store of an account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_is_frozen">is_frozen</a>(<a href="account.md#0x1_account">account</a>: <b>address</b>, metadata: Object&lt;Metadata&gt;): bool {
@@ -576,7 +632,9 @@ Unfreeze the primary store of an account.
 
 
 
-<a name="0x1_coin_balances"></a>
+</details>
+
+<a id="0x1_coin_balances"></a>
 
 ## Function `balances`
 
@@ -588,7 +646,8 @@ Unfreeze the primary store of an account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_balances">balances</a>(
@@ -602,7 +661,9 @@ Unfreeze the primary store of an account.
 
 
 
-<a name="0x1_coin_supply"></a>
+</details>
+
+<a id="0x1_coin_supply"></a>
 
 ## Function `supply`
 
@@ -615,7 +676,8 @@ Get the current supply from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_supply">supply</a>(metadata: Object&lt;Metadata&gt;): Option&lt;u128&gt; {
@@ -625,7 +687,9 @@ Get the current supply from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_maximum"></a>
+</details>
+
+<a id="0x1_coin_maximum"></a>
 
 ## Function `maximum`
 
@@ -638,7 +702,8 @@ Get the maximum supply from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_maximum">maximum</a>(metadata: Object&lt;Metadata&gt;): Option&lt;u128&gt; {
@@ -648,7 +713,9 @@ Get the maximum supply from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_name"></a>
+</details>
+
+<a id="0x1_coin_name"></a>
 
 ## Function `name`
 
@@ -661,7 +728,8 @@ Get the name of the fungible asset from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_name">name</a>(metadata: Object&lt;Metadata&gt;): String {
@@ -671,7 +739,9 @@ Get the name of the fungible asset from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_symbol"></a>
+</details>
+
+<a id="0x1_coin_symbol"></a>
 
 ## Function `symbol`
 
@@ -684,7 +754,8 @@ Get the symbol of the fungible asset from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_symbol">symbol</a>(metadata: Object&lt;Metadata&gt;): String {
@@ -694,7 +765,9 @@ Get the symbol of the fungible asset from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_decimals"></a>
+</details>
+
+<a id="0x1_coin_decimals"></a>
 
 ## Function `decimals`
 
@@ -707,7 +780,8 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_decimals">decimals</a>(metadata: Object&lt;Metadata&gt;): u8 {
@@ -717,7 +791,9 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_metadata_address"></a>
+</details>
+
+<a id="0x1_coin_metadata_address"></a>
 
 ## Function `metadata_address`
 
@@ -729,7 +805,8 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_metadata_address">metadata_address</a>(creator: <b>address</b>, symbol: String): <b>address</b> {
@@ -739,7 +816,9 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_metadata"></a>
+</details>
+
+<a id="0x1_coin_metadata"></a>
 
 ## Function `metadata`
 
@@ -751,7 +830,8 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_metadata">metadata</a>(creator: <b>address</b>, symbol: String): Object&lt;Metadata&gt; {
@@ -761,7 +841,9 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-<a name="0x1_coin_is_coin_initialized"></a>
+</details>
+
+<a id="0x1_coin_is_coin_initialized"></a>
 
 ## Function `is_coin_initialized`
 
@@ -773,7 +855,8 @@ Get the decimals from the <code>metadata</code> object.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_is_coin_initialized">is_coin_initialized</a>(metadata: Object&lt;Metadata&gt;): bool {
@@ -781,3 +864,128 @@ Get the decimals from the <code>metadata</code> object.
     <b>exists</b>&lt;<a href="coin.md#0x1_coin_ManagingRefs">ManagingRefs</a>&gt;(metadata_addr)
 }
 </code></pre>
+
+
+
+</details>
+
+<a id="0x1_coin_is_coin"></a>
+
+## Function `is_coin`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_is_coin">is_coin</a>(metadata_addr: <b>address</b>): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_is_coin">is_coin</a>(metadata_addr: <b>address</b>): bool {
+    <b>exists</b>&lt;<a href="coin.md#0x1_coin_ManagingRefs">ManagingRefs</a>&gt;(metadata_addr)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_coin_is_coin_by_symbol"></a>
+
+## Function `is_coin_by_symbol`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_is_coin_by_symbol">is_coin_by_symbol</a>(creator: <b>address</b>, symbol: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_is_coin_by_symbol">is_coin_by_symbol</a>(creator: <b>address</b>, symbol: String): bool {
+    <b>let</b> metadata_addr = <a href="coin.md#0x1_coin_metadata_address">metadata_address</a>(creator, symbol);
+    <b>exists</b>&lt;<a href="coin.md#0x1_coin_ManagingRefs">ManagingRefs</a>&gt;(metadata_addr)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_coin_metadata_to_denom"></a>
+
+## Function `metadata_to_denom`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_metadata_to_denom">metadata_to_denom</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_metadata_to_denom">metadata_to_denom</a>(metadata: Object&lt;Metadata&gt;): String {
+    <b>let</b> metadata_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(metadata);
+    <b>let</b> symbol = <a href="coin.md#0x1_coin_symbol">symbol</a>(metadata);
+    <b>let</b> std_metadata_addr = <a href="coin.md#0x1_coin_metadata_address">metadata_address</a>(@minitia_std, symbol);
+
+    <b>if</b> (std_metadata_addr == metadata_addr) {
+        <b>return</b> symbol
+    };
+
+    <b>let</b> denom = <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"<b>move</b>/");
+    <b>let</b> addr_bytes = <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs_to_bytes">bcs::to_bytes</a>(&metadata_addr);
+    <b>let</b> addr_string = <a href="hex.md#0x1_hex_encode_to_string">hex::encode_to_string</a>(&addr_bytes);
+    <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_append">string::append</a>(&<b>mut</b> denom, addr_string);
+    <b>return</b> denom
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_coin_denom_to_metadata"></a>
+
+## Function `denom_to_metadata`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_denom_to_metadata">denom_to_metadata</a>(denom: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_denom_to_metadata">denom_to_metadata</a>(denom: String): Object&lt;Metadata&gt; {
+    <b>let</b> addr = <b>if</b> (<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&denom) &gt; 5 && &b"<b>move</b>/" == <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_sub_string">string::sub_string</a>(&denom, 0, 5))) {
+        <b>let</b> len = <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&denom);
+        <b>let</b> hex_string = <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_sub_string">string::sub_string</a>(&denom, 5, len);
+        <a href="from_bcs.md#0x1_from_bcs_to_address">from_bcs::to_address</a>(<a href="hex.md#0x1_hex_decode_string">hex::decode_string</a>(&hex_string))
+    } <b>else</b> {
+        <a href="coin.md#0x1_coin_metadata_address">metadata_address</a>(@minitia_std, denom)
+    };
+
+    <a href="object.md#0x1_object_address_to_object">object::address_to_object</a>(addr)
+}
+</code></pre>
+
+
+
+</details>

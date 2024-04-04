@@ -1,5 +1,5 @@
 
-<a name="0x1_type_info"></a>
+<a id="0x1_type_info"></a>
 
 # Module `0x1::type_info`
 
@@ -13,12 +13,12 @@
 -  [Function `type_name`](#0x1_type_info_type_name)
 
 
-<pre><code><b>use</b> <a href="">0x1::string</a>;
+<pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 </code></pre>
 
 
 
-<a name="0x1_type_info_TypeInfo"></a>
+<a id="0x1_type_info_TypeInfo"></a>
 
 ## Struct `TypeInfo`
 
@@ -29,7 +29,8 @@
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -40,13 +41,13 @@
 
 </dd>
 <dt>
-<code>module_name: <a href="">vector</a>&lt;u8&gt;</code>
+<code>module_name: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-<code>struct_name: <a href="">vector</a>&lt;u8&gt;</code>
+<code>struct_name: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;</code>
 </dt>
 <dd>
 
@@ -54,7 +55,9 @@
 </dl>
 
 
-<a name="0x1_type_info_account_address"></a>
+</details>
+
+<a id="0x1_type_info_account_address"></a>
 
 ## Function `account_address`
 
@@ -65,7 +68,8 @@
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_account_address">account_address</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">TypeInfo</a>): <b>address</b> {
@@ -75,49 +79,57 @@
 
 
 
-<a name="0x1_type_info_module_name"></a>
+</details>
+
+<a id="0x1_type_info_module_name"></a>
 
 ## Function `module_name`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_module_name">module_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">type_info::TypeInfo</a>): <a href="">vector</a>&lt;u8&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_module_name">module_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">type_info::TypeInfo</a>): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_module_name">module_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">TypeInfo</a>): <a href="">vector</a>&lt;u8&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_module_name">module_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">TypeInfo</a>): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
     <a href="type_info.md#0x1_type_info">type_info</a>.module_name
 }
 </code></pre>
 
 
 
-<a name="0x1_type_info_struct_name"></a>
+</details>
+
+<a id="0x1_type_info_struct_name"></a>
 
 ## Function `struct_name`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_struct_name">struct_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">type_info::TypeInfo</a>): <a href="">vector</a>&lt;u8&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_struct_name">struct_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">type_info::TypeInfo</a>): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_struct_name">struct_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">TypeInfo</a>): <a href="">vector</a>&lt;u8&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_struct_name">struct_name</a>(<a href="type_info.md#0x1_type_info">type_info</a>: &<a href="type_info.md#0x1_type_info_TypeInfo">TypeInfo</a>): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
     <a href="type_info.md#0x1_type_info">type_info</a>.struct_name
 }
 </code></pre>
 
 
 
-<a name="0x1_type_info_type_of"></a>
+</details>
+
+<a id="0x1_type_info_type_of"></a>
 
 ## Function `type_of`
 
@@ -128,7 +140,8 @@
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>native</b> <b>fun</b> <a href="type_info.md#0x1_type_info_type_of">type_of</a>&lt;T&gt;(): <a href="type_info.md#0x1_type_info_TypeInfo">TypeInfo</a>;
@@ -136,19 +149,26 @@
 
 
 
-<a name="0x1_type_info_type_name"></a>
+</details>
+
+<a id="0x1_type_info_type_name"></a>
 
 ## Function `type_name`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_type_name">type_name</a>&lt;T&gt;(): <a href="_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="type_info.md#0x1_type_info_type_name">type_name</a>&lt;T&gt;(): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>native</b> <b>fun</b> <a href="type_info.md#0x1_type_info_type_name">type_name</a>&lt;T&gt;(): <a href="_String">string::String</a>;
+<pre><code><b>public</b> <b>native</b> <b>fun</b> <a href="type_info.md#0x1_type_info_type_name">type_name</a>&lt;T&gt;(): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>;
 </code></pre>
+
+
+
+</details>

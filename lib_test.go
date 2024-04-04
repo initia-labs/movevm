@@ -67,7 +67,6 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 			SessionId:         [32]uint8(generateRandomHash()),
 		},
 		types.NewModuleBundle(stdlibFiles...),
-		false,
 		[]types.AccountAddress{},
 	)
 	require.NoError(t, err)

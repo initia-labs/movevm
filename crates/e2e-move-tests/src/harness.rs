@@ -70,10 +70,6 @@ impl MoveHarness {
     }
 
     pub fn initialize(&mut self) {
-        self.initialize_with_check_compat(true)
-    }
-
-    pub fn initialize_with_check_compat(&mut self, check_compat: bool) {
         let state = self.chain.create_state();
         let mut table_state = MockTableState::new(&state);
 
@@ -97,19 +93,10 @@ impl MoveHarness {
                 &mut table_resolver,
                 self.load_precompiled_stdlib()
                     .expect("Failed to load precompiles"),
-                !check_compat,
                 vec![],
             )
             .expect("Module must load");
         self.commit(output, true);
-        self.assert_check_compat(check_compat);
-    }
-
-    fn assert_check_compat(&self, expected_value: bool) {
-        let state = self.chain.create_state();
-        let resolver = StateViewImpl::new(&state);
-        let check_compat = resolver.check_compat().expect("should not return error");
-        assert_eq!(check_compat, expected_value);
     }
 
     fn load_precompiled_stdlib(&self) -> io::Result<ModuleBundle> {

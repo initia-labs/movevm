@@ -23,7 +23,6 @@ func (vm *VM) Initialize(
 	goApi api.GoAPI,
 	env types.Env,
 	moduleBundle types.ModuleBundle,
-	allowArbitrary bool,
 	allowedPublishers []types.AccountAddress,
 ) error {
 	envBz, err := env.BcsSerialize()
@@ -47,7 +46,6 @@ func (vm *VM) Initialize(
 		goApi,
 		envBz,
 		moduleBundleBz,
-		allowArbitrary,
 		allowedPublishersBz,
 	)
 

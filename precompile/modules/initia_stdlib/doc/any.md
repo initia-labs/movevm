@@ -1,5 +1,5 @@
 
-<a name="0x1_any"></a>
+<a id="0x1_any"></a>
 
 # Module `0x1::any`
 
@@ -12,16 +12,16 @@
 -  [Function `type_name`](#0x1_any_type_name)
 
 
-<pre><code><b>use</b> <a href="">0x1::bcs</a>;
-<b>use</b> <a href="">0x1::error</a>;
+<pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs">0x1::bcs</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error">0x1::error</a>;
 <b>use</b> <a href="from_bcs.md#0x1_from_bcs">0x1::from_bcs</a>;
-<b>use</b> <a href="">0x1::string</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 <b>use</b> <a href="type_info.md#0x1_type_info">0x1::type_info</a>;
 </code></pre>
 
 
 
-<a name="0x1_any_Any"></a>
+<a id="0x1_any_Any"></a>
 
 ## Struct `Any`
 
@@ -43,18 +43,19 @@ extension: Option<Any>
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
 <dt>
-<code>type_name: <a href="_String">string::String</a></code>
+<code>type_name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-<code>data: <a href="">vector</a>&lt;u8&gt;</code>
+<code>data: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;</code>
 </dt>
 <dd>
 
@@ -62,12 +63,14 @@ extension: Option<Any>
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_any_ETYPE_MISMATCH"></a>
+<a id="0x1_any_ETYPE_MISMATCH"></a>
 
 The type provided for <code>unpack</code> is not the same as was given for <code>pack</code>.
 
@@ -77,7 +80,7 @@ The type provided for <code>unpack</code> is not the same as was given for <code
 
 
 
-<a name="0x1_any_pack"></a>
+<a id="0x1_any_pack"></a>
 
 ## Function `pack`
 
@@ -90,7 +93,8 @@ also required from <code>T</code>.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="any.md#0x1_any_pack">pack</a>&lt;T: drop + store&gt;(x: T): <a href="any.md#0x1_any_Any">Any</a> {
@@ -103,7 +107,9 @@ also required from <code>T</code>.
 
 
 
-<a name="0x1_any_unpack"></a>
+</details>
+
+<a id="0x1_any_unpack"></a>
 
 ## Function `unpack`
 
@@ -115,33 +121,41 @@ Unpack a value from the <code><a href="any.md#0x1_any_Any">Any</a></code> repres
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="any.md#0x1_any_unpack">unpack</a>&lt;T&gt;(x: <a href="any.md#0x1_any_Any">Any</a>): T {
-    <b>assert</b>!(<a href="type_info.md#0x1_type_info_type_name">type_info::type_name</a>&lt;T&gt;() == x.type_name, <a href="_invalid_argument">error::invalid_argument</a>(<a href="any.md#0x1_any_ETYPE_MISMATCH">ETYPE_MISMATCH</a>));
+    <b>assert</b>!(<a href="type_info.md#0x1_type_info_type_name">type_info::type_name</a>&lt;T&gt;() == x.type_name, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="any.md#0x1_any_ETYPE_MISMATCH">ETYPE_MISMATCH</a>));
     from_bytes&lt;T&gt;(x.data)
 }
 </code></pre>
 
 
 
-<a name="0x1_any_type_name"></a>
+</details>
+
+<a id="0x1_any_type_name"></a>
 
 ## Function `type_name`
 
 Returns the type name of this Any
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="any.md#0x1_any_type_name">type_name</a>(x: &<a href="any.md#0x1_any_Any">any::Any</a>): &<a href="_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="any.md#0x1_any_type_name">type_name</a>(x: &<a href="any.md#0x1_any_Any">any::Any</a>): &<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="any.md#0x1_any_type_name">type_name</a>(x: &<a href="any.md#0x1_any_Any">Any</a>): &String {
     &x.type_name
 }
 </code></pre>
+
+
+
+</details>

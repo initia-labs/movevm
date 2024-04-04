@@ -1,5 +1,5 @@
 
-<a name="0x1_guid"></a>
+<a id="0x1_guid"></a>
 
 # Module `0x1::guid`
 
@@ -15,6 +15,7 @@ A module for generating globally unique identifiers
 -  [Function `create_id`](#0x1_guid_create_id)
 -  [Function `create_with_capability`](#0x1_guid_create_with_capability)
 -  [Function `create`](#0x1_guid_create)
+-  [Function `create_impl`](#0x1_guid_create_impl)
 -  [Function `publish_generator`](#0x1_guid_publish_generator)
 -  [Function `id`](#0x1_guid_id)
 -  [Function `creator_address`](#0x1_guid_creator_address)
@@ -30,7 +31,7 @@ A module for generating globally unique identifiers
 
 
 
-<a name="0x1_guid_Generator"></a>
+<a id="0x1_guid_Generator"></a>
 
 ## Resource `Generator`
 
@@ -42,7 +43,8 @@ A generator for new GUIDs.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -55,7 +57,9 @@ A generator for new GUIDs.
 </dl>
 
 
-<a name="0x1_guid_GUID"></a>
+</details>
+
+<a id="0x1_guid_GUID"></a>
 
 ## Struct `GUID`
 
@@ -67,7 +71,8 @@ A globally unique identifier derived from the sender's address and a counter
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -80,7 +85,9 @@ A globally unique identifier derived from the sender's address and a counter
 </dl>
 
 
-<a name="0x1_guid_ID"></a>
+</details>
+
+<a id="0x1_guid_ID"></a>
 
 ## Struct `ID`
 
@@ -92,7 +99,8 @@ A non-privileged identifier that can be freely created by anyone. Useful for loo
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -111,7 +119,9 @@ A non-privileged identifier that can be freely created by anyone. Useful for loo
 </dl>
 
 
-<a name="0x1_guid_CreateCapability"></a>
+</details>
+
+<a id="0x1_guid_CreateCapability"></a>
 
 ## Resource `CreateCapability`
 
@@ -123,7 +133,8 @@ A capability to create a privileged identifier on behalf of the given address
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -136,12 +147,14 @@ A capability to create a privileged identifier on behalf of the given address
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_guid_EGUID_GENERATOR_NOT_PUBLISHED"></a>
+<a id="0x1_guid_EGUID_GENERATOR_NOT_PUBLISHED"></a>
 
 GUID generator must be published ahead of first usage of <code>create_with_capability</code> function.
 
@@ -151,7 +164,7 @@ GUID generator must be published ahead of first usage of <code>create_with_capab
 
 
 
-<a name="0x1_guid_gen_create_capability"></a>
+<a id="0x1_guid_gen_create_capability"></a>
 
 ## Function `gen_create_capability`
 
@@ -163,7 +176,8 @@ Generates a capability to create the privileged GUID on behalf of the signer
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a> {
@@ -177,7 +191,9 @@ Generates a capability to create the privileged GUID on behalf of the signer
 
 
 
-<a name="0x1_guid_create_id"></a>
+</details>
+
+<a id="0x1_guid_create_id"></a>
 
 ## Function `create_id`
 
@@ -189,7 +205,8 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create_id">create_id</a>(addr: <b>address</b>, creation_num: u64): <a href="guid.md#0x1_guid_ID">ID</a> {
@@ -199,7 +216,9 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 
 
-<a name="0x1_guid_create_with_capability"></a>
+</details>
+
+<a id="0x1_guid_create_with_capability"></a>
 
 ## Function `create_with_capability`
 
@@ -210,7 +229,8 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create_with_capability">create_with_capability</a>(addr: <b>address</b>, _cap: &<a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
@@ -221,7 +241,9 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 
 
-<a name="0x1_guid_create"></a>
+</details>
+
+<a id="0x1_guid_create"></a>
 
 ## Function `create`
 
@@ -234,7 +256,8 @@ if it does not already have one
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
@@ -248,7 +271,36 @@ if it does not already have one
 
 
 
-<a name="0x1_guid_publish_generator"></a>
+</details>
+
+<a id="0x1_guid_create_impl"></a>
+
+## Function `create_impl`
+
+
+
+<pre><code><b>fun</b> <a href="guid.md#0x1_guid_create_impl">create_impl</a>(addr: <b>address</b>): <a href="guid.md#0x1_guid_GUID">guid::GUID</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="guid.md#0x1_guid_create_impl">create_impl</a>(addr: <b>address</b>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
+    <b>let</b> generator = <b>borrow_global_mut</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr);
+    <b>let</b> creation_num = generator.counter;
+    generator.counter = creation_num + 1;
+    <a href="guid.md#0x1_guid_GUID">GUID</a> { id: <a href="guid.md#0x1_guid_ID">ID</a> { creation_num, addr } }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_guid_publish_generator"></a>
 
 ## Function `publish_generator`
 
@@ -260,7 +312,8 @@ Publish a Generator resource under <code>account</code>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>) {
@@ -270,7 +323,9 @@ Publish a Generator resource under <code>account</code>
 
 
 
-<a name="0x1_guid_id"></a>
+</details>
+
+<a id="0x1_guid_id"></a>
 
 ## Function `id`
 
@@ -282,7 +337,8 @@ Get the non-privileged ID associated with a GUID
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id">id</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>): <a href="guid.md#0x1_guid_ID">ID</a> {
@@ -292,7 +348,9 @@ Get the non-privileged ID associated with a GUID
 
 
 
-<a name="0x1_guid_creator_address"></a>
+</details>
+
+<a id="0x1_guid_creator_address"></a>
 
 ## Function `creator_address`
 
@@ -304,7 +362,8 @@ Return the account address that created the GUID
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_creator_address">creator_address</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>): <b>address</b> {
@@ -314,7 +373,9 @@ Return the account address that created the GUID
 
 
 
-<a name="0x1_guid_id_creator_address"></a>
+</details>
+
+<a id="0x1_guid_id_creator_address"></a>
 
 ## Function `id_creator_address`
 
@@ -326,7 +387,8 @@ Return the account address that created the guid::ID
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creator_address">id_creator_address</a>(id: &<a href="guid.md#0x1_guid_ID">ID</a>): <b>address</b> {
@@ -336,7 +398,9 @@ Return the account address that created the guid::ID
 
 
 
-<a name="0x1_guid_creation_num"></a>
+</details>
+
+<a id="0x1_guid_creation_num"></a>
 
 ## Function `creation_num`
 
@@ -348,7 +412,8 @@ Return the creation number associated with the GUID
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_creation_num">creation_num</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>): u64 {
@@ -358,7 +423,9 @@ Return the creation number associated with the GUID
 
 
 
-<a name="0x1_guid_id_creation_num"></a>
+</details>
+
+<a id="0x1_guid_id_creation_num"></a>
 
 ## Function `id_creation_num`
 
@@ -370,7 +437,8 @@ Return the creation number associated with the guid::ID
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creation_num">id_creation_num</a>(id: &<a href="guid.md#0x1_guid_ID">ID</a>): u64 {
@@ -380,7 +448,9 @@ Return the creation number associated with the guid::ID
 
 
 
-<a name="0x1_guid_eq_id"></a>
+</details>
+
+<a id="0x1_guid_eq_id"></a>
 
 ## Function `eq_id`
 
@@ -392,7 +462,8 @@ Return true if the GUID's ID is <code>id</code>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_eq_id">eq_id</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>, id: &<a href="guid.md#0x1_guid_ID">ID</a>): bool {
@@ -402,7 +473,9 @@ Return true if the GUID's ID is <code>id</code>
 
 
 
-<a name="0x1_guid_get_next_creation_num"></a>
+</details>
+
+<a id="0x1_guid_get_next_creation_num"></a>
 
 ## Function `get_next_creation_num`
 
@@ -414,7 +487,8 @@ Return the number of the next GUID to be created by <code>addr</code>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_get_next_creation_num">get_next_creation_num</a>(addr: <b>address</b>): u64 <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
@@ -425,3 +499,7 @@ Return the number of the next GUID to be created by <code>addr</code>
     }
 }
 </code></pre>
+
+
+
+</details>

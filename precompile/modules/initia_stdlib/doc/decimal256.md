@@ -1,5 +1,5 @@
 
-<a name="0x1_decimal256"></a>
+<a id="0x1_decimal256"></a>
 
 # Module `0x1::decimal256`
 
@@ -27,15 +27,16 @@
 -  [Function `val`](#0x1_decimal256_val)
 -  [Function `is_same`](#0x1_decimal256_is_same)
 -  [Function `from_string`](#0x1_decimal256_from_string)
+-  [Function `pow`](#0x1_decimal256_pow)
 
 
-<pre><code><b>use</b> <a href="">0x1::error</a>;
-<b>use</b> <a href="">0x1::string</a>;
+<pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error">0x1::error</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 </code></pre>
 
 
 
-<a name="0x1_decimal256_Decimal256"></a>
+<a id="0x1_decimal256_Decimal256"></a>
 
 ## Struct `Decimal256`
 
@@ -47,7 +48,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -60,12 +62,14 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_decimal256_DECIMAL_FRACTIONAL"></a>
+<a id="0x1_decimal256_DECIMAL_FRACTIONAL"></a>
 
 
 
@@ -74,7 +78,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_EDIV_WITH_ZERO"></a>
+<a id="0x1_decimal256_EDIV_WITH_ZERO"></a>
 
 
 
@@ -83,7 +87,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_EFAILED_TO_DESERIALIZE"></a>
+<a id="0x1_decimal256_EFAILED_TO_DESERIALIZE"></a>
 
 
 
@@ -92,7 +96,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_EOUT_OF_RANGE"></a>
+<a id="0x1_decimal256_EOUT_OF_RANGE"></a>
 
 
 
@@ -101,7 +105,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_FRACTIONAL_LENGTH"></a>
+<a id="0x1_decimal256_FRACTIONAL_LENGTH"></a>
 
 
 
@@ -110,7 +114,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_MAX_INTEGER_PART"></a>
+<a id="0x1_decimal256_MAX_INTEGER_PART"></a>
 
 
 
@@ -119,7 +123,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_new"></a>
+<a id="0x1_decimal256_new"></a>
 
 ## Function `new`
 
@@ -130,7 +134,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_new">new</a>(val: u256): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -140,7 +145,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_new_u64"></a>
+</details>
+
+<a id="0x1_decimal256_new_u64"></a>
 
 ## Function `new_u64`
 
@@ -151,7 +158,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_new_u64">new_u64</a>(val: u64): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -161,7 +169,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_new_u128"></a>
+</details>
+
+<a id="0x1_decimal256_new_u128"></a>
 
 ## Function `new_u128`
 
@@ -172,7 +182,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_new_u128">new_u128</a>(val: u128): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -182,7 +193,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_one"></a>
+</details>
+
+<a id="0x1_decimal256_one"></a>
 
 ## Function `one`
 
@@ -193,7 +206,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_one">one</a>(): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -203,7 +217,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_zero"></a>
+</details>
+
+<a id="0x1_decimal256_zero"></a>
 
 ## Function `zero`
 
@@ -214,7 +230,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_zero">zero</a>(): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -224,7 +241,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_from_ratio_u64"></a>
+</details>
+
+<a id="0x1_decimal256_from_ratio_u64"></a>
 
 ## Function `from_ratio_u64`
 
@@ -235,7 +254,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_from_ratio_u64">from_ratio_u64</a>(numerator: u64, denominator: u64): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -247,7 +267,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_from_ratio_u128"></a>
+</details>
+
+<a id="0x1_decimal256_from_ratio_u128"></a>
 
 ## Function `from_ratio_u128`
 
@@ -258,7 +280,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_from_ratio_u128">from_ratio_u128</a>(numerator: u128, denominator: u128): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -270,7 +293,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_from_ratio"></a>
+</details>
+
+<a id="0x1_decimal256_from_ratio"></a>
 
 ## Function `from_ratio`
 
@@ -281,7 +306,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_from_ratio">from_ratio</a>(numerator: u256, denominator: u256): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -293,7 +319,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_add"></a>
+</details>
+
+<a id="0x1_decimal256_add"></a>
 
 ## Function `add`
 
@@ -304,7 +332,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_add">add</a>(left: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, right: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -314,7 +343,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_sub"></a>
+</details>
+
+<a id="0x1_decimal256_sub"></a>
 
 ## Function `sub`
 
@@ -325,7 +356,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_sub">sub</a>(left: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, right: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -335,7 +367,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_mul_u64"></a>
+</details>
+
+<a id="0x1_decimal256_mul_u64"></a>
 
 ## Function `mul_u64`
 
@@ -346,7 +380,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_mul_u64">mul_u64</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, val: u64): u64 {
@@ -356,7 +391,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_mul_u128"></a>
+</details>
+
+<a id="0x1_decimal256_mul_u128"></a>
 
 ## Function `mul_u128`
 
@@ -367,7 +404,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_mul_u128">mul_u128</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, val: u128): u128 {
@@ -377,7 +415,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_mul_u256"></a>
+</details>
+
+<a id="0x1_decimal256_mul_u256"></a>
 
 ## Function `mul_u256`
 
@@ -388,7 +428,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_mul_u256">mul_u256</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, val: u256): u256 {
@@ -398,7 +439,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_mul"></a>
+</details>
+
+<a id="0x1_decimal256_mul"></a>
 
 ## Function `mul`
 
@@ -409,7 +452,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_mul">mul</a>(a: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, b: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -419,7 +463,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_div_u64"></a>
+</details>
+
+<a id="0x1_decimal256_div_u64"></a>
 
 ## Function `div_u64`
 
@@ -430,7 +476,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_div_u64">div_u64</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, val: u64): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -440,7 +487,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_div_u128"></a>
+</details>
+
+<a id="0x1_decimal256_div_u128"></a>
 
 ## Function `div_u128`
 
@@ -451,7 +500,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_div_u128">div_u128</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, val: u128): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -461,7 +511,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_div"></a>
+</details>
+
+<a id="0x1_decimal256_div"></a>
 
 ## Function `div`
 
@@ -472,7 +524,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_div">div</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, val: u256): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
@@ -482,7 +535,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_val"></a>
+</details>
+
+<a id="0x1_decimal256_val"></a>
 
 ## Function `val`
 
@@ -493,7 +548,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_val">val</a>(decimal: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>): u256 {
@@ -503,7 +559,9 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_is_same"></a>
+</details>
+
+<a id="0x1_decimal256_is_same"></a>
 
 ## Function `is_same`
 
@@ -514,7 +572,8 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_is_same">is_same</a>(left: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>, right: &<a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a>): bool {
@@ -524,36 +583,39 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
 
 
 
-<a name="0x1_decimal256_from_string"></a>
+</details>
+
+<a id="0x1_decimal256_from_string"></a>
 
 ## Function `from_string`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_from_string">from_string</a>(num: &<a href="_String">string::String</a>): <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>
+<pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_from_string">from_string</a>(num: &<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="decimal256.md#0x1_decimal256_from_string">from_string</a>(num: &String): <a href="decimal256.md#0x1_decimal256_Decimal256">Decimal256</a> {
-    <b>let</b> vec = <a href="_bytes">string::bytes</a>(num);
-    <b>let</b> len = <a href="_length">vector::length</a>(vec);
+    <b>let</b> vec = <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(num);
+    <b>let</b> len = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(vec);
 
     <b>let</b> cursor = 0;
     <b>let</b> dot_index = 0;
     <b>let</b> val: u256 = 0;
     <b>while</b> (cursor &lt; len) {
-        <b>let</b> s = *<a href="_borrow">vector::borrow</a>(vec, cursor);
+        <b>let</b> s = *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(vec, cursor);
         cursor = cursor + 1;
 
         // find `.` position
         <b>if</b> (s == 46) <b>continue</b>;
 
         val = val * 10;
-        <b>assert</b>!(s &gt;= 48 && s &lt;= 57, <a href="_invalid_argument">error::invalid_argument</a>(<a href="decimal256.md#0x1_decimal256_EFAILED_TO_DESERIALIZE">EFAILED_TO_DESERIALIZE</a>));
+        <b>assert</b>!(s &gt;= 48 && s &lt;= 57, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="decimal256.md#0x1_decimal256_EFAILED_TO_DESERIALIZE">EFAILED_TO_DESERIALIZE</a>));
 
         <b>let</b> n = (s - 48 <b>as</b> u256);
         val = val + n;
@@ -561,7 +623,7 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
         <b>if</b> (cursor == dot_index + 1) {
             // <b>use</b> `&lt;` not `&lt;=` <b>to</b> safely check "out of range"
             // (i.e. <b>to</b> avoid fractional part checking)
-            <b>assert</b>!(<a href="decimal256.md#0x1_decimal256_val">val</a> &lt; <a href="decimal256.md#0x1_decimal256_MAX_INTEGER_PART">MAX_INTEGER_PART</a>, <a href="_invalid_argument">error::invalid_argument</a>(<a href="decimal256.md#0x1_decimal256_EOUT_OF_RANGE">EOUT_OF_RANGE</a>));
+            <b>assert</b>!(<a href="decimal256.md#0x1_decimal256_val">val</a> &lt; <a href="decimal256.md#0x1_decimal256_MAX_INTEGER_PART">MAX_INTEGER_PART</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="decimal256.md#0x1_decimal256_EOUT_OF_RANGE">EOUT_OF_RANGE</a>));
 
             dot_index = dot_index + 1;
         };
@@ -582,3 +644,38 @@ A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_0
     <a href="decimal256.md#0x1_decimal256_new">new</a>(val)
 }
 </code></pre>
+
+
+
+</details>
+
+<a id="0x1_decimal256_pow"></a>
+
+## Function `pow`
+
+
+
+<pre><code><b>fun</b> <a href="decimal256.md#0x1_decimal256_pow">pow</a>(num: u256, pow_amount: u64): u256
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="decimal256.md#0x1_decimal256_pow">pow</a>(num: u256, pow_amount: u64): u256 {
+    <b>let</b> index = 0;
+    <b>let</b> val = 1;
+    <b>while</b> (index &lt; pow_amount) {
+        val = val * num;
+        index = index + 1;
+    };
+
+    val
+}
+</code></pre>
+
+
+
+</details>

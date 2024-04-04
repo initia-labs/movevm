@@ -1,5 +1,5 @@
 
-<a name="0x1_staking"></a>
+<a id="0x1_staking"></a>
 
 # Module `0x1::staking`
 
@@ -20,6 +20,13 @@
 -  [Struct `UnbondingResponse`](#0x1_staking_UnbondingResponse)
 -  [Constants](#@Constants_0)
 -  [Function `reward_metadata`](#0x1_staking_reward_metadata)
+-  [Function `init_module`](#0x1_staking_init_module)
+-  [Function `load_staking_state`](#0x1_staking_load_staking_state)
+-  [Function `load_staking_state_mut`](#0x1_staking_load_staking_state_mut)
+-  [Function `load_delegation`](#0x1_staking_load_delegation)
+-  [Function `load_delegation_mut`](#0x1_staking_load_delegation_mut)
+-  [Function `load_unbonding`](#0x1_staking_load_unbonding)
+-  [Function `load_unbonding_mut`](#0x1_staking_load_unbonding_mut)
 -  [Function `get_delegation_response_from_delegation`](#0x1_staking_get_delegation_response_from_delegation)
 -  [Function `get_unbonding_response_from_unbonding`](#0x1_staking_get_unbonding_response_from_unbonding)
 -  [Function `get_delegation`](#0x1_staking_get_delegation)
@@ -34,6 +41,7 @@
 -  [Function `get_validator_from_unbonding_response`](#0x1_staking_get_validator_from_unbonding_response)
 -  [Function `get_release_time_from_unbonding_response`](#0x1_staking_get_release_time_from_unbonding_response)
 -  [Function `get_unbonding_amount_from_unbonding_response`](#0x1_staking_get_unbonding_amount_from_unbonding_response)
+-  [Function `check_chain_permission`](#0x1_staking_check_chain_permission)
 -  [Function `initialize_for_chain`](#0x1_staking_initialize_for_chain)
 -  [Function `slash_unbonding_for_chain`](#0x1_staking_slash_unbonding_for_chain)
 -  [Function `deposit_unbonding_coin_for_chain`](#0x1_staking_deposit_unbonding_coin_for_chain)
@@ -47,6 +55,7 @@
 -  [Function `claim_unbonding_script`](#0x1_staking_claim_unbonding_script)
 -  [Function `claim_reward_script`](#0x1_staking_claim_reward_script)
 -  [Function `claim_reward`](#0x1_staking_claim_reward)
+-  [Function `calculate_reward`](#0x1_staking_calculate_reward)
 -  [Function `empty_delegation`](#0x1_staking_empty_delegation)
 -  [Function `get_metadata_from_delegation`](#0x1_staking_get_metadata_from_delegation)
 -  [Function `get_validator_from_delegation`](#0x1_staking_get_validator_from_delegation)
@@ -56,6 +65,9 @@
 -  [Function `withdraw_delegation`](#0x1_staking_withdraw_delegation)
 -  [Function `extract_delegation`](#0x1_staking_extract_delegation)
 -  [Function `merge_delegation`](#0x1_staking_merge_delegation)
+-  [Function `destroy_delegation_and_extract_reward`](#0x1_staking_destroy_delegation_and_extract_reward)
+-  [Function `unbonding_share_from_amount`](#0x1_staking_unbonding_share_from_amount)
+-  [Function `unbonding_amount_from_share`](#0x1_staking_unbonding_amount_from_share)
 -  [Function `empty_unbonding`](#0x1_staking_empty_unbonding)
 -  [Function `get_metadata_from_unbonding`](#0x1_staking_get_metadata_from_unbonding)
 -  [Function `get_validator_from_unbonding`](#0x1_staking_get_validator_from_unbonding)
@@ -68,6 +80,8 @@
 -  [Function `extract_unbonding`](#0x1_staking_extract_unbonding)
 -  [Function `merge_unbonding`](#0x1_staking_merge_unbonding)
 -  [Function `claim_unbonding`](#0x1_staking_claim_unbonding)
+-  [Function `delegate_internal`](#0x1_staking_delegate_internal)
+-  [Function `undelegate_internal`](#0x1_staking_undelegate_internal)
 -  [Function `share_to_amount`](#0x1_staking_share_to_amount)
 -  [Function `amount_to_share`](#0x1_staking_amount_to_share)
 
@@ -77,20 +91,20 @@
 <b>use</b> <a href="coin.md#0x1_coin">0x1::coin</a>;
 <b>use</b> <a href="cosmos.md#0x1_cosmos">0x1::cosmos</a>;
 <b>use</b> <a href="decimal128.md#0x1_decimal128">0x1::decimal128</a>;
-<b>use</b> <a href="">0x1::error</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error">0x1::error</a>;
 <b>use</b> <a href="event.md#0x1_event">0x1::event</a>;
 <b>use</b> <a href="fungible_asset.md#0x1_fungible_asset">0x1::fungible_asset</a>;
 <b>use</b> <a href="object.md#0x1_object">0x1::object</a>;
-<b>use</b> <a href="">0x1::option</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option">0x1::option</a>;
 <b>use</b> <a href="primary_fungible_store.md#0x1_primary_fungible_store">0x1::primary_fungible_store</a>;
-<b>use</b> <a href="">0x1::signer</a>;
-<b>use</b> <a href="">0x1::string</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">0x1::signer</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 <b>use</b> <a href="table.md#0x1_table">0x1::table</a>;
 </code></pre>
 
 
 
-<a name="0x1_staking_ModuleStore"></a>
+<a id="0x1_staking_ModuleStore"></a>
 
 ## Resource `ModuleStore`
 
@@ -101,12 +115,13 @@
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
 <dt>
-<code>staking_states: <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="_String">string::String</a>, <a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>&gt;&gt;</code>
+<code>staking_states: <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>&gt;&gt;</code>
 </dt>
 <dd>
 
@@ -114,7 +129,9 @@
 </dl>
 
 
-<a name="0x1_staking_StakingState"></a>
+</details>
+
+<a id="0x1_staking_StakingState"></a>
 
 ## Struct `StakingState`
 
@@ -125,7 +142,8 @@
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -136,7 +154,7 @@
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -186,7 +204,9 @@
 </dl>
 
 
-<a name="0x1_staking_Delegation"></a>
+</details>
+
+<a id="0x1_staking_Delegation"></a>
 
 ## Struct `Delegation`
 
@@ -198,7 +218,8 @@ Define a delegation entry which can be transferred.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -209,7 +230,7 @@ Define a delegation entry which can be transferred.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -229,7 +250,9 @@ Define a delegation entry which can be transferred.
 </dl>
 
 
-<a name="0x1_staking_Unbonding"></a>
+</details>
+
+<a id="0x1_staking_Unbonding"></a>
 
 ## Struct `Unbonding`
 
@@ -241,7 +264,8 @@ Define a unbonding entry which can be transferred.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -252,7 +276,7 @@ Define a unbonding entry which can be transferred.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -272,7 +296,9 @@ Define a unbonding entry which can be transferred.
 </dl>
 
 
-<a name="0x1_staking_DelegationStore"></a>
+</details>
+
+<a id="0x1_staking_DelegationStore"></a>
 
 ## Resource `DelegationStore`
 
@@ -285,12 +311,13 @@ These are kept in a single resource to ensure locality of data.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
 <dt>
-<code>delegations: <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="_String">string::String</a>, <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>&gt;&gt;</code>
+<code>delegations: <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>&gt;&gt;</code>
 </dt>
 <dd>
 
@@ -304,7 +331,9 @@ These are kept in a single resource to ensure locality of data.
 </dl>
 
 
-<a name="0x1_staking_UnbondingKey"></a>
+</details>
+
+<a id="0x1_staking_UnbondingKey"></a>
 
 ## Struct `UnbondingKey`
 
@@ -316,12 +345,13 @@ Key for <code><a href="staking.md#0x1_staking_Unbonding">Unbonding</a></code>
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -335,7 +365,9 @@ Key for <code><a href="staking.md#0x1_staking_Unbonding">Unbonding</a></code>
 </dl>
 
 
-<a name="0x1_staking_RewardEvent"></a>
+</details>
+
+<a id="0x1_staking_RewardEvent"></a>
 
 ## Struct `RewardEvent`
 
@@ -348,7 +380,8 @@ Event emitted when some amount of reward is claimed by entry function.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -373,7 +406,9 @@ Event emitted when some amount of reward is claimed by entry function.
 </dl>
 
 
-<a name="0x1_staking_DelegationDepositEvent"></a>
+</details>
+
+<a id="0x1_staking_DelegationDepositEvent"></a>
 
 ## Struct `DelegationDepositEvent`
 
@@ -386,7 +421,8 @@ Event emitted when a Delegation is deposited to an account.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -403,7 +439,7 @@ Event emitted when a Delegation is deposited to an account.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -417,7 +453,9 @@ Event emitted when a Delegation is deposited to an account.
 </dl>
 
 
-<a name="0x1_staking_DelegationWithdrawEvent"></a>
+</details>
+
+<a id="0x1_staking_DelegationWithdrawEvent"></a>
 
 ## Struct `DelegationWithdrawEvent`
 
@@ -430,7 +468,8 @@ Event emitted when a Delegation is withdrawn from an account.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -447,7 +486,7 @@ Event emitted when a Delegation is withdrawn from an account.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -461,7 +500,9 @@ Event emitted when a Delegation is withdrawn from an account.
 </dl>
 
 
-<a name="0x1_staking_UnbondingDepositEvent"></a>
+</details>
+
+<a id="0x1_staking_UnbondingDepositEvent"></a>
 
 ## Struct `UnbondingDepositEvent`
 
@@ -474,7 +515,8 @@ Event emitted when a Unbonding is deposited from an account.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -491,7 +533,7 @@ Event emitted when a Unbonding is deposited from an account.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -511,7 +553,9 @@ Event emitted when a Unbonding is deposited from an account.
 </dl>
 
 
-<a name="0x1_staking_UnbondingWithdrawEvent"></a>
+</details>
+
+<a id="0x1_staking_UnbondingWithdrawEvent"></a>
 
 ## Struct `UnbondingWithdrawEvent`
 
@@ -524,7 +568,8 @@ Event emitted when a Unbonding is withdrawn from an account.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -541,7 +586,7 @@ Event emitted when a Unbonding is withdrawn from an account.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -561,7 +606,9 @@ Event emitted when a Unbonding is withdrawn from an account.
 </dl>
 
 
-<a name="0x1_staking_DelegationResponse"></a>
+</details>
+
+<a id="0x1_staking_DelegationResponse"></a>
 
 ## Struct `DelegationResponse`
 
@@ -572,7 +619,8 @@ Event emitted when a Unbonding is withdrawn from an account.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -583,7 +631,7 @@ Event emitted when a Unbonding is withdrawn from an account.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -603,7 +651,9 @@ Event emitted when a Unbonding is withdrawn from an account.
 </dl>
 
 
-<a name="0x1_staking_UnbondingResponse"></a>
+</details>
+
+<a id="0x1_staking_UnbondingResponse"></a>
 
 ## Struct `UnbondingResponse`
 
@@ -614,7 +664,8 @@ Event emitted when a Unbonding is withdrawn from an account.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -625,7 +676,7 @@ Event emitted when a Unbonding is withdrawn from an account.
 
 </dd>
 <dt>
-<code>validator: <a href="_String">string::String</a></code>
+<code>validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
 </dt>
 <dd>
 
@@ -645,12 +696,14 @@ Event emitted when a Unbonding is withdrawn from an account.
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_staking_ENOT_EMPTY"></a>
+<a id="0x1_staking_ENOT_EMPTY"></a>
 
 triggered when a non-empty delegation or unbonding is passed to destroy.
 
@@ -660,7 +713,7 @@ triggered when a non-empty delegation or unbonding is passed to destroy.
 
 
 
-<a name="0x1_staking_MAX_LIMIT"></a>
+<a id="0x1_staking_MAX_LIMIT"></a>
 
 Max number of view function response items.
 
@@ -670,7 +723,7 @@ Max number of view function response items.
 
 
 
-<a name="0x1_staking_EDELEGATION_NOT_FOUND"></a>
+<a id="0x1_staking_EDELEGATION_NOT_FOUND"></a>
 
 Can not find delegation
 
@@ -680,7 +733,7 @@ Can not find delegation
 
 
 
-<a name="0x1_staking_EDELEGATION_STORE_ALREADY_EXISTS"></a>
+<a id="0x1_staking_EDELEGATION_STORE_ALREADY_EXISTS"></a>
 
 triggered when delegation store is already exists.
 
@@ -690,7 +743,7 @@ triggered when delegation store is already exists.
 
 
 
-<a name="0x1_staking_EDELEGATION_STORE_NOT_EXISTS"></a>
+<a id="0x1_staking_EDELEGATION_STORE_NOT_EXISTS"></a>
 
 triggered when delegation store is not exists.
 
@@ -700,7 +753,7 @@ triggered when delegation store is not exists.
 
 
 
-<a name="0x1_staking_EINSUFFICIENT_AMOUNT"></a>
+<a id="0x1_staking_EINSUFFICIENT_AMOUNT"></a>
 
 Insufficient amount or share
 
@@ -710,7 +763,7 @@ Insufficient amount or share
 
 
 
-<a name="0x1_staking_EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE"></a>
+<a id="0x1_staking_EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE"></a>
 
 triggered when a total share is smaller than a withdrawing share.
 
@@ -720,7 +773,7 @@ triggered when a total share is smaller than a withdrawing share.
 
 
 
-<a name="0x1_staking_EINVALID_START_AFTER"></a>
+<a id="0x1_staking_EINVALID_START_AFTER"></a>
 
 Both <code>start_after_validator</code> and <code>start_after_release_time</code> either given or not given.
 
@@ -730,7 +783,7 @@ Both <code>start_after_validator</code> and <code>start_after_release_time</code
 
 
 
-<a name="0x1_staking_ELENGTH_MISMATCH"></a>
+<a id="0x1_staking_ELENGTH_MISMATCH"></a>
 
 Length of validators and amounts mismatch.
 
@@ -740,7 +793,7 @@ Length of validators and amounts mismatch.
 
 
 
-<a name="0x1_staking_EMETADATA_MISMATCH"></a>
+<a id="0x1_staking_EMETADATA_MISMATCH"></a>
 
 triggered when the given arguments have different metadata.
 
@@ -750,7 +803,7 @@ triggered when the given arguments have different metadata.
 
 
 
-<a name="0x1_staking_ENOT_RELEASED"></a>
+<a id="0x1_staking_ENOT_RELEASED"></a>
 
 Can not claim before <code>release_time</code>
 
@@ -760,7 +813,7 @@ Can not claim before <code>release_time</code>
 
 
 
-<a name="0x1_staking_ERELEASE_TIME"></a>
+<a id="0x1_staking_ERELEASE_TIME"></a>
 
 <code>release_time</code> of the <code>source_unbonding</code> must be sooner than or equal to the one of <code>dst_unbonding</code>
 
@@ -770,7 +823,7 @@ Can not claim before <code>release_time</code>
 
 
 
-<a name="0x1_staking_ESTAKING_STATE_ALREADY_EXISTS"></a>
+<a id="0x1_staking_ESTAKING_STATE_ALREADY_EXISTS"></a>
 
 Chain already has <code><a href="staking.md#0x1_staking_StakingState">StakingState</a></code> for the given metadata
 
@@ -780,7 +833,7 @@ Chain already has <code><a href="staking.md#0x1_staking_StakingState">StakingSta
 
 
 
-<a name="0x1_staking_ESTAKING_STATE_NOT_EXISTS"></a>
+<a id="0x1_staking_ESTAKING_STATE_NOT_EXISTS"></a>
 
 
 
@@ -789,7 +842,7 @@ Chain already has <code><a href="staking.md#0x1_staking_StakingState">StakingSta
 
 
 
-<a name="0x1_staking_EUNAUTHORIZED_CHAIN_OPERATION"></a>
+<a id="0x1_staking_EUNAUTHORIZED_CHAIN_OPERATION"></a>
 
 triggered when the chain operations are triggered by others.
 
@@ -799,7 +852,7 @@ triggered when the chain operations are triggered by others.
 
 
 
-<a name="0x1_staking_EUNBONDING_NOT_FOUND"></a>
+<a id="0x1_staking_EUNBONDING_NOT_FOUND"></a>
 
 Can not find unbonding
 
@@ -809,7 +862,7 @@ Can not find unbonding
 
 
 
-<a name="0x1_staking_EVALIDATOR_MISMATCH"></a>
+<a id="0x1_staking_EVALIDATOR_MISMATCH"></a>
 
 Validator of delegation which is used as operand doesn't match the other operand one
 
@@ -819,17 +872,17 @@ Validator of delegation which is used as operand doesn't match the other operand
 
 
 
-<a name="0x1_staking_REWARD_SYMBOL"></a>
+<a id="0x1_staking_REWARD_SYMBOL"></a>
 
 <code>uinit</code> token symbol bytes
 
 
-<pre><code><b>const</b> <a href="staking.md#0x1_staking_REWARD_SYMBOL">REWARD_SYMBOL</a>: <a href="">vector</a>&lt;u8&gt; = [117, 105, 110, 105, 116];
+<pre><code><b>const</b> <a href="staking.md#0x1_staking_REWARD_SYMBOL">REWARD_SYMBOL</a>: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; = [117, 105, 110, 105, 116];
 </code></pre>
 
 
 
-<a name="0x1_staking_reward_metadata"></a>
+<a id="0x1_staking_reward_metadata"></a>
 
 ## Function `reward_metadata`
 
@@ -840,17 +893,216 @@ Validator of delegation which is used as operand doesn't match the other operand
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_reward_metadata">reward_metadata</a>(): Object&lt;Metadata&gt; {
-    <a href="coin.md#0x1_coin_metadata">coin::metadata</a>(@initia_std, <a href="_utf8">string::utf8</a>(<a href="staking.md#0x1_staking_REWARD_SYMBOL">REWARD_SYMBOL</a>))
+    <a href="coin.md#0x1_coin_metadata">coin::metadata</a>(@initia_std, <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(<a href="staking.md#0x1_staking_REWARD_SYMBOL">REWARD_SYMBOL</a>))
 }
 </code></pre>
 
 
 
-<a name="0x1_staking_get_delegation_response_from_delegation"></a>
+</details>
+
+<a id="0x1_staking_init_module"></a>
+
+## Function `init_module`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_init_module">init_module</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_init_module">init_module</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>) {
+    <b>move_to</b>(chain, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+        staking_states: <a href="table.md#0x1_table_new">table::new</a>(),
+    });
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_load_staking_state"></a>
+
+## Function `load_staking_state`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_staking_state">load_staking_state</a>(staking_states: &<a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>&gt;&gt;, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): &<a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_staking_state">load_staking_state</a> (staking_states: &Table&lt;Object&lt;Metadata&gt;, Table&lt;String, <a href="staking.md#0x1_staking_StakingState">StakingState</a>&gt;&gt;, metadata: Object&lt;Metadata&gt;, validator: String): &<a href="staking.md#0x1_staking_StakingState">StakingState</a> {
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(staking_states, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>));
+    <b>let</b> states = <a href="table.md#0x1_table_borrow">table::borrow</a>(staking_states, metadata);
+
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(states, validator), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>));
+    <a href="table.md#0x1_table_borrow">table::borrow</a>(states, validator)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_load_staking_state_mut"></a>
+
+## Function `load_staking_state_mut`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_staking_state_mut">load_staking_state_mut</a>(staking_states: &<b>mut</b> <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>&gt;&gt;, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): &<b>mut</b> <a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_staking_state_mut">load_staking_state_mut</a> (staking_states: &<b>mut</b> Table&lt;Object&lt;Metadata&gt;, Table&lt;String, <a href="staking.md#0x1_staking_StakingState">StakingState</a>&gt;&gt;, metadata: Object&lt;Metadata&gt;, validator: String): &<b>mut</b> <a href="staking.md#0x1_staking_StakingState">StakingState</a> {
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(staking_states, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>));
+    <b>let</b> states = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(staking_states, metadata);
+
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(states, validator), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>));
+    <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(states, validator)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_load_delegation"></a>
+
+## Function `load_delegation`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_delegation">load_delegation</a>(delegations: &<a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>&gt;&gt;, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): &<a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_delegation">load_delegation</a> (delegations: &Table&lt;Object&lt;Metadata&gt;, Table&lt;String, <a href="staking.md#0x1_staking_Delegation">Delegation</a>&gt;&gt;, metadata: Object&lt;Metadata&gt;, validator: String): &<a href="staking.md#0x1_staking_Delegation">Delegation</a> {
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(delegations, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_NOT_FOUND">EDELEGATION_NOT_FOUND</a>));
+    <b>let</b> delegations = <a href="table.md#0x1_table_borrow">table::borrow</a>(delegations, metadata);
+
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(delegations, validator), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_NOT_FOUND">EDELEGATION_NOT_FOUND</a>));
+    <a href="table.md#0x1_table_borrow">table::borrow</a>(delegations, validator)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_load_delegation_mut"></a>
+
+## Function `load_delegation_mut`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_delegation_mut">load_delegation_mut</a>(delegations: &<b>mut</b> <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>&gt;&gt;, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): &<b>mut</b> <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_delegation_mut">load_delegation_mut</a> (delegations: &<b>mut</b> Table&lt;Object&lt;Metadata&gt;, Table&lt;String, <a href="staking.md#0x1_staking_Delegation">Delegation</a>&gt;&gt;, metadata: Object&lt;Metadata&gt;, validator: String): &<b>mut</b> <a href="staking.md#0x1_staking_Delegation">Delegation</a> {
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(delegations, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_NOT_FOUND">EDELEGATION_NOT_FOUND</a>));
+    <b>let</b> delegations = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(delegations, metadata);
+
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(delegations, validator), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_NOT_FOUND">EDELEGATION_NOT_FOUND</a>));
+    <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(delegations, validator)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_load_unbonding"></a>
+
+## Function `load_unbonding`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_unbonding">load_unbonding</a>(unbondings: &<a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="staking.md#0x1_staking_UnbondingKey">staking::UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>&gt;&gt;, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64): &<a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_unbonding">load_unbonding</a> (unbondings: &Table&lt;Object&lt;Metadata&gt;, Table&lt;<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>&gt;&gt;, metadata: Object&lt;Metadata&gt;, validator: String, release_time: u64): &<a href="staking.md#0x1_staking_Unbonding">Unbonding</a> {
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(unbondings, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EUNBONDING_NOT_FOUND">EUNBONDING_NOT_FOUND</a>));
+    <b>let</b> unbondings = <a href="table.md#0x1_table_borrow">table::borrow</a>(unbondings, metadata);
+
+    <b>let</b> key = <a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a> { validator, release_time };
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(unbondings, key), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EUNBONDING_NOT_FOUND">EUNBONDING_NOT_FOUND</a>));
+    <a href="table.md#0x1_table_borrow">table::borrow</a>(unbondings, key)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_load_unbonding_mut"></a>
+
+## Function `load_unbonding_mut`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_unbonding_mut">load_unbonding_mut</a>(unbondings: &<b>mut</b> <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, <a href="table.md#0x1_table_Table">table::Table</a>&lt;<a href="staking.md#0x1_staking_UnbondingKey">staking::UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>&gt;&gt;, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64): &<b>mut</b> <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_load_unbonding_mut">load_unbonding_mut</a> (unbondings: &<b>mut</b> Table&lt;Object&lt;Metadata&gt;, Table&lt;<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>&gt;&gt;, metadata: Object&lt;Metadata&gt;, validator: String, release_time: u64): &<b>mut</b> <a href="staking.md#0x1_staking_Unbonding">Unbonding</a> {
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(unbondings, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EUNBONDING_NOT_FOUND">EUNBONDING_NOT_FOUND</a>));
+    <b>let</b> unbondings = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(unbondings, metadata);
+
+    <b>let</b> key = <a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a> { validator, release_time };
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(unbondings, key), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EUNBONDING_NOT_FOUND">EUNBONDING_NOT_FOUND</a>));
+    <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(unbondings, key)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_get_delegation_response_from_delegation"></a>
 
 ## Function `get_delegation_response_from_delegation`
 
@@ -862,7 +1114,8 @@ util function to convert Delegation => DelegationResponse for third party querie
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegation_response_from_delegation">get_delegation_response_from_delegation</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">Delegation</a>): <a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a> <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
@@ -885,7 +1138,9 @@ util function to convert Delegation => DelegationResponse for third party querie
 
 
 
-<a name="0x1_staking_get_unbonding_response_from_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_unbonding_response_from_unbonding"></a>
 
 ## Function `get_unbonding_response_from_unbonding`
 
@@ -897,7 +1152,8 @@ util function to convert Unbonding => UnbondingResponse for third party queriers
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding_response_from_unbonding">get_unbonding_response_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">Unbonding</a>): <a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a> <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>{
@@ -914,7 +1170,9 @@ util function to convert Unbonding => UnbondingResponse for third party queriers
 
 
 
-<a name="0x1_staking_get_delegation"></a>
+</details>
+
+<a id="0x1_staking_get_delegation"></a>
 
 ## Function `get_delegation`
 
@@ -922,12 +1180,13 @@ Get delegation info of specifed addr and validator
 
 
 <pre><code>#[view]
-<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegation">get_delegation</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>): <a href="staking.md#0x1_staking_DelegationResponse">staking::DelegationResponse</a>
+<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegation">get_delegation</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="staking.md#0x1_staking_DelegationResponse">staking::DelegationResponse</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegation">get_delegation</a>(
@@ -937,7 +1196,7 @@ Get delegation info of specifed addr and validator
 ): <a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a> <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> delegation_store = <b>borrow_global</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(addr);
@@ -959,7 +1218,9 @@ Get delegation info of specifed addr and validator
 
 
 
-<a name="0x1_staking_get_delegations"></a>
+</details>
+
+<a id="0x1_staking_get_delegations"></a>
 
 ## Function `get_delegations`
 
@@ -967,12 +1228,13 @@ Get all delegation info of an addr
 
 
 <pre><code>#[view]
-<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegations">get_delegations</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, start_after: <a href="_Option">option::Option</a>&lt;<a href="_String">string::String</a>&gt;, limit: u8): <a href="">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">staking::DelegationResponse</a>&gt;
+<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegations">get_delegations</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, start_after: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, limit: u8): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">staking::DelegationResponse</a>&gt;
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_delegations">get_delegations</a>(
@@ -980,14 +1242,14 @@ Get all delegation info of an addr
     metadata: Object&lt;Metadata&gt;,
     start_after: Option&lt;String&gt;,
     limit: u8,
-): <a href="">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>&gt; <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>&gt; <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>if</b> (limit &gt; <a href="staking.md#0x1_staking_MAX_LIMIT">MAX_LIMIT</a>) {
         limit = <a href="staking.md#0x1_staking_MAX_LIMIT">MAX_LIMIT</a>;
     };
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> module_store = <b>borrow_global</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
@@ -997,18 +1259,18 @@ Get all delegation info of an addr
     <b>let</b> delegations = <a href="table.md#0x1_table_borrow">table::borrow</a>(&delegation_store.delegations, metadata);
     <b>let</b> delegations_iter = <a href="table.md#0x1_table_iter">table::iter</a>(
         delegations,
-        <a href="_none">option::none</a>(),
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
         start_after,
         2,
     );
 
     <b>let</b> prepare = <a href="table.md#0x1_table_prepare">table::prepare</a>(&<b>mut</b> delegations_iter);
-    <b>let</b> res: <a href="">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>&gt; = <a href="">vector</a>[];
-    <b>while</b> (<a href="_length">vector::length</a>(&res) &lt; (limit <b>as</b> u64) && prepare) {
+    <b>let</b> res: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
+    <b>while</b> (<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&res) &lt; (limit <b>as</b> u64) && prepare) {
         <b>let</b> (validator, delegation) = <a href="table.md#0x1_table_next">table::next</a>(&<b>mut</b> delegations_iter);
         <b>let</b> state = <a href="table.md#0x1_table_borrow">table::borrow</a>(staking_states, validator);
         <b>let</b> reward = <a href="staking.md#0x1_staking_calculate_reward">calculate_reward</a>(delegation, state);
-        <a href="_push_back">vector::push_back</a>(
+        <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_push_back">vector::push_back</a>(
             &<b>mut</b> res,
             <a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a> {
                 metadata: delegation.metadata,
@@ -1026,7 +1288,9 @@ Get all delegation info of an addr
 
 
 
-<a name="0x1_staking_get_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_unbonding"></a>
 
 ## Function `get_unbonding`
 
@@ -1034,12 +1298,13 @@ Get unbonding info of (addr, metadata, validator, release time)
 
 
 <pre><code>#[view]
-<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding">get_unbonding</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, release_time: u64): <a href="staking.md#0x1_staking_UnbondingResponse">staking::UnbondingResponse</a>
+<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding">get_unbonding</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64): <a href="staking.md#0x1_staking_UnbondingResponse">staking::UnbondingResponse</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding">get_unbonding</a>(
@@ -1050,7 +1315,7 @@ Get unbonding info of (addr, metadata, validator, release time)
 ): <a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a> <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> delegation_store = <b>borrow_global</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(addr);
@@ -1069,7 +1334,9 @@ Get unbonding info of (addr, metadata, validator, release time)
 
 
 
-<a name="0x1_staking_get_unbondings"></a>
+</details>
+
+<a id="0x1_staking_get_unbondings"></a>
 
 ## Function `get_unbondings`
 
@@ -1077,12 +1344,13 @@ Get all unbondings of (addr, validator)
 
 
 <pre><code>#[view]
-<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbondings">get_unbondings</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, start_after_validator: <a href="_Option">option::Option</a>&lt;<a href="_String">string::String</a>&gt;, start_after_release_time: <a href="_Option">option::Option</a>&lt;u64&gt;, limit: u8): <a href="">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">staking::UnbondingResponse</a>&gt;
+<b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbondings">get_unbondings</a>(addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, start_after_validator: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, start_after_release_time: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;u64&gt;, limit: u8): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">staking::UnbondingResponse</a>&gt;
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbondings">get_unbondings</a>(
@@ -1091,47 +1359,47 @@ Get all unbondings of (addr, validator)
     start_after_validator: Option&lt;String&gt;,
     start_after_release_time: Option&lt;u64&gt;,
     limit: u8,
-): <a href="">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>&gt; <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>&gt; <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>if</b> (limit &gt; <a href="staking.md#0x1_staking_MAX_LIMIT">MAX_LIMIT</a>) {
         limit = <a href="staking.md#0x1_staking_MAX_LIMIT">MAX_LIMIT</a>;
     };
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>assert</b>!(
-        <a href="_is_some">option::is_some</a>(&start_after_validator) == <a href="_is_some">option::is_some</a>(&start_after_release_time),
-        <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EINVALID_START_AFTER">EINVALID_START_AFTER</a>)
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&start_after_validator) == <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&start_after_release_time),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EINVALID_START_AFTER">EINVALID_START_AFTER</a>)
     );
 
     <b>let</b> delegation_store = <b>borrow_global</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(addr);
     <b>let</b> unbondings = <a href="table.md#0x1_table_borrow">table::borrow</a>(&delegation_store.unbondings, metadata);
 
-    <b>let</b> start_after = <b>if</b> (<a href="_is_some">option::is_some</a>(&start_after_validator)) {
-        <a href="_some">option::some</a>(<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a> {
-            validator: *<a href="_borrow">option::borrow</a>(&start_after_validator),
-            release_time: *<a href="_borrow">option::borrow</a>(&start_after_release_time),
+    <b>let</b> start_after = <b>if</b> (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&start_after_validator)) {
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a> {
+            validator: *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&start_after_validator),
+            release_time: *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&start_after_release_time),
         })
     } <b>else</b> {
-        <a href="_none">option::none</a>()
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>()
     };
 
     <b>let</b> unbondings_iter = <a href="table.md#0x1_table_iter">table::iter</a>(
         unbondings,
-        <a href="_none">option::none</a>(),
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
         start_after,
         2,
     );
 
-    <b>let</b> res: <a href="">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>&gt; = <a href="">vector</a>[];
-    <b>while</b> (<a href="_length">vector::length</a>(&res) &lt; (limit <b>as</b> u64) && <a href="table.md#0x1_table_prepare">table::prepare</a>&lt;<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>&gt;(
+    <b>let</b> res: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
+    <b>while</b> (<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&res) &lt; (limit <b>as</b> u64) && <a href="table.md#0x1_table_prepare">table::prepare</a>&lt;<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>&gt;(
         &<b>mut</b> unbondings_iter
     )) {
         <b>let</b> (_, unbonding) = <a href="table.md#0x1_table_next">table::next</a>&lt;<a href="staking.md#0x1_staking_UnbondingKey">UnbondingKey</a>, <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>&gt;(&<b>mut</b> unbondings_iter);
         <b>let</b> unbonding_amount = <a href="staking.md#0x1_staking_get_unbonding_amount_from_unbonding">get_unbonding_amount_from_unbonding</a>(unbonding);
-        <a href="_push_back">vector::push_back</a>(
+        <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_push_back">vector::push_back</a>(
             &<b>mut</b> res,
             <a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a> {
                 metadata: unbonding.metadata,
@@ -1148,7 +1416,9 @@ Get all unbondings of (addr, validator)
 
 
 
-<a name="0x1_staking_get_metadata_from_delegation_response"></a>
+</details>
+
+<a id="0x1_staking_get_metadata_from_delegation_response"></a>
 
 ## Function `get_metadata_from_delegation_response`
 
@@ -1160,7 +1430,8 @@ get <code>metadata</code> from <code><a href="staking.md#0x1_staking_DelegationR
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_metadata_from_delegation_response">get_metadata_from_delegation_response</a>(delegation_res: &<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>): Object&lt;Metadata&gt; {
@@ -1170,19 +1441,22 @@ get <code>metadata</code> from <code><a href="staking.md#0x1_staking_DelegationR
 
 
 
-<a name="0x1_staking_get_validator_from_delegation_response"></a>
+</details>
+
+<a id="0x1_staking_get_validator_from_delegation_response"></a>
 
 ## Function `get_validator_from_delegation_response`
 
 get <code>validator</code> from <code><a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_delegation_response">get_validator_from_delegation_response</a>(delegation_res: &<a href="staking.md#0x1_staking_DelegationResponse">staking::DelegationResponse</a>): <a href="_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_delegation_response">get_validator_from_delegation_response</a>(delegation_res: &<a href="staking.md#0x1_staking_DelegationResponse">staking::DelegationResponse</a>): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_delegation_response">get_validator_from_delegation_response</a>(delegation_res: &<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>): String {
@@ -1192,7 +1466,9 @@ get <code>validator</code> from <code><a href="staking.md#0x1_staking_Delegation
 
 
 
-<a name="0x1_staking_get_share_from_delegation_response"></a>
+</details>
+
+<a id="0x1_staking_get_share_from_delegation_response"></a>
 
 ## Function `get_share_from_delegation_response`
 
@@ -1204,7 +1480,8 @@ get <code>share</code> from <code><a href="staking.md#0x1_staking_DelegationResp
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_share_from_delegation_response">get_share_from_delegation_response</a>(delegation_res: &<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>): u64 {
@@ -1214,7 +1491,9 @@ get <code>share</code> from <code><a href="staking.md#0x1_staking_DelegationResp
 
 
 
-<a name="0x1_staking_get_unclaimed_reward_from_delegation_response"></a>
+</details>
+
+<a id="0x1_staking_get_unclaimed_reward_from_delegation_response"></a>
 
 ## Function `get_unclaimed_reward_from_delegation_response`
 
@@ -1226,7 +1505,8 @@ get <code>unclaimed_reward</code> from <code><a href="staking.md#0x1_staking_Del
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unclaimed_reward_from_delegation_response">get_unclaimed_reward_from_delegation_response</a>(delegation_res: &<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>): u64 {
@@ -1236,7 +1516,9 @@ get <code>unclaimed_reward</code> from <code><a href="staking.md#0x1_staking_Del
 
 
 
-<a name="0x1_staking_get_metadata_from_unbonding_response"></a>
+</details>
+
+<a id="0x1_staking_get_metadata_from_unbonding_response"></a>
 
 ## Function `get_metadata_from_unbonding_response`
 
@@ -1248,7 +1530,8 @@ get <code>metadata</code> from <code><a href="staking.md#0x1_staking_UnbondingRe
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_metadata_from_unbonding_response">get_metadata_from_unbonding_response</a>(unbonding_res: &<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>): Object&lt;Metadata&gt; {
@@ -1258,19 +1541,22 @@ get <code>metadata</code> from <code><a href="staking.md#0x1_staking_UnbondingRe
 
 
 
-<a name="0x1_staking_get_validator_from_unbonding_response"></a>
+</details>
+
+<a id="0x1_staking_get_validator_from_unbonding_response"></a>
 
 ## Function `get_validator_from_unbonding_response`
 
 get <code>validator</code> from <code><a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_unbonding_response">get_validator_from_unbonding_response</a>(unbonding_res: &<a href="staking.md#0x1_staking_UnbondingResponse">staking::UnbondingResponse</a>): <a href="_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_unbonding_response">get_validator_from_unbonding_response</a>(unbonding_res: &<a href="staking.md#0x1_staking_UnbondingResponse">staking::UnbondingResponse</a>): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_unbonding_response">get_validator_from_unbonding_response</a>(unbonding_res: &<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>): String {
@@ -1280,7 +1566,9 @@ get <code>validator</code> from <code><a href="staking.md#0x1_staking_UnbondingR
 
 
 
-<a name="0x1_staking_get_release_time_from_unbonding_response"></a>
+</details>
+
+<a id="0x1_staking_get_release_time_from_unbonding_response"></a>
 
 ## Function `get_release_time_from_unbonding_response`
 
@@ -1292,7 +1580,8 @@ get <code>release_time</code> from <code><a href="staking.md#0x1_staking_Unbondi
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_release_time_from_unbonding_response">get_release_time_from_unbonding_response</a>(unbonding_res: &<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>): u64 {
@@ -1302,7 +1591,9 @@ get <code>release_time</code> from <code><a href="staking.md#0x1_staking_Unbondi
 
 
 
-<a name="0x1_staking_get_unbonding_amount_from_unbonding_response"></a>
+</details>
+
+<a id="0x1_staking_get_unbonding_amount_from_unbonding_response"></a>
 
 ## Function `get_unbonding_amount_from_unbonding_response`
 
@@ -1314,7 +1605,8 @@ get <code>unbonding_amount</code> from <code><a href="staking.md#0x1_staking_Unb
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding_amount_from_unbonding_response">get_unbonding_amount_from_unbonding_response</a>(unbonding_res: &<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>): u64 {
@@ -1324,50 +1616,81 @@ get <code>unbonding_amount</code> from <code><a href="staking.md#0x1_staking_Unb
 
 
 
-<a name="0x1_staking_initialize_for_chain"></a>
+</details>
+
+<a id="0x1_staking_check_chain_permission"></a>
+
+## Function `check_chain_permission`
+
+Check signer is chain
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_check_chain_permission">check_chain_permission</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_check_chain_permission">check_chain_permission</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>) {
+    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain) == @initia_std, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="staking.md#0x1_staking_EUNAUTHORIZED_CHAIN_OPERATION">EUNAUTHORIZED_CHAIN_OPERATION</a>));
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_initialize_for_chain"></a>
 
 ## Function `initialize_for_chain`
 
 Initialize, Make staking store
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_initialize_for_chain">initialize_for_chain</a>(chain: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_initialize_for_chain">initialize_for_chain</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_initialize_for_chain">initialize_for_chain</a>(chain: &<a href="">signer</a>, metadata: Object&lt;Metadata&gt;) <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_initialize_for_chain">initialize_for_chain</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: Object&lt;Metadata&gt;) <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <a href="staking.md#0x1_staking_check_chain_permission">check_chain_permission</a>(chain);
 
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
 
-    <b>assert</b>!(!<a href="table.md#0x1_table_contains">table::contains</a>(&module_store.staking_states, metadata), <a href="_already_exists">error::already_exists</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_ALREADY_EXISTS">ESTAKING_STATE_ALREADY_EXISTS</a>));
+    <b>assert</b>!(!<a href="table.md#0x1_table_contains">table::contains</a>(&module_store.staking_states, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_already_exists">error::already_exists</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_ALREADY_EXISTS">ESTAKING_STATE_ALREADY_EXISTS</a>));
     <a href="table.md#0x1_table_add">table::add</a>(&<b>mut</b> module_store.staking_states, metadata, <a href="table.md#0x1_table_new">table::new</a>());
 }
 </code></pre>
 
 
 
-<a name="0x1_staking_slash_unbonding_for_chain"></a>
+</details>
+
+<a id="0x1_staking_slash_unbonding_for_chain"></a>
 
 ## Function `slash_unbonding_for_chain`
 
 Slash unbonding coin
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_slash_unbonding_for_chain">slash_unbonding_for_chain</a>(chain: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, fraction: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_slash_unbonding_for_chain">slash_unbonding_for_chain</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, fraction: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_slash_unbonding_for_chain">slash_unbonding_for_chain</a>(
-    chain: &<a href="">signer</a>,
+    chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String,
     fraction: String
@@ -1398,37 +1721,40 @@ Slash unbonding coin
 
 
 
-<a name="0x1_staking_deposit_unbonding_coin_for_chain"></a>
+</details>
+
+<a id="0x1_staking_deposit_unbonding_coin_for_chain"></a>
 
 ## Function `deposit_unbonding_coin_for_chain`
 
 Deposit unbonding coin to global store
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_deposit_unbonding_coin_for_chain">deposit_unbonding_coin_for_chain</a>(chain: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validators: <a href="">vector</a>&lt;<a href="_String">string::String</a>&gt;, amounts: <a href="">vector</a>&lt;u64&gt;)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_deposit_unbonding_coin_for_chain">deposit_unbonding_coin_for_chain</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validators: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, amounts: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt;)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_deposit_unbonding_coin_for_chain">deposit_unbonding_coin_for_chain</a>(
-    chain: &<a href="">signer</a>,
+    chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
-    validators: <a href="">vector</a>&lt;String&gt;,
-    amounts: <a href="">vector</a>&lt;u64&gt;
+    validators: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    amounts: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt;
 ) <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <a href="staking.md#0x1_staking_check_chain_permission">check_chain_permission</a>(chain);
 
-    <b>assert</b>!(<a href="_length">vector::length</a>(&validators) == <a href="_length">vector::length</a>(&amounts), <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ELENGTH_MISMATCH">ELENGTH_MISMATCH</a>));
+    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&validators) == <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&amounts), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ELENGTH_MISMATCH">ELENGTH_MISMATCH</a>));
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
     <b>let</b> staking_module = create_signer(@relayer);
 
     <b>let</b> index = 0;
-    <b>while</b> (index &lt; <a href="_length">vector::length</a>(&validators)) {
-        <b>let</b> validator = *<a href="_borrow">vector::borrow</a>(&validators, index);
-        <b>let</b> amount = *<a href="_borrow">vector::borrow</a>(&amounts, index);
+    <b>while</b> (index &lt; <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&validators)) {
+        <b>let</b> validator = *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&validators, index);
+        <b>let</b> amount = *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&amounts, index);
         <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state_mut">load_staking_state_mut</a>(&<b>mut</b> module_store.staking_states, metadata, validator);
 
         // calculate share
@@ -1452,38 +1778,41 @@ Deposit unbonding coin to global store
 
 
 
-<a name="0x1_staking_deposit_reward_for_chain"></a>
+</details>
+
+<a id="0x1_staking_deposit_reward_for_chain"></a>
 
 ## Function `deposit_reward_for_chain`
 
 Deposit staking reward, and update <code>reward_index</code>
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_deposit_reward_for_chain">deposit_reward_for_chain</a>(chain: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validators: <a href="">vector</a>&lt;<a href="_String">string::String</a>&gt;, reward_amounts: <a href="">vector</a>&lt;u64&gt;)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_deposit_reward_for_chain">deposit_reward_for_chain</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validators: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, reward_amounts: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt;)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_deposit_reward_for_chain">deposit_reward_for_chain</a>(
-    chain: &<a href="">signer</a>,
+    chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
-    validators: <a href="">vector</a>&lt;String&gt;,
-    reward_amounts: <a href="">vector</a>&lt;u64&gt;,
+    validators: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    reward_amounts: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt;,
 ) <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <a href="staking.md#0x1_staking_check_chain_permission">check_chain_permission</a>(chain);
 
-    <b>assert</b>!(<a href="_length">vector::length</a>(&validators) == <a href="_length">vector::length</a>(&reward_amounts), <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ELENGTH_MISMATCH">ELENGTH_MISMATCH</a>));
+    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&validators) == <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&reward_amounts), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ELENGTH_MISMATCH">ELENGTH_MISMATCH</a>));
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
     <b>let</b> staking_module = create_signer(@relayer);
     <b>let</b> reward_metadata = <a href="staking.md#0x1_staking_reward_metadata">reward_metadata</a>();
 
     <b>let</b> index = 0;
-    <b>while</b> (index &lt; <a href="_length">vector::length</a>(&validators)) {
-        <b>let</b> validator = *<a href="_borrow">vector::borrow</a>(&validators, index);
-        <b>let</b> reward_amount = *<a href="_borrow">vector::borrow</a>(&reward_amounts, index);
+    <b>while</b> (index &lt; <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&validators)) {
+        <b>let</b> validator = *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&validators, index);
+        <b>let</b> reward_amount = *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&reward_amounts, index);
         <b>let</b> reward = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(&staking_module, reward_metadata, reward_amount);
 
         <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state_mut">load_staking_state_mut</a>(&<b>mut</b> module_store.staking_states, metadata, validator);
@@ -1501,7 +1830,9 @@ Deposit staking reward, and update <code>reward_index</code>
 
 
 
-<a name="0x1_staking_is_account_registered"></a>
+</details>
+
+<a id="0x1_staking_is_account_registered"></a>
 
 ## Function `is_account_registered`
 
@@ -1513,7 +1844,8 @@ Check the DelegationStore is already exist
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr: <b>address</b>): bool {
@@ -1523,26 +1855,29 @@ Check the DelegationStore is already exist
 
 
 
-<a name="0x1_staking_register"></a>
+</details>
+
+<a id="0x1_staking_register"></a>
 
 ## Function `register`
 
 Register an account delegation store
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_register">register</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_register">register</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_register">register</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>) {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_register">register</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>) {
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
     <b>assert</b>!(
         !<a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_already_exists">error::already_exists</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_ALREADY_EXISTS">EDELEGATION_STORE_ALREADY_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_already_exists">error::already_exists</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_ALREADY_EXISTS">EDELEGATION_STORE_ALREADY_EXISTS</a>),
     );
 
     <b>let</b> delegation_store = <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a> {
@@ -1556,28 +1891,31 @@ Register an account delegation store
 
 
 
-<a name="0x1_staking_delegate_script"></a>
+</details>
+
+<a id="0x1_staking_delegate_script"></a>
 
 ## Function `delegate_script`
 
 Delegate coin to a validator and deposit reward to signer.
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_delegate_script">delegate_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, amount: u64)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_delegate_script">delegate_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, amount: u64)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_delegate_script">delegate_script</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="">signer</a>,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String,
     amount: u64,
 ) <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
     <b>if</b> (!<a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr)) {
         <a href="staking.md#0x1_staking_register">register</a>(<a href="account.md#0x1_account">account</a>);
     };
@@ -1601,31 +1939,34 @@ Delegate coin to a validator and deposit reward to signer.
 
 
 
-<a name="0x1_staking_delegate"></a>
+</details>
+
+<a id="0x1_staking_delegate"></a>
 
 ## Function `delegate`
 
 Delegate a fa to a validator.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_delegate">delegate</a>(validator: <a href="_String">string::String</a>, fa: <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>): <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_delegate">delegate</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, fa: <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>): <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_delegate">delegate</a>(validator: String, fa: FungibleAsset): <a href="staking.md#0x1_staking_Delegation">Delegation</a> <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
     <b>let</b> metadata = <a href="fungible_asset.md#0x1_fungible_asset_asset_metadata">fungible_asset::asset_metadata</a>(&fa);
 
-    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(&module_store.staking_states, metadata), <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>));
+    <b>assert</b>!(<a href="table.md#0x1_table_contains">table::contains</a>(&module_store.staking_states, metadata), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>));
     <b>let</b> states = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(&<b>mut</b> module_store.staking_states, metadata);
 
     <b>if</b> (!<a href="table.md#0x1_table_contains">table::contains</a>(states, validator)) {
-        <b>let</b> reward_coin_store_ref = &<a href="object.md#0x1_object_create_object">object::create_object</a>(@initia_std);
-        <b>let</b> unbonding_coin_store_ref = &<a href="object.md#0x1_object_create_object">object::create_object</a>(@initia_std);
+        <b>let</b> reward_coin_store_ref = &<a href="object.md#0x1_object_create_object">object::create_object</a>(@initia_std, <b>false</b>);
+        <b>let</b> unbonding_coin_store_ref = &<a href="object.md#0x1_object_create_object">object::create_object</a>(@initia_std, <b>false</b>);
 
         <b>let</b> reward_coin_store_address = <a href="object.md#0x1_object_address_from_constructor_ref">object::address_from_constructor_ref</a>(reward_coin_store_ref);
         <b>let</b> reward_coin_store = <a href="primary_fungible_store.md#0x1_primary_fungible_store_create_primary_store">primary_fungible_store::create_primary_store</a>(reward_coin_store_address, <a href="staking.md#0x1_staking_reward_metadata">reward_metadata</a>());
@@ -1650,7 +1991,7 @@ Delegate a fa to a validator.
         )
     };
 
-    <b>let</b> share_diff = <a href="staking.md#0x1_staking_delegate_internal">delegate_internal</a>(*<a href="_bytes">string::bytes</a>(&validator), &metadata, <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&fa));
+    <b>let</b> share_diff = <a href="staking.md#0x1_staking_delegate_internal">delegate_internal</a>(*<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator), &metadata, <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&fa));
     <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state_mut">load_staking_state_mut</a>(&<b>mut</b> module_store.staking_states, metadata, validator);
     state.total_share = state.total_share + (share_diff <b>as</b> u128);
 
@@ -1668,7 +2009,9 @@ Delegate a fa to a validator.
 
 
 
-<a name="0x1_staking_undelegate_script"></a>
+</details>
+
+<a id="0x1_staking_undelegate_script"></a>
 
 ## Function `undelegate_script`
 
@@ -1676,28 +2019,29 @@ Undelegate coin from a validator and deposit reward to signer.
 unbonding amount can be slightly different with input amount due to round error.
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_undelegate_script">undelegate_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, amount: u64)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_undelegate_script">undelegate_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, amount: u64)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_undelegate_script">undelegate_script</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="">signer</a>,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String,
     amount: u64,
 ) <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
-    <b>let</b> share = <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(*<a href="_bytes">string::bytes</a>(&validator), &metadata, amount);
+    <b>let</b> share = <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(*<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator), &metadata, amount);
     <b>let</b> delegation = <a href="staking.md#0x1_staking_withdraw_delegation">withdraw_delegation</a>(<a href="account.md#0x1_account">account</a>, metadata, validator, share);
     <b>let</b> (reward, unbonding) = <a href="staking.md#0x1_staking_undelegate">undelegate</a>(delegation);
 
@@ -1716,7 +2060,9 @@ unbonding amount can be slightly different with input amount due to round error.
 
 
 
-<a name="0x1_staking_undelegate"></a>
+</details>
+
+<a id="0x1_staking_undelegate"></a>
 
 ## Function `undelegate`
 
@@ -1727,7 +2073,8 @@ unbonding amount can be slightly different with input amount due to round error.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_undelegate">undelegate</a>(
@@ -1737,13 +2084,13 @@ unbonding amount can be slightly different with input amount due to round error.
     <b>let</b> validator = delegation.validator;
     <b>let</b> metadata = delegation.metadata;
 
-    <b>let</b> (unbonding_amount, release_time) = <a href="staking.md#0x1_staking_undelegate_internal">undelegate_internal</a>(*<a href="_bytes">string::bytes</a>(&validator), &metadata, share);
+    <b>let</b> (unbonding_amount, release_time) = <a href="staking.md#0x1_staking_undelegate_internal">undelegate_internal</a>(*<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator), &metadata, share);
     <b>let</b> reward = <a href="staking.md#0x1_staking_destroy_delegation_and_extract_reward">destroy_delegation_and_extract_reward</a>(delegation);
 
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
     <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state_mut">load_staking_state_mut</a>(&<b>mut</b> module_store.staking_states, metadata, validator);
 
-    <b>assert</b>!(state.total_share &gt;= (share <b>as</b> u128), <a href="_invalid_state">error::invalid_state</a>(<a href="staking.md#0x1_staking_EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE">EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE</a>));
+    <b>assert</b>!(state.total_share &gt;= (share <b>as</b> u128), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="staking.md#0x1_staking_EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE">EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE</a>));
     state.total_share = state.total_share - (share <b>as</b> u128);
 
     <b>let</b> unbonding_share = <a href="staking.md#0x1_staking_unbonding_share_from_amount">unbonding_share_from_amount</a>(metadata, validator, unbonding_amount);
@@ -1755,32 +2102,35 @@ unbonding amount can be slightly different with input amount due to round error.
 
 
 
-<a name="0x1_staking_claim_unbonding_script"></a>
+</details>
+
+<a id="0x1_staking_claim_unbonding_script"></a>
 
 ## Function `claim_unbonding_script`
 
 Claim <code>unbonding_coin</code> from expired unbonding.
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_claim_unbonding_script">claim_unbonding_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, release_time: u64)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_claim_unbonding_script">claim_unbonding_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_claim_unbonding_script">claim_unbonding_script</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="">signer</a>,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String,
     release_time: u64
 ) <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     // withdraw unbonding all
@@ -1793,30 +2143,33 @@ Claim <code>unbonding_coin</code> from expired unbonding.
 
 
 
-<a name="0x1_staking_claim_reward_script"></a>
+</details>
+
+<a id="0x1_staking_claim_reward_script"></a>
 
 ## Function `claim_reward_script`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_claim_reward_script">claim_reward_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_claim_reward_script">claim_reward_script</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="staking.md#0x1_staking_claim_reward_script">claim_reward_script</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="">signer</a>,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String
 ) <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> delegation_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(account_addr);
@@ -1837,7 +2190,9 @@ Claim <code>unbonding_coin</code> from expired unbonding.
 
 
 
-<a name="0x1_staking_claim_reward"></a>
+</details>
+
+<a id="0x1_staking_claim_reward"></a>
 
 ## Function `claim_reward`
 
@@ -1849,7 +2204,8 @@ Claim staking reward from the specified validator.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_claim_reward">claim_reward</a>(
@@ -1877,7 +2233,40 @@ Claim staking reward from the specified validator.
 
 
 
-<a name="0x1_staking_empty_delegation"></a>
+</details>
+
+<a id="0x1_staking_calculate_reward"></a>
+
+## Function `calculate_reward`
+
+Calculate unclaimed reward
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_calculate_reward">calculate_reward</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>, state: &<a href="staking.md#0x1_staking_StakingState">staking::StakingState</a>): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_calculate_reward">calculate_reward</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">Delegation</a>, state: &<a href="staking.md#0x1_staking_StakingState">StakingState</a>): u64 {
+    <b>assert</b>!(
+        delegation.metadata == state.metadata,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EMETADATA_MISMATCH">EMETADATA_MISMATCH</a>),
+    );
+
+    <b>let</b> index_diff = <a href="decimal128.md#0x1_decimal128_sub">decimal128::sub</a>(&state.reward_index, &delegation.reward_index);
+    <a href="decimal128.md#0x1_decimal128_mul_u64">decimal128::mul_u64</a>(&index_diff, delegation.share)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_empty_delegation"></a>
 
 ## Function `empty_delegation`
 
@@ -1885,12 +2274,13 @@ For delegation object
 return empty delegation resource
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_empty_delegation">empty_delegation</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>): <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_empty_delegation">empty_delegation</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_empty_delegation">empty_delegation</a>(metadata: Object&lt;Metadata&gt;, validator: String): <a href="staking.md#0x1_staking_Delegation">Delegation</a> {
@@ -1905,7 +2295,9 @@ return empty delegation resource
 
 
 
-<a name="0x1_staking_get_metadata_from_delegation"></a>
+</details>
+
+<a id="0x1_staking_get_metadata_from_delegation"></a>
 
 ## Function `get_metadata_from_delegation`
 
@@ -1917,7 +2309,8 @@ Get <code>metadata</code> from <code><a href="staking.md#0x1_staking_Delegation"
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_metadata_from_delegation">get_metadata_from_delegation</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">Delegation</a>): Object&lt;Metadata&gt; {
@@ -1927,19 +2320,22 @@ Get <code>metadata</code> from <code><a href="staking.md#0x1_staking_Delegation"
 
 
 
-<a name="0x1_staking_get_validator_from_delegation"></a>
+</details>
+
+<a id="0x1_staking_get_validator_from_delegation"></a>
 
 ## Function `get_validator_from_delegation`
 
 Get <code>validator</code> from <code><a href="staking.md#0x1_staking_Delegation">Delegation</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_delegation">get_validator_from_delegation</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>): <a href="_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_delegation">get_validator_from_delegation</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_delegation">get_validator_from_delegation</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">Delegation</a>): String {
@@ -1949,7 +2345,9 @@ Get <code>validator</code> from <code><a href="staking.md#0x1_staking_Delegation
 
 
 
-<a name="0x1_staking_get_share_from_delegation"></a>
+</details>
+
+<a id="0x1_staking_get_share_from_delegation"></a>
 
 ## Function `get_share_from_delegation`
 
@@ -1961,7 +2359,8 @@ Get <code>share</code> from <code><a href="staking.md#0x1_staking_Delegation">De
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_share_from_delegation">get_share_from_delegation</a>(delegation: &<a href="staking.md#0x1_staking_Delegation">Delegation</a>): u64 {
@@ -1971,7 +2370,9 @@ Get <code>share</code> from <code><a href="staking.md#0x1_staking_Delegation">De
 
 
 
-<a name="0x1_staking_destroy_empty_delegation"></a>
+</details>
+
+<a id="0x1_staking_destroy_empty_delegation"></a>
 
 ## Function `destroy_empty_delegation`
 
@@ -1983,18 +2384,21 @@ Destory empty delegation
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_destroy_empty_delegation">destroy_empty_delegation</a>(delegation: <a href="staking.md#0x1_staking_Delegation">Delegation</a>) {
-    <b>assert</b>!(delegation.share == 0, <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ENOT_EMPTY">ENOT_EMPTY</a>));
+    <b>assert</b>!(delegation.share == 0, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ENOT_EMPTY">ENOT_EMPTY</a>));
     <b>let</b> <a href="staking.md#0x1_staking_Delegation">Delegation</a> { metadata: _, validator: _, share: _, reward_index: _ } = delegation;
 }
 </code></pre>
 
 
 
-<a name="0x1_staking_deposit_delegation"></a>
+</details>
+
+<a id="0x1_staking_deposit_delegation"></a>
 
 ## Function `deposit_delegation`
 
@@ -2006,7 +2410,8 @@ Deposit the delegation into recipient's account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_deposit_delegation">deposit_delegation</a>(
@@ -2015,7 +2420,7 @@ Deposit the delegation into recipient's account.
 ): FungibleAsset <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> metadata = delegation.metadata;
@@ -2051,32 +2456,35 @@ Deposit the delegation into recipient's account.
 
 
 
-<a name="0x1_staking_withdraw_delegation"></a>
+</details>
+
+<a id="0x1_staking_withdraw_delegation"></a>
 
 ## Function `withdraw_delegation`
 
 Withdraw specified <code>share</code> from delegation.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_delegation">withdraw_delegation</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, share: u64): <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_delegation">withdraw_delegation</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, share: u64): <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_delegation">withdraw_delegation</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="">signer</a>,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String,
     share: u64,
 ): <a href="staking.md#0x1_staking_Delegation">Delegation</a> <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a> {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> delegation_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(account_addr);
@@ -2104,7 +2512,9 @@ Withdraw specified <code>share</code> from delegation.
 
 
 
-<a name="0x1_staking_extract_delegation"></a>
+</details>
+
+<a id="0x1_staking_extract_delegation"></a>
 
 ## Function `extract_delegation`
 
@@ -2116,11 +2526,12 @@ Extracts specified share of delegatiion from the passed-in <code>delegation</cod
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_extract_delegation">extract_delegation</a>(delegation: &<b>mut</b> <a href="staking.md#0x1_staking_Delegation">Delegation</a>, share: u64): <a href="staking.md#0x1_staking_Delegation">Delegation</a> {
-    <b>assert</b>!(delegation.share &gt;= share, <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EINSUFFICIENT_AMOUNT">EINSUFFICIENT_AMOUNT</a>));
+    <b>assert</b>!(delegation.share &gt;= share, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EINSUFFICIENT_AMOUNT">EINSUFFICIENT_AMOUNT</a>));
 
     // Total share is <b>invariant</b> and reward_indexes are same btw given and new one so no need <b>to</b> <b>update</b> `reward_index`.
     delegation.share = delegation.share - share;
@@ -2135,7 +2546,9 @@ Extracts specified share of delegatiion from the passed-in <code>delegation</cod
 
 
 
-<a name="0x1_staking_merge_delegation"></a>
+</details>
+
+<a id="0x1_staking_merge_delegation"></a>
 
 ## Function `merge_delegation`
 
@@ -2148,7 +2561,8 @@ to the sum of the two shares (<code>dst_delegation</code> and <code>source_deleg
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_merge_delegation">merge_delegation</a>(
@@ -2157,11 +2571,11 @@ to the sum of the two shares (<code>dst_delegation</code> and <code>source_deleg
 ): FungibleAsset <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>assert</b>!(
         dst_delegation.metadata == source_delegation.metadata,
-        <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EMETADATA_MISMATCH">EMETADATA_MISMATCH</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EMETADATA_MISMATCH">EMETADATA_MISMATCH</a>),
     );
     <b>assert</b>!(
         dst_delegation.validator == source_delegation.validator,
-        <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EVALIDATOR_MISMATCH">EVALIDATOR_MISMATCH</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EVALIDATOR_MISMATCH">EVALIDATOR_MISMATCH</a>),
     );
 
     <b>spec</b> {
@@ -2181,19 +2595,135 @@ to the sum of the two shares (<code>dst_delegation</code> and <code>source_deleg
 
 
 
-<a name="0x1_staking_empty_unbonding"></a>
+</details>
+
+<a id="0x1_staking_destroy_delegation_and_extract_reward"></a>
+
+## Function `destroy_delegation_and_extract_reward`
+
+Destroy delegation and extract reward from delegation
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_destroy_delegation_and_extract_reward">destroy_delegation_and_extract_reward</a>(delegation: <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>): <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_destroy_delegation_and_extract_reward">destroy_delegation_and_extract_reward</a> (
+    delegation: <a href="staking.md#0x1_staking_Delegation">Delegation</a>
+): FungibleAsset <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+    <b>let</b> metadata = delegation.metadata;
+    <b>let</b> validator = delegation.validator;
+
+    <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
+    <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state">load_staking_state</a>(&module_store.staking_states, metadata, validator);
+
+    <b>let</b> reward_amount = <a href="staking.md#0x1_staking_calculate_reward">calculate_reward</a>(&delegation, state);
+    <b>let</b> reward = <b>if</b> (reward_amount == 0) {
+        <a href="fungible_asset.md#0x1_fungible_asset_zero">fungible_asset::zero</a>(<a href="staking.md#0x1_staking_reward_metadata">reward_metadata</a>())
+    } <b>else</b> {
+        <b>let</b> reward_coin_store_signer = &<a href="object.md#0x1_object_generate_signer_for_extending">object::generate_signer_for_extending</a>(&state.reward_coin_store_ref);
+        <a href="fungible_asset.md#0x1_fungible_asset_withdraw">fungible_asset::withdraw</a>(reward_coin_store_signer, state.reward_coin_store, reward_amount)
+    };
+
+    <b>let</b> <a href="staking.md#0x1_staking_Delegation">Delegation</a> { metadata: _, share: _, validator: _, reward_index: _ } = delegation;
+
+    reward
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_unbonding_share_from_amount"></a>
+
+## Function `unbonding_share_from_amount`
+
+For unbonding object
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_unbonding_share_from_amount">unbonding_share_from_amount</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, unbonding_amount: u64): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_unbonding_share_from_amount">unbonding_share_from_amount</a>(metadata: Object&lt;Metadata&gt;, validator: String, unbonding_amount: u64): u64 <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+    <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
+    <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state">load_staking_state</a>(&module_store.staking_states, metadata, validator);
+
+    <b>let</b> total_unbonding_amount = <a href="fungible_asset.md#0x1_fungible_asset_balance">fungible_asset::balance</a>(state.unbonding_coin_store);
+    <b>let</b> share_amount_ratio = <b>if</b> (total_unbonding_amount == 0) {
+        <a href="decimal128.md#0x1_decimal128_one">decimal128::one</a>()
+    } <b>else</b> {
+        <a href="decimal128.md#0x1_decimal128_from_ratio">decimal128::from_ratio</a>(state.unbonding_share, (total_unbonding_amount <b>as</b> u128))
+    };
+
+    <a href="decimal128.md#0x1_decimal128_mul_u64">decimal128::mul_u64</a>(&share_amount_ratio, unbonding_amount)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_unbonding_amount_from_share"></a>
+
+## Function `unbonding_amount_from_share`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_unbonding_amount_from_share">unbonding_amount_from_share</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, unbonding_share: u64): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_unbonding_amount_from_share">unbonding_amount_from_share</a>(metadata: Object&lt;Metadata&gt;, validator: String, unbonding_share: u64): u64 <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
+    <b>let</b> module_store = <b>borrow_global</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
+    <b>let</b> state = <a href="staking.md#0x1_staking_load_staking_state">load_staking_state</a>(&module_store.staking_states, metadata, validator);
+
+    <b>let</b> total_unbonding_amount = <a href="fungible_asset.md#0x1_fungible_asset_balance">fungible_asset::balance</a>(state.unbonding_coin_store);
+    <b>let</b> amount_share_ratio = <b>if</b> (state.unbonding_share == 0) {
+        <a href="decimal128.md#0x1_decimal128_one">decimal128::one</a>()
+    } <b>else</b> {
+        <a href="decimal128.md#0x1_decimal128_from_ratio">decimal128::from_ratio</a>((total_unbonding_amount <b>as</b> u128), state.unbonding_share)
+    };
+
+    <a href="decimal128.md#0x1_decimal128_mul_u64">decimal128::mul_u64</a>(&amount_share_ratio, unbonding_share)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_empty_unbonding"></a>
 
 ## Function `empty_unbonding`
 
 return empty unbonding resource
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_empty_unbonding">empty_unbonding</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, release_time: u64): <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_empty_unbonding">empty_unbonding</a>(metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64): <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_empty_unbonding">empty_unbonding</a>(metadata: Object&lt;Metadata&gt;, validator: String, release_time: u64): <a href="staking.md#0x1_staking_Unbonding">Unbonding</a> {
@@ -2208,7 +2738,9 @@ return empty unbonding resource
 
 
 
-<a name="0x1_staking_get_metadata_from_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_metadata_from_unbonding"></a>
 
 ## Function `get_metadata_from_unbonding`
 
@@ -2220,7 +2752,8 @@ Get <code>metadata</code> from <code><a href="staking.md#0x1_staking_Unbonding">
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_metadata_from_unbonding">get_metadata_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">Unbonding</a>): Object&lt;Metadata&gt; {
@@ -2230,19 +2763,22 @@ Get <code>metadata</code> from <code><a href="staking.md#0x1_staking_Unbonding">
 
 
 
-<a name="0x1_staking_get_validator_from_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_validator_from_unbonding"></a>
 
 ## Function `get_validator_from_unbonding`
 
 Get <code>validator</code> from <code><a href="staking.md#0x1_staking_Unbonding">Unbonding</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_unbonding">get_validator_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>): <a href="_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_unbonding">get_validator_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_validator_from_unbonding">get_validator_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">Unbonding</a>): String {
@@ -2252,7 +2788,9 @@ Get <code>validator</code> from <code><a href="staking.md#0x1_staking_Unbonding"
 
 
 
-<a name="0x1_staking_get_release_time_from_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_release_time_from_unbonding"></a>
 
 ## Function `get_release_time_from_unbonding`
 
@@ -2264,7 +2802,8 @@ Get <code>release_time</code> from <code><a href="staking.md#0x1_staking_Unbondi
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_release_time_from_unbonding">get_release_time_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">Unbonding</a>): u64 {
@@ -2274,7 +2813,9 @@ Get <code>release_time</code> from <code><a href="staking.md#0x1_staking_Unbondi
 
 
 
-<a name="0x1_staking_get_unbonding_share_from_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_unbonding_share_from_unbonding"></a>
 
 ## Function `get_unbonding_share_from_unbonding`
 
@@ -2286,7 +2827,8 @@ Get <code>unbonding_share</code> from <code><a href="staking.md#0x1_staking_Unbo
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding_share_from_unbonding">get_unbonding_share_from_unbonding</a>(unbonding: &<a href="staking.md#0x1_staking_Unbonding">Unbonding</a>): u64 {
@@ -2296,7 +2838,9 @@ Get <code>unbonding_share</code> from <code><a href="staking.md#0x1_staking_Unbo
 
 
 
-<a name="0x1_staking_get_unbonding_amount_from_unbonding"></a>
+</details>
+
+<a id="0x1_staking_get_unbonding_amount_from_unbonding"></a>
 
 ## Function `get_unbonding_amount_from_unbonding`
 
@@ -2308,7 +2852,8 @@ Get <code>unbonding_amount</code> from <code><a href="staking.md#0x1_staking_Unb
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_get_unbonding_amount_from_unbonding">get_unbonding_amount_from_unbonding</a>(
@@ -2320,7 +2865,9 @@ Get <code>unbonding_amount</code> from <code><a href="staking.md#0x1_staking_Unb
 
 
 
-<a name="0x1_staking_destroy_empty_unbonding"></a>
+</details>
+
+<a id="0x1_staking_destroy_empty_unbonding"></a>
 
 ## Function `destroy_empty_unbonding`
 
@@ -2332,18 +2879,21 @@ Destory empty unbonding
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_destroy_empty_unbonding">destroy_empty_unbonding</a>(unbonding: <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>) {
-    <b>assert</b>!(unbonding.unbonding_share == 0, <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ENOT_EMPTY">ENOT_EMPTY</a>));
+    <b>assert</b>!(unbonding.unbonding_share == 0, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ENOT_EMPTY">ENOT_EMPTY</a>));
     <b>let</b> <a href="staking.md#0x1_staking_Unbonding">Unbonding</a> { metadata: _, validator: _, unbonding_share: _, release_time: _ } = unbonding;
 }
 </code></pre>
 
 
 
-<a name="0x1_staking_deposit_unbonding"></a>
+</details>
+
+<a id="0x1_staking_deposit_unbonding"></a>
 
 ## Function `deposit_unbonding`
 
@@ -2355,7 +2905,8 @@ Deposit the unbonding into recipient's account.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_deposit_unbonding">deposit_unbonding</a>(
@@ -2364,7 +2915,7 @@ Deposit the unbonding into recipient's account.
 ) <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a> {
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> metadata = unbonding.metadata;
@@ -2403,33 +2954,36 @@ Deposit the unbonding into recipient's account.
 
 
 
-<a name="0x1_staking_withdraw_unbonding"></a>
+</details>
+
+<a id="0x1_staking_withdraw_unbonding"></a>
 
 ## Function `withdraw_unbonding`
 
 Withdraw specifed <code>amount</code> of unbonding_amount from the unbonding.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_unbonding">withdraw_unbonding</a>(<a href="account.md#0x1_account">account</a>: &<a href="">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="_String">string::String</a>, release_time: u64, amount: u64): <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_unbonding">withdraw_unbonding</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64, amount: u64): <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_unbonding">withdraw_unbonding</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="">signer</a>,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     metadata: Object&lt;Metadata&gt;,
     validator: String,
     release_time: u64,
     amount: u64,
 ): <a href="staking.md#0x1_staking_Unbonding">Unbonding</a> <b>acquires</b> <a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>, <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
-    <b>let</b> account_addr = <a href="_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="staking.md#0x1_staking_is_account_registered">is_account_registered</a>(account_addr),
-        <a href="_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>),
     );
 
     <b>let</b> delegation_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(account_addr);
@@ -2463,7 +3017,9 @@ Withdraw specifed <code>amount</code> of unbonding_amount from the unbonding.
 
 
 
-<a name="0x1_staking_extract_unbonding"></a>
+</details>
+
+<a id="0x1_staking_extract_unbonding"></a>
 
 ## Function `extract_unbonding`
 
@@ -2475,13 +3031,14 @@ Extracts specified amount of unbonding from the passed-in <code>unbonding</code>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_extract_unbonding">extract_unbonding</a>(unbonding: &<b>mut</b> <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>, share: u64): <a href="staking.md#0x1_staking_Unbonding">Unbonding</a> {
     <b>assert</b>!(
         unbonding.unbonding_share &gt;= share,
-        <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EINSUFFICIENT_AMOUNT">EINSUFFICIENT_AMOUNT</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EINSUFFICIENT_AMOUNT">EINSUFFICIENT_AMOUNT</a>),
     );
 
     unbonding.unbonding_share = unbonding.unbonding_share - share;
@@ -2491,7 +3048,9 @@ Extracts specified amount of unbonding from the passed-in <code>unbonding</code>
 
 
 
-<a name="0x1_staking_merge_unbonding"></a>
+</details>
+
+<a id="0x1_staking_merge_unbonding"></a>
 
 ## Function `merge_unbonding`
 
@@ -2505,16 +3064,17 @@ will be merged into the unbonding_coin of the <code>dst_unbonding</code>.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_merge_unbonding">merge_unbonding</a>(
     dst_unbonding: &<b>mut</b> <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>,
     source_unbonding: <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>
 ) {
-    <b>assert</b>!(dst_unbonding.metadata == source_unbonding.metadata, <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EMETADATA_MISMATCH">EMETADATA_MISMATCH</a>));
-    <b>assert</b>!(dst_unbonding.validator == source_unbonding.validator, <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EVALIDATOR_MISMATCH">EVALIDATOR_MISMATCH</a>));
-    <b>assert</b>!(dst_unbonding.release_time &gt;= source_unbonding.release_time, <a href="_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ERELEASE_TIME">ERELEASE_TIME</a>));
+    <b>assert</b>!(dst_unbonding.metadata == source_unbonding.metadata, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EMETADATA_MISMATCH">EMETADATA_MISMATCH</a>));
+    <b>assert</b>!(dst_unbonding.validator == source_unbonding.validator, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_EVALIDATOR_MISMATCH">EVALIDATOR_MISMATCH</a>));
+    <b>assert</b>!(dst_unbonding.release_time &gt;= source_unbonding.release_time, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="staking.md#0x1_staking_ERELEASE_TIME">ERELEASE_TIME</a>));
 
     <b>spec</b> {
         <b>assume</b> dst_unbonding.unbonding_share + source_unbonding.unbonding_share &lt;= MAX_U64;
@@ -2527,7 +3087,9 @@ will be merged into the unbonding_coin of the <code>dst_unbonding</code>.
 
 
 
-<a name="0x1_staking_claim_unbonding"></a>
+</details>
+
+<a id="0x1_staking_claim_unbonding"></a>
 
 ## Function `claim_unbonding`
 
@@ -2539,12 +3101,13 @@ Claim <code>unbonding_coin</code> from expired unbonding.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_claim_unbonding">claim_unbonding</a>(unbonding: <a href="staking.md#0x1_staking_Unbonding">Unbonding</a>): FungibleAsset <b>acquires</b> <a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a> {
     <b>let</b> (_, timestamp) = <a href="block.md#0x1_block_get_block_info">block::get_block_info</a>();
-    <b>assert</b>!(unbonding.release_time &lt;= timestamp, <a href="_invalid_state">error::invalid_state</a>(<a href="staking.md#0x1_staking_ENOT_RELEASED">ENOT_RELEASED</a>));
+    <b>assert</b>!(unbonding.release_time &lt;= timestamp, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="staking.md#0x1_staking_ENOT_RELEASED">ENOT_RELEASED</a>));
 
     <b>let</b> unbonding_amount = <a href="staking.md#0x1_staking_get_unbonding_amount_from_unbonding">get_unbonding_amount_from_unbonding</a>(&unbonding);
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
@@ -2572,38 +3135,100 @@ Claim <code>unbonding_coin</code> from expired unbonding.
 
 
 
-<a name="0x1_staking_share_to_amount"></a>
+</details>
+
+<a id="0x1_staking_delegate_internal"></a>
+
+## Function `delegate_internal`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_delegate_internal">delegate_internal</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, metadata: &<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="staking.md#0x1_staking_delegate_internal">delegate_internal</a>(
+    validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;,
+    metadata: &Object&lt;Metadata&gt;,
+    amount: u64,
+): u64 /* share amount */;
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_undelegate_internal"></a>
+
+## Function `undelegate_internal`
+
+
+
+<pre><code><b>fun</b> <a href="staking.md#0x1_staking_undelegate_internal">undelegate_internal</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, metadata: &<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, share: u64): (u64, u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="staking.md#0x1_staking_undelegate_internal">undelegate_internal</a>(
+    validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;,
+    metadata: &Object&lt;Metadata&gt;,
+    share: u64
+): (u64 /* unbonding amount */, u64 /* unbond timestamp */);
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_staking_share_to_amount"></a>
 
 ## Function `share_to_amount`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_share_to_amount">share_to_amount</a>(validator: <a href="">vector</a>&lt;u8&gt;, metadata: &<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, share: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_share_to_amount">share_to_amount</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, metadata: &<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, share: u64): u64
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_share_to_amount">share_to_amount</a>(validator: <a href="">vector</a>&lt;u8&gt;, metadata: &Object&lt;Metadata&gt;, share: u64): u64 /* delegation amount */;
+<pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_share_to_amount">share_to_amount</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, metadata: &Object&lt;Metadata&gt;, share: u64): u64 /* delegation amount */;
 </code></pre>
 
 
 
-<a name="0x1_staking_amount_to_share"></a>
+</details>
+
+<a id="0x1_staking_amount_to_share"></a>
 
 ## Function `amount_to_share`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(validator: <a href="">vector</a>&lt;u8&gt;, metadata: &<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, metadata: &<a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64): u64
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
-<pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(validator: <a href="">vector</a>&lt;u8&gt;, metadata: &Object&lt;Metadata&gt;, amount: u64): u64 /* share amount */;
+<pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(validator: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, metadata: &Object&lt;Metadata&gt;, amount: u64): u64 /* share amount */;
 </code></pre>
+
+
+
+</details>
