@@ -1,5 +1,5 @@
 
-<a name="0x1_transaction_context"></a>
+<a id="0x1_transaction_context"></a>
 
 # Module `0x1::transaction_context`
 
@@ -13,7 +13,7 @@
 
 
 
-<a name="0x1_transaction_context_get_transaction_hash"></a>
+<a id="0x1_transaction_context_get_transaction_hash"></a>
 
 ## Function `get_transaction_hash`
 
@@ -25,7 +25,8 @@ Return a transaction hash of this execution.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="transaction_context.md#0x1_transaction_context_get_transaction_hash">get_transaction_hash</a>(): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;;
@@ -33,7 +34,9 @@ Return a transaction hash of this execution.
 
 
 
-<a name="0x1_transaction_context_generate_unique_address"></a>
+</details>
+
+<a id="0x1_transaction_context_generate_unique_address"></a>
 
 ## Function `generate_unique_address`
 
@@ -49,8 +52,13 @@ the sequence number and generates a new unique address.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="transaction_context.md#0x1_transaction_context_generate_unique_address">generate_unique_address</a>(): <b>address</b>;
 </code></pre>
+
+
+
+</details>

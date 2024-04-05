@@ -59,18 +59,6 @@ impl AccessPath {
         AccessPath { address, path }
     }
 
-    pub fn check_compat_path() -> Self {
-        AccessPath {
-            address: AccountAddress::ONE,
-            path: DataPath::Resource(StructTag {
-                address: AccountAddress::ONE,
-                module: Identifier::new("code").unwrap(),
-                name: Identifier::new("ModuleStore").unwrap(),
-                type_params: vec![],
-            }),
-        }
-    }
-
     pub fn resource_access_path(address: AccountAddress, struct_tag: StructTag) -> Self {
         Self::new(address, Self::resource_data_path(struct_tag))
     }

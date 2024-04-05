@@ -1,5 +1,5 @@
 
-<a name="0x1_soul_bound_token"></a>
+<a id="0x1_soul_bound_token"></a>
 
 # Module `0x1::soul_bound_token`
 
@@ -14,10 +14,13 @@ initia_std::nft module.
 -  [Function `create_collection_object`](#0x1_soul_bound_token_create_collection_object)
 -  [Function `mint`](#0x1_soul_bound_token_mint)
 -  [Function `mint_soul_bound_token_object`](#0x1_soul_bound_token_mint_soul_bound_token_object)
+-  [Function `mint_internal`](#0x1_soul_bound_token_mint_internal)
+-  [Function `borrow`](#0x1_soul_bound_token_borrow)
 -  [Function `are_properties_mutable`](#0x1_soul_bound_token_are_properties_mutable)
 -  [Function `is_mutable_description`](#0x1_soul_bound_token_is_mutable_description)
 -  [Function `is_mutable_name`](#0x1_soul_bound_token_is_mutable_name)
 -  [Function `is_mutable_uri`](#0x1_soul_bound_token_is_mutable_uri)
+-  [Function `authorized_borrow`](#0x1_soul_bound_token_authorized_borrow)
 -  [Function `set_description`](#0x1_soul_bound_token_set_description)
 -  [Function `set_uri`](#0x1_soul_bound_token_set_uri)
 -  [Function `add_property`](#0x1_soul_bound_token_add_property)
@@ -25,6 +28,8 @@ initia_std::nft module.
 -  [Function `remove_property`](#0x1_soul_bound_token_remove_property)
 -  [Function `update_property`](#0x1_soul_bound_token_update_property)
 -  [Function `update_typed_property`](#0x1_soul_bound_token_update_typed_property)
+-  [Function `collection_object`](#0x1_soul_bound_token_collection_object)
+-  [Function `borrow_collection`](#0x1_soul_bound_token_borrow_collection)
 -  [Function `is_mutable_collection_description`](#0x1_soul_bound_token_is_mutable_collection_description)
 -  [Function `is_mutable_collection_royalty`](#0x1_soul_bound_token_is_mutable_collection_royalty)
 -  [Function `is_mutable_collection_uri`](#0x1_soul_bound_token_is_mutable_collection_uri)
@@ -32,6 +37,7 @@ initia_std::nft module.
 -  [Function `is_mutable_collection_nft_name`](#0x1_soul_bound_token_is_mutable_collection_nft_name)
 -  [Function `is_mutable_collection_nft_uri`](#0x1_soul_bound_token_is_mutable_collection_nft_uri)
 -  [Function `is_mutable_collection_nft_properties`](#0x1_soul_bound_token_is_mutable_collection_nft_properties)
+-  [Function `authorized_borrow_collection`](#0x1_soul_bound_token_authorized_borrow_collection)
 -  [Function `set_collection_description`](#0x1_soul_bound_token_set_collection_description)
 -  [Function `set_collection_royalties`](#0x1_soul_bound_token_set_collection_royalties)
 -  [Function `set_collection_royalties_call`](#0x1_soul_bound_token_set_collection_royalties_call)
@@ -40,19 +46,19 @@ initia_std::nft module.
 
 <pre><code><b>use</b> <a href="collection.md#0x1_collection">0x1::collection</a>;
 <b>use</b> <a href="decimal128.md#0x1_decimal128">0x1::decimal128</a>;
-<b>use</b> <a href="">0x1::error</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error">0x1::error</a>;
 <b>use</b> <a href="nft.md#0x1_nft">0x1::nft</a>;
 <b>use</b> <a href="object.md#0x1_object">0x1::object</a>;
-<b>use</b> <a href="">0x1::option</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option">0x1::option</a>;
 <b>use</b> <a href="property_map.md#0x1_property_map">0x1::property_map</a>;
 <b>use</b> <a href="royalty.md#0x1_royalty">0x1::royalty</a>;
-<b>use</b> <a href="">0x1::signer</a>;
-<b>use</b> <a href="">0x1::string</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">0x1::signer</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 </code></pre>
 
 
 
-<a name="0x1_soul_bound_token_SoulBoundTokenCollection"></a>
+<a id="0x1_soul_bound_token_SoulBoundTokenCollection"></a>
 
 ## Resource `SoulBoundTokenCollection`
 
@@ -64,18 +70,19 @@ Storage state for managing the no-code Collection.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
 <dt>
-<code>mutator_ref: <a href="_Option">option::Option</a>&lt;<a href="collection.md#0x1_collection_MutatorRef">collection::MutatorRef</a>&gt;</code>
+<code>mutator_ref: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="collection.md#0x1_collection_MutatorRef">collection::MutatorRef</a>&gt;</code>
 </dt>
 <dd>
  Used to mutate collection fields
 </dd>
 <dt>
-<code>royalty_mutator_ref: <a href="_Option">option::Option</a>&lt;<a href="royalty.md#0x1_royalty_MutatorRef">royalty::MutatorRef</a>&gt;</code>
+<code>royalty_mutator_ref: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="royalty.md#0x1_royalty_MutatorRef">royalty::MutatorRef</a>&gt;</code>
 </dt>
 <dd>
  Used to mutate royalties
@@ -119,7 +126,9 @@ Storage state for managing the no-code Collection.
 </dl>
 
 
-<a name="0x1_soul_bound_token_SoulBoundToken"></a>
+</details>
+
+<a id="0x1_soul_bound_token_SoulBoundToken"></a>
 
 ## Resource `SoulBoundToken`
 
@@ -131,12 +140,13 @@ Storage state for managing the no-code Token.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
 <dt>
-<code>mutator_ref: <a href="_Option">option::Option</a>&lt;<a href="nft.md#0x1_nft_MutatorRef">nft::MutatorRef</a>&gt;</code>
+<code>mutator_ref: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="nft.md#0x1_nft_MutatorRef">nft::MutatorRef</a>&gt;</code>
 </dt>
 <dd>
  Used to mutate fields
@@ -150,12 +160,14 @@ Storage state for managing the no-code Token.
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_soul_bound_token_ECOLLECTION_DOES_NOT_EXIST"></a>
+<a id="0x1_soul_bound_token_ECOLLECTION_DOES_NOT_EXIST"></a>
 
 The collection does not exist
 
@@ -165,7 +177,7 @@ The collection does not exist
 
 
 
-<a name="0x1_soul_bound_token_EFIELD_NOT_MUTABLE"></a>
+<a id="0x1_soul_bound_token_EFIELD_NOT_MUTABLE"></a>
 
 The field being changed is not mutable
 
@@ -175,7 +187,7 @@ The field being changed is not mutable
 
 
 
-<a name="0x1_soul_bound_token_ENFT_DOES_NOT_EXIST"></a>
+<a id="0x1_soul_bound_token_ENFT_DOES_NOT_EXIST"></a>
 
 The nft does not exist
 
@@ -185,7 +197,7 @@ The nft does not exist
 
 
 
-<a name="0x1_soul_bound_token_ENOT_CREATOR"></a>
+<a id="0x1_soul_bound_token_ENOT_CREATOR"></a>
 
 The provided signer is not the creator
 
@@ -195,7 +207,7 @@ The provided signer is not the creator
 
 
 
-<a name="0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE"></a>
+<a id="0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE"></a>
 
 The property map being mutated is not mutable
 
@@ -205,23 +217,24 @@ The property map being mutated is not mutable
 
 
 
-<a name="0x1_soul_bound_token_create_collection"></a>
+<a id="0x1_soul_bound_token_create_collection"></a>
 
 ## Function `create_collection`
 
 Create a new collection
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_create_collection">create_collection</a>(creator: &<a href="">signer</a>, description: <a href="_String">string::String</a>, max_supply: u64, name: <a href="_String">string::String</a>, uri: <a href="_String">string::String</a>, mutable_description: bool, mutable_royalty: bool, mutable_uri: bool, mutable_nft_description: bool, mutable_nft_name: bool, mutable_nft_properties: bool, mutable_nft_uri: bool, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="decimal128.md#0x1_decimal128_Decimal128">decimal128::Decimal128</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_create_collection">create_collection</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, max_supply: u64, name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, mutable_description: bool, mutable_royalty: bool, mutable_uri: bool, mutable_nft_description: bool, mutable_nft_name: bool, mutable_nft_properties: bool, mutable_nft_uri: bool, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="decimal128.md#0x1_decimal128_Decimal128">decimal128::Decimal128</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_create_collection">create_collection</a>(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     description: String,
     max_supply: u64,
     name: String,
@@ -255,22 +268,25 @@ Create a new collection
 
 
 
-<a name="0x1_soul_bound_token_create_collection_object"></a>
+</details>
+
+<a id="0x1_soul_bound_token_create_collection_object"></a>
 
 ## Function `create_collection_object`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_create_collection_object">create_collection_object</a>(creator: &<a href="">signer</a>, description: <a href="_String">string::String</a>, max_supply: u64, name: <a href="_String">string::String</a>, uri: <a href="_String">string::String</a>, mutable_description: bool, mutable_royalty: bool, mutable_uri: bool, mutable_nft_description: bool, mutable_nft_name: bool, mutable_nft_properties: bool, mutable_nft_uri: bool, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="decimal128.md#0x1_decimal128_Decimal128">decimal128::Decimal128</a>): <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">soul_bound_token::SoulBoundTokenCollection</a>&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_create_collection_object">create_collection_object</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, max_supply: u64, name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, mutable_description: bool, mutable_royalty: bool, mutable_uri: bool, mutable_nft_description: bool, mutable_nft_name: bool, mutable_nft_properties: bool, mutable_nft_uri: bool, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="decimal128.md#0x1_decimal128_Decimal128">decimal128::Decimal128</a>): <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">soul_bound_token::SoulBoundTokenCollection</a>&gt;
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_create_collection_object">create_collection_object</a>(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     description: String,
     max_supply: u64,
     name: String,
@@ -284,28 +300,28 @@ Create a new collection
     mutable_nft_uri: bool,
     <a href="royalty.md#0x1_royalty">royalty</a>: Decimal128,
 ): Object&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt; {
-    <b>let</b> creator_addr = <a href="_address_of">signer::address_of</a>(creator);
+    <b>let</b> creator_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator);
     <b>let</b> <a href="royalty.md#0x1_royalty">royalty</a> = <a href="royalty.md#0x1_royalty_create">royalty::create</a>(<a href="royalty.md#0x1_royalty">royalty</a>, creator_addr);
     <b>let</b> constructor_ref = <a href="collection.md#0x1_collection_create_fixed_collection">collection::create_fixed_collection</a>(
         creator,
         description,
         max_supply,
         name,
-        <a href="_some">option::some</a>(<a href="royalty.md#0x1_royalty">royalty</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="royalty.md#0x1_royalty">royalty</a>),
         uri,
     );
 
     <b>let</b> object_signer = <a href="object.md#0x1_object_generate_signer">object::generate_signer</a>(&constructor_ref);
     <b>let</b> mutator_ref = <b>if</b> (mutable_description || mutable_uri) {
-        <a href="_some">option::some</a>(<a href="collection.md#0x1_collection_generate_mutator_ref">collection::generate_mutator_ref</a>(&constructor_ref))
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="collection.md#0x1_collection_generate_mutator_ref">collection::generate_mutator_ref</a>(&constructor_ref))
     } <b>else</b> {
-        <a href="_none">option::none</a>()
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>()
     };
 
     <b>let</b> royalty_mutator_ref = <b>if</b> (mutable_royalty) {
-        <a href="_some">option::some</a>(<a href="royalty.md#0x1_royalty_generate_mutator_ref">royalty::generate_mutator_ref</a>(<a href="object.md#0x1_object_generate_extend_ref">object::generate_extend_ref</a>(&constructor_ref)))
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="royalty.md#0x1_royalty_generate_mutator_ref">royalty::generate_mutator_ref</a>(<a href="object.md#0x1_object_generate_extend_ref">object::generate_extend_ref</a>(&constructor_ref)))
     } <b>else</b> {
-        <a href="_none">option::none</a>()
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>()
     };
 
     <b>let</b> soul_bound_token_collection = <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
@@ -325,30 +341,33 @@ Create a new collection
 
 
 
-<a name="0x1_soul_bound_token_mint"></a>
+</details>
+
+<a id="0x1_soul_bound_token_mint"></a>
 
 ## Function `mint`
 
 With an existing collection, directly mint a soul bound token into the recipient's account.
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint">mint</a>(creator: &<a href="">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="_String">string::String</a>, description: <a href="_String">string::String</a>, name: <a href="_String">string::String</a>, uri: <a href="_String">string::String</a>, property_keys: <a href="">vector</a>&lt;<a href="_String">string::String</a>&gt;, property_types: <a href="">vector</a>&lt;<a href="_String">string::String</a>&gt;, property_values: <a href="">vector</a>&lt;<a href="">vector</a>&lt;u8&gt;&gt;, soul_bound_to: <b>address</b>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint">mint</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, property_keys: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, property_types: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, property_values: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;, soul_bound_to: <b>address</b>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint">mint</a>(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="collection.md#0x1_collection">collection</a>: String,
     description: String,
     name: String,
     uri: String,
-    property_keys: <a href="">vector</a>&lt;String&gt;,
-    property_types: <a href="">vector</a>&lt;String&gt;,
-    property_values: <a href="">vector</a>&lt;<a href="">vector</a>&lt;u8&gt;&gt;,
+    property_keys: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    property_types: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    property_values: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;,
     soul_bound_to: <b>address</b>,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
     <a href="soul_bound_token.md#0x1_soul_bound_token_mint_soul_bound_token_object">mint_soul_bound_token_object</a>(
@@ -367,30 +386,33 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_mint_soul_bound_token_object"></a>
+</details>
+
+<a id="0x1_soul_bound_token_mint_soul_bound_token_object"></a>
 
 ## Function `mint_soul_bound_token_object`
 
 With an existing collection, directly mint a soul bound token into the recipient's account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint_soul_bound_token_object">mint_soul_bound_token_object</a>(creator: &<a href="">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="_String">string::String</a>, description: <a href="_String">string::String</a>, name: <a href="_String">string::String</a>, uri: <a href="_String">string::String</a>, property_keys: <a href="">vector</a>&lt;<a href="_String">string::String</a>&gt;, property_types: <a href="">vector</a>&lt;<a href="_String">string::String</a>&gt;, property_values: <a href="">vector</a>&lt;<a href="">vector</a>&lt;u8&gt;&gt;, soul_bound_to: <b>address</b>): <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">soul_bound_token::SoulBoundToken</a>&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint_soul_bound_token_object">mint_soul_bound_token_object</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, property_keys: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, property_types: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, property_values: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;, soul_bound_to: <b>address</b>): <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">soul_bound_token::SoulBoundToken</a>&gt;
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint_soul_bound_token_object">mint_soul_bound_token_object</a>(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="collection.md#0x1_collection">collection</a>: String,
     description: String,
     name: String,
     uri: String,
-    property_keys: <a href="">vector</a>&lt;String&gt;,
-    property_types: <a href="">vector</a>&lt;String&gt;,
-    property_values: <a href="">vector</a>&lt;<a href="">vector</a>&lt;u8&gt;&gt;,
+    property_keys: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    property_types: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    property_values: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;,
     soul_bound_to: <b>address</b>,
 ): Object&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a>&gt; <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
     <b>let</b> constructor_ref = <a href="soul_bound_token.md#0x1_soul_bound_token_mint_internal">mint_internal</a>(
@@ -415,7 +437,105 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_are_properties_mutable"></a>
+</details>
+
+<a id="0x1_soul_bound_token_mint_internal"></a>
+
+## Function `mint_internal`
+
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint_internal">mint_internal</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, property_keys: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, property_types: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, property_values: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;): <a href="object.md#0x1_object_ConstructorRef">object::ConstructorRef</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_mint_internal">mint_internal</a>(
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
+    <a href="collection.md#0x1_collection">collection</a>: String,
+    description: String,
+    name: String,
+    uri: String,
+    property_keys: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    property_types: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
+    property_values: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;,
+): ConstructorRef <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
+    <b>let</b> constructor_ref = <a href="nft.md#0x1_nft_create">nft::create</a>(
+        creator,
+        <a href="collection.md#0x1_collection">collection</a>,
+        description,
+        name,
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
+        uri,
+    );
+    <b>let</b> s = <a href="object.md#0x1_object_generate_signer">object::generate_signer</a>(&constructor_ref);
+
+    <b>let</b> object_signer = <a href="object.md#0x1_object_generate_signer">object::generate_signer</a>(&constructor_ref);
+
+    <b>let</b> collection_obj = <a href="soul_bound_token.md#0x1_soul_bound_token_collection_object">collection_object</a>(creator, &<a href="collection.md#0x1_collection">collection</a>);
+    <b>let</b> <a href="collection.md#0x1_collection">collection</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_borrow_collection">borrow_collection</a>(collection_obj);
+
+    <b>let</b> mutator_ref = <b>if</b> (
+        <a href="collection.md#0x1_collection">collection</a>.mutable_nft_description
+            || <a href="collection.md#0x1_collection">collection</a>.mutable_nft_name
+            || <a href="collection.md#0x1_collection">collection</a>.mutable_nft_uri
+    ) {
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="nft.md#0x1_nft_generate_mutator_ref">nft::generate_mutator_ref</a>(&constructor_ref))
+    } <b>else</b> {
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>()
+    };
+
+    <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
+        mutator_ref,
+        property_mutator_ref: <a href="property_map.md#0x1_property_map_generate_mutator_ref">property_map::generate_mutator_ref</a>(&s),
+    };
+    <b>move_to</b>(&object_signer, <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>);
+
+    <b>let</b> properties = <a href="property_map.md#0x1_property_map_prepare_input">property_map::prepare_input</a>(property_keys, property_types, property_values);
+    <a href="property_map.md#0x1_property_map_init">property_map::init</a>(&s, properties);
+
+    constructor_ref
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_soul_bound_token_borrow"></a>
+
+## Function `borrow`
+
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_borrow">borrow</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">soul_bound_token::SoulBoundToken</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code>inline <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_borrow">borrow</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
+    <b>let</b> nft_address = <a href="object.md#0x1_object_object_address">object::object_address</a>(<a href="nft.md#0x1_nft">nft</a>);
+    <b>assert</b>!(
+        <b>exists</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a>&gt;(nft_address),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_ENFT_DOES_NOT_EXIST">ENFT_DOES_NOT_EXIST</a>),
+    );
+    <b>borrow_global</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a>&gt;(nft_address)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_soul_bound_token_are_properties_mutable"></a>
 
 ## Function `are_properties_mutable`
 
@@ -427,7 +547,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_are_properties_mutable">are_properties_mutable</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): bool <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
@@ -438,7 +559,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_description"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_description"></a>
 
 ## Function `is_mutable_description`
 
@@ -450,7 +573,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_description">is_mutable_description</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): bool <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
@@ -460,7 +584,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_name"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_name"></a>
 
 ## Function `is_mutable_name`
 
@@ -472,7 +598,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_name">is_mutable_name</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): bool <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
@@ -482,7 +609,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_uri"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_uri"></a>
 
 ## Function `is_mutable_uri`
 
@@ -494,7 +623,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_uri">is_mutable_uri</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): bool <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
@@ -504,91 +634,134 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_set_description"></a>
+</details>
+
+<a id="0x1_soul_bound_token_authorized_borrow"></a>
+
+## Function `authorized_borrow`
+
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">soul_bound_token::SoulBoundToken</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code>inline <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;, creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
+    <b>let</b> nft_address = <a href="object.md#0x1_object_object_address">object::object_address</a>(<a href="nft.md#0x1_nft">nft</a>);
+    <b>assert</b>!(
+        <b>exists</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a>&gt;(nft_address),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_ENFT_DOES_NOT_EXIST">ENFT_DOES_NOT_EXIST</a>),
+    );
+
+    <b>assert</b>!(
+        <a href="nft.md#0x1_nft_creator">nft::creator</a>(<a href="nft.md#0x1_nft">nft</a>) == <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_ENOT_CREATOR">ENOT_CREATOR</a>),
+    );
+    <b>borrow_global</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a>&gt;(nft_address)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_soul_bound_token_set_description"></a>
 
 ## Function `set_description`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_description">set_description</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, description: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_description">set_description</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_description">set_description</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     description: String,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>, <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_description">is_mutable_description</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
     );
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
-    <a href="nft.md#0x1_nft_set_description">nft::set_description</a>(<a href="_borrow">option::borrow</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.mutator_ref), description);
+    <a href="nft.md#0x1_nft_set_description">nft::set_description</a>(<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.mutator_ref), description);
 }
 </code></pre>
 
 
 
-<a name="0x1_soul_bound_token_set_uri"></a>
+</details>
+
+<a id="0x1_soul_bound_token_set_uri"></a>
 
 ## Function `set_uri`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_uri">set_uri</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, uri: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_uri">set_uri</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_uri">set_uri</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     uri: String,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>, <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_uri">is_mutable_uri</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
     );
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
-    <a href="nft.md#0x1_nft_set_uri">nft::set_uri</a>(<a href="_borrow">option::borrow</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.mutator_ref), uri);
+    <a href="nft.md#0x1_nft_set_uri">nft::set_uri</a>(<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.mutator_ref), uri);
 }
 </code></pre>
 
 
 
-<a name="0x1_soul_bound_token_add_property"></a>
+</details>
+
+<a id="0x1_soul_bound_token_add_property"></a>
 
 ## Function `add_property`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_add_property">add_property</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="_String">string::String</a>, type: <a href="_String">string::String</a>, value: <a href="">vector</a>&lt;u8&gt;)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_add_property">add_property</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, type: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, value: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_add_property">add_property</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     key: String,
     type: String,
-    value: <a href="">vector</a>&lt;u8&gt;,
+    value: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>, <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_are_properties_mutable">are_properties_mutable</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
     );
 
     <a href="property_map.md#0x1_property_map_add">property_map::add</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.property_mutator_ref, key, type, value);
@@ -597,22 +770,25 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_add_typed_property"></a>
+</details>
+
+<a id="0x1_soul_bound_token_add_typed_property"></a>
 
 ## Function `add_typed_property`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_add_typed_property">add_typed_property</a>&lt;T: key, V: drop&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="_String">string::String</a>, value: V)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_add_typed_property">add_typed_property</a>&lt;T: key, V: drop&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, value: V)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_add_typed_property">add_typed_property</a>&lt;T: key, V: drop&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     key: String,
     value: V,
@@ -620,7 +796,7 @@ With an existing collection, directly mint a soul bound token into the recipient
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_are_properties_mutable">are_properties_mutable</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
     );
 
     <a href="property_map.md#0x1_property_map_add_typed">property_map::add_typed</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.property_mutator_ref, key, value);
@@ -629,29 +805,32 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_remove_property"></a>
+</details>
+
+<a id="0x1_soul_bound_token_remove_property"></a>
 
 ## Function `remove_property`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_remove_property">remove_property</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_remove_property">remove_property</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_remove_property">remove_property</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     key: String,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>, <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_are_properties_mutable">are_properties_mutable</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
     );
 
     <a href="property_map.md#0x1_property_map_remove">property_map::remove</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.property_mutator_ref, &key);
@@ -660,31 +839,34 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_update_property"></a>
+</details>
+
+<a id="0x1_soul_bound_token_update_property"></a>
 
 ## Function `update_property`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_update_property">update_property</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="_String">string::String</a>, type: <a href="_String">string::String</a>, value: <a href="">vector</a>&lt;u8&gt;)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_update_property">update_property</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, type: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, value: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_update_property">update_property</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     key: String,
     type: String,
-    value: <a href="">vector</a>&lt;u8&gt;,
+    value: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>, <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundToken">SoulBoundToken</a> {
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_are_properties_mutable">are_properties_mutable</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
     );
 
     <a href="property_map.md#0x1_property_map_update">property_map::update</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.property_mutator_ref, &key, type, value);
@@ -693,22 +875,25 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_update_typed_property"></a>
+</details>
+
+<a id="0x1_soul_bound_token_update_typed_property"></a>
 
 ## Function `update_typed_property`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_update_typed_property">update_typed_property</a>&lt;T: key, V: drop&gt;(creator: &<a href="">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="_String">string::String</a>, value: V)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_update_typed_property">update_typed_property</a>&lt;T: key, V: drop&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, key: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, value: V)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_update_typed_property">update_typed_property</a>&lt;T: key, V: drop&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;,
     key: String,
     value: V,
@@ -716,7 +901,7 @@ With an existing collection, directly mint a soul bound token into the recipient
     <b>let</b> <a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a> = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow">authorized_borrow</a>(<a href="nft.md#0x1_nft">nft</a>, creator);
     <b>assert</b>!(
         <a href="soul_bound_token.md#0x1_soul_bound_token_are_properties_mutable">are_properties_mutable</a>(<a href="nft.md#0x1_nft">nft</a>),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>),
     );
 
     <a href="property_map.md#0x1_property_map_update_typed">property_map::update_typed</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token">soul_bound_token</a>.property_mutator_ref, &key, value);
@@ -725,7 +910,63 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_description"></a>
+</details>
+
+<a id="0x1_soul_bound_token_collection_object"></a>
+
+## Function `collection_object`
+
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_collection_object">collection_object</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, name: &<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">soul_bound_token::SoulBoundTokenCollection</a>&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code>inline <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_collection_object">collection_object</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, name: &String): Object&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt; {
+    <b>let</b> collection_addr = <a href="collection.md#0x1_collection_create_collection_address">collection::create_collection_address</a>(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator), name);
+    <a href="object.md#0x1_object_address_to_object">object::address_to_object</a>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt;(collection_addr)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_soul_bound_token_borrow_collection"></a>
+
+## Function `borrow_collection`
+
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_borrow_collection">borrow_collection</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">soul_bound_token::SoulBoundTokenCollection</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code>inline <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_borrow_collection">borrow_collection</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
+    <b>let</b> collection_address = <a href="object.md#0x1_object_object_address">object::object_address</a>(<a href="nft.md#0x1_nft">nft</a>);
+    <b>assert</b>!(
+        <b>exists</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt;(collection_address),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_ECOLLECTION_DOES_NOT_EXIST">ECOLLECTION_DOES_NOT_EXIST</a>),
+    );
+    <b>borrow_global</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt;(collection_address)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_description"></a>
 
 ## Function `is_mutable_collection_description`
 
@@ -736,7 +977,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_description">is_mutable_collection_description</a>&lt;T: key&gt;(
@@ -748,7 +990,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_royalty"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_royalty"></a>
 
 ## Function `is_mutable_collection_royalty`
 
@@ -759,19 +1003,22 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_royalty">is_mutable_collection_royalty</a>&lt;T: key&gt;(
     <a href="collection.md#0x1_collection">collection</a>: Object&lt;T&gt;,
 ): bool <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
-    <a href="_is_some">option::is_some</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token_borrow_collection">borrow_collection</a>(<a href="collection.md#0x1_collection">collection</a>).royalty_mutator_ref)
+    <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&<a href="soul_bound_token.md#0x1_soul_bound_token_borrow_collection">borrow_collection</a>(<a href="collection.md#0x1_collection">collection</a>).royalty_mutator_ref)
 }
 </code></pre>
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_uri"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_uri"></a>
 
 ## Function `is_mutable_collection_uri`
 
@@ -782,7 +1029,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_uri">is_mutable_collection_uri</a>&lt;T: key&gt;(
@@ -794,7 +1042,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_nft_description"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_nft_description"></a>
 
 ## Function `is_mutable_collection_nft_description`
 
@@ -805,7 +1055,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_nft_description">is_mutable_collection_nft_description</a>&lt;T: key&gt;(
@@ -817,7 +1068,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_nft_name"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_nft_name"></a>
 
 ## Function `is_mutable_collection_nft_name`
 
@@ -828,7 +1081,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_nft_name">is_mutable_collection_nft_name</a>&lt;T: key&gt;(
@@ -840,7 +1094,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_nft_uri"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_nft_uri"></a>
 
 ## Function `is_mutable_collection_nft_uri`
 
@@ -851,7 +1107,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_nft_uri">is_mutable_collection_nft_uri</a>&lt;T: key&gt;(
@@ -863,7 +1120,9 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_is_mutable_collection_nft_properties"></a>
+</details>
+
+<a id="0x1_soul_bound_token_is_mutable_collection_nft_properties"></a>
 
 ## Function `is_mutable_collection_nft_properties`
 
@@ -874,7 +1133,8 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_is_mutable_collection_nft_properties">is_mutable_collection_nft_properties</a>&lt;T: key&gt;(
@@ -886,82 +1146,124 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_set_collection_description"></a>
+</details>
+
+<a id="0x1_soul_bound_token_authorized_borrow_collection"></a>
+
+## Function `authorized_borrow_collection`
+
+
+
+<pre><code><b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow_collection">authorized_borrow_collection</a>&lt;T: key&gt;(<a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">soul_bound_token::SoulBoundTokenCollection</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code>inline <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow_collection">authorized_borrow_collection</a>&lt;T: key&gt;(<a href="collection.md#0x1_collection">collection</a>: Object&lt;T&gt;, creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>): &<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
+    <b>let</b> collection_address = <a href="object.md#0x1_object_object_address">object::object_address</a>(<a href="collection.md#0x1_collection">collection</a>);
+    <b>assert</b>!(
+        <b>exists</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt;(collection_address),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_ECOLLECTION_DOES_NOT_EXIST">ECOLLECTION_DOES_NOT_EXIST</a>),
+    );
+    <b>assert</b>!(
+        <a href="collection.md#0x1_collection_creator">collection::creator</a>(<a href="collection.md#0x1_collection">collection</a>) == <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_ENOT_CREATOR">ENOT_CREATOR</a>),
+    );
+    <b>borrow_global</b>&lt;<a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a>&gt;(collection_address)
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_soul_bound_token_set_collection_description"></a>
 
 ## Function `set_collection_description`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_description">set_collection_description</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, description: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_description">set_collection_description</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_description">set_collection_description</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="collection.md#0x1_collection">collection</a>: Object&lt;T&gt;,
     description: String,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
     <b>let</b> soul_bound_token_collection = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow_collection">authorized_borrow_collection</a>(<a href="collection.md#0x1_collection">collection</a>, creator);
     <b>assert</b>!(
         soul_bound_token_collection.mutable_description,
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
     );
-    <a href="collection.md#0x1_collection_set_description">collection::set_description</a>(<a href="_borrow">option::borrow</a>(&soul_bound_token_collection.mutator_ref), description);
+    <a href="collection.md#0x1_collection_set_description">collection::set_description</a>(<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&soul_bound_token_collection.mutator_ref), description);
 }
 </code></pre>
 
 
 
-<a name="0x1_soul_bound_token_set_collection_royalties"></a>
+</details>
+
+<a id="0x1_soul_bound_token_set_collection_royalties"></a>
 
 ## Function `set_collection_royalties`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_royalties">set_collection_royalties</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="royalty.md#0x1_royalty_Royalty">royalty::Royalty</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_royalties">set_collection_royalties</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="royalty.md#0x1_royalty_Royalty">royalty::Royalty</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_royalties">set_collection_royalties</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="collection.md#0x1_collection">collection</a>: Object&lt;T&gt;,
     <a href="royalty.md#0x1_royalty">royalty</a>: <a href="royalty.md#0x1_royalty_Royalty">royalty::Royalty</a>,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
     <b>let</b> soul_bound_token_collection = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow_collection">authorized_borrow_collection</a>(<a href="collection.md#0x1_collection">collection</a>, creator);
     <b>assert</b>!(
-        <a href="_is_some">option::is_some</a>(&soul_bound_token_collection.royalty_mutator_ref),
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&soul_bound_token_collection.royalty_mutator_ref),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
     );
-    <a href="royalty.md#0x1_royalty_update">royalty::update</a>(<a href="_borrow">option::borrow</a>(&soul_bound_token_collection.royalty_mutator_ref), <a href="royalty.md#0x1_royalty">royalty</a>);
+    <a href="royalty.md#0x1_royalty_update">royalty::update</a>(<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&soul_bound_token_collection.royalty_mutator_ref), <a href="royalty.md#0x1_royalty">royalty</a>);
 }
 </code></pre>
 
 
 
-<a name="0x1_soul_bound_token_set_collection_royalties_call"></a>
+</details>
+
+<a id="0x1_soul_bound_token_set_collection_royalties_call"></a>
 
 ## Function `set_collection_royalties_call`
 
 
 
-<pre><code>entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_royalties_call">set_collection_royalties_call</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="decimal128.md#0x1_decimal128_Decimal128">decimal128::Decimal128</a>, payee_address: <b>address</b>)
+<pre><code>entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_royalties_call">set_collection_royalties_call</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="decimal128.md#0x1_decimal128_Decimal128">decimal128::Decimal128</a>, payee_address: <b>address</b>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code>entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_royalties_call">set_collection_royalties_call</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="collection.md#0x1_collection">collection</a>: Object&lt;T&gt;,
     <a href="royalty.md#0x1_royalty">royalty</a>: Decimal128,
     payee_address: <b>address</b>,
@@ -973,30 +1275,37 @@ With an existing collection, directly mint a soul bound token into the recipient
 
 
 
-<a name="0x1_soul_bound_token_set_collection_uri"></a>
+</details>
+
+<a id="0x1_soul_bound_token_set_collection_uri"></a>
 
 ## Function `set_collection_uri`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_uri">set_collection_uri</a>&lt;T: key&gt;(creator: &<a href="">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, uri: <a href="_String">string::String</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_uri">set_collection_uri</a>&lt;T: key&gt;(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="soul_bound_token.md#0x1_soul_bound_token_set_collection_uri">set_collection_uri</a>&lt;T: key&gt;(
-    creator: &<a href="">signer</a>,
+    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     <a href="collection.md#0x1_collection">collection</a>: Object&lt;T&gt;,
     uri: String,
 ) <b>acquires</b> <a href="soul_bound_token.md#0x1_soul_bound_token_SoulBoundTokenCollection">SoulBoundTokenCollection</a> {
     <b>let</b> soul_bound_token_collection = <a href="soul_bound_token.md#0x1_soul_bound_token_authorized_borrow_collection">authorized_borrow_collection</a>(<a href="collection.md#0x1_collection">collection</a>, creator);
     <b>assert</b>!(
         soul_bound_token_collection.mutable_uri,
-        <a href="_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="soul_bound_token.md#0x1_soul_bound_token_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>),
     );
-    <a href="collection.md#0x1_collection_set_uri">collection::set_uri</a>(<a href="_borrow">option::borrow</a>(&soul_bound_token_collection.mutator_ref), uri);
+    <a href="collection.md#0x1_collection_set_uri">collection::set_uri</a>(<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&soul_bound_token_collection.mutator_ref), uri);
 }
 </code></pre>
+
+
+
+</details>

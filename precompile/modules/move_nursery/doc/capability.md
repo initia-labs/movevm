@@ -1,5 +1,5 @@
 
-<a name="0x1_capability"></a>
+<a id="0x1_capability"></a>
 
 # Module `0x1::capability`
 
@@ -9,7 +9,7 @@ A module which defines the basic concept of
 EXPERIMENTAL
 
 
-<a name="@Overview_0"></a>
+<a id="@Overview_0"></a>
 
 ## Overview
 
@@ -21,7 +21,7 @@ called within a transaction which has a capability as a parameter, it is guarant
 has been obtained via a proper signer-based authorization step previously in the transaction's execution.
 
 
-<a name="@Usage_1"></a>
+<a id="@Usage_1"></a>
 
 ### Usage
 
@@ -59,7 +59,7 @@ public fun do_something(_cap: Cap<Feature>) { ... }
 ```
 
 
-<a name="@Delegation_2"></a>
+<a id="@Delegation_2"></a>
 
 ### Delegation
 
@@ -100,10 +100,14 @@ is_valid_delegate_for_feature(d);
 -  [Function `create`](#0x1_capability_create)
 -  [Function `acquire`](#0x1_capability_acquire)
 -  [Function `acquire_linear`](#0x1_capability_acquire_linear)
+-  [Function `validate_acquire`](#0x1_capability_validate_acquire)
 -  [Function `root_addr`](#0x1_capability_root_addr)
 -  [Function `linear_root_addr`](#0x1_capability_linear_root_addr)
 -  [Function `delegate`](#0x1_capability_delegate)
 -  [Function `revoke`](#0x1_capability_revoke)
+-  [Function `remove_element`](#0x1_capability_remove_element)
+-  [Function `add_element`](#0x1_capability_add_element)
+-  [Module Specification](#@Module_Specification_4)
 
 
 <pre><code><b>use</b> <a href="../../move_stdlib/doc/error.md#0x1_error">0x1::error</a>;
@@ -113,7 +117,7 @@ is_valid_delegate_for_feature(d);
 
 
 
-<a name="0x1_capability_Cap"></a>
+<a id="0x1_capability_Cap"></a>
 
 ## Struct `Cap`
 
@@ -125,7 +129,8 @@ The token representing an acquired capability. Cannot be stored in memory, but c
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -138,7 +143,9 @@ The token representing an acquired capability. Cannot be stored in memory, but c
 </dl>
 
 
-<a name="0x1_capability_LinearCap"></a>
+</details>
+
+<a id="0x1_capability_LinearCap"></a>
 
 ## Struct `LinearCap`
 
@@ -151,7 +158,8 @@ to be used only once for an authorization.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -164,7 +172,9 @@ to be used only once for an authorization.
 </dl>
 
 
-<a name="0x1_capability_CapState"></a>
+</details>
+
+<a id="0x1_capability_CapState"></a>
 
 ## Resource `CapState`
 
@@ -176,7 +186,8 @@ An internal data structure for representing a configured capability.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -189,7 +200,9 @@ An internal data structure for representing a configured capability.
 </dl>
 
 
-<a name="0x1_capability_CapDelegateState"></a>
+</details>
+
+<a id="0x1_capability_CapDelegateState"></a>
 
 ## Resource `CapDelegateState`
 
@@ -201,7 +214,8 @@ An internal data structure for representing a configured delegated capability.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -214,12 +228,14 @@ An internal data structure for representing a configured delegated capability.
 </dl>
 
 
-<a name="@Constants_3"></a>
+</details>
+
+<a id="@Constants_3"></a>
 
 ## Constants
 
 
-<a name="0x1_capability_ECAP"></a>
+<a id="0x1_capability_ECAP"></a>
 
 
 
@@ -228,7 +244,7 @@ An internal data structure for representing a configured delegated capability.
 
 
 
-<a name="0x1_capability_EDELEGATE"></a>
+<a id="0x1_capability_EDELEGATE"></a>
 
 
 
@@ -237,7 +253,7 @@ An internal data structure for representing a configured delegated capability.
 
 
 
-<a name="0x1_capability_create"></a>
+<a id="0x1_capability_create"></a>
 
 ## Function `create`
 
@@ -250,7 +266,8 @@ they own the <code>Feature</code> type parameter.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_create">create</a>&lt;Feature&gt;(owner: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>, _feature_witness: &Feature) {
@@ -262,7 +279,9 @@ they own the <code>Feature</code> type parameter.
 
 
 
-<a name="0x1_capability_acquire"></a>
+</details>
+
+<a id="0x1_capability_acquire"></a>
 
 ## Function `acquire`
 
@@ -276,7 +295,8 @@ parameter.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_acquire">acquire</a>&lt;Feature&gt;(requester: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>, _feature_witness: &Feature): <a href="capability.md#0x1_capability_Cap">Cap</a>&lt;Feature&gt;
@@ -287,7 +307,9 @@ parameter.
 
 
 
-<a name="0x1_capability_acquire_linear"></a>
+</details>
+
+<a id="0x1_capability_acquire_linear"></a>
 
 ## Function `acquire_linear`
 
@@ -300,7 +322,8 @@ whether to expose a linear or non-linear capability.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_acquire_linear">acquire_linear</a>&lt;Feature&gt;(requester: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>, _feature_witness: &Feature): <a href="capability.md#0x1_capability_LinearCap">LinearCap</a>&lt;Feature&gt;
@@ -311,7 +334,46 @@ whether to expose a linear or non-linear capability.
 
 
 
-<a name="0x1_capability_root_addr"></a>
+</details>
+
+<a id="0x1_capability_validate_acquire"></a>
+
+## Function `validate_acquire`
+
+Helper to validate an acquire. Returns the root address of the capability.
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_validate_acquire">validate_acquire</a>&lt;Feature&gt;(requester: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>): <b>address</b>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_validate_acquire">validate_acquire</a>&lt;Feature&gt;(requester: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>): <b>address</b>
+<b>acquires</b> <a href="capability.md#0x1_capability_CapState">CapState</a>, <a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a> {
+    <b>let</b> addr = <a href="../../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(requester);
+    <b>if</b> (<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>&lt;Feature&gt;&gt;(addr)) {
+        <b>let</b> root_addr = <b>borrow_global</b>&lt;<a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>&lt;Feature&gt;&gt;(addr).root;
+        // double check that requester is actually registered <b>as</b> a delegate
+        <b>assert</b>!(<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(root_addr), <a href="../../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="capability.md#0x1_capability_EDELEGATE">EDELEGATE</a>));
+        <b>assert</b>!(<a href="../../move_stdlib/doc/vector.md#0x1_vector_contains">vector::contains</a>(&<b>borrow_global</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(root_addr).delegates, &addr),
+               <a href="../../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="capability.md#0x1_capability_EDELEGATE">EDELEGATE</a>));
+        root_addr
+    } <b>else</b> {
+        <b>assert</b>!(<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr), <a href="../../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="capability.md#0x1_capability_ECAP">ECAP</a>));
+        addr
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_capability_root_addr"></a>
 
 ## Function `root_addr`
 
@@ -324,7 +386,8 @@ of the feature can do this.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_root_addr">root_addr</a>&lt;Feature&gt;(cap: <a href="capability.md#0x1_capability_Cap">Cap</a>&lt;Feature&gt;, _feature_witness: &Feature): <b>address</b> {
@@ -334,7 +397,9 @@ of the feature can do this.
 
 
 
-<a name="0x1_capability_linear_root_addr"></a>
+</details>
+
+<a id="0x1_capability_linear_root_addr"></a>
 
 ## Function `linear_root_addr`
 
@@ -346,7 +411,8 @@ Returns the root address associated with the given linear capability token.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_linear_root_addr">linear_root_addr</a>&lt;Feature&gt;(cap: <a href="capability.md#0x1_capability_LinearCap">LinearCap</a>&lt;Feature&gt;, _feature_witness: &Feature): <b>address</b> {
@@ -356,7 +422,9 @@ Returns the root address associated with the given linear capability token.
 
 
 
-<a name="0x1_capability_delegate"></a>
+</details>
+
+<a id="0x1_capability_delegate"></a>
 
 ## Function `delegate`
 
@@ -369,7 +437,8 @@ nothing.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_delegate">delegate</a>&lt;Feature&gt;(cap: <a href="capability.md#0x1_capability_Cap">Cap</a>&lt;Feature&gt;, _feature_witness: &Feature, <b>to</b>: &<a href="../../move_stdlib/doc/signer.md#0x1_signer">signer</a>)
@@ -383,7 +452,9 @@ nothing.
 
 
 
-<a name="0x1_capability_revoke"></a>
+</details>
+
+<a id="0x1_capability_revoke"></a>
 
 ## Function `revoke`
 
@@ -395,7 +466,8 @@ Revokes a delegation relation. If no relation exists, this function does nothing
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_revoke">revoke</a>&lt;Feature&gt;(cap: <a href="capability.md#0x1_capability_Cap">Cap</a>&lt;Feature&gt;, _feature_witness: &Feature, from: <b>address</b>)
@@ -404,5 +476,91 @@ Revokes a delegation relation. If no relation exists, this function does nothing
     <b>if</b> (!<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>&lt;Feature&gt;&gt;(from)) <b>return</b>;
     <b>let</b> <a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>{root: _root} = <b>move_from</b>&lt;<a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>&lt;Feature&gt;&gt;(from);
     <a href="capability.md#0x1_capability_remove_element">remove_element</a>(&<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(cap.root).delegates, &from);
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_capability_remove_element"></a>
+
+## Function `remove_element`
+
+Helper to remove an element from a vector.
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_remove_element">remove_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;E&gt;, x: &E)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_remove_element">remove_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;E&gt;, x: &E) {
+    <b>let</b> (found, index) = <a href="../../move_stdlib/doc/vector.md#0x1_vector_index_of">vector::index_of</a>(v, x);
+    <b>if</b> (found) {
+        <a href="../../move_stdlib/doc/vector.md#0x1_vector_remove">vector::remove</a>(v, index);
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_capability_add_element"></a>
+
+## Function `add_element`
+
+Helper to add an element to a vector.
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_add_element">add_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;E&gt;, x: E)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_add_element">add_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;E&gt;, x: E) {
+    <b>if</b> (!<a href="../../move_stdlib/doc/vector.md#0x1_vector_contains">vector::contains</a>(v, &x)) {
+        <a href="../../move_stdlib/doc/vector.md#0x1_vector_push_back">vector::push_back</a>(v, x)
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="@Module_Specification_4"></a>
+
+## Module Specification
+
+Helper specification function to check whether a capability exists at address.
+
+
+<a id="0x1_capability_spec_has_cap"></a>
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_spec_has_cap">spec_has_cap</a>&lt;Feature&gt;(addr: <b>address</b>): bool {
+   <b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr)
+}
+</code></pre>
+
+
+Helper specification function to obtain the delegates of a capability.
+
+
+<a id="0x1_capability_spec_delegates"></a>
+
+
+<pre><code><b>fun</b> <a href="capability.md#0x1_capability_spec_delegates">spec_delegates</a>&lt;Feature&gt;(addr: <b>address</b>): <a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt; {
+   <b>global</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr).delegates
 }
 </code></pre>

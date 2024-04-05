@@ -1,5 +1,5 @@
 
-<a name="0x1_simple_map"></a>
+<a id="0x1_simple_map"></a>
 
 # Module `0x1::simple_map`
 
@@ -22,6 +22,7 @@ This module provides a solution for sorted maps, that is it has the properties t
 -  [Function `destroy_empty`](#0x1_simple_map_destroy_empty)
 -  [Function `add`](#0x1_simple_map_add)
 -  [Function `remove`](#0x1_simple_map_remove)
+-  [Function `find`](#0x1_simple_map_find)
 
 
 <pre><code><b>use</b> <a href="comparator.md#0x1_comparator">0x1::comparator</a>;
@@ -31,7 +32,7 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_SimpleMap"></a>
+<a id="0x1_simple_map_SimpleMap"></a>
 
 ## Struct `SimpleMap`
 
@@ -42,7 +43,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -55,7 +57,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 </dl>
 
 
-<a name="0x1_simple_map_Element"></a>
+</details>
+
+<a id="0x1_simple_map_Element"></a>
 
 ## Struct `Element`
 
@@ -66,7 +70,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -85,12 +90,14 @@ This module provides a solution for sorted maps, that is it has the properties t
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_simple_map_EKEY_ALREADY_EXISTS"></a>
+<a id="0x1_simple_map_EKEY_ALREADY_EXISTS"></a>
 
 
 
@@ -99,7 +106,7 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_EKEY_NOT_FOUND"></a>
+<a id="0x1_simple_map_EKEY_NOT_FOUND"></a>
 
 
 
@@ -108,7 +115,7 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_length"></a>
+<a id="0x1_simple_map_length"></a>
 
 ## Function `length`
 
@@ -119,7 +126,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_length">length</a>&lt;Key: store, Value: store&gt;(map: &<a href="simple_map.md#0x1_simple_map_SimpleMap">SimpleMap</a>&lt;Key, Value&gt;): u64 {
@@ -129,7 +137,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_create"></a>
+</details>
+
+<a id="0x1_simple_map_create"></a>
 
 ## Function `create`
 
@@ -140,7 +150,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_create">create</a>&lt;Key: store, Value: store&gt;(): <a href="simple_map.md#0x1_simple_map_SimpleMap">SimpleMap</a>&lt;Key, Value&gt; {
@@ -152,7 +163,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_borrow"></a>
+</details>
+
+<a id="0x1_simple_map_borrow"></a>
 
 ## Function `borrow`
 
@@ -163,7 +176,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_borrow">borrow</a>&lt;Key: store, Value: store&gt;(
@@ -179,7 +193,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_borrow_mut"></a>
+</details>
+
+<a id="0x1_simple_map_borrow_mut"></a>
 
 ## Function `borrow_mut`
 
@@ -190,7 +206,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_borrow_mut">borrow_mut</a>&lt;Key: store, Value: store&gt;(
@@ -206,7 +223,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_contains_key"></a>
+</details>
+
+<a id="0x1_simple_map_contains_key"></a>
 
 ## Function `contains_key`
 
@@ -217,7 +236,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_contains_key">contains_key</a>&lt;Key: store, Value: store&gt;(
@@ -231,7 +251,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_destroy_empty"></a>
+</details>
+
+<a id="0x1_simple_map_destroy_empty"></a>
 
 ## Function `destroy_empty`
 
@@ -242,7 +264,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_destroy_empty">destroy_empty</a>&lt;Key: store, Value: store&gt;(map: <a href="simple_map.md#0x1_simple_map_SimpleMap">SimpleMap</a>&lt;Key, Value&gt;) {
@@ -253,7 +276,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_add"></a>
+</details>
+
+<a id="0x1_simple_map_add"></a>
 
 ## Function `add`
 
@@ -264,7 +289,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_add">add</a>&lt;Key: store, Value: store&gt;(
@@ -289,7 +315,9 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-<a name="0x1_simple_map_remove"></a>
+</details>
+
+<a id="0x1_simple_map_remove"></a>
 
 ## Function `remove`
 
@@ -300,7 +328,8 @@ This module provides a solution for sorted maps, that is it has the properties t
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="simple_map.md#0x1_simple_map_remove">remove</a>&lt;Key: store, Value: store&gt;(
@@ -322,3 +351,57 @@ This module provides a solution for sorted maps, that is it has the properties t
     (key, value)
 }
 </code></pre>
+
+
+
+</details>
+
+<a id="0x1_simple_map_find"></a>
+
+## Function `find`
+
+
+
+<pre><code><b>fun</b> <a href="simple_map.md#0x1_simple_map_find">find</a>&lt;Key: store, Value: store&gt;(map: &<a href="simple_map.md#0x1_simple_map_SimpleMap">simple_map::SimpleMap</a>&lt;Key, Value&gt;, key: &Key): (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;u64&gt;, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;u64&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="simple_map.md#0x1_simple_map_find">find</a>&lt;Key: store, Value: store&gt;(
+    map: &<a href="simple_map.md#0x1_simple_map_SimpleMap">SimpleMap</a>&lt;Key, Value&gt;,
+    key: &Key,
+): (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;u64&gt;, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;u64&gt;) {
+    <b>let</b> length = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&map.data);
+
+    <b>if</b> (length == 0) {
+        <b>return</b> (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(0))
+    };
+
+    <b>let</b> left = 0;
+    <b>let</b> right = length;
+
+    <b>while</b> (left != right) {
+        <b>let</b> mid = (left + right) / 2;
+        <b>let</b> potential_key = &<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&map.data, mid).key;
+        <b>if</b> (<a href="comparator.md#0x1_comparator_is_smaller_than">comparator::is_smaller_than</a>(&<a href="comparator.md#0x1_comparator_compare">comparator::compare</a>(potential_key, key))) {
+            left = mid + 1;
+        } <b>else</b> {
+            right = mid;
+        };
+    };
+
+    <b>if</b> (left != length && key == &<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&map.data, left).key) {
+        (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(left), <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>())
+    } <b>else</b> {
+        (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(left))
+    }
+}
+</code></pre>
+
+
+
+</details>

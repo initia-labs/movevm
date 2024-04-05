@@ -1,5 +1,5 @@
 
-<a name="0x1_compare"></a>
+<a id="0x1_compare"></a>
 
 # Module `0x1::compare`
 
@@ -8,18 +8,20 @@ Utilities for comparing Move values based on their representation in BCS.
 
 -  [Constants](#@Constants_0)
 -  [Function `cmp_bcs_bytes`](#0x1_compare_cmp_bcs_bytes)
+-  [Function `cmp_u8`](#0x1_compare_cmp_u8)
+-  [Function `cmp_u64`](#0x1_compare_cmp_u64)
 
 
 <pre><code></code></pre>
 
 
 
-<a name="@Constants_0"></a>
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_compare_EQUAL"></a>
+<a id="0x1_compare_EQUAL"></a>
 
 
 
@@ -28,7 +30,7 @@ Utilities for comparing Move values based on their representation in BCS.
 
 
 
-<a name="0x1_compare_GREATER_THAN"></a>
+<a id="0x1_compare_GREATER_THAN"></a>
 
 
 
@@ -37,7 +39,7 @@ Utilities for comparing Move values based on their representation in BCS.
 
 
 
-<a name="0x1_compare_LESS_THAN"></a>
+<a id="0x1_compare_LESS_THAN"></a>
 
 
 
@@ -46,7 +48,7 @@ Utilities for comparing Move values based on their representation in BCS.
 
 
 
-<a name="0x1_compare_cmp_bcs_bytes"></a>
+<a id="0x1_compare_cmp_bcs_bytes"></a>
 
 ## Function `cmp_bcs_bytes`
 
@@ -86,7 +88,8 @@ Keep this in mind when using this function to compare addresses.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="compare.md#0x1_compare_cmp_bcs_bytes">cmp_bcs_bytes</a>(v1: &<a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, v2: &<a href="../../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): u8 {
@@ -108,3 +111,61 @@ Keep this in mind when using this function to compare addresses.
     len_cmp
 }
 </code></pre>
+
+
+
+</details>
+
+<a id="0x1_compare_cmp_u8"></a>
+
+## Function `cmp_u8`
+
+Compare two <code>u8</code>'s
+
+
+<pre><code><b>fun</b> <a href="compare.md#0x1_compare_cmp_u8">cmp_u8</a>(i1: u8, i2: u8): u8
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="compare.md#0x1_compare_cmp_u8">cmp_u8</a>(i1: u8, i2: u8): u8 {
+    <b>if</b> (i1 == i2) <a href="compare.md#0x1_compare_EQUAL">EQUAL</a>
+    <b>else</b> <b>if</b> (i1 &lt; i2) <a href="compare.md#0x1_compare_LESS_THAN">LESS_THAN</a>
+    <b>else</b> <a href="compare.md#0x1_compare_GREATER_THAN">GREATER_THAN</a>
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_compare_cmp_u64"></a>
+
+## Function `cmp_u64`
+
+Compare two <code>u64</code>'s
+
+
+<pre><code><b>fun</b> <a href="compare.md#0x1_compare_cmp_u64">cmp_u64</a>(i1: u64, i2: u64): u8
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="compare.md#0x1_compare_cmp_u64">cmp_u64</a>(i1: u64, i2: u64): u8 {
+    <b>if</b> (i1 == i2) <a href="compare.md#0x1_compare_EQUAL">EQUAL</a>
+    <b>else</b> <b>if</b> (i1 &lt; i2) <a href="compare.md#0x1_compare_LESS_THAN">LESS_THAN</a>
+    <b>else</b> <a href="compare.md#0x1_compare_GREATER_THAN">GREATER_THAN</a>
+}
+</code></pre>
+
+
+
+</details>

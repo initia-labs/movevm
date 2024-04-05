@@ -1,5 +1,5 @@
 
-<a name="0x1_math128"></a>
+<a id="0x1_math128"></a>
 
 # Module `0x1::math128`
 
@@ -27,12 +27,12 @@ Standard math utilities missing in the Move Language.
 
 
 
-<a name="@Constants_0"></a>
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_math128_EDIVISION_BY_ZERO"></a>
+<a id="0x1_math128_EDIVISION_BY_ZERO"></a>
 
 
 
@@ -41,7 +41,7 @@ Standard math utilities missing in the Move Language.
 
 
 
-<a name="0x1_math128_EINVALID_ARG_FLOOR_LOG2"></a>
+<a id="0x1_math128_EINVALID_ARG_FLOOR_LOG2"></a>
 
 Abort value when an invalid argument is provided.
 
@@ -51,7 +51,7 @@ Abort value when an invalid argument is provided.
 
 
 
-<a name="0x1_math128_max"></a>
+<a id="0x1_math128_max"></a>
 
 ## Function `max`
 
@@ -63,7 +63,8 @@ Return the largest of two numbers.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_max">max</a>(a: u128, b: u128): u128 {
@@ -73,7 +74,9 @@ Return the largest of two numbers.
 
 
 
-<a name="0x1_math128_min"></a>
+</details>
+
+<a id="0x1_math128_min"></a>
 
 ## Function `min`
 
@@ -85,7 +88,8 @@ Return the smallest of two numbers.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <b>min</b>(a: u128, b: u128): u128 {
@@ -95,7 +99,9 @@ Return the smallest of two numbers.
 
 
 
-<a name="0x1_math128_average"></a>
+</details>
+
+<a id="0x1_math128_average"></a>
 
 ## Function `average`
 
@@ -107,7 +113,8 @@ Return the average of two.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_average">average</a>(a: u128, b: u128): u128 {
@@ -121,7 +128,9 @@ Return the average of two.
 
 
 
-<a name="0x1_math128_mul_div"></a>
+</details>
+
+<a id="0x1_math128_mul_div"></a>
 
 ## Function `mul_div`
 
@@ -133,7 +142,8 @@ Returns a * b / c going through u128 to prevent intermediate overflow
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_mul_div">mul_div</a>(a: u128, b: u128, c: u128): u128 {
@@ -143,7 +153,9 @@ Returns a * b / c going through u128 to prevent intermediate overflow
 
 
 
-<a name="0x1_math128_clamp"></a>
+</details>
+
+<a id="0x1_math128_clamp"></a>
 
 ## Function `clamp`
 
@@ -155,7 +167,8 @@ Return x clamped to the interval [lower, upper].
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_clamp">clamp</a>(x: u128, lower: u128, upper: u128): u128 {
@@ -165,7 +178,9 @@ Return x clamped to the interval [lower, upper].
 
 
 
-<a name="0x1_math128_pow"></a>
+</details>
+
+<a id="0x1_math128_pow"></a>
 
 ## Function `pow`
 
@@ -177,7 +192,8 @@ Return the value of n raised to power e
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_pow">pow</a>(n: u128, e: u128): u128 {
@@ -199,7 +215,9 @@ Return the value of n raised to power e
 
 
 
-<a name="0x1_math128_floor_log2"></a>
+</details>
+
+<a id="0x1_math128_floor_log2"></a>
 
 ## Function `floor_log2`
 
@@ -211,7 +229,8 @@ Returns floor(log2(x))
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_floor_log2">floor_log2</a>(x: u128): u8 {
@@ -232,7 +251,9 @@ Returns floor(log2(x))
 
 
 
-<a name="0x1_math128_log2"></a>
+</details>
+
+<a id="0x1_math128_log2"></a>
 
 ## Function `log2`
 
@@ -243,7 +264,8 @@ Returns floor(log2(x))
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_log2">log2</a>(x: u128): FixedPoint32 {
@@ -271,7 +293,9 @@ Returns floor(log2(x))
 
 
 
-<a name="0x1_math128_log2_64"></a>
+</details>
+
+<a id="0x1_math128_log2_64"></a>
 
 ## Function `log2_64`
 
@@ -282,7 +306,8 @@ Returns floor(log2(x))
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_log2_64">log2_64</a>(x: u128): FixedPoint64 {
@@ -310,7 +335,9 @@ Returns floor(log2(x))
 
 
 
-<a name="0x1_math128_sqrt"></a>
+</details>
+
+<a id="0x1_math128_sqrt"></a>
 
 ## Function `sqrt`
 
@@ -322,7 +349,8 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_sqrt">sqrt</a>(x: u128): u128 {
@@ -347,7 +375,9 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-<a name="0x1_math128_ceil_div"></a>
+</details>
+
+<a id="0x1_math128_ceil_div"></a>
 
 ## Function `ceil_div`
 
@@ -358,7 +388,8 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_ceil_div">ceil_div</a>(x: u128, y: u128): u128 {
@@ -371,3 +402,7 @@ Returns square root of x, precisely floor(sqrt(x))
     <b>else</b> (x - 1) / y + 1
 }
 </code></pre>
+
+
+
+</details>

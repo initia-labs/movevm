@@ -1,5 +1,5 @@
 
-<a name="0x1_fixed_point32"></a>
+<a id="0x1_fixed_point32"></a>
 
 # Module `0x1::fixed_point32`
 
@@ -21,13 +21,14 @@ a 32-bit fractional part.
 -  [Function `floor`](#0x1_fixed_point32_floor)
 -  [Function `ceil`](#0x1_fixed_point32_ceil)
 -  [Function `round`](#0x1_fixed_point32_round)
+-  [Module Specification](#@Module_Specification_1)
 
 
 <pre><code></code></pre>
 
 
 
-<a name="0x1_fixed_point32_FixedPoint32"></a>
+<a id="0x1_fixed_point32_FixedPoint32"></a>
 
 ## Struct `FixedPoint32`
 
@@ -47,7 +48,8 @@ decimal.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -60,12 +62,14 @@ decimal.
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_fixed_point32_MAX_U64"></a>
+<a id="0x1_fixed_point32_MAX_U64"></a>
 
 > TODO: This is a basic constant and should be provided somewhere centrally in the framework.
 
@@ -75,7 +79,7 @@ decimal.
 
 
 
-<a name="0x1_fixed_point32_EDENOMINATOR"></a>
+<a id="0x1_fixed_point32_EDENOMINATOR"></a>
 
 The denominator provided was zero
 
@@ -85,7 +89,7 @@ The denominator provided was zero
 
 
 
-<a name="0x1_fixed_point32_EDIVISION"></a>
+<a id="0x1_fixed_point32_EDIVISION"></a>
 
 The quotient value would be too large to be held in a <code>u64</code>
 
@@ -95,7 +99,7 @@ The quotient value would be too large to be held in a <code>u64</code>
 
 
 
-<a name="0x1_fixed_point32_EDIVISION_BY_ZERO"></a>
+<a id="0x1_fixed_point32_EDIVISION_BY_ZERO"></a>
 
 A division by zero was encountered
 
@@ -105,7 +109,7 @@ A division by zero was encountered
 
 
 
-<a name="0x1_fixed_point32_EMULTIPLICATION"></a>
+<a id="0x1_fixed_point32_EMULTIPLICATION"></a>
 
 The multiplied value would be too large to be held in a <code>u64</code>
 
@@ -115,7 +119,7 @@ The multiplied value would be too large to be held in a <code>u64</code>
 
 
 
-<a name="0x1_fixed_point32_ERATIO_OUT_OF_RANGE"></a>
+<a id="0x1_fixed_point32_ERATIO_OUT_OF_RANGE"></a>
 
 The computed ratio when converting to a <code><a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a></code> would be unrepresentable
 
@@ -125,7 +129,7 @@ The computed ratio when converting to a <code><a href="fixed_point32.md#0x1_fixe
 
 
 
-<a name="0x1_fixed_point32_multiply_u64"></a>
+<a id="0x1_fixed_point32_multiply_u64"></a>
 
 ## Function `multiply_u64`
 
@@ -139,7 +143,8 @@ overflows.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_multiply_u64">multiply_u64</a>(val: u64, multiplier: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
@@ -158,7 +163,47 @@ overflows.
 
 
 
-<a name="0x1_fixed_point32_divide_u64"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_MultiplyAbortsIf">MultiplyAbortsIf</a>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_multiply_u64">spec_multiply_u64</a>(val, multiplier);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_MultiplyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_MultiplyAbortsIf">MultiplyAbortsIf</a> {
+    val: num;
+    multiplier: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>;
+    <b>aborts_if</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_multiply_u64">spec_multiply_u64</a>(val, multiplier) &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EMULTIPLICATION">EMULTIPLICATION</a>;
+}
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_multiply_u64"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_multiply_u64">spec_multiply_u64</a>(val: num, multiplier: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): num {
+   (val * multiplier.value) &gt;&gt; 32
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_divide_u64"></a>
 
 ## Function `divide_u64`
 
@@ -172,7 +217,8 @@ is zero or if the quotient overflows.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_divide_u64">divide_u64</a>(val: u64, divisor: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
@@ -192,7 +238,48 @@ is zero or if the quotient overflows.
 
 
 
-<a name="0x1_fixed_point32_create_from_rational"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_DivideAbortsIf">DivideAbortsIf</a>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_divide_u64">spec_divide_u64</a>(val, divisor);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_DivideAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_DivideAbortsIf">DivideAbortsIf</a> {
+    val: num;
+    divisor: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>;
+    <b>aborts_if</b> divisor.value == 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>;
+    <b>aborts_if</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_divide_u64">spec_divide_u64</a>(val, divisor) &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>;
+}
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_divide_u64"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_divide_u64">spec_divide_u64</a>(val: num, divisor: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): num {
+   (val &lt;&lt; 32) / divisor.value
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_create_from_rational"></a>
 
 ## Function `create_from_rational`
 
@@ -213,7 +300,8 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
@@ -235,7 +323,52 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-<a name="0x1_fixed_point32_create_from_raw_value"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_rational">spec_create_from_rational</a>(numerator, denominator);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_CreateFromRationalAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a> {
+    numerator: u64;
+    denominator: u64;
+    <b>let</b> scaled_numerator = (numerator <b>as</b> u128) &lt;&lt; 64;
+    <b>let</b> scaled_denominator = (denominator <b>as</b> u128) &lt;&lt; 32;
+    <b>let</b> quotient = scaled_numerator / scaled_denominator;
+    <b>aborts_if</b> scaled_denominator == 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>;
+    <b>aborts_if</b> quotient == 0 && scaled_numerator != 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
+    <b>aborts_if</b> quotient &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
+}
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_create_from_rational"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_rational">spec_create_from_rational</a>(numerator: num, denominator: num): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>{value: (numerator &lt;&lt; 64) / (denominator &lt;&lt; 32)}
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_create_from_raw_value"></a>
 
 ## Function `create_from_raw_value`
 
@@ -247,7 +380,8 @@ Create a fixedpoint value from a raw value.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
@@ -257,7 +391,23 @@ Create a fixedpoint value from a raw value.
 
 
 
-<a name="0x1_fixed_point32_get_raw_value"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result.value == value;
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_get_raw_value"></a>
 
 ## Function `get_raw_value`
 
@@ -271,7 +421,8 @@ values directly.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_get_raw_value">get_raw_value</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
@@ -281,7 +432,9 @@ values directly.
 
 
 
-<a name="0x1_fixed_point32_is_zero"></a>
+</details>
+
+<a id="0x1_fixed_point32_is_zero"></a>
 
 ## Function `is_zero`
 
@@ -293,7 +446,8 @@ Returns true if the ratio is zero.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_is_zero">is_zero</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): bool {
@@ -303,7 +457,9 @@ Returns true if the ratio is zero.
 
 
 
-<a name="0x1_fixed_point32_min"></a>
+</details>
+
+<a id="0x1_fixed_point32_min"></a>
 
 ## Function `min`
 
@@ -315,7 +471,8 @@ Returns the smaller of the two FixedPoint32 numbers.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <b>min</b>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
@@ -329,7 +486,38 @@ Returns the smaller of the two FixedPoint32 numbers.
 
 
 
-<a name="0x1_fixed_point32_max"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_min">spec_min</a>(num1, num2);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_min"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_min">spec_min</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <b>if</b> (num1.value &lt; num2.value) {
+       num1
+   } <b>else</b> {
+       num2
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_max"></a>
 
 ## Function `max`
 
@@ -341,7 +529,8 @@ Returns the larger of the two FixedPoint32 numbers.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_max">max</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
@@ -355,7 +544,38 @@ Returns the larger of the two FixedPoint32 numbers.
 
 
 
-<a name="0x1_fixed_point32_create_from_u64"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_max">spec_max</a>(num1, num2);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_max"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_max">spec_max</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <b>if</b> (num1.value &gt; num2.value) {
+       num1
+   } <b>else</b> {
+       num2
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_create_from_u64"></a>
 
 ## Function `create_from_u64`
 
@@ -367,7 +587,8 @@ Create a fixedpoint value from a u64 value.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_create_from_u64">create_from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
@@ -379,7 +600,47 @@ Create a fixedpoint value from a u64 value.
 
 
 
-<a name="0x1_fixed_point32_floor"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_u64">spec_create_from_u64</a>(val);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_CreateFromU64AbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a> {
+    val: num;
+    <b>let</b> scaled_value = (val <b>as</b> u128) &lt;&lt; 32;
+    <b>aborts_if</b> scaled_value &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>;
+}
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_create_from_u64"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_u64">spec_create_from_u64</a>(val: num): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {value: val &lt;&lt; 32}
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_floor"></a>
 
 ## Function `floor`
 
@@ -391,7 +652,8 @@ Returns the largest integer less than or equal to a given number.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_floor">floor</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
@@ -401,7 +663,39 @@ Returns the largest integer less than or equal to a given number.
 
 
 
-<a name="0x1_fixed_point32_ceil"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_floor">spec_floor</a>(num);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_floor"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_floor">spec_floor</a>(val: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+   <b>let</b> fractional = val.value % (1 &lt;&lt; 32);
+   <b>if</b> (fractional == 0) {
+       val.value &gt;&gt; 32
+   } <b>else</b> {
+       (val.value - fractional) &gt;&gt; 32
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_ceil"></a>
 
 ## Function `ceil`
 
@@ -413,7 +707,8 @@ Rounds up the given FixedPoint32 to the next largest integer.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_ceil">ceil</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
@@ -428,7 +723,40 @@ Rounds up the given FixedPoint32 to the next largest integer.
 
 
 
-<a name="0x1_fixed_point32_round"></a>
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_ceil">spec_ceil</a>(num);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_ceil"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_ceil">spec_ceil</a>(val: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+   <b>let</b> fractional = val.value % (1 &lt;&lt; 32);
+   <b>let</b> one = 1 &lt;&lt; 32;
+   <b>if</b> (fractional == 0) {
+       val.value &gt;&gt; 32
+   } <b>else</b> {
+       (val.value - fractional + one) &gt;&gt; 32
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="0x1_fixed_point32_round"></a>
 
 ## Function `round`
 
@@ -440,7 +768,8 @@ Returns the value of a FixedPoint32 to the nearest integer.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_round">round</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
@@ -452,4 +781,50 @@ Returns the value of a FixedPoint32 to the nearest integer.
         <a href="fixed_point32.md#0x1_fixed_point32_ceil">ceil</a>(num)
     }
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_round">spec_round</a>(num);
+</code></pre>
+
+
+
+
+<a id="0x1_fixed_point32_spec_round"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_round">spec_round</a>(val: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+   <b>let</b> fractional = val.value % (1 &lt;&lt; 32);
+   <b>let</b> boundary = (1 &lt;&lt; 32) / 2;
+   <b>let</b> one = 1 &lt;&lt; 32;
+   <b>if</b> (fractional &lt; boundary) {
+       (val.value - fractional) &gt;&gt; 32
+   } <b>else</b> {
+       (val.value - fractional + one) &gt;&gt; 32
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a id="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+
+<pre><code><b>pragma</b> aborts_if_is_strict;
 </code></pre>

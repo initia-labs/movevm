@@ -1,5 +1,5 @@
 
-<a name="0x1_block"></a>
+<a id="0x1_block"></a>
 
 # Module `0x1::block`
 
@@ -12,7 +12,7 @@
 
 
 
-<a name="0x1_block_get_block_info"></a>
+<a id="0x1_block_get_block_info"></a>
 
 ## Function `get_block_info`
 
@@ -23,8 +23,13 @@
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="block.md#0x1_block_get_block_info">get_block_info</a>(): (u64, u64);
 </code></pre>
+
+
+
+</details>

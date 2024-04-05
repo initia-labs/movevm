@@ -27,7 +27,6 @@ pub(crate) fn initialize_vm(
     api: GoApi,
     env: Env,
     module_bundle: ModuleBundle,
-    allow_arbitrary: bool,
     allowed_publishers: Vec<AccountAddress>,
 ) -> Result<(), Error> {
     let mut storage = GoStorage::new(&db_handle);
@@ -41,7 +40,6 @@ pub(crate) fn initialize_vm(
         &state_view_impl,
         &mut table_view_impl,
         module_bundle,
-        allow_arbitrary,
         allowed_publishers,
     )?;
 

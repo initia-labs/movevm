@@ -1,5 +1,5 @@
 
-<a name="0x1_acl"></a>
+<a id="0x1_acl"></a>
 
 # Module `0x1::acl`
 
@@ -24,7 +24,7 @@ use a "set" instead when it's available in the language in the future.
 
 
 
-<a name="0x1_acl_ACL"></a>
+<a id="0x1_acl_ACL"></a>
 
 ## Struct `ACL`
 
@@ -35,7 +35,8 @@ use a "set" instead when it's available in the language in the future.
 
 
 
-##### Fields
+<details>
+<summary>Fields</summary>
 
 
 <dl>
@@ -48,12 +49,14 @@ use a "set" instead when it's available in the language in the future.
 </dl>
 
 
-<a name="@Constants_0"></a>
+</details>
+
+<a id="@Constants_0"></a>
 
 ## Constants
 
 
-<a name="0x1_acl_ECONTAIN"></a>
+<a id="0x1_acl_ECONTAIN"></a>
 
 The ACL already contains the address.
 
@@ -63,7 +66,7 @@ The ACL already contains the address.
 
 
 
-<a name="0x1_acl_ENOT_CONTAIN"></a>
+<a id="0x1_acl_ENOT_CONTAIN"></a>
 
 The ACL does not contain the address.
 
@@ -73,7 +76,7 @@ The ACL does not contain the address.
 
 
 
-<a name="0x1_acl_empty"></a>
+<a id="0x1_acl_empty"></a>
 
 ## Function `empty`
 
@@ -85,7 +88,8 @@ Return an empty ACL.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="acl.md#0x1_acl_empty">empty</a>(): <a href="acl.md#0x1_acl_ACL">ACL</a> {
@@ -95,7 +99,9 @@ Return an empty ACL.
 
 
 
-<a name="0x1_acl_add"></a>
+</details>
+
+<a id="0x1_acl_add"></a>
 
 ## Function `add`
 
@@ -107,7 +113,8 @@ Add the address to the ACL.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="acl.md#0x1_acl_add">add</a>(<a href="acl.md#0x1_acl">acl</a>: &<b>mut</b> <a href="acl.md#0x1_acl_ACL">ACL</a>, addr: <b>address</b>) {
@@ -118,7 +125,9 @@ Add the address to the ACL.
 
 
 
-<a name="0x1_acl_remove"></a>
+</details>
+
+<a id="0x1_acl_remove"></a>
 
 ## Function `remove`
 
@@ -130,7 +139,8 @@ Remove the address from the ACL.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="acl.md#0x1_acl_remove">remove</a>(<a href="acl.md#0x1_acl">acl</a>: &<b>mut</b> <a href="acl.md#0x1_acl_ACL">ACL</a>, addr: <b>address</b>) {
@@ -142,7 +152,9 @@ Remove the address from the ACL.
 
 
 
-<a name="0x1_acl_contains"></a>
+</details>
+
+<a id="0x1_acl_contains"></a>
 
 ## Function `contains`
 
@@ -154,7 +166,8 @@ Return true iff the ACL contains the address.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="acl.md#0x1_acl_contains">contains</a>(<a href="acl.md#0x1_acl">acl</a>: &<a href="acl.md#0x1_acl_ACL">ACL</a>, addr: <b>address</b>): bool {
@@ -164,7 +177,9 @@ Return true iff the ACL contains the address.
 
 
 
-<a name="0x1_acl_assert_contains"></a>
+</details>
+
+<a id="0x1_acl_assert_contains"></a>
 
 ## Function `assert_contains`
 
@@ -176,10 +191,15 @@ assert! that the ACL has the address.
 
 
 
-##### Implementation
+<details>
+<summary>Implementation</summary>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="acl.md#0x1_acl_assert_contains">assert_contains</a>(<a href="acl.md#0x1_acl">acl</a>: &<a href="acl.md#0x1_acl_ACL">ACL</a>, addr: <b>address</b>) {
     <b>assert</b>!(<a href="acl.md#0x1_acl_contains">contains</a>(<a href="acl.md#0x1_acl">acl</a>, addr), <a href="../../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="acl.md#0x1_acl_ENOT_CONTAIN">ENOT_CONTAIN</a>));
 }
 </code></pre>
+
+
+
+</details>
