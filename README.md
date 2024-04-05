@@ -13,7 +13,7 @@ This repo contains both Rust and Go code. The rust code is compiled into a dll/s
 
 ## Support Platform
 
-Requires Rust 1.77+ and Go 1.21.5+.
+Requires Rust 1.77+ and Go 1.22+.
 
 The Rust implementation of the VM is compiled to a library called libmovevm. This is then linked to the Go code when the final binary is built. For that reason not all systems supported by Go are supported by this project.
 
