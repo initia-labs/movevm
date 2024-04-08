@@ -125,11 +125,11 @@ module minitia_std::secp256k1 {
 
     #[test_only]
     /// Generates an secp256k1 ECDSA key pair.
-    native fun generate_keys(): (vector<u8>, vector<u8>);
+    native public fun generate_keys(): (vector<u8>, vector<u8>);
 
     #[test_only]
     /// Generates an secp256k1 ECDSA signature for a given byte array using a given signing key.
-    native fun sign(message: vector<u8>, secrete_key: vector<u8>): (u8, vector<u8>);
+    native public fun sign(message: vector<u8>, secrete_key: vector<u8>): (u8, vector<u8>);
 
     //
     // Tests
