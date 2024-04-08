@@ -104,10 +104,10 @@ module minitia_std::ed25519 {
     ): bool;
 
     #[test_only]
-    native fun generate_keys(): (vector<u8>, vector<u8>);
+    native public fun generate_keys(): (vector<u8>, vector<u8>);
 
     #[test_only]
-    native fun sign(message: vector<u8>, secrete_key: vector<u8>): vector<u8>;
+    native public fun sign(message: vector<u8>, secrete_key: vector<u8>): vector<u8>;
 
     //
     // Tests
