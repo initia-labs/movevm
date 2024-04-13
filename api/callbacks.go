@@ -13,7 +13,7 @@ typedef GoError (*remove_db_fn)(db_t *ptr, U8SliceView key, UnmanagedVector *err
 typedef GoError (*scan_db_fn)(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // and api
 typedef GoError (*query_fn)(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
-typedef GoError (*get_account_info_fn)(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence,  UnmanagedVector *errOut);
+typedef GoError (*get_account_info_fn)(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence,  uint8_t *account_type, UnmanagedVector *errOut);
 typedef GoError (*amount_to_share_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share,  UnmanagedVector *errOut);
 typedef GoError (*share_to_amount_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount,  UnmanagedVector *errOut);
 typedef GoError (*unbond_timestamp_fn)(api_t *ptr, uint64_t *unbondTimestamp,  UnmanagedVector *errOut);
@@ -28,7 +28,7 @@ GoError cDelete_cgo(db_t *ptr, U8SliceView key, UnmanagedVector *errOut);
 GoError cScan_cgo(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // api
 GoError cQuery_cgo(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
-GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, UnmanagedVector *errOut);
+GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, UnmanagedVector *errOut);
 GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share, UnmanagedVector *errOut);
 GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount, UnmanagedVector *errOut);
 GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);

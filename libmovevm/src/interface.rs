@@ -67,14 +67,7 @@ pub extern "C" fn initialize(
 
     let res = match to_vm(vm_ptr) {
         Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::initialize_vm(
-                vm,
-                db,
-                api,
-                env,
-                module_bundle,
-                allowed_publishers,
-            )
+            vm::initialize_vm(vm, db, api, env, module_bundle, allowed_publishers)
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(VM_ARG)),
