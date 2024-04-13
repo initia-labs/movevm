@@ -217,6 +217,16 @@ impl UnmanagedVector {
         }
     }
 
+    /// Creates a non-none UnmanagedVector with the given data.
+    pub fn some(data: impl Into<Vec<u8>>) -> Self {
+        Self::new(Some(data.into()))
+    }
+
+    /// Creates a none UnmanagedVector.
+    pub fn none() -> Self {
+        Self::new(None)
+    }
+
     pub fn is_none(&self) -> bool {
         self.is_none
     }
@@ -238,7 +248,7 @@ impl UnmanagedVector {
 
 impl Default for UnmanagedVector {
     fn default() -> Self {
-        Self::new(None)
+        Self::none()
     }
 }
 
@@ -253,6 +263,8 @@ pub extern "C" fn new_unmanaged_vector(
     } else if length == 0 {
         UnmanagedVector::new(Some(Vec::new()))
     } else {
+        // In slice::from_raw_parts, `data` must be non-null and aligned even for zero-length slices.
+        // For this reason we cover the length == 0 case separately above.
         let external_memory = unsafe { slice::from_raw_parts(ptr, length) };
         let copy = Vec::from(external_memory);
         UnmanagedVector::new(Some(copy))

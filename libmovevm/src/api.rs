@@ -97,11 +97,11 @@ impl AccountAPI for GoApi {
         let go_error: GoError = (self.vtable.get_account_info)(
             self.state,
             addr,
-            &mut found,
-            &mut account_number,
-            &mut sequence,
-            &mut account_type,
-            &mut error_msg,
+            &mut found as *mut bool,
+            &mut account_number as *mut u64,
+            &mut sequence as *mut u64,
+            &mut account_type as *mut u8,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
 
@@ -138,8 +138,8 @@ impl StakingAPI for GoApi {
             validator,
             metadata,
             amount,
-            &mut share,
-            &mut error_msg,
+            &mut share as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
 
@@ -174,8 +174,8 @@ impl StakingAPI for GoApi {
             validator,
             metadata,
             share,
-            &mut amount,
-            &mut error_msg,
+            &mut amount as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
 
@@ -194,9 +194,12 @@ impl StakingAPI for GoApi {
         let mut unbond_timestamp = 0_u64;
         let mut error_msg = UnmanagedVector::default();
 
-        let go_error: GoError =
-            (self.vtable.unbond_timestamp)(self.state, &mut unbond_timestamp, &mut error_msg)
-                .into();
+        let go_error: GoError = (self.vtable.unbond_timestamp)(
+            self.state,
+            &mut unbond_timestamp as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to convert share to amount".to_string();
@@ -221,10 +224,10 @@ impl OracleAPI for GoApi {
         let go_error: GoError = (self.vtable.get_price)(
             self.state,
             pair_id,
-            &mut price,
-            &mut updated_at,
-            &mut decimals,
-            &mut error_msg,
+            &mut price as *mut UnmanagedVector,
+            &mut updated_at as *mut u64,
+            &mut decimals as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
 
@@ -257,9 +260,9 @@ impl QueryAPI for GoApi {
             self.state,
             request,
             gas_balance,
-            &mut response,
-            &mut used_gas,
-            &mut error_msg,
+            &mut response as *mut UnmanagedVector,
+            &mut used_gas as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
 
