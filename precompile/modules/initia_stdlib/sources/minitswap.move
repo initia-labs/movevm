@@ -156,6 +156,7 @@ module initia_std::minitswap {
     /// Event emitted when stable swap pool created
     struct CreateStableswapPoolEvent has drop, store {
         l2_init_metadata: Object<Metadata>,
+        pool: Object<Pool>,
     }
 
     fun init_module(chain: &signer) {
@@ -568,12 +569,14 @@ module initia_std::minitswap {
 
         let liquidity_token = stableswap::create_pair(&creator, symbol, symbol, stableswap_pool_store.swap_fee_rate, coins, stableswap_pool_store.ann);
         let metadata = fungible_asset::metadata_from_asset(&liquidity_token);
+        let pool = object::convert<Metadata, Pool>(metadata);
 
         table::add(&mut stableswap_pool_store.pools, l2_init_metadata, object::convert<Metadata, Pool>(metadata));
 
         primary_fungible_store::deposit(signer::address_of(account), liquidity_token);
         event::emit(CreateStableswapPoolEvent {
             l2_init_metadata,
+            pool,
         });
     }
 
