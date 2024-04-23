@@ -758,7 +758,7 @@ module initia_std::stableswap {
         (y as u64)
     }
 
-    fun swap_simulation(
+    public fun swap_simulation(
         pair: Object<Pool>,
         offer_coin_metadata: Object<Metadata>,
         return_coin_metadata: Object<Metadata>,
@@ -806,6 +806,11 @@ module initia_std::stableswap {
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
         assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
+    }
+
+    #[test_only]
+    public fun init_module_for_test(chain: &signer) {
+        init_module(chain)
     }
 
     #[test_only]
