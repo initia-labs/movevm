@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonEvent {
-    type_tag: TypeTag,
-    event_data: String,
+    pub type_tag: TypeTag,
+    pub event_data: String,
 }
 
 impl PartialEq for JsonEvent {

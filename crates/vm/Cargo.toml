@@ -40,3 +40,4 @@ bigdecimal = { workspace = true }
 
 [dev-dependencies]
 triomphe = { workspace = true }
+bytes = { workspace = true }

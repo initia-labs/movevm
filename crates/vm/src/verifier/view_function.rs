@@ -1,4 +1,5 @@
 use crate::verifier::transaction_arg_validation;
+use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
 use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_core_types::{
     identifier::IdentStr,
@@ -26,8 +27,9 @@ pub fn determine_is_view(
 
 /// Validate view function call. This checks whether the function is marked as a view
 /// function, and validates the arguments.
-pub(crate) fn validate_view_function(
+pub(crate) fn validate_view_function<S: StateView>(
     session: &mut Session,
+    state_view: &StateViewImpl<'_, S>,
     args: Vec<Vec<u8>>,
     fun_name: &IdentStr,
     fun_inst: &LoadedFunctionInstantiation,
@@ -54,6 +56,7 @@ pub(crate) fn validate_view_function(
     let allowed_structs = &ALLOWED_STRUCTS;
     let args = transaction_arg_validation::construct_args(
         session,
+        state_view,
         &fun_inst.parameters,
         args,
         &fun_inst.type_arguments,

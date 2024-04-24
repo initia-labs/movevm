@@ -4,12 +4,28 @@ module 0xCAFE::test {
     use std::string::String;
     use std::vector;
     use std::option::{Self, Option};
+    use std::object::{Self, Object};
 
     struct ModuleData<T> has key, store {
         state: T,
     }
 
-     public entry fun hi(sender: &signer, msg: String) acquires ModuleData {
+    public entry fun create_object(sender: &signer, data: String) {
+        let addr = signer::address_of(sender);
+        let cons_ref = object::create_object(addr, false);
+        let obj_signer = object::generate_signer(&cons_ref);
+
+        move_to(&obj_signer, ModuleData<String>{state: data});
+    }
+
+    #[view]
+    public fun get_object(obj: Object<ModuleData<String>>): String acquires ModuleData {
+        let addr = object::object_address(obj);
+
+        borrow_global<ModuleData<String>>(addr).state    
+    }
+
+    public entry fun hi(sender: &signer, msg: String) acquires ModuleData {
         let addr = signer::address_of(sender);
         if (!exists<ModuleData<String>>(addr)) {
             move_to(sender, ModuleData<String>{state: msg});

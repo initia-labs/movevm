@@ -311,9 +311,8 @@ impl MoveHarness {
 
         let args = args
             .iter()
-            .map(|v| serde_json::from_str(v))
-            .collect::<Result<Vec<Vec<u8>>, _>>()
-            .unwrap();
+            .map(|v| v.as_bytes().to_vec())
+            .collect::<Vec<Vec<u8>>>();
         ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 

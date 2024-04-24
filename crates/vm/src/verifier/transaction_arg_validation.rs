@@ -1,3 +1,5 @@
+use initia_move_storage::state_view::StateView;
+use initia_move_storage::state_view_impl::StateViewImpl;
 use move_binary_format::errors::{Location, PartialVMError};
 use move_binary_format::file_format::FunctionDefinitionIndex;
 use move_binary_format::file_format_common::read_uleb128_as_u64;
@@ -107,8 +109,9 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
 /// 3. check arg types are allowed after signers
 ///
 /// after validation, add senders and non-signer arguments to generate the final args
-pub fn validate_combine_signer_and_txn_args(
+pub fn validate_combine_signer_and_txn_args<S: StateView>(
     session: &mut Session,
+    state_view: &StateViewImpl<'_, S>,
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
     func: &LoadedFunctionInstantiation,
@@ -174,6 +177,7 @@ pub fn validate_combine_signer_and_txn_args(
     // FAILED_TO_DESERIALIZE_ARGUMENT error.
     let args = construct_args(
         session,
+        state_view,
         &func.parameters[signer_param_cnt..],
         args,
         &func.type_arguments,
@@ -216,11 +220,13 @@ pub(crate) fn is_valid_txn_arg(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 // Construct arguments. Walk through the arguments and according to the signature
 // construct arguments that require so.
 // TODO: This needs a more solid story and a tighter integration with the VM.
-pub(crate) fn construct_args(
+pub(crate) fn construct_args<S: StateView>(
     session: &mut Session,
+    state_view: &StateViewImpl<'_, S>,
     types: &[Type],
     args: Vec<Vec<u8>>,
     ty_args: &[Type],
@@ -237,6 +243,7 @@ pub(crate) fn construct_args(
     for (ty, arg) in types.iter().zip(args) {
         let arg = construct_arg(
             session,
+            state_view,
             &ty.subst(ty_args).unwrap(),
             allowed_structs,
             arg,
@@ -253,8 +260,10 @@ fn invalid_signature() -> VMStatus {
     VMStatus::error(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE, None)
 }
 
-fn construct_arg(
+#[allow(clippy::too_many_arguments)]
+fn construct_arg<S: StateView>(
     session: &mut Session,
+    state_view: &StateViewImpl<'_, S>,
     ty: &Type,
     allowed_structs: &ConstructorMap,
     arg: Vec<u8>,
@@ -263,7 +272,7 @@ fn construct_arg(
     is_json: bool,
 ) -> Result<Vec<u8>, VMStatus> {
     if is_json {
-        return deserialize_json_args(ty, &arg).map_err(|e| e.into_vm_status());
+        return deserialize_json_args(state_view, ty, &arg).map_err(|e| e.into_vm_status());
     }
 
     use move_vm_types::loaded_data::runtime_types::Type::*;

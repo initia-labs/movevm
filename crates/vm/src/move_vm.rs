@@ -276,6 +276,7 @@ impl MoveVM {
             .map_err(|e| e.finish(Location::Undefined))?;
         let args = validate_view_function(
             &mut session,
+            state_view_impl,
             view_fn.args().to_vec(),
             view_fn.function(),
             &func_inst,
@@ -348,6 +349,7 @@ impl MoveVM {
 
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
+                    state_view_impl,
                     senders,
                     script.args().to_vec(),
                     &func_inst,
@@ -378,6 +380,7 @@ impl MoveVM {
                 )?;
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
+                    state_view_impl,
                     senders,
                     entry_fn.args().to_vec(),
                     &func_inst,
