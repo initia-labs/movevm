@@ -51,13 +51,16 @@ test-safety:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
 	GODEBUG=cgocheck=2 go test -race -v -count=1 -parallel=1 ./...
 
-test-rust: test-compiler test-lib test-e2e
+test-rust: test-compiler test-lib test-e2e test-movevm
 
 test-compiler:
 	cargo test -p initia-move-compiler
 
-test-lib:
+test-movevm:
 	cargo test -p movevm
+
+test-lib:
+	cargo test -p initia-move-vm
 
 test-e2e: 
 	cargo test -p e2e-move-tests --features testing
