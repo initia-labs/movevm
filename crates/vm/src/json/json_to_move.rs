@@ -240,14 +240,16 @@ fn verify_object<S: StateView>(
     inner_type: &Type,
 ) -> VMResult<()> {
     // verify a object hold object core
-    let obj_core_st = StructTag {
-        address: AccountAddress::ONE,
-        module: ident_str!("object").into(),
-        name: ident_str!("ObjectCore").into(),
-        type_params: vec![],
-    };
     if state_view
-        .get_resource(&addr, &obj_core_st)
+        .get_resource(
+            &addr,
+            &StructTag {
+                address: AccountAddress::ONE,
+                module: ident_str!("object").into(),
+                name: ident_str!("ObjectCore").into(),
+                type_params: vec![],
+            },
+        )
         .map_err(deserialization_error_with_msg)?
         .is_none()
     {
@@ -255,8 +257,8 @@ fn verify_object<S: StateView>(
     }
 
     // verify a object hold inner type
-    let tag_str = inner_type.to_string();
-    let inner_type_st = parse_struct_tag(&tag_str).map_err(deserialization_error_with_msg)?;
+    let inner_type_st = parse_struct_tag(inner_type.to_string().as_str())
+        .map_err(deserialization_error_with_msg)?;
 
     if state_view
         .get_resource(&addr, &inner_type_st)

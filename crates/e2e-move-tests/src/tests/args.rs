@@ -737,3 +737,53 @@ fn option_string_args_good() {
 
     success(tests);
 }
+
+#[test]
+fn json_object_args() {
+    let acc = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let path = "src/tests/args.data/pack";
+    let mut h = MoveHarness::new();
+
+    h.initialize();
+
+    // publish package
+    let output = h.publish_package(&acc, path).expect("should success");
+    h.commit(output, true);
+
+    // execute create_object
+    let entry = "0xcafe::test::create_object";
+    let data_string = r#""data_string""#.to_string();
+    let output = h
+        .run_entry_function_with_json(
+            vec![acc],
+            str::parse(entry).unwrap(),
+            vec![],
+            vec![data_string.clone()],
+        )
+        .unwrap();
+
+    // extract object address from the events
+    let events = output.events().clone().into_inner();
+    let event = events
+        .iter()
+        .find(|e| e.type_tag.to_string() == "0x1::object::CreateEvent")
+        .unwrap();
+    let data: CreateEvent = serde_json::from_str(event.event_data.as_str()).unwrap();
+
+    // commit the changes
+    h.commit(output, true);
+
+    // check we can execute view function with the object json args
+    let vf = h.create_view_function_with_json(
+        str::parse("0xcafe::test::get_object").unwrap(),
+        vec![],
+        vec![format!(r#""{}""#, data.object.to_hex_literal())],
+    );
+    let res = h.run_view_function(vf).unwrap();
+    assert_eq!(res, data_string);
+}
+
+#[derive(Deserialize)]
+struct CreateEvent {
+    object: AccountAddress,
+}
