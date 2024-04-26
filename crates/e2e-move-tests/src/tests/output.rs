@@ -58,7 +58,7 @@ fn test_output() {
         vec![],
         ExpectedOutput::new(
             VMStatus::Executed,
-            Some("[\"123\"]".to_string()),
+            Some("\"123\"".to_string()),
             None,
             None,
         ),
@@ -72,7 +72,7 @@ fn test_output() {
         vec![],
         ExpectedOutput::new(
             VMStatus::Executed,
-            Some("[[\"123\"]]".to_string()),
+            Some("[\"123\"]".to_string()),
             None,
             None,
         ),
@@ -84,7 +84,7 @@ fn test_output() {
         "0x2::test::option_none",
         vec![],
         vec![],
-        ExpectedOutput::new(VMStatus::Executed, Some("[]".to_string()), None, None),
+        ExpectedOutput::new(VMStatus::Executed, Some("null".to_string()), None, None),
     );
     tests.push(test_option_none);
 
