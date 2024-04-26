@@ -149,12 +149,9 @@ fn convert_option_to_json_value(val: &MoveValue, depth: usize) -> VMResult<JSONV
     Ok(match val {
         MoveValue::Vector(elem) => {
             if elem.is_empty() {
-                JSONValue::Array(vec![])
+                JSONValue::Null
             } else {
-                JSONValue::Array(vec![convert_move_value_to_json_value(
-                    elem.first().unwrap(),
-                    depth + 1,
-                )?])
+                convert_move_value_to_json_value(elem.first().unwrap(), depth + 1)?
             }
         }
         _ => unreachable!(),
@@ -267,7 +264,7 @@ mod move_to_json_tests {
             )],
         });
         let val = convert_move_value_to_json_value(&mv, 1).unwrap();
-        assert_eq!(val, json!([123u8]));
+        assert_eq!(val, json!(123u8));
 
         // option none
         let mv = MoveValue::Struct(MoveStruct::WithTypes {
@@ -280,7 +277,7 @@ mod move_to_json_tests {
             fields: vec![(ident_str!("vec").into(), MoveValue::Vector(vec![]))],
         });
         let val = convert_move_value_to_json_value(&mv, 1).unwrap();
-        assert_eq!(val, json!([]));
+        assert_eq!(val, json!(null));
 
         // decimal128
         const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;

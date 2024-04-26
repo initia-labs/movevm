@@ -189,24 +189,16 @@ pub(crate) fn convert_json_value_to_move_value<S: StateView>(
             let full_name = format!("{}::{}", id.module_id.short_str_lossless(), id.name);
             match full_name.as_str() {
                 "0x1::option::Option" => {
-                    let json_vals = json_val
-                        .as_array()
-                        .ok_or_else(deserialization_error)?
-                        .to_owned();
-
-                    if json_vals.is_empty() {
+                    if json_val.is_null() {
                         return Ok(MoveValue::Vector(vec![]));
-                    } else if json_vals.len() == 1 {
-                        let json_val = json_vals.into_iter().next().unwrap();
-                        return Ok(MoveValue::Vector(vec![convert_json_value_to_move_value(
-                            state_view,
-                            ty,
-                            json_val,
-                            depth + 1,
-                        )?]));
                     }
 
-                    return Err(deserialization_error_with_msg("invalid option value"));
+                    return Ok(MoveValue::Vector(vec![convert_json_value_to_move_value(
+                        state_view,
+                        ty,
+                        json_val,
+                        depth + 1,
+                    )?]));
                 }
                 "0x1::object::Object" => {
                     let addr = AccountAddress::from_hex_literal(
@@ -614,7 +606,7 @@ mod json_arg_testing {
             ty_args: Arc::new(vec![Type::Address]),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
-        let arg = b"[\"0x1\"]";
+        let arg = b"\"0x1\"";
         let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
         assert_eq!(
             result,
@@ -622,7 +614,7 @@ mod json_arg_testing {
         );
 
         // invalid inner value
-        let arg = b"[\"0xgg\"]";
+        let arg = b"\"0xgg\"";
         _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
     }
 
@@ -639,7 +631,7 @@ mod json_arg_testing {
             ty_args: Arc::new(vec![Type::Address]),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
-        let arg = b"[]";
+        let arg = b"null";
         let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
         assert_eq!(
             result,
