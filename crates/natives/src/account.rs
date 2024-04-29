@@ -115,7 +115,6 @@ fn native_get_account_info(
 
     let address = safely_pop_arg!(arguments, AccountAddress);
     let account_context = context.extensions().get::<NativeAccountContext>();
-
     let (found, account_number, sequence, account_type) =
         if let Some(new_account) = account_context.new_accounts.get(&address) {
             (true, new_account.0, 0, new_account.1)
@@ -176,7 +175,6 @@ fn native_create_account(
     debug_assert!(arguments.len() == 3);
 
     context.charge(gas_params.base_cost)?;
-
 
     let account_type = safely_pop_arg!(arguments, u8);
     if !AccountType::is_valid(account_type) {
