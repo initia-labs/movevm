@@ -157,10 +157,8 @@ fn native_delegate(
     }
 
     #[cfg(feature = "testing")]
-    if staking_context.share_ratios.contains_key(&validator) {
-        let ratios = staking_context.share_ratios.get(&validator).unwrap();
-        if ratios.contains_key(&metadata) {
-            let ratio = ratios.get(&metadata).unwrap();
+    if let Some(ratios) = staking_context.share_ratios.get(&validator) {
+        if let Some(ratio) = ratios.get(&metadata) {
             return Ok(smallvec![Value::u64(amount * ratio.0 / ratio.1)]);
         }
     }

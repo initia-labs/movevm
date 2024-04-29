@@ -44,6 +44,16 @@ pub struct NativeAccountContext<'a> {
     api: &'a dyn AccountAPI,
     new_accounts: BTreeMap<AccountAddress, (u64 /* account_number */, u8 /* account_type */)>,
     next_account_number: u64,
+
+    #[cfg(feature = "testing")]
+    test_accounts: BTreeMap<
+        AccountAddress,
+        (
+            u64, /* account_number */
+            u64, /* sequence */
+            u8,  /* account_type */
+        ),
+    >,
 }
 
 impl<'a> NativeAccountContext<'a> {
@@ -52,6 +62,9 @@ impl<'a> NativeAccountContext<'a> {
             api,
             new_accounts: Default::default(),
             next_account_number,
+
+            #[cfg(feature = "testing")]
+            test_accounts: Default::default(),
         }
     }
 
@@ -62,6 +75,18 @@ impl<'a> NativeAccountContext<'a> {
                 .map(|(k, v)| (k, v.0, v.1))
                 .collect::<Vec<(AccountAddress, u64, u8)>>(),
         )
+    }
+
+    #[cfg(feature = "testing")]
+    pub fn set_account_info(
+        &mut self,
+        addr: AccountAddress,
+        account_number: u64,
+        sequence: u64,
+        account_type: u8,
+    ) {
+        self.test_accounts
+            .insert(addr, (account_number, sequence, account_type));
     }
 }
 
@@ -90,6 +115,19 @@ fn native_get_account_info(
 
     let address = safely_pop_arg!(arguments, AccountAddress);
     let account_context = context.extensions().get::<NativeAccountContext>();
+
+    #[cfg(feature = "testing")]
+    if let Some((account_number, sequence, account_type)) =
+        account_context.test_accounts.get(&address)
+    {
+        return Ok(smallvec![
+            Value::bool(true),
+            Value::u64(*account_number),
+            Value::u64(*sequence),
+            Value::u8(*account_type)
+        ]);
+    }
+
     let (found, account_number, sequence, account_type) =
         if let Some(new_account) = account_context.new_accounts.get(&address) {
             (true, new_account.0, 0, new_account.1)
@@ -225,14 +263,47 @@ fn native_create_signer(
 pub fn make_all(
     builder: &SafeNativeBuilder,
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
-    let natives = [
+    let mut natives = vec![];
+    natives.extend([
         ("get_account_info", native_get_account_info as RawSafeNative),
         ("request_create_account", native_create_account),
         ("create_address", native_create_address),
         ("create_signer", native_create_signer),
-    ];
+    ]);
+
+    #[cfg(feature = "testing")]
+    natives.extend([(
+        "set_account_info",
+        native_test_only_set_account_info as RawSafeNative,
+    )]);
 
     builder.make_named_natives(natives)
+}
+
+#[cfg(feature = "testing")]
+fn native_test_only_set_account_info(
+    context: &mut SafeNativeContext,
+    ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 4);
+
+    let account_type = safely_pop_arg!(arguments, u8);
+    let sequence = safely_pop_arg!(arguments, u64);
+    let account_number = safely_pop_arg!(arguments, u64);
+    let addr = safely_pop_arg!(arguments, AccountAddress);
+
+    let account_context = context.extensions_mut().get_mut::<NativeAccountContext>();
+    NativeAccountContext::set_account_info(
+        account_context,
+        addr,
+        account_number,
+        sequence,
+        account_type,
+    );
+
+    Ok(smallvec![])
 }
 
 // =========================================================================================

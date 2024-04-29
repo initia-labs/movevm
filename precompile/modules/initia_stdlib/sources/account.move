@@ -31,7 +31,7 @@ module initia_std::account {
         request_create_account(addr, ACCOUNT_TYPE_BASE)
     }
 
-   /// TableAccount is similar to CosmosSDK's ModuleAccount in concept, 
+    /// TableAccount is similar to CosmosSDK's ModuleAccount in concept, 
     /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_table_account(addr: address): u64 {
         let (found, _, _, _) = get_account_info(addr);
@@ -43,8 +43,12 @@ module initia_std::account {
     /// ObjectAccount is similar to CosmosSDK's ModuleAccount in concept, 
     /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_object_account(addr: address): u64 {
-        let (found, account_number, _, account_type) = get_account_info(addr);
-        if (found) {
+        let (found, account_number, sequence, account_type) = get_account_info(addr);
+
+        // base account with sequence 0 is considered as not created.
+        if (!found || (account_type == ACCOUNT_TYPE_BASE && sequence == 0)) {
+            request_create_account(addr, ACCOUNT_TYPE_OBJECT)
+        } else {
             // When an Object is deleted, the ObjectAccount in CosmosSDK is designed 
             // not to be deleted in order to prevent unexpected issues. Therefore, 
             // in this case, the creation of an account is omitted.
@@ -55,8 +59,6 @@ module initia_std::account {
             } else {
                 abort(error::already_exists(EACCOUNT_ALREADY_EXISTS))
             }
-        } else {
-            request_create_account(addr, ACCOUNT_TYPE_OBJECT)
         }
     }
 
@@ -118,6 +120,9 @@ module initia_std::account {
     native public fun get_account_info(addr: address): (bool /* found */, u64 /* account_number */, u64 /* sequence_number */, u8 /* account_type */);
     native public(friend) fun create_address(bytes: vector<u8>): address;
     native public(friend) fun create_signer(addr: address): signer;
+
+    #[test_only]
+    native public fun set_account_info(addr: address, account_number: u64, sequence: u64, account_type: u8);
 
     #[test_only]
     /// Create signer for testing
