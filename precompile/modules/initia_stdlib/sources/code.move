@@ -48,9 +48,6 @@ module initia_std::code {
 
     /// allowed_publishers argument is invalid.
     const EINVALID_ALLOWED_PUBLISHERS: u64 = 0x6;
-    
-    /// The upgrade policy is unspecified.
-    const UPGRADE_POLICY_UNSPECIFIED: u8 = 0;
 
     /// Whether a compatibility check should be performed for upgrades. The check only passes if
     /// a new module has (a) the same public functions (b) for existing resources, no layout change.
@@ -123,7 +120,7 @@ module initia_std::code {
         // Check whether arbitrary publish is allowed or not.
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(
-            upgrade_policy > UPGRADE_POLICY_UNSPECIFIED,
+            upgrade_policy == UPGRADE_POLICY_COMPATIBLE || upgrade_policy == UPGRADE_POLICY_IMMUTABLE,
             error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED),
         );
 
