@@ -794,9 +794,9 @@ module initia_std::minitswap {
         (*option::borrow(&supply) as u64)
     }
 
-    fun assert_is_chain(_account: &signer) {
-        // let addr = signer::address_of(account);
-        // assert!(addr == @initia_std, error::permission_denied(ENOT_CHAIN));
+    fun assert_is_chain(account: &signer) {
+        let addr = signer::address_of(account);
+        assert!(addr == @initia_std, error::permission_denied(ENOT_CHAIN));
     }
 
     fun mul_div(a: u64, b: u64, c: u64): u64 {
