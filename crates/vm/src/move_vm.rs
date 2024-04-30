@@ -448,10 +448,9 @@ impl MoveVM {
         // `init_module` and verify some deployment conditions, while the VM need to do
         // the deserialization again. Consider adding an API to MoveVM which allows to
         // directly pass CompiledModule.
-        let sorted_module_bundle = module_bundle.sorted_code_and_modules();
-        let modules = self.deserialize_module_bundle(&sorted_module_bundle)?;
+        let modules_ = self.deserialize_module_bundle(&module_bundle)?;
         let modules: &Vec<CompiledModule> =
-            traversal_context.referenced_module_bundles.alloc(modules);
+            traversal_context.referenced_module_bundles.alloc(modules_);
 
         // Note: Feature gating is needed here because the traversal of the dependencies could
         //       result in shallow-loading of the modules and therefore subtle changes in
@@ -467,7 +466,7 @@ impl MoveVM {
             )?;
 
             // Charge all modules in the bundle that is about to be published.
-            for (module, blob) in modules.iter().zip(sorted_module_bundle.iter()) {
+            for (module, blob) in modules.iter().zip(module_bundle.iter()) {
                 let module_id = &module.self_id();
                 gas_meter
                     .charge_dependency(
@@ -529,6 +528,9 @@ impl MoveVM {
                 exists.insert(id);
             }
         }
+
+        // sort the modules by dependencies
+        let sorted_module_bundle = ModuleBundle::sorted_code_and_modules(module_bundle);
 
         // publish and cache the modules on loader cache.
         session.publish_module_bundle_with_compat_config(

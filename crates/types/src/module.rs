@@ -71,19 +71,19 @@ impl ModuleBundle {
         self.codes.iter()
     }
 
-    pub fn sorted_code_and_modules(&self) -> Self {
-        let codes = self.clone().into_inner();
-        let mut map = codes
-            .iter()
+    pub fn sorted_code_and_modules(self) -> Self {
+        let mut map = self
+            .into_iter()
             .map(|c| {
-                let m = CompiledModule::deserialize(c).unwrap();
-                (m.self_id(), (c.as_slice(), m))
+                let m = CompiledModule::deserialize(&c.code).unwrap();
+                (m.self_id(), (c.code, m))
             })
             .collect::<BTreeMap<_, _>>();
         let mut order = vec![];
         for id in map.keys() {
             sort_by_deps(&map, &mut order, id.clone());
         }
+
         let mut modules = vec![];
         for id in order {
             let (code, module) = map.remove(&id).unwrap();
@@ -94,12 +94,12 @@ impl ModuleBundle {
             .into_iter()
             .map(|(c, _)| c.to_vec())
             .collect::<Vec<_>>();
-        Self::new(sorted_codes)
+        ModuleBundle::new(sorted_codes)
     }
 }
 
 pub fn sort_by_deps(
-    map: &BTreeMap<ModuleId, (&[u8], CompiledModule)>,
+    map: &BTreeMap<ModuleId, (Vec<u8>, CompiledModule)>,
     order: &mut Vec<ModuleId>,
     id: ModuleId,
 ) {
