@@ -71,42 +71,46 @@ impl ModuleBundle {
         self.codes.iter()
     }
 
-    pub fn sorted_code_and_modules(self) -> Self {
-        let mut map = self
-            .into_iter()
-            .map(|c| {
-                let m = CompiledModule::deserialize(&c.code).unwrap();
-                (m.self_id(), (c.code, m))
-            })
-            .collect::<BTreeMap<_, _>>();
+    pub fn sorted_code_and_modules(
+        self,
+        compiled_modules: &[CompiledModule],
+    ) -> (Self, Vec<String>, Vec<&CompiledModule>) {
+        let mut map: BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)> = BTreeMap::new();
+
+        let ModuleBundle { codes } = self;
+        for (cm, m) in compiled_modules.iter().zip(codes.into_iter()) {
+            map.insert(cm.self_id(), (m.code, cm));
+        }
+
         let mut order = vec![];
         for id in map.keys() {
             sort_by_deps(&map, &mut order, id.clone());
         }
 
-        let mut modules = vec![];
+        let mut codes = vec![];
+        let mut module_ids = vec![];
+        let mut compiled_modules = vec![];
         for id in order {
             let (code, module) = map.remove(&id).unwrap();
-            modules.push((code, module))
+            codes.push(code);
+            compiled_modules.push(module);
+            module_ids.push(id.short_str_lossless());
         }
 
-        let sorted_codes = modules
-            .into_iter()
-            .map(|(c, _)| c.to_vec())
-            .collect::<Vec<_>>();
-        ModuleBundle::new(sorted_codes)
+        (Self::new(codes), module_ids, compiled_modules)
     }
 }
 
 pub fn sort_by_deps(
-    map: &BTreeMap<ModuleId, (Vec<u8>, CompiledModule)>,
+    map: &BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)>,
     order: &mut Vec<ModuleId>,
     id: ModuleId,
 ) {
     if order.contains(&id) {
         return;
     }
-    let compiled = &map.get(&id).unwrap().1;
+
+    let compiled = map.get(&id).unwrap().1;
     for dep in compiled.immediate_dependencies() {
         // Only consider deps which are actually in this package. Deps for outside
         // packages are considered fine because of package deployment order. Note
