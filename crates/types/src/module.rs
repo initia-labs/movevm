@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use move_binary_format::access::ModuleAccess;
+use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
 
+use move_core_types::vm_status::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -74,7 +76,7 @@ impl ModuleBundle {
     pub fn sorted_code_and_modules(
         self,
         compiled_modules: &[CompiledModule],
-    ) -> (Self, Vec<String>, Vec<&CompiledModule>) {
+    ) -> PartialVMResult<(Self, Vec<String>, Vec<&CompiledModule>)> {
         let mut map: BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)> = BTreeMap::new();
 
         let ModuleBundle { codes } = self;
@@ -84,7 +86,7 @@ impl ModuleBundle {
 
         let mut order = vec![];
         for id in map.keys() {
-            sort_by_deps(&map, &mut order, id.clone());
+            sort_by_deps(&map, &mut order, id.clone(), &mut BTreeSet::new())?;
         }
 
         let mut codes = vec![];
@@ -97,7 +99,7 @@ impl ModuleBundle {
             module_ids.push(id.short_str_lossless());
         }
 
-        (Self::new(codes), module_ids, compiled_modules)
+        Ok((Self::new(codes), module_ids, compiled_modules))
     }
 }
 
@@ -105,10 +107,20 @@ pub fn sort_by_deps(
     map: &BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)>,
     order: &mut Vec<ModuleId>,
     id: ModuleId,
-) {
+    seen_modules: &mut BTreeSet<ModuleId>,
+) -> PartialVMResult<()> {
     if order.contains(&id) {
-        return;
+        return Ok(());
     }
+
+    // check for circular dependencies
+    if seen_modules.contains(&id) {
+        return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
+            .with_message(format!("Circular dependency detected for module {}", id)));
+    }
+
+    // mark as seen
+    seen_modules.insert(id.clone());
 
     let compiled = map.get(&id).unwrap().1;
     for dep in compiled.immediate_dependencies() {
@@ -116,10 +128,16 @@ pub fn sort_by_deps(
         // packages are considered fine because of package deployment order. Note
         // that because of this detail, we can't use existing topsort from Move utils.
         if map.contains_key(&dep) {
-            sort_by_deps(map, order, dep);
+            sort_by_deps(map, order, dep, seen_modules)?;
         }
     }
-    order.push(id)
+
+    // remove from seen
+    seen_modules.remove(&id);
+
+    order.push(id);
+
+    Ok(())
 }
 
 impl fmt::Debug for ModuleBundle {

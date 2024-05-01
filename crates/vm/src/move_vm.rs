@@ -528,8 +528,9 @@ impl MoveVM {
         }
 
         // sort the modules by dependencies
-        let (sorted_module_bundle, published_module_ids, sorted_compiled_modules) =
-            module_bundle.sorted_code_and_modules(modules);
+        let (sorted_module_bundle, published_module_ids, sorted_compiled_modules) = module_bundle
+            .sorted_code_and_modules(modules)
+            .map_err(|e| e.finish(Location::Undefined))?;
 
         // publish and cache the modules on loader cache.
         session.publish_module_bundle_with_compat_config(
