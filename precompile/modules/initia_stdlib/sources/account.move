@@ -28,23 +28,30 @@ module initia_std::account {
         let (found, _, _, _) = get_account_info(addr);
         assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
 
-        request_create_account(addr, ACCOUNT_TYPE_BASE)
+        request_create_account(addr, 0, ACCOUNT_TYPE_BASE)
     }
 
-   /// TableAccount is similar to CosmosSDK's ModuleAccount in concept, 
+    /// TableAccount is similar to CosmosSDK's ModuleAccount in concept, 
     /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_table_account(addr: address): u64 {
-        let (found, _, _, _) = get_account_info(addr);
-        assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
+        let (found, account_number, sequence, account_type) = get_account_info(addr);
+        assert!(
+            !found || (account_type == ACCOUNT_TYPE_BASE && sequence == 0),
+            error::already_exists(EACCOUNT_ALREADY_EXISTS),
+        );
 
-        request_create_account(addr, ACCOUNT_TYPE_TABLE)
+        request_create_account(addr, account_number, ACCOUNT_TYPE_TABLE)
     }
 
     /// ObjectAccount is similar to CosmosSDK's ModuleAccount in concept, 
     /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_object_account(addr: address): u64 {
-        let (found, account_number, _, account_type) = get_account_info(addr);
-        if (found) {
+        let (found, account_number, sequence, account_type) = get_account_info(addr);
+
+        // base account with sequence 0 is considered as not created.
+        if (!found || (account_type == ACCOUNT_TYPE_BASE && sequence == 0)) {
+            request_create_account(addr, account_number, ACCOUNT_TYPE_OBJECT)
+        } else {
             // When an Object is deleted, the ObjectAccount in CosmosSDK is designed 
             // not to be deleted in order to prevent unexpected issues. Therefore, 
             // in this case, the creation of an account is omitted.
@@ -55,8 +62,6 @@ module initia_std::account {
             } else {
                 abort(error::already_exists(EACCOUNT_ALREADY_EXISTS))
             }
-        } else {
-            request_create_account(addr, ACCOUNT_TYPE_OBJECT)
         }
     }
 
@@ -114,10 +119,13 @@ module initia_std::account {
         account_type == ACCOUNT_TYPE_MODULE
     }
 
-    native fun request_create_account(addr: address, account_type: u8): u64;
+    native fun request_create_account(addr: address, account_number: u64, account_type: u8): u64;
     native public fun get_account_info(addr: address): (bool /* found */, u64 /* account_number */, u64 /* sequence_number */, u8 /* account_type */);
     native public(friend) fun create_address(bytes: vector<u8>): address;
     native public(friend) fun create_signer(addr: address): signer;
+
+    #[test_only]
+    native public fun set_account_info(addr: address, account_number: u64, sequence: u64, account_type: u8);
 
     #[test_only]
     /// Create signer for testing
@@ -173,5 +181,36 @@ module initia_std::account {
         let _new_account = create_signer(new_address);
         let authentication_key = bcs::to_bytes(&new_address);
         assert!(vector::length(&authentication_key) == 32, 0);
+    }
+
+    #[test(new_address = @0x41, new_address2 = @0x42, new_address3 = @0x43, new_address4 = @0x44)]
+    public fun test_create_table_account_and_object_account(
+        new_address: address, new_address2: address, new_address3: address, new_address4: address,
+    ) {
+        let table_account_num = create_table_account(new_address);
+        assert!(table_account_num == get_account_number(new_address), 0);
+        assert!(is_table_account(new_address), 1);
+        assert!(exists_at(new_address), 2);
+
+        // set base account with 0 sequence
+        set_account_info(new_address2, 100, 0, ACCOUNT_TYPE_BASE);
+        let table_account_num = create_table_account(new_address2);
+        assert!(table_account_num == get_account_number(new_address2), 0);
+        assert!(table_account_num == 100, 0);
+        assert!(is_table_account(new_address2), 1);
+        assert!(exists_at(new_address2), 2);
+
+        let object_account_num = create_object_account(new_address3);
+        assert!(object_account_num == get_account_number(new_address3), 3);
+        assert!(is_object_account(new_address3), 4);
+        assert!(exists_at(new_address3), 5);
+
+        // set base account with 0 sequence
+        set_account_info(new_address4, 200, 0, ACCOUNT_TYPE_BASE);
+        let object_account_num = create_object_account(new_address4);
+        assert!(object_account_num == get_account_number(new_address4), 0);
+        assert!(object_account_num == 200, 0);
+        assert!(is_object_account(new_address4), 1);
+        assert!(exists_at(new_address4), 2);
     }
 }
