@@ -15,7 +15,7 @@ use move_vm_types::{
 };
 use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::VecDeque;
 
 /// Whether unconditional code upgrade with no compatibility check is allowed. This
 /// publication mode should only be used for modules which aren't shared with user others.
@@ -84,7 +84,7 @@ pub struct NativeCodeContext {
 pub struct PublishRequest {
     pub destination: AccountAddress,
     pub module_bundle: ModuleBundle,
-    pub expected_modules: Option<BTreeSet<String>>,
+    pub expected_modules: Option<Vec<String>>,
     pub check_compat: bool,
 }
 
@@ -126,12 +126,12 @@ fn native_request_publish(
         code.push(module_code);
     }
 
-    let mut expected_modules: BTreeSet<String> = BTreeSet::new();
+    let mut expected_modules: Vec<String> = vec![];
     for name in safely_pop_vec_arg!(arguments, Struct) {
         let str_bytes = get_string(name)?;
 
         context.charge(gas_params.per_byte * NumBytes::new(str_bytes.len() as u64))?;
-        expected_modules.insert(String::from_utf8(str_bytes).map_err(|_| {
+        expected_modules.push(String::from_utf8(str_bytes).map_err(|_| {
             SafeNativeError::Abort {
                 abort_code: EUNABLE_TO_PARSE_STRING,
             }
