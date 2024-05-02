@@ -506,12 +506,13 @@ impl MoveVM {
         // validate modules are properly compiled with metadata
         validate_publish_request(session, modules)?;
 
-        if let Some(mut expected_modules) = expected_modules {
-            for m in modules.iter() {
-                if !expected_modules.remove(m.self_id().short_str_lossless().as_str()) {
+        if let Some(expected_modules) = expected_modules {
+            for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
+                if m.self_id().short_str_lossless().as_str() != expected_id {
                     return Err(metadata_validation_error(&format!(
-                        "unregistered module: '{}'",
-                        m.self_id().name()
+                        "unexpected module: '{}', expected: '{}'",
+                        m.self_id().name(),
+                        expected_id
                     )));
                 }
             }

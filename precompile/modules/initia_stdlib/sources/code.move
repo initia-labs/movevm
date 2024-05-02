@@ -6,6 +6,7 @@ module initia_std::code {
     use std::event;
 
     use initia_std::table::{Self, Table};
+    use initia_std::simple_map;
 
     // ----------------------------------------------------------------------
     // Code Publishing
@@ -48,6 +49,9 @@ module initia_std::code {
 
     /// allowed_publishers argument is invalid.
     const EINVALID_ALLOWED_PUBLISHERS: u64 = 0x6;
+
+    /// The module ID is duplicated.
+    const EDUPLICATE_MODULE_ID: u64 = 0x7;
 
     /// Whether a compatibility check should be performed for upgrades. The check only passes if
     /// a new module has (a) the same public functions (b) for existing resources, no layout change.
@@ -116,6 +120,15 @@ module initia_std::code {
     ) acquires ModuleStore, MetadataStore {
         // Disallow incompatible upgrade mode. Governance can decide later if this should be reconsidered.
         assert!(vector::length(&code) == vector::length(&module_ids), error::invalid_argument(EINVALID_ARGUMENTS));
+
+        // duplication check
+        let module_ids_set = simple_map::create<String, bool>();
+        vector::for_each_ref(&module_ids, 
+            |module_id| {
+                assert!(!simple_map::contains_key(&module_ids_set, module_id), error::invalid_argument(EDUPLICATE_MODULE_ID));
+                simple_map::add(&mut module_ids_set, *module_id, true);
+            }
+        );
         
         // Check whether arbitrary publish is allowed or not.
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
