@@ -85,8 +85,9 @@ impl ModuleBundle {
         }
 
         let mut order = vec![];
+        let mut order_set = BTreeSet::new();
         for id in map.keys() {
-            sort_by_deps(&map, &mut order, id.clone(), &mut BTreeSet::new())?;
+            sort_by_deps(&map, &mut order, &mut order_set, &mut BTreeSet::new(), id.clone())?;
         }
 
         let mut codes = vec![];
@@ -106,10 +107,11 @@ impl ModuleBundle {
 pub fn sort_by_deps(
     map: &BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)>,
     order: &mut Vec<ModuleId>,
-    id: ModuleId,
+    order_set: &mut BTreeSet<ModuleId>,
     seen_modules: &mut BTreeSet<ModuleId>,
+    id: ModuleId,
 ) -> PartialVMResult<()> {
-    if order.contains(&id) {
+    if order_set.contains(&id) {
         return Ok(());
     }
 
@@ -128,14 +130,15 @@ pub fn sort_by_deps(
         // packages are considered fine because of package deployment order. Note
         // that because of this detail, we can't use existing topsort from Move utils.
         if map.contains_key(&dep) {
-            sort_by_deps(map, order, dep, seen_modules)?;
+            sort_by_deps(map, order, order_set, seen_modules, dep)?;
         }
     }
 
     // remove from seen
     seen_modules.remove(&id);
 
-    order.push(id);
+    order.push(id.clone());
+    order_set.insert(id);
 
     Ok(())
 }
