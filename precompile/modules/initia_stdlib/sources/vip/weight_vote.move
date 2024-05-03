@@ -88,6 +88,7 @@ module initia_std::vip_weight_vote {
         votes: Table<address, Vote>,
         total_tally: u64,
         tally: Table<vector<u8>/* bridge id */, u64/* tally */>,
+        snapshot_height: u64,
         voting_end_time: u64,
         api_uri: String,
     }
@@ -131,6 +132,7 @@ module initia_std::vip_weight_vote {
         stage: u64,
         merkle_root: vector<u8>,
         api_uri: String,
+        snapshot_height: u64,
         voting_end_time: u64,
     }
 
@@ -213,6 +215,7 @@ module initia_std::vip_weight_vote {
         submitter: &signer,
         merkle_root: vector<u8>,
         api_uri: String,
+        snapshot_height: u64,
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
@@ -225,7 +228,7 @@ module initia_std::vip_weight_vote {
         } else {
             module_store.stage_end_timestamp + module_store.snapshot_grace_period + module_store.voting_period
         };
-        submit_merkle_root_internal(merkle_root, api_uri, voting_end_time);
+        submit_merkle_root_internal(merkle_root, api_uri, snapshot_height, voting_end_time);
     }
 
     public entry fun vote(
@@ -507,8 +510,8 @@ module initia_std::vip_weight_vote {
         };
 
         if (proposal.type == string::utf8(b"challenge")) {
-            let (stage, new_submitter, merkle_root, api_uri) = parse_challenge_args(&proposal.args);
-            return challenge(stage, new_submitter, merkle_root, api_uri)
+            let (stage, new_submitter, merkle_root, api_uri, snapshot_height) = parse_challenge_args(&proposal.args);
+            return challenge(stage, new_submitter, merkle_root, api_uri, snapshot_height)
         } else if (proposal.type == string::utf8(b"update_params")) {
             let (stage_interval, snapshot_grace_period, voting_period, submitter, quorum_ratio, proposal_deposit_amount) =
                 parse_update_params_args(&proposal.args);
@@ -521,13 +524,14 @@ module initia_std::vip_weight_vote {
 
     // challenge
 
-    fun parse_challenge_args(args: &vector<vector<u8>>): (u64, address, vector<u8>, String) {
+    fun parse_challenge_args(args: &vector<vector<u8>>): (u64, address, vector<u8>, String, u64) {
         let stage = from_bcs::to_u64(*vector::borrow(args, 0));
         let new_submitter = from_bcs::to_address(*vector::borrow(args, 1));
         let merkle_root = from_bcs::to_bytes(*vector::borrow(args, 2));
         let api_uri = from_bcs::to_string(*vector::borrow(args, 3));
+        let snapshot_height = from_bcs::to_u64(*vector::borrow(args, 4));
 
-        return (stage, new_submitter, merkle_root, api_uri)
+        return (stage, new_submitter, merkle_root, api_uri, snapshot_height)
     }
 
     fun challenge(
@@ -535,6 +539,7 @@ module initia_std::vip_weight_vote {
         new_submitter: address,
         merkle_root: vector<u8>,
         api_uri: String,
+        snapshot_height: u64,
     ): bool acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
@@ -563,7 +568,7 @@ module initia_std::vip_weight_vote {
         // replace submitter
         module_store.submitter = new_submitter;
         let voting_end_time = timestamp + module_store.voting_period;
-        submit_merkle_root_internal(merkle_root, api_uri, voting_end_time);
+        submit_merkle_root_internal(merkle_root, api_uri, snapshot_height, voting_end_time);
         return true
     }
 
@@ -667,7 +672,7 @@ module initia_std::vip_weight_vote {
 
     // weight vote
 
-    fun submit_merkle_root_internal(merkle_root: vector<u8>, api_uri: String, voting_end_time: u64) acquires ModuleStore {
+    fun submit_merkle_root_internal(merkle_root: vector<u8>, api_uri: String, snapshot_height: u64, voting_end_time: u64) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
 
         module_store.current_stage = module_store.current_stage + 1;
@@ -684,14 +689,16 @@ module initia_std::vip_weight_vote {
             votes: table::new(),
             total_tally: 0,
             tally: table::new(),
-            voting_end_time,
             api_uri,
+            snapshot_height,
+            voting_end_time,
         });
 
         event::emit(SubmitMerkleRootEvent {
             stage: module_store.current_stage,
             merkle_root,
             api_uri,
+            snapshot_height,
             voting_end_time,
         })
     }
@@ -931,7 +938,7 @@ module initia_std::vip_weight_vote {
         let tree = create_merkle_tree(addresses, voting_powers);
         let merkle_root = get_merkle_root(tree);
 
-        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"));
+        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"), 100);
         vote(
             u1,
             1,
@@ -1001,7 +1008,7 @@ module initia_std::vip_weight_vote {
         let voting_powers = vector[10, 20, 30, 40];
         let tree = create_merkle_tree(addresses, voting_powers);
         let merkle_root = get_merkle_root(tree);
-        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"));
+        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"), 100);
 
         // votes
         vote(
@@ -1038,7 +1045,8 @@ module initia_std::vip_weight_vote {
         let tree = create_merkle_tree(addresses, voting_powers);
         let args = vector[
             bcs::to_bytes(&get_merkle_root(tree)),
-            bcs::to_bytes(&string::utf8(b"https://abc2.com"))
+            bcs::to_bytes(&string::utf8(b"https://abc2.com")),
+            bcs::to_bytes(&100u64),
         ];
         create_proposal(u1, string::utf8(b"challenge"), string::utf8(b"challenge"), string::utf8(b"challenge"), args);
 
@@ -1063,7 +1071,8 @@ module initia_std::vip_weight_vote {
         let tree = create_merkle_tree(addresses, voting_powers);
         let args = vector[
             bcs::to_bytes(&get_merkle_root(tree)),
-            bcs::to_bytes(&string::utf8(b"https://abc3.com"))
+            bcs::to_bytes(&string::utf8(b"https://abc3.com")),
+            bcs::to_bytes(&100u64),
         ];
         create_proposal(u2, string::utf8(b"challenge"), string::utf8(b"challenge"), string::utf8(b"challenge"), args);
 
@@ -1106,7 +1115,7 @@ module initia_std::vip_weight_vote {
         let voting_powers = vector[10, 20, 30, 40];
         let tree = create_merkle_tree(addresses, voting_powers);
         let merkle_root = get_merkle_root(tree);
-        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"));
+        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"), 100);
 
         // votes
         vote(
