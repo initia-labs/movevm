@@ -407,6 +407,7 @@ module initia_std::vip_weight_vote {
         proposal_id: u64,
         vote_yes: bool,
     ) acquires ModuleStore {
+        let (_, timestamp) = get_block_info();
         let vote_option = if (vote_yes) {
             1
         } else {
@@ -418,6 +419,7 @@ module initia_std::vip_weight_vote {
         let key = table_key::encode_u64(proposal_id);
         assert!(table::contains(&module_store.proposals, key), error::not_found(EPROPOSAL_NOT_FOUND));
         let proposal = table::borrow_mut(&mut module_store.proposals, key);
+        assert!(timestamp < proposal.voting_end_time, error::invalid_state(EVOTING_END));
 
         let voting_power_stage = table_key::encode_u64(proposal.voting_power_stage);
         let weight_vote = table::borrow(&module_store.weight_votes, voting_power_stage);
