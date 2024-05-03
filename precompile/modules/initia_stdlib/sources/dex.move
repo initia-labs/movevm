@@ -1302,13 +1302,17 @@ module initia_std::dex {
             let time_diff_before = (timestamp - weights.weights_before.timestamp as u128);
 
             // when timestamp_before < timestamp < timestamp_after
-            // weight = a * timestamp + b
-            // m = (a * timestamp_before + b) * (timestamp_after - timestamp)
-            //   = a * t_b * t_a - a * t_b * t + b * t_a - b * t
-            // n = (a * timestamp_after + b) * (timestamp - timestamp_before)
-            //   = a * t_a * t - a * t_a * t_b + b * t - b * t_b
-            // l = m + n = a * t * (t_a - t_b) + b * (t_a - t_b)
-            // weight = l / (t_a - t_b)
+            // weight is linearly change from before to after
+            //
+            // weight = g * timestamp + c
+            // where g is gradient of line and c is the weight-intercept (weight value when timestamp is 0)
+            //
+            // n = (g * timestamp_before + c) * (timestamp_after - timestamp)
+            //   = g * t_b * t_a - g * t_b * t + c * t_a - c * t
+            // m = (g * timestamp_after + c) * (timestamp - timestamp_before)
+            //   = g * t_a * t - g * t_a * t_b + c * t - c * t_b
+            // l = m + n = g * t * (t_a - t_b) + c * (t_a - t_b)
+            // weight = l / (t_a - t_b) = g * t + c
             let coin_a_m = decimal128::new(decimal128::val(&weights.weights_after.coin_a_weight) * time_diff_before);
             let coin_a_n = decimal128::new(decimal128::val(&weights.weights_before.coin_a_weight) * time_diff_after);
             let coin_a_l = decimal128::add(&coin_a_m, &coin_a_n);
