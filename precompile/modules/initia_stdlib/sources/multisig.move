@@ -30,7 +30,7 @@ module initia_std::multisig {
 
     const ENOT_PASS: u64 = 8;
 
-    const EPROPOSAL_NOT_FOUND: u64 = 8;
+    const EPROPOSAL_NOT_FOUND: u64 = 9;
 
     // constants
 
