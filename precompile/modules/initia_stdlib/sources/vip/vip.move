@@ -23,6 +23,8 @@ module initia_std::vip {
     use initia_std::vip_reward;
     use initia_std::vip_vault;
 
+    friend initia_std::vip_weight_vote;
+
     //
     // Errors
     //
@@ -626,6 +628,11 @@ module initia_std::vip {
         vested_reward
     }
 
+    public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        table::contains(&module_store.bridges, table_key::encode_u64(bridge_id))
+    }
+
     //
     // Entry Functions
     //
@@ -861,17 +868,6 @@ module initia_std::vip {
         });
     }
 
-    public entry fun update_vip_weight(
-        chain: &signer,
-        bridge_id: u64,
-        weight: u64,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let bridge = load_bridge_mut(&mut module_store.bridges, bridge_id);
-        bridge.vip_weight = weight;
-    }
-
     public entry fun update_vesting_period(
         chain: &signer,
         user_vesting_period: u64,
@@ -997,6 +993,21 @@ module initia_std::vip {
     ) acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         vip_operator::update_operator_commission(operator, bridge_id, module_store.stage, commission_rate);
+    }
+
+    //
+    // friend function
+    //
+
+    public(friend) fun update_vip_weight(
+        bridge_id: u64,
+        weight: u64,
+    ) acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        if(!table::contains(&module_store.bridges, table_key::encode_u64(bridge_id))) return;
+
+        let bridge = load_bridge_mut(&mut module_store.bridges, bridge_id);
+        bridge.vip_weight = weight;
     }
     
     //
@@ -1464,7 +1475,6 @@ module initia_std::vip {
         assert!(bridge_info.vip_weight == DEFAULT_VIP_WEIGHT_FOR_TEST, 1);
 
         update_vip_weight(
-            chain,
             1,
             100,
         );
