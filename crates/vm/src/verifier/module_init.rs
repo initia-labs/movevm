@@ -31,15 +31,22 @@ pub(crate) fn verify_module_init_function(module: &CompiledModule) -> PartialVMR
     }
 
     let fhandle = module.function_handle_at(fdef.function);
-    let parameters = module.signature_at(fhandle.parameters);
 
+    // check init_module has no return
     let return_ = module.signature_at(fhandle.return_);
-
     if !return_.0.is_empty() {
         return Err(PartialVMError::new(StatusCode::VERIFICATION_ERROR)
             .with_message("module_init_function should not return".to_string()));
     }
 
+    // check init_module has exactly one argument
+    let parameters = module.signature_at(fhandle.parameters);
+    if parameters.0.len() != 1 {
+        return Err(PartialVMError::new(StatusCode::VERIFICATION_ERROR)
+            .with_message("module_init_function should have exactly one argument".to_string()));
+    }
+
+    // check init_module has only signer arguments
     let non_signer_tokens = parameters
         .0
         .iter()
