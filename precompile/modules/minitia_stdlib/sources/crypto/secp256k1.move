@@ -14,7 +14,7 @@ module minitia_std::secp256k1 {
     const E_WRONG_SIGNATURE_SIZE: u64 = 2;
 
     /// Wrong number of bytes were given as message.
-    const E_WRONG_MESSAGE_SIZE: u64 = 2;
+    const E_WRONG_MESSAGE_SIZE: u64 = 3;
 
     //
     // constants
