@@ -391,7 +391,7 @@ impl MockStakingAPI {
         metadata: AccountAddress,
         amount: u64,
     ) -> anyhow::Result<u64> {
-        match self.validators.get(&validator.to_vec()) {
+        match self.validators.get(validator) {
             Some(ratios) => match ratios.get(&metadata) {
                 Some((s, a)) => Ok(amount * s / a),
                 None => Err(anyhow!("ratio not found")),
@@ -406,7 +406,7 @@ impl MockStakingAPI {
         metadata: AccountAddress,
         share: u64,
     ) -> anyhow::Result<u64> {
-        match self.validators.get(&validator.to_vec()) {
+        match self.validators.get(validator) {
             Some(ratios) => match ratios.get(&metadata) {
                 Some((s, a)) => Ok(share * a / s),
                 None => Err(anyhow!("ratio not found")),
