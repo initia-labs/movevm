@@ -204,7 +204,11 @@ module initia_std::dex {
     /// All start_after must be provided or not
     const ESTART_AFTER: u64 = 17;
 
+    // Cannot create pair with the same coin type
     const ESAME_COIN_TYPE: u64 = 19;
+
+    /// Zero amount in the swap simulation is not allowed
+    const EZERO_AMOUNT_IN: u64 = 20;
 
     // Constants
     const MAX_LIMIT: u8 = 30;
@@ -1359,9 +1363,17 @@ module initia_std::dex {
         amount_in: u64,
         swap_fee_rate: Decimal128,
     ): (u64, u64) {
+        assert!(amount_in > 0, error::invalid_argument(EZERO_AMOUNT_IN));
+
         let one = decimal128::one();
         let exp = decimal128::from_ratio(decimal128::val(&weight_in), decimal128::val(&weight_out));
+
+        // avoid zero fee amount to prevent fee bypass attack
         let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
+
         let adjusted_amount_in = amount_in - fee_amount;
         let base = decimal128::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
         let sub_amount = pow(&base, &exp);
