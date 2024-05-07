@@ -1,19 +1,14 @@
 # Initia MoveVM
-
-This project is copied from [wasmvm](https://github.com/CosmWasm/wasmvm) and changed to support ([Aptos](https://github.com/aptos-labs/aptos-core)) MoveVM.
-
-**Move VM for the Cosmos SDK.**
-
-It allows you to compile, initialize and execute Move smart contracts
-from Go applications, in particular from [x/move](https://github.com/initia-labs/initia/tree/main/x/move).
+The Initia MoveVM is forked from [wasmvm](https://github.com/CosmWasm/wasmvm) with some modifications to support ([Aptos](https://github.com/aptos-labs/aptos-core)) MoveVM.
+This mechanism allows the users to compile, initialize, and execute Move Smart Contracts from Go applications, in particular from [x/move](https://github.com/initia-labs/initia/tree/main/x/move).
 
 ## Structure
 
-This repo contains both Rust and Go code. The rust code is compiled into a dll/so to be linked via cgo and wrapped with a pleasant Go API. The full build step involves compiling rust -> C library, and linking that library to the Go code. For ergonomics of the user, we will include pre-compiled libraries to easily link with, and Go developers should just be able to import this directly.
+This repo contains both Rust and Go codes. The rust code is compiled into a dll/so to be linked via cgo and wrapped with a pleasant Go API. The full build step involves compiling rust -> C library, and linking that library to the Go code. For ergonomics of the user, we will include pre-compiled libraries to easily link with, and Go developers should just be able to import this directly.
 
-## Support Platform
+## Supported Platform
 
-Requires Rust 1.77+ and Go 1.22+.
+Requires **Rust 1.77+ and Go 1.22+.**
 
 The Rust implementation of the VM is compiled to a library called libmovevm. This is then linked to the Go code when the final binary is built. For that reason not all systems supported by Go are supported by this project.
 

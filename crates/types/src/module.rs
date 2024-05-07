@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use move_binary_format::access::ModuleAccess;
+use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
 
+use move_core_types::vm_status::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -71,51 +73,74 @@ impl ModuleBundle {
         self.codes.iter()
     }
 
-    pub fn sorted_code_and_modules(&self) -> Self {
-        let codes = self.clone().into_inner();
-        let mut map = codes
-            .iter()
-            .map(|c| {
-                let m = CompiledModule::deserialize(c).unwrap();
-                (m.self_id(), (c.as_slice(), m))
-            })
-            .collect::<BTreeMap<_, _>>();
-        let mut order = vec![];
-        for id in map.keys() {
-            sort_by_deps(&map, &mut order, id.clone());
-        }
-        let mut modules = vec![];
-        for id in order {
-            let (code, module) = map.remove(&id).unwrap();
-            modules.push((code, module))
+    pub fn sorted_code_and_modules(
+        self,
+        compiled_modules: &[CompiledModule],
+    ) -> PartialVMResult<(Self, Vec<String>, Vec<&CompiledModule>)> {
+        let mut map: BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)> = BTreeMap::new();
+
+        let ModuleBundle { codes } = self;
+        for (cm, m) in compiled_modules.iter().zip(codes.into_iter()) {
+            map.insert(cm.self_id(), (m.code, cm));
         }
 
-        let sorted_codes = modules
-            .into_iter()
-            .map(|(c, _)| c.to_vec())
-            .collect::<Vec<_>>();
-        Self::new(sorted_codes)
+        let mut order = vec![];
+        let mut order_set = BTreeSet::new();
+        for id in map.keys() {
+            sort_by_deps(&map, &mut order, &mut order_set, &mut BTreeSet::new(), id.clone())?;
+        }
+
+        let mut codes = vec![];
+        let mut module_ids = vec![];
+        let mut compiled_modules = vec![];
+        for id in order {
+            let (code, module) = map.remove(&id).unwrap();
+            codes.push(code);
+            compiled_modules.push(module);
+            module_ids.push(id.short_str_lossless());
+        }
+
+        Ok((Self::new(codes), module_ids, compiled_modules))
     }
 }
 
 pub fn sort_by_deps(
-    map: &BTreeMap<ModuleId, (&[u8], CompiledModule)>,
+    map: &BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)>,
     order: &mut Vec<ModuleId>,
+    order_set: &mut BTreeSet<ModuleId>,
+    seen_modules: &mut BTreeSet<ModuleId>,
     id: ModuleId,
-) {
-    if order.contains(&id) {
-        return;
+) -> PartialVMResult<()> {
+    if order_set.contains(&id) {
+        return Ok(());
     }
-    let compiled = &map.get(&id).unwrap().1;
+
+    // check for circular dependencies
+    if seen_modules.contains(&id) {
+        return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
+            .with_message(format!("Circular dependency detected for module {}", id)));
+    }
+
+    // mark as seen
+    seen_modules.insert(id.clone());
+
+    let compiled = map.get(&id).unwrap().1;
     for dep in compiled.immediate_dependencies() {
         // Only consider deps which are actually in this package. Deps for outside
         // packages are considered fine because of package deployment order. Note
         // that because of this detail, we can't use existing topsort from Move utils.
         if map.contains_key(&dep) {
-            sort_by_deps(map, order, dep);
+            sort_by_deps(map, order, order_set, seen_modules, dep)?;
         }
     }
-    order.push(id)
+
+    // remove from seen
+    seen_modules.remove(&id);
+
+    order.push(id.clone());
+    order_set.insert(id);
+
+    Ok(())
 }
 
 impl fmt::Debug for ModuleBundle {

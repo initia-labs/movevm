@@ -6,7 +6,7 @@ module initia_std::math64 {
 
     /// Abort value when an invalid argument is provided.
     const EINVALID_ARG_FLOOR_LOG2: u64 = 1;
-    const EDIVISION_BY_ZERO: u64 = 1;
+    const EDIVISION_BY_ZERO: u64 = 2;
 
     /// Return the largest of two numbers.
     public fun max(a: u64, b: u64): u64 {

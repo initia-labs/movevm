@@ -28,7 +28,10 @@ impl TestPackage {
         new_build_config.test_mode = true;
         new_build_config.generate_docs = false;
         new_build_config.generate_move_model = true;
-        new_build_config.compiler_config.known_attributes.clone_from(metadata::get_all_attribute_names());
+        new_build_config
+            .compiler_config
+            .known_attributes
+            .clone_from(metadata::get_all_attribute_names());
 
         configure_for_unit_test();
 

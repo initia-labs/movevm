@@ -204,7 +204,11 @@ module initia_std::dex {
     /// All start_after must be provided or not
     const ESTART_AFTER: u64 = 17;
 
+    // Cannot create pair with the same coin type
     const ESAME_COIN_TYPE: u64 = 19;
+
+    /// Zero amount in the swap simulation is not allowed
+    const EZERO_AMOUNT_IN: u64 = 20;
 
     // Constants
     const MAX_LIMIT: u8 = 30;
@@ -1302,13 +1306,17 @@ module initia_std::dex {
             let time_diff_before = (timestamp - weights.weights_before.timestamp as u128);
 
             // when timestamp_before < timestamp < timestamp_after
-            // weight = a * timestamp + b
-            // m = (a * timestamp_before + b) * (timestamp_after - timestamp)
-            //   = a * t_b * t_a - a * t_b * t + b * t_a - b * t
-            // n = (a * timestamp_after + b) * (timestamp - timestamp_before)
-            //   = a * t_a * t - a * t_a * t_b + b * t - b * t_b
-            // l = m + n = a * t * (t_a - t_b) + b * (t_a - t_b)
-            // weight = l / (t_a - t_b)
+            // weight is linearly change from before to after
+            //
+            // weight = g * timestamp + c
+            // where g is gradient of line and c is the weight-intercept (weight value when timestamp is 0)
+            //
+            // n = (g * timestamp_before + c) * (timestamp_after - timestamp)
+            //   = g * t_b * t_a - g * t_b * t + c * t_a - c * t
+            // m = (g * timestamp_after + c) * (timestamp - timestamp_before)
+            //   = g * t_a * t - g * t_a * t_b + c * t - c * t_b
+            // l = m + n = g * t * (t_a - t_b) + c * (t_a - t_b)
+            // weight = l / (t_a - t_b) = g * t + c
             let coin_a_m = decimal128::new(decimal128::val(&weights.weights_after.coin_a_weight) * time_diff_before);
             let coin_a_n = decimal128::new(decimal128::val(&weights.weights_before.coin_a_weight) * time_diff_after);
             let coin_a_l = decimal128::add(&coin_a_m, &coin_a_n);
@@ -1355,9 +1363,17 @@ module initia_std::dex {
         amount_in: u64,
         swap_fee_rate: Decimal128,
     ): (u64, u64) {
+        assert!(amount_in > 0, error::invalid_argument(EZERO_AMOUNT_IN));
+
         let one = decimal128::one();
         let exp = decimal128::from_ratio(decimal128::val(&weight_in), decimal128::val(&weight_out));
+
+        // avoid zero fee amount to prevent fee bypass attack
         let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
+
         let adjusted_amount_in = amount_in - fee_amount;
         let base = decimal128::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
         let sub_amount = pow(&base, &exp);
