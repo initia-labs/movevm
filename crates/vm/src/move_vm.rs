@@ -572,10 +572,14 @@ impl MoveVM {
             // with the general verify_module above.
             if init_function.is_ok() {
                 if verify_module_init_function(module).is_ok() {
-                    let args: Vec<Vec<u8>> = senders
-                        .iter()
-                        .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
-                        .collect();
+                    let args: Vec<Vec<u8>> = if init_function.unwrap().parameters.is_empty() {
+                        vec![]
+                    } else {
+                        senders
+                            .iter()
+                            .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
+                            .collect()
+                    };
 
                     // first execution does not execute `charge_call`, so need to record call here
                     gas_meter.record_call(&module.self_id());
