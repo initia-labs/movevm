@@ -567,7 +567,7 @@ module initia_std::minitswap {
             coin::withdraw(account, l2_init_metadata, l2_init_amount),
         ];
 
-        let liquidity_token = stableswap::create_pair(&creator, symbol, symbol, stableswap_pool_store.swap_fee_rate, coins, stableswap_pool_store.ann);
+        let liquidity_token = stableswap::create_pool(&creator, symbol, symbol, stableswap_pool_store.swap_fee_rate, coins, stableswap_pool_store.ann);
         let metadata = fungible_asset::metadata_from_asset(&liquidity_token);
         let pool = object::convert<Metadata, Pool>(metadata);
 
