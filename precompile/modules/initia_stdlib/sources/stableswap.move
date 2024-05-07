@@ -332,6 +332,7 @@ module initia_std::stableswap {
         coins: vector<FungibleAsset>,
         ann: u64,
     ): FungibleAsset acquires Pool, ModuleStore {
+        assert!(vector::length(&coins) >= 2, error::invalid_argument(EN_COINS));
         let (_, timestamp) = block::get_block_info();
         let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref (
             creator,
@@ -764,6 +765,7 @@ module initia_std::stableswap {
         return_coin_metadata: Object<Metadata>,
         offer_amount: u64,
     ): (u64, u64) acquires Pool {
+        assert!(offer_coin_metadata != return_coin_metadata, error::invalid_argument(ESAME_COIN_TYPE));
         let pool = borrow_pool(pool_obj);
         let pool_addr = object::object_address(pool_obj);
         let n = vector::length(&pool.coin_metadata);
