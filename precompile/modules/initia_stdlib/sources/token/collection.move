@@ -396,8 +396,8 @@ module initia_std::collection {
 
         let res: vector<NftResponse> = vector[];
 
-        while (table::prepare<String, address>(&mut nfts_iter) && vector::length(&res) < (limit as u64)) {
-            let (token_id, nft) = table::next<String, address>(&mut nfts_iter);
+        while (table::prepare<String, address>(nfts_iter) && vector::length(&res) < (limit as u64)) {
+            let (token_id, nft) = table::next<String, address>(nfts_iter);
 
             vector::push_back(
                 &mut res,

@@ -408,11 +408,11 @@ module initia_std::vip {
         let index = 0;
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)){
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
                 break
             };
 
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             let balance_reward = split_reward_with_share(
                 balance_shares, 
@@ -552,10 +552,10 @@ module initia_std::vip {
         
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)){
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
                 break
             };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
@@ -582,10 +582,10 @@ module initia_std::vip {
         
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)){
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
                 break
             };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
 
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
@@ -1078,11 +1078,11 @@ module initia_std::vip {
 
         let iter = table::iter(&module_store.stage_data, option::none(), option::none(), 2);
         loop {
-            if (!table::prepare<vector<u8>, StageData>(&mut iter)) {
+            if (!table::prepare<vector<u8>, StageData>(iter)) {
                 break
             };
 
-            let (key, value) = table::next<vector<u8>, StageData>(&mut iter);
+            let (key, value) = table::next<vector<u8>, StageData>(iter);
             if (table::contains(&value.snapshots, table_key::encode_u64(bridge_id))) {
                 return table_key::decode_u64(key) + 1
             };

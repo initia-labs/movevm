@@ -620,7 +620,7 @@ fn native_new_table_iter(
         order,
     });
 
-    Ok(smallvec![Value::u64(context_iterator_id as u64)])
+    Ok(smallvec![Value::iter_reference(context_iterator_id as u64)])
 }
 
 /// Check the `next_key` exist or not and store
@@ -683,9 +683,10 @@ fn native_next_box(
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut iterators = table_context.iterators.borrow_mut();
     let iterator = iterators.get_mut(iterator_id).unwrap();
-    let (key, value) = iterator.next.take().ok_or_else(|| {
-        partial_extension_error("next_box called without prepare_box")
-    })?;
+    let (key, value) = iterator
+        .next
+        .take()
+        .ok_or_else(|| partial_extension_error("next_box called without prepare_box"))?;
 
     iterator.next = None;
 

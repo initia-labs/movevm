@@ -467,8 +467,8 @@ module initia_std::dex {
             1,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
-            let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
+        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(pairs_iter)) {
+            let (key, value) = table::next<PairKey, PairResponse>(pairs_iter);
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(&mut res, *value)
             }
@@ -523,8 +523,8 @@ module initia_std::dex {
             1,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
-            let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
+        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(pairs_iter)) {
+            let (key, value) = table::next<PairKey, PairResponse>(pairs_iter);
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(&mut res, PairByDenomResponse {
                     coin_a: coin::metadata_to_denom(object::address_to_object(value.coin_a)),
@@ -576,8 +576,8 @@ module initia_std::dex {
             1,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
-            let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
+        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(pairs_iter)) {
+            let (key, value) = table::next<PairKey, PairResponse>(pairs_iter);
             if (coin_a != key.coin_a || coin_b != key.coin_b) break;
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(&mut res, *value)
