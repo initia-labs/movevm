@@ -12,6 +12,7 @@
 /// ```
 module initia_std::from_bcs {
     use std::string::{Self, String};
+    use std::vector;
 
     /// UTF8 check failed in conversion from bytes to string
     const EINVALID_UTF8: u64 = 0x1;
@@ -57,7 +58,11 @@ module initia_std::from_bcs {
     }
 
     public fun to_vector_string(v: vector<u8>): vector<String> {
-        from_bytes<vector<String>>(v)
+        let vec_string = from_bytes<vector<String>>(v);
+        vector::for_each_ref(&vec_string, |s| {
+            assert!(string::internal_check_utf8(string::bytes(s)), EINVALID_UTF8);
+        });
+        vec_string
     }
 
     public fun to_string(v: vector<u8>): String {
@@ -95,5 +100,17 @@ module initia_std::from_bcs {
     fun test_address_fail() {
         let bad_vec = b"01";
         to_address(bad_vec);
+    }
+
+    #[test_only]
+    use std::address;
+
+    #[test]
+    fun zellic_invalid_utf8_to_vector_string() {
+        let invalid_utf8 = b"\x01\x03\xE0\x80\x80";
+        let res = to_vector_string(invalid_utf8);
+        assert!(!vector::is_empty(&res), 0);
+
+        address::from_string(vector::pop_back(&mut res));
     }
 }
