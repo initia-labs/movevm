@@ -2,6 +2,8 @@
 The Initia MoveVM is forked from [wasmvm](https://github.com/CosmWasm/wasmvm) with some modifications to support ([Aptos](https://github.com/aptos-labs/aptos-core)) MoveVM.
 This mechanism allows the users to compile, initialize, and execute Move Smart Contracts from Go applications, in particular from [x/move](https://github.com/initia-labs/initia/tree/main/x/move).
 
+* https://github.com/initia-labs/move
+
 ## Structure
 
 This repo contains both Rust and Go codes. The rust code is compiled into a dll/so to be linked via cgo and wrapped with a pleasant Go API. The full build step involves compiling rust -> C library, and linking that library to the Go code. For ergonomics of the user, we will include pre-compiled libraries to easily link with, and Go developers should just be able to import this directly.
