@@ -106,6 +106,7 @@ module initia_std::from_bcs {
     use std::address;
 
     #[test]
+    #[expected_failure(abort_code = EINVALID_UTF8)]
     fun zellic_invalid_utf8_to_vector_string() {
         let invalid_utf8 = b"\x01\x03\xE0\x80\x80";
         let res = to_vector_string(invalid_utf8);
