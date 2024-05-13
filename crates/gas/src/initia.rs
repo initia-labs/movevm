@@ -69,6 +69,9 @@ crate::natives::define_gas_parameters_for_natives!(GasParameters, "initia", [
     // TODO(Gas): the on-chain name is wrong...
     [.event.write_module_event_to_store.per_abstract_value_unit, "event.write_module_event_to_store.per_abstract_memory_unit", 61],
 
+    [.keccak.keccak256.base, "keccak.keccak256.base", 14704],
+    [.keccak.keccak256.per_byte, "keccak.keccak256.per_byte", 165],
+
     [.object.exists_at.base, "object.exists_at.base", 919],
     [.object.exists_at.per_byte_loaded, "object.exists_at.per_byte_loaded", 183],
     [.object.exists_at.per_item_loaded, "object.exists_at.per_item_loaded", 1470],
@@ -134,6 +137,7 @@ pub struct GasParameters {
     pub base64: base64::GasParameters,
     pub crypto: crypto::GasParameters,
     pub event: event::GasParameters,
+    pub keccak: keccak::GasParameters,
     pub object: object::GasParameters,
     pub transaction_context: transaction_context::GasParameters,
     pub staking: staking::GasParameters,
@@ -325,6 +329,12 @@ impl GasParameters {
                     per_byte: 0.into(),
                 },
                 pay_fee: cosmos::PayFeeGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+            },
+            keccak: keccak::GasParameters {
+                keccak256: keccak::Keccak256GasParameters {
                     base: 0.into(),
                     per_byte: 0.into(),
                 },
