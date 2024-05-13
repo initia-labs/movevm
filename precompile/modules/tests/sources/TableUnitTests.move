@@ -276,27 +276,27 @@ module TestAccount::TableUnitTests {
 
         let iter = T::iter(&t, option::some(1), option::some(5), 1);
         
-        assert!(T::prepare<u64, u64>(&mut iter), 101);
-        let (key, value) = T::next<u64, u64>(&mut iter);
+        assert!(T::prepare<u64, u64>(iter), 101);
+        let (key, value) = T::next<u64, u64>(iter);
         assert!(key == 1, 101);
         assert!(value == &1, 101);
 
-        assert!(T::prepare<u64, u64>(&mut iter), 102);
-        let (key, value) = T::next<u64, u64>(&mut iter);
+        assert!(T::prepare<u64, u64>(iter), 102);
+        let (key, value) = T::next<u64, u64>(iter);
         assert!(key == 2, 102);
         assert!(value == &2, 102);
 
-        assert!(T::prepare<u64, u64>(&mut iter), 103);
-        let (key, value) = T::next<u64, u64>(&mut iter);
+        assert!(T::prepare<u64, u64>(iter), 103);
+        let (key, value) = T::next<u64, u64>(iter);
         assert!(key == 3, 103);
         assert!(value == &3, 103);
 
-        assert!(T::prepare<u64, u64>(&mut iter), 104);
-        let (key, value) = T::next<u64, u64>(&mut iter);
+        assert!(T::prepare<u64, u64>(iter), 104);
+        let (key, value) = T::next<u64, u64>(iter);
         assert!(key == 4, 104);
         assert!(value == &4, 104);
 
-        assert!(!T::prepare<u64, u64>(&mut iter), 105);
+        assert!(!T::prepare<u64, u64>(iter), 105);
 
         // clear
         T::remove(&mut t, 1);

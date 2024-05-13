@@ -198,8 +198,8 @@ module minitia_std::primary_fungible_store {
         let metadata_vec: vector<Object<Metadata>> = vector[];
         let balance_vec: vector<u64> = vector[];
 
-        while (table::prepare<address, address>(&mut iter) && vector::length(&balance_vec) < (limit as u64)) {
-            let (metadata_addr, store_addr) = table::next<address, address>(&mut iter);
+        while (table::prepare<address, address>(iter) && vector::length(&balance_vec) < (limit as u64)) {
+            let (metadata_addr, store_addr) = table::next<address, address>(iter);
             let metadata = object::address_to_object<Metadata>(metadata_addr);
             let store = object::address_to_object<FungibleStore>(*store_addr);
 

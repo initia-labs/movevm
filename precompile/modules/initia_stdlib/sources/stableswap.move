@@ -208,8 +208,8 @@ module initia_std::stableswap {
             2,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<address, bool>(&mut pools_iter)) {
-            let (key, _) = table::next<address, bool>(&mut pools_iter);
+        while (vector::length(&res) < (limit as u64) && table::prepare<address, bool>(pools_iter)) {
+            let (key, _) = table::next<address, bool>(pools_iter);
             let pool_response = get_pool(object::address_to_object<Pool>(key));
             vector::push_back(&mut res, pool_response)
         };

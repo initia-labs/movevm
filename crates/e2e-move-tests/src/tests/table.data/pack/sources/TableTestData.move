@@ -49,8 +49,8 @@ module 0x2::TableTestData {
 
         let keys = vector::empty<u64>();
         let vals = vector::empty<u64>();
-        while(T::prepare<u64, u64>(&mut iter)) {
-            let (key, value) = T::next<u64, u64>(&mut iter);
+        while(T::prepare<u64, u64>(iter)) {
+            let (key, value) = T::next<u64, u64>(iter);
 
             vector::push_back(&mut keys, key);
             vector::push_back(&mut vals, *value);
@@ -83,27 +83,27 @@ module 0x2::TableTestData {
         
         let i = 1;
         while(i < 11) {
-            assert!(T::prepare<u64, u64>(&mut iter), 101);
-            let (key, value) = T::next<u64, u64>(&mut iter);
+            assert!(T::prepare<u64, u64>(iter), 101);
+            let (key, value) = T::next<u64, u64>(iter);
             assert!(key == i, 101);
             assert!(value == &i, 101);
 
             i = i + 1;
         };
-        assert!(!T::prepare<u64, u64>(&mut iter), 101);
+        assert!(!T::prepare<u64, u64>(iter), 101);
 
         let iter = T::iter(t_ref, option::some(2), option::some(5), 1);
         
         let i = 2;
         while(i < 5) {
-            assert!(T::prepare<u64, u64>(&mut iter), 102);
-            let (key, value) = T::next(&mut iter);
+            assert!(T::prepare<u64, u64>(iter), 102);
+            let (key, value) = T::next(iter);
             assert!(key == i, 102);
             assert!(value == &i, 102);
 
             i = i + 1;
         };
-        assert!(!T::prepare<u64, u64>(&mut iter), 102);
+        assert!(!T::prepare<u64, u64>(iter), 102);
     }
 
     public entry fun iterate_descending(acc: address) acquires S {
@@ -113,26 +113,26 @@ module 0x2::TableTestData {
         
         let i = 10;
         while(i > 0) {
-            assert!(T::prepare<u64, u64>(&mut iter), 101);
-            let (key, value) = T::next(&mut iter);
+            assert!(T::prepare<u64, u64>(iter), 101);
+            let (key, value) = T::next(iter);
             assert!(key == i, 101);
             assert!(value == &i, 101);
 
             i = i - 1;
         };
-        assert!(!T::prepare<u64, u64>(&mut iter), 101);
+        assert!(!T::prepare<u64, u64>(iter), 101);
 
         let iter = T::iter(t_ref, option::some(2), option::some(5), 2);
         
         let i = 4;
         while(i > 1) {
-            assert!(T::prepare<u64, u64>(&mut iter), 102);
-            let (key, value) = T::next(&mut iter);
+            assert!(T::prepare<u64, u64>(iter), 102);
+            let (key, value) = T::next(iter);
             assert!(key == i, 102);
             assert!(value == &i, 102);
 
             i = i - 1;
         };
-        assert!(!T::prepare<u64, u64>(&mut iter), 102);
+        assert!(!T::prepare<u64, u64>(iter), 102);
     }
 }
