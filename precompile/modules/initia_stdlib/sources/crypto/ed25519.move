@@ -13,6 +13,9 @@ module initia_std::ed25519 {
     /// Wrong number of bytes were given as input when deserializing an Ed25519 signature.
     const E_WRONG_SIGNATURE_SIZE: u64 = 2;
 
+    /// The number of messages, public keys, and signatures do not match.
+    const E_UNMATCHED_ARGS_LENGTH: u64 = 3;
+
     //
     // Constants
     //
@@ -92,6 +95,21 @@ module initia_std::ed25519 {
         public_keys: vector<PublicKey>,
         signatures: vector<Signature>,
     ): bool {
+        let message_length = std::vector::length(&messages);
+        let public_key_length = std::vector::length(&public_keys);
+        let signature_length = std::vector::length(&signatures);
+
+        if ( message_length == 1) {
+            assert!(public_key_length == signature_length, std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
+            if(public_key_length == 0) return true;
+        } else if (public_key_length == 1) {
+            assert!(message_length == signature_length, std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
+            if(message_length == 0) return true;
+        } else {
+            assert!(message_length == public_key_length && public_key_length == signature_length, std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
+            if(message_length == 0) return true;
+        };
+
         batch_verify_internal(messages, public_keys, signatures)
     }
 
