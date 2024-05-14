@@ -16,6 +16,7 @@ pub mod debug;
 pub mod event;
 pub mod from_bcs;
 pub mod json;
+pub mod keccak;
 pub mod move_stdlib;
 pub mod object;
 pub mod oracle;
@@ -58,6 +59,7 @@ pub fn initia_move_natives(
     add_natives_from_module!("type_info", type_info::make_all(builder));
     add_natives_from_module!("from_bcs", from_bcs::make_all(builder));
     add_natives_from_module!("base64", base64::make_all(builder));
+    add_natives_from_module!("keccak", keccak::make_all(builder));
     add_natives_from_module!("staking", staking::make_all(builder));
     add_natives_from_module!("cosmos", cosmos::make_all(builder));
     add_natives_from_module!("object", object::make_all(builder));

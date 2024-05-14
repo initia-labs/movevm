@@ -102,6 +102,7 @@ base64 = "0.21.7"
 bigdecimal = "0.4"
 bech32 = "0.11"
 triomphe = "0.1.9"
+tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES
