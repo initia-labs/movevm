@@ -30,6 +30,12 @@ pub const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
 /// The lenght of a signature in bytes.
 pub const ED25519_SIGNATURE_LENGTH: usize = 64;
 
+// See stdlib/error.move
+const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
+
+// native errors always start from 100
+const NUMBER_OF_ARGUMENTS_MISMATCH: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
+
 pub fn native_verify(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -172,9 +178,7 @@ pub fn native_batch_verify(
     } else if public_keys_len == 1 && messages_len == signatures_len {
         public_keys = repeats_vec_of_vec_u8(public_keys[0].to_vec(), signatures_len);
     } else {
-        return Err(SafeNativeError::InvariantViolation(PartialVMError::new(
-            StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH,
-        )));
+        return Err(SafeNativeError::Abort { abort_code: NUMBER_OF_ARGUMENTS_MISMATCH });
     }
 
     debug_assert_eq!(messages.len(), signatures_len);
