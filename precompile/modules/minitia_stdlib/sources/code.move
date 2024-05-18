@@ -15,6 +15,9 @@ module minitia_std::code {
         /// It is a list of addresses with permission to distribute contracts, 
         /// and an empty list is interpreted as allowing anyone to distribute.
         allowed_publishers: vector<address>,
+
+        /// The total number of modules published.
+        total_modules: u64,
     }
 
     struct MetadataStore has key {
@@ -69,8 +72,37 @@ module minitia_std::code {
     fun init_module(chain: &signer) {
         move_to(chain, ModuleStore {
             allowed_publishers: vector[],
+            total_modules: 0,
         });
-    } 
+    }
+
+    // view functions
+
+    #[view]
+    public fun allowed_publishers(): vector<address> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@minitia_std);
+        module_store.allowed_publishers
+    }
+
+    #[view]
+    public fun total_modules(): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@minitia_std);
+        module_store.total_modules
+    }
+
+    // private functions
+
+    fun increase_total_modules(num_modules: u64) acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        module_store.total_modules = module_store.total_modules + num_modules;
+    }
+
+    fun assert_allowed(allowed_publishers: &vector<address>, addr: address) {
+        assert!(
+            vector::is_empty(allowed_publishers) || vector::contains(allowed_publishers, &addr), 
+            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
+        )
+    }
 
     public entry fun init_genesis(
         chain: &signer, 
@@ -93,6 +125,7 @@ module minitia_std::code {
         });
 
         set_allowed_publishers(chain, allowed_publishers);
+        increase_total_modules(vector::length(&module_ids));
     }
 
     public entry fun set_allowed_publishers(chain: &signer, allowed_publishers: vector<address>) acquires ModuleStore {
@@ -101,13 +134,6 @@ module minitia_std::code {
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         module_store.allowed_publishers = allowed_publishers;
-    }
-
-    fun assert_allowed(allowed_publishers: &vector<address>, addr: address) {
-        assert!(
-            vector::is_empty(allowed_publishers) || vector::contains(allowed_publishers, &addr), 
-            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
-        )
     }
 
     /// Publishes a package at the given signer's address. The caller must provide package metadata describing the
@@ -172,6 +198,7 @@ module minitia_std::code {
         );
 
         // Request publish
+        increase_total_modules(vector::length(&module_ids));
         request_publish(addr, module_ids, code, upgrade_policy)
     }
 
