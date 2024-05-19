@@ -1,6 +1,6 @@
 use errno::{set_errno, Errno};
 use initia_move_types::errors::BackendError;
-use move_core_types::vm_status::VMStatus;
+use move_core_types::vm_status::{StatusCode, VMStatus};
 use thiserror::Error;
 
 use crate::memory::UnmanagedVector;
