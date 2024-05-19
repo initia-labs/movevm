@@ -178,7 +178,9 @@ pub fn native_batch_verify(
     } else if public_keys_len == 1 && messages_len == signatures_len {
         public_keys = repeats_vec_of_vec_u8(public_keys[0].to_vec(), signatures_len);
     } else {
-        return Err(SafeNativeError::Abort { abort_code: NUMBER_OF_ARGUMENTS_MISMATCH });
+        return Err(SafeNativeError::Abort {
+            abort_code: NUMBER_OF_ARGUMENTS_MISMATCH,
+        });
     }
 
     debug_assert_eq!(messages.len(), signatures_len);
