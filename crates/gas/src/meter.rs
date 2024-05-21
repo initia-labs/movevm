@@ -224,6 +224,9 @@ impl InitiaGasMeter {
 
     #[inline]
     fn charge(&mut self, amount: InternalGas) -> PartialVMResult<()> {
+        // copy the value for error message
+        let balance = self.balance;
+
         match self.balance.checked_sub(amount) {
             Some(new_balance) => {
                 self.balance = new_balance;
@@ -231,7 +234,15 @@ impl InitiaGasMeter {
             }
             None => {
                 self.balance = 0.into();
-                Err(PartialVMError::new(StatusCode::OUT_OF_GAS))
+                let gas_used: Gas = (self.gas_limit.checked_sub(balance).unwrap() + amount)
+                    .to_unit_round_down_with_params(&self.gas_params.txn);
+
+                Err(
+                    PartialVMError::new(StatusCode::OUT_OF_GAS).with_message(format!(
+                        "gas_limit: {}, gas_used: {}",
+                        self.gas_limit, gas_used
+                    )),
+                )
             }
         }
     }
