@@ -266,6 +266,9 @@ impl QueryAPI for GoApi {
         )
         .into();
 
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = response.consume();
+
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to query".to_string();
         unsafe {
@@ -274,7 +277,7 @@ impl QueryAPI for GoApi {
             }
         }
 
-        match response.consume() {
+        match output {
             Some(val) => (Ok(val), used_gas),
             None => (Err(anyhow!(default())), used_gas),
         }

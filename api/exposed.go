@@ -26,7 +26,7 @@ func ConvertModuleName(
 	moduleNameView := makeView([]byte(moduleName))
 	defer runtime.KeepAlive(moduleNameView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.convert_module_name(&errmsg, precompiledView, moduleNameView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -49,7 +49,7 @@ func ReadModuleInfo(
 	compiledView := makeView(compiled)
 	defer runtime.KeepAlive(compiledView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.read_module_info(&errmsg, compiledView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -92,7 +92,7 @@ func DecodeMoveResource(
 	resourceBytesView := makeView(resourceBytes)
 	defer runtime.KeepAlive(resourceBytesView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.decode_move_resource(db, &errmsg, structTagView, resourceBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -127,7 +127,7 @@ func DecodeMoveValue(
 	valueBytesView := makeView(valueBytes)
 	defer runtime.KeepAlive(valueBytesView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.decode_move_value(db, &errmsg, typeTagView, valueBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -148,7 +148,7 @@ func DecodeModuleBytes(
 	moduleBytesView := makeView([]byte(moduleBytes))
 	defer runtime.KeepAlive(moduleBytesView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.decode_module_bytes(&errmsg, moduleBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -169,7 +169,7 @@ func DecodeScriptBytes(
 	scriptBytesView := makeView([]byte(scriptBytes))
 	defer runtime.KeepAlive(scriptBytesView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.decode_script_bytes(&errmsg, scriptBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -193,7 +193,7 @@ func ParseStructTag(
 	structTagStrView := makeView([]byte(structTagStr))
 	defer runtime.KeepAlive(structTagStrView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.parse_struct_tag(&errmsg, structTagStrView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -218,7 +218,7 @@ func StringifyStructTag(
 	structTagView := makeView([]byte(bz))
 	defer runtime.KeepAlive(structTagView)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.stringify_struct_tag(&errmsg, structTagView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
