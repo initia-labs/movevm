@@ -57,7 +57,7 @@ func Initialize(
 	ap := makeView(allowedPublishers)
 	defer runtime.KeepAlive(ap)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	_, err = C.initialize(vm.ptr, db, _api, e, mb, ap, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -95,7 +95,7 @@ func ExecuteContract(
 	msg := makeView(message)
 	defer runtime.KeepAlive(msg)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.execute_contract(vm.ptr, db, _api, e, cu64(gasLimit), sendersView, msg, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -132,7 +132,7 @@ func ExecuteScript(
 	msg := makeView(message)
 	defer runtime.KeepAlive(msg)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.execute_script(vm.ptr, db, _api, e, cu64(gasLimit), sendersView, msg, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -167,7 +167,7 @@ func ExecuteViewFunction(
 	msg := makeView(message)
 	defer runtime.KeepAlive(msg)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.execute_view_function(vm.ptr, db, _api, e, cu64(gasLimit), msg, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
