@@ -18,7 +18,7 @@ import (
 func BuildContract(arg compiler.CompilerArgument) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -54,7 +54,7 @@ func BuildContract(arg compiler.CompilerArgument) ([]byte, error) {
 func TestContract(arg compiler.CompilerArgument, testConfig testtypes.TestConfig) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -102,7 +102,7 @@ func TestContract(arg compiler.CompilerArgument, testConfig testtypes.TestConfig
 func CoverageSummary(arg compiler.CompilerArgument, coverageSummaryConfig coveragetypes.CoverageSummaryConfig) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -145,7 +145,7 @@ func CoverageSummary(arg compiler.CompilerArgument, coverageSummaryConfig covera
 func CoverageSource(arg compiler.CompilerArgument, coverageSourceConfig coveragetypes.CoverageSourceConfig) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -189,7 +189,7 @@ func CoverageSource(arg compiler.CompilerArgument, coverageSourceConfig coverage
 func CoverageBytecode(arg compiler.CompilerArgument, coverageBytecodeConfig coveragetypes.CoverageBytecodeConfig) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -233,7 +233,7 @@ func CoverageBytecode(arg compiler.CompilerArgument, coverageBytecodeConfig cove
 func ProveContract(arg compiler.CompilerArgument, proveConfig provetypes.ProveConfig) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -292,7 +292,7 @@ func ProveContract(arg compiler.CompilerArgument, proveConfig provetypes.ProveCo
 func Docgen(arg compiler.CompilerArgument, docgenOption docgentypes.DocgenConfig) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -344,7 +344,7 @@ func Docgen(arg compiler.CompilerArgument, docgenOption docgentypes.DocgenConfig
 func CreateContractPackage(arg compiler.CompilerArgument, name string) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
@@ -383,7 +383,7 @@ func CreateContractPackage(arg compiler.CompilerArgument, name string) ([]byte, 
 func CleanContractPackage(arg compiler.CompilerArgument, cleanCache, cleanByproduct, force bool) ([]byte, error) {
 	var err error
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 	buildConfig := arg.BuildConfig
 
 	pathBytesView := makeView([]byte(arg.PackagePath))
