@@ -47,6 +47,7 @@ module initia_std::vip {
     const EINVALID_TOTAL_REWARD: u64 = 18;
     const ESNAPSHOT_NOT_EXISTS: u64 = 19;
     const EALREADY_RELEASED: u64 = 20;
+    const EINVALID_WEIGHT: u64 = 21;
     
     //
     //  Constants
@@ -58,8 +59,9 @@ module initia_std::vip {
     const DEFAULT_PROPORTION_RATIO: vector<u8> = b"0.5";
     const DEFAULT_USER_VESTING_PERIOD: u64 = 52; // 52 times
     const DEFAULT_OPERATOR_VESTING_PERIOD: u64 = 52;
-    const DEFAULT_MINIMUM_TVL: u64 = 0;
-    const DEFAULT_MAXIMUM_TVL: u64 = 100_000_000_000_000_000;
+    const DEFAULT_MINIMUM_TVL_RATIO: vector<u8> = b"0";
+    const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
+    const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 1;
     
 
@@ -80,9 +82,12 @@ module initia_std::vip {
         // balance pool takes 0.4 and weight pool takes 0.6
         pool_split_ratio: Decimal256, 
         // TVL cap of L2 INIT token to receive the reward.
-        maximum_tvl: u64,
+        maximum_tvl_ratio: Decimal256,
         // minimum TVL of L2 INIT token to receive the reward.
-        minimum_tvl: u64,
+        minimum_tvl_ratio: Decimal256,
+        // maximum weight of VIP reward
+        maximum_weight_ratio: Decimal256,
+        // a set of stage data
         stage_data: table::Table<vector<u8> /* stage */, StageData>,
         // a set of bridge info
         bridges: table::Table<vector<u8> /* bridge id */, Bridge>,
@@ -108,7 +113,7 @@ module initia_std::vip {
     struct Bridge has store, drop {
         bridge_addr: address,
         operator_addr: address,
-        vip_weight: u64,
+        vip_weight: Decimal256,
         operator_reward_store_addr: address,
         user_reward_store_addr: address
     }
@@ -132,8 +137,8 @@ module initia_std::vip {
         pool_split_ratio: Decimal256,
         user_vesting_period: u64,
         operator_vesting_period: u64,
-        minimum_tvl: u64,
-        maximum_tvl: u64,
+        minimum_tvl_ratio: Decimal256,
+        maximum_tvl_ratio: Decimal256,
     }
 
     struct SnapshotResponse has drop {
@@ -155,7 +160,7 @@ module initia_std::vip {
     struct BridgeResponse has drop {
         bridge_addr: address,
         operator_addr: address,
-        vip_weight: u64,
+        vip_weight: Decimal256,
         user_reward_store_addr: address,
         operator_reward_store_addr: address,
     }
@@ -198,8 +203,9 @@ module initia_std::vip {
             proportion: decimal256::from_string(&string::utf8(DEFAULT_PROPORTION_RATIO)),
             pool_split_ratio: decimal256::from_string(&string::utf8(DEFAULT_POOL_SPLIT_RATIO)),
             agent: signer::address_of(chain),
-            maximum_tvl: DEFAULT_MAXIMUM_TVL,
-            minimum_tvl: DEFAULT_MINIMUM_TVL,
+            maximum_tvl_ratio: decimal256::from_string(&string::utf8(DEFAULT_MAXIMUM_TVL_RATIO)),
+            minimum_tvl_ratio: decimal256::from_string(&string::utf8(DEFAULT_MINIMUM_TVL_RATIO)),
+            maximum_weight_ratio: decimal256::from_string(&string::utf8(DEFAULT_MAXIMUM_WEIGHT_RATIO)),
             stage_data: table::new<vector<u8>, StageData>(),
             bridges: table::new<vector<u8>, Bridge>(),
         });
@@ -391,10 +397,8 @@ module initia_std::vip {
     fun split_reward(
         module_store: &mut ModuleStore,
         stage: u64,
-        balance_shares: &SimpleMap<u64, u64>,
-        weight_shares: &SimpleMap<u64, u64>,
-        total_balance: u64,
-        total_weight: u64,
+        balance_shares: &SimpleMap<u64, Decimal256>,
+        weight_shares: &SimpleMap<u64, Decimal256>,
         balance_pool_reward: FungibleAsset,
         weight_pool_reward: FungibleAsset,
     ): (u64, u64) {
@@ -416,8 +420,7 @@ module initia_std::vip {
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             let balance_reward = split_reward_with_share(
                 balance_shares, 
-                bridge_id, 
-                total_balance, 
+                bridge_id,
                 initial_balance_pool_reward_amount, 
                 &mut balance_pool_reward
             );
@@ -430,7 +433,6 @@ module initia_std::vip {
             let weight_reward = split_reward_with_share(
                 weight_shares, 
                 bridge_id, 
-                total_weight, 
                 initial_weight_pool_reward_amount, 
                 &mut weight_pool_reward
             );
@@ -489,24 +491,21 @@ module initia_std::vip {
     }
 
     fun split_reward_with_share(
-        shares: &SimpleMap<u64, u64>,
+        shares: &SimpleMap<u64, Decimal256>,
         bridge_id: u64,
-        total_share: u64,
         total_reward_amount: u64,
         reward: &mut FungibleAsset,
     ): FungibleAsset {
-        let split_amount = split_reward_with_share_internal(shares, bridge_id, total_share, total_reward_amount);
+        let split_amount = split_reward_with_share_internal(shares, bridge_id, total_reward_amount);
         fungible_asset::extract(reward, split_amount)
     }
 
     fun split_reward_with_share_internal(
-        shares: &SimpleMap<u64, u64>,
+        shares: &SimpleMap<u64, Decimal256>,
         bridge_id: u64,
-        total_share: u64,
         total_reward_amount: u64,
     ): u64 {
-        let share_amount = *simple_map::borrow(shares, &bridge_id);
-        let share_ratio = decimal256::from_ratio_u64(share_amount, total_share);
+        let share_ratio = *simple_map::borrow(shares, &bridge_id);
         let split_amount = decimal256::mul_u64(&share_ratio, total_reward_amount);
         split_amount
     }
@@ -518,14 +517,12 @@ module initia_std::vip {
     ): (u64, u64) {
         let initial_amount = fungible_asset::amount(&initial_reward);
         
-        let balance_shares = simple_map::create<u64, u64>();
-        let weight_shares = simple_map::create<u64, u64>();
+        let balance_shares = simple_map::create<u64, Decimal256>();
+        let weight_shares = simple_map::create<u64, Decimal256>();
         
         let total_balance = calculate_balance_share(module_store, &mut balance_shares); 
         assert!(total_balance > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
-        let total_weight = calculate_weight_share(module_store, &mut weight_shares);
-        assert!(total_weight > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
-        
+        calculate_weight_share(module_store, &mut weight_shares);
         let balance_pool_reward_amount = decimal256::mul_u64(&module_store.pool_split_ratio, initial_amount);
         let balance_pool_reward = fungible_asset::extract(&mut initial_reward, balance_pool_reward_amount);
         let weight_pool_reward = initial_reward;
@@ -535,8 +532,6 @@ module initia_std::vip {
             stage,
             &balance_shares,
             &weight_shares,
-            total_balance,
-            total_weight,
             balance_pool_reward,
             weight_pool_reward
         );
@@ -544,11 +539,31 @@ module initia_std::vip {
         (total_operator_funded_reward, total_user_funded_reward)
     }
 
-    fun calculate_balance_share(
+    fun bridge_total_balance(
         module_store: &ModuleStore,
-        balance_shares: &mut SimpleMap<u64, u64>
     ): u64 {
         let total_balance = 0;
+        
+        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
+                break
+            };
+            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
+            total_balance = total_balance + bridge_balance;
+        };
+        
+        (total_balance)
+    }
+
+    fun calculate_balance_share(
+        module_store: &ModuleStore,
+        balance_shares: &mut SimpleMap<u64, Decimal256>
+    ): u64 {
+        let total_balance = bridge_total_balance(module_store);
+        let max_eligible_balance = decimal256::mul_u64(&module_store.maximum_tvl_ratio, total_balance);
+        let min_eligible_balance = decimal256::mul_u64(&module_store.minimum_tvl_ratio, total_balance); 
         
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
@@ -559,16 +574,19 @@ module initia_std::vip {
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
-            let bridge_balance = if (bridge_balance > module_store.maximum_tvl) {
-                module_store.maximum_tvl
-            } else if (bridge_balance < module_store.minimum_tvl){
+            
+            let bridge_balance = if (bridge_balance > max_eligible_balance) {
+                max_eligible_balance
+            } else if (bridge_balance < min_eligible_balance){
                 0
             } else {
                 bridge_balance
             };
 
-            total_balance = total_balance + bridge_balance;
-            simple_map::add(balance_shares, bridge_id, bridge_balance);
+            let share = decimal256::from_ratio_u64(bridge_balance, total_balance);
+            simple_map::add(balance_shares, bridge_id, share
+            
+            );
         };
         
         (total_balance)
@@ -576,10 +594,8 @@ module initia_std::vip {
 
     fun calculate_weight_share(
         module_store: &ModuleStore,
-        weight_shares: &mut SimpleMap<u64, u64>
-    ): u64 {
-        let total_weight = 0;
-        
+        weight_shares: &mut SimpleMap<u64, Decimal256>
+    ) {
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)){
@@ -588,18 +604,14 @@ module initia_std::vip {
             let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
 
-            let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
-            let weight = if (bridge_balance < module_store.minimum_tvl) {
-                0
+            let weight = if (decimal256::val(&bridge.vip_weight) > decimal256::val(&module_store.maximum_weight_ratio)) {
+                module_store.maximum_weight_ratio
             } else {
                 bridge.vip_weight
             };
 
-            total_weight = total_weight + weight;
             simple_map::add(weight_shares, bridge_id, weight);
-        };
-        
-        (total_weight)
+        }
     }
 
     fun claim_operator_reward(
@@ -636,7 +648,6 @@ module initia_std::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
-        vip_weight: u64,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
         operator_commission_rate: Decimal256,
@@ -669,7 +680,7 @@ module initia_std::vip {
         table::add(&mut module_store.bridges, table_key::encode_u64(bridge_id), Bridge {
             bridge_addr: bridge_address,
             operator_addr: operator,
-            vip_weight,
+            vip_weight: decimal256::zero(),
             user_reward_store_addr: vip_vesting::get_user_reward_store_address(bridge_id),
             operator_reward_store_addr: vip_vesting::get_operator_reward_store_address(bridge_id),
         });
@@ -861,10 +872,29 @@ module initia_std::vip {
         });
     }
 
+    public entry fun update_vip_weights(
+        chain: &signer,
+        bridge_id: vector<u64>,
+        weight: vector<Decimal256>,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        assert!(vector::length(&bridge_id) == vector::length(&weight), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+
+        let total_weight = decimal256::zero();
+        vector::enumerate_ref(&bridge_id, |i, id| {
+            let bridge = load_bridge_mut(&mut module_store.bridges, *id);
+            bridge.vip_weight = *vector::borrow(&weight, i);
+            total_weight = decimal256::add(&total_weight, vector::borrow(&weight, i));
+        });
+        
+        assert!(decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_WEIGHT));
+    }
+
     public entry fun update_vip_weight(
         chain: &signer,
         bridge_id: u64,
-        weight: u64,
+        weight: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -884,24 +914,24 @@ module initia_std::vip {
         module_store.operator_vesting_period = operator_vesting_period;
     }
 
-    public entry fun update_minimum_tvl(
+    public entry fun update_minimum_tvl_ratio(
         chain: &signer,
-        minimum_tvl: u64,
+        minimum_tvl_ratio: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(minimum_tvl >= 0,error::invalid_argument(EINVALID_MIN_TVL));
-        module_store.minimum_tvl = minimum_tvl;
+        assert!(decimal256::val(&minimum_tvl_ratio) >= 0,error::invalid_argument(EINVALID_MIN_TVL));
+        module_store.minimum_tvl_ratio = minimum_tvl_ratio;
     }
 
-    public entry fun update_maximum_tvl(
+    public entry fun update_maximum_tvl_ratio(
         chain: &signer,
-        maximum_tvl: u64,
+        maximum_tvl_ratio: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(maximum_tvl >= module_store.minimum_tvl,error::invalid_argument(EINVALID_MAX_TVL));
-        module_store.maximum_tvl = maximum_tvl;
+        assert!(decimal256::val(&maximum_tvl_ratio) >= decimal256::val(&module_store.minimum_tvl_ratio), error::invalid_argument(EINVALID_MAX_TVL));
+        module_store.maximum_tvl_ratio = maximum_tvl_ratio;
     }
 
     public entry fun update_proportion(
@@ -1021,22 +1051,21 @@ module initia_std::vip {
     #[view]
     public fun get_expected_reward(bridge_id: u64, fund_reward_amount: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
-        let balance_shares = simple_map::create<u64, u64>();
-        let weight_shares = simple_map::create<u64, u64>();
+        let balance_shares = simple_map::create<u64, Decimal256>();
+        let weight_shares = simple_map::create<u64, Decimal256>();
         
         let total_balance = calculate_balance_share(module_store, &mut balance_shares); 
-        let total_weight = calculate_weight_share(module_store, &mut weight_shares);
+        calculate_weight_share(module_store, &mut weight_shares);
 
         assert!(fund_reward_amount > 0, error::invalid_argument(EINVALID_TOTAL_REWARD));
         assert!(total_balance > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
-        assert!(total_weight > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
 
         let weight_ratio = decimal256::sub(&decimal256::one(), &module_store.pool_split_ratio);
         let balance_pool_reward_amount = decimal256::mul_u64(&module_store.pool_split_ratio, fund_reward_amount);
         let weight_pool_reward_amount = decimal256::mul_u64(&weight_ratio, fund_reward_amount);
 
-        let balance_split_amount = split_reward_with_share_internal(&balance_shares, bridge_id, total_balance, balance_pool_reward_amount);
-        let weight_split_amount = split_reward_with_share_internal(&weight_shares, bridge_id, total_weight, weight_pool_reward_amount);
+        let balance_split_amount = split_reward_with_share_internal(&balance_shares, bridge_id, balance_pool_reward_amount);
+        let weight_split_amount = split_reward_with_share_internal(&weight_shares, bridge_id, weight_pool_reward_amount);
 
         balance_split_amount + weight_split_amount
     }
@@ -1102,8 +1131,8 @@ module initia_std::vip {
             pool_split_ratio: module_store.pool_split_ratio,
             user_vesting_period: module_store.user_vesting_period,
             operator_vesting_period: module_store.operator_vesting_period,
-            minimum_tvl: module_store.minimum_tvl,
-            maximum_tvl: module_store.maximum_tvl,
+            minimum_tvl_ratio: module_store.minimum_tvl_ratio,
+            maximum_tvl_ratio: module_store.maximum_tvl_ratio,
         }
     }
 
@@ -1190,7 +1219,7 @@ module initia_std::vip {
     } 
 
     #[test_only]
-    const DEFAULT_VIP_WEIGHT_FOR_TEST: u64 = 1;
+    const DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST: vector<u8> = b"1";
     
     #[test_only]
     const DEFAULT_PROPORTION_RATIO_FOR_TEST: vector<u8> = b"1";
@@ -1264,7 +1293,6 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             commission_max_rate,
             commission_max_change_rate,
             commission_rate
@@ -1300,6 +1328,12 @@ module initia_std::vip {
         update_proportion(
             chain,
             decimal256::from_string(&string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST)),
+        );
+
+        update_vip_weight(
+            chain,
+            bridge_id,
+            decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)),
         );
 
         move_to(chain, TestCapability {
@@ -1454,23 +1488,20 @@ module initia_std::vip {
             signer::address_of(operator),
             1,
             @0x90,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST))
         );
 
-        let bridge_info = get_bridge_info(1);
-        assert!(bridge_info.vip_weight == DEFAULT_VIP_WEIGHT_FOR_TEST, 1);
-
+        let new_weight = decimal256::from_string(&string::utf8(b"0.7"));
         update_vip_weight(
             chain,
             1,
-            100,
+            new_weight,
         );
         
         let bridge_info = get_bridge_info(1);
-        assert!(bridge_info.vip_weight == 100, 3);
+        assert!(decimal256::is_same(&bridge_info.vip_weight, &new_weight), 3);
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -1623,10 +1654,10 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        update_minimum_tvl(chain, 1_000);
+        update_minimum_tvl_ratio(chain, decimal256::from_string(&string::utf8(b"0.3")));
         claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
 
-        update_minimum_tvl(chain, 100_000_000_000);
+        update_minimum_tvl_ratio(chain, decimal256::from_string(&string::utf8(b"0.5")));
         claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
     }
 
@@ -1803,7 +1834,6 @@ module initia_std::vip {
             operator_addr,
             1,
             @0x90,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST))
@@ -1814,7 +1844,6 @@ module initia_std::vip {
             operator_addr,
             2,
             @0x91,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST))
@@ -1825,7 +1854,6 @@ module initia_std::vip {
             operator_addr,
             3,
             @0x92,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST))
@@ -1833,23 +1861,26 @@ module initia_std::vip {
 
         update_pool_split_ratio(chain, decimal256::from_string(&string::utf8(b"0.7")));
         fund_reward_script(chain, 1, release_time, release_time);
+        
+        assert!(get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST) == 35_000_000_000, 0); // 0.7 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * (2/4) + 0.3 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * 0
+        assert!(get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST) == 17_500_000_000, 0); // 0.7 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * (1/4) + 0.3 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * 0
+        assert!(get_expected_reward(3, DEFAULT_REWARD_PER_STAGE_FOR_TEST) == 17_500_000_000, 0); // 0.7 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * (1/4) + 0.3 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * 0
 
-        // 1 is round error for each weight pool
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(1)) == get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0); // (balance_pool_amount/2 + weight_pool_amount/3) 
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(2)) == get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0); // (balance_pool_amount/4 + weight_pool_amount/3)
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(3)) == get_expected_reward(3, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0); // (balance_pool_amount/4 + weight_pool_amount/3)
-
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(1)) == get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0);
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(2)) == get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0);
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(3)) == get_expected_reward(3, DEFAULT_REWARD_PER_STAGE_FOR_TEST), 0);
+        
         fund_reward_script(chain, 2, release_time, release_time);
         assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(1)) == 0, 0);
         assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(2)) == 0, 0);
         assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(3)) == 0, 0);
-        
+
         update_operator_commission(operator, 1, decimal256::from_string(&string::utf8(b"0.5")));
         update_operator_commission(operator, 2, decimal256::from_string(&string::utf8(b"0.5")));
         fund_reward_script(chain, 3, release_time, release_time);
 
-        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(1)) == 22_499_999_999, 0);
-        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(2)) == 13_749_999_999, 0);
+        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(1)) == get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST) / 2, 0);
+        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(2)) == get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST) / 2, 0);
         assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(3)) == 0, 0);
 
     }
@@ -1885,7 +1916,6 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
@@ -1897,7 +1927,6 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
@@ -1906,7 +1935,7 @@ module initia_std::vip {
         let (merkle_root_map, merkle_proof_map, score_map, total_score_map) = merkle_root_and_proof_scene1();
 
         update_agent(chain, signer::address_of(agent));
-
+        update_vip_weights(chain, vector[1,2], vector[decimal256::from_string(&string::utf8(b"0.5")), decimal256::from_string(&string::utf8(b"0.5"))]);
         fund_reward_script(agent, 1, release_time, release_time);
         fund_reward_script(agent, 2, release_time, release_time);
         
@@ -1920,7 +1949,6 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             @0x999,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
@@ -2029,8 +2057,8 @@ module initia_std::vip {
         assert!(bridge_info.user_reward_store_addr == user_reward_store_addr
             && bridge_info.operator_reward_store_addr == operator_reward_store_addr
             && bridge_info.operator_addr == operator_addr
-            && bridge_info.vip_weight == DEFAULT_VIP_WEIGHT_FOR_TEST
-            && bridge_info.bridge_addr == @0x99, 7);
+            && bridge_info.bridge_addr == @0x99
+            && decimal256::is_same(&bridge_info.vip_weight, &decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST))), 7);
         assert!(vip_reward::get_stage_reward(user_reward_store_addr, 1) == total_reward_per_stage, 8);
         assert!(vip_reward::get_stage_reward(user_reward_store_addr, 100) == 0, 9); // not exists
     }
@@ -2257,7 +2285,6 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
-            DEFAULT_VIP_WEIGHT_FOR_TEST,
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
