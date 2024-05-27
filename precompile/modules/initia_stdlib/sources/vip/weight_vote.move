@@ -28,22 +28,19 @@ module initia_std::vip_weight_vote {
     const EINVALID_MERKLE_PROOFS: u64 = 2;
     const EINVALID_PROOF_LENGTH: u64 = 3;
     const ESTAGE_NOT_FOUND: u64 = 4;
-    const EALREADY_VOTE: u64 = 5;
-    const EVECTOR_LENGTH: u64 = 6;
-    const EWEIGHT_SUM: u64 = 7;
-    const EVOTING_END: u64 = 8;
-    const EVOTING_NOT_END: u64 = 9;
-    const ESTAGE_NOT_END: u64 = 10;
-    const EUNAUTHORIZED: u64 = 11;
-    const EINVALID_PROPOSAL_TYPE: u64 = 12;
-    const ECANNOT_CREATE_CHALLENGE_PROPOSAL: u64 = 13;
-    const ENOT_OPTION: u64 = 14;
-    const EPROPOSAL_NOT_FOUND: u64 = 15;
-    const EVOTE_NOT_FOUND : u64 = 16;
-    const EPROPOSAL_IN_PROGRESS: u64 = 17;
-    const EPROPOSAL_ALREADY_EXECUTED: u64 = 18;
-    const EINVALID_RATIO: u64 = 19;
-    const EBRIDGE_NOT_FOUND: u64 = 20;
+    const EVECTOR_LENGTH: u64 = 5;
+    const EVOTING_END: u64 = 6;
+    const EVOTING_NOT_END: u64 = 7;
+    const ESTAGE_NOT_END: u64 = 8;
+    const EUNAUTHORIZED: u64 = 9;
+    const ECANNOT_CREATE_CHALLENGE_PROPOSAL: u64 = 10;
+    const ENOT_OPTION: u64 = 11;
+    const EPROPOSAL_NOT_FOUND: u64 = 12;
+    const EVOTE_NOT_FOUND : u64 = 13;
+    const EPROPOSAL_IN_PROGRESS: u64 = 14;
+    const EPROPOSAL_ALREADY_EXECUTED: u64 = 15;
+    const EINVALID_RATIO: u64 = 16;
+    const EBRIDGE_NOT_FOUND: u64 = 17;
 
     //
     //  Constants
@@ -61,7 +58,7 @@ module initia_std::vip_weight_vote {
         // votes for change bridge weight
         weight_votes: Table<vector<u8>/* stage */, WeightVote>,
         // proposals
-        proposals: Table<vector<u8>/* proposal_id */, Proposal>,
+        proposals: Table<vector<u8>/* proposal_id */, ChallengeProposal>,
         // init store for proposal deposit
         proposal_deposit_store: object::ExtendRef,
 
@@ -78,9 +75,9 @@ module initia_std::vip_weight_vote {
         submitter: address,
         // quorum = quorum_ratio * total_voting_power.
         quorum_ratio: Decimal128,
-        // init deposit amount to create proposal
+        // init deposit amount to create challenge proposal
         // if total tally doesn't reach to quorum, can not refun deposit
-        proposal_deposit_amount: u64
+        challenge_deposit_amount: u64
     }
 
     struct WeightVote has store {
@@ -98,18 +95,20 @@ module initia_std::vip_weight_vote {
         weights: vector<Weight>
     }
 
-    struct Proposal has store {
+    struct ChallengeProposal has store {
         proposer: address,
         voting_power_stage: u64,
-        type: String,
         title: String,
         summary: String,
-        args: vector<vector<u8>>,
+        stage: u64,
+        new_submitter: address,
+        merkle_root: vector<u8>,
+        api_uri: String,
+        snapshot_height: u64,
         votes: Table<address, Vote>,
         tally: Table<vector<u8>/* 0 = no 1 = yes */, u64/* tally */>,
         quorum: u64,
         voting_end_time: u64,
-        emergency: bool,
         deposit_amount: u64,
         is_executed: bool,
     }
@@ -150,17 +149,19 @@ module initia_std::vip_weight_vote {
     }
 
     #[event]
-    struct CreateProposalEvent has drop, store {
+    struct CreateChallengeProposalEvent has drop, store {
         proposer: address,
         proposal_id: u64,
-        type: String,
         title: String,
         summary: String,
-        args: vector<vector<u8>>,
+        new_submitter: address,
+        merkle_root: vector<u8>,
+        api_uri: String,
+        snapshot_height: u64,
     }
 
     #[event]
-    struct VoteProposalEvent has drop, store {
+    struct VoteChallengeProposalEvent has drop, store {
         account: address,
         proposal_id: u64,
         voting_power: u64,
@@ -168,7 +169,7 @@ module initia_std::vip_weight_vote {
     }
 
     #[event]
-    struct ExecuteProposalEvent has drop, store {
+    struct ExecuteChallengeProposalEvent has drop, store {
         proposal_id: u64,
         success: bool,
     }
@@ -183,7 +184,7 @@ module initia_std::vip_weight_vote {
         voting_period: u64,
         submitter: address,
         quorum_ratio: Decimal128,
-        proposal_deposit_amount: u64,
+        challenge_deposit_amount: u64,
     ) {
         assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
         assert!(!exists<ModuleStore>(@initia_std), error::already_exists(EMODULE_STORE_ALREADY_EXISTS));
@@ -201,8 +202,46 @@ module initia_std::vip_weight_vote {
             voting_period,
             submitter,
             quorum_ratio,
-            proposal_deposit_amount,
+            challenge_deposit_amount,
         })
+    }
+
+
+    public entry fun update_params(
+        chain: &signer,
+        stage_interval: Option<u64>,
+        snapshot_grace_period: Option<u64>,
+        voting_period: Option<u64>,
+        submitter: Option<address>,
+        quorum_ratio: Option<Decimal128>,
+        proposal_deposit_amount: Option<u64>,
+    ) acquires ModuleStore{
+        assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
+        if (option::is_some(&stage_interval)) {
+            module_store.stage_interval = option::extract(&mut stage_interval);
+        };
+
+        if (option::is_some(&snapshot_grace_period)) {
+            module_store.snapshot_grace_period = option::extract(&mut snapshot_grace_period);
+        };
+
+        if (option::is_some(&voting_period)) {
+            module_store.voting_period = option::extract(&mut voting_period);
+        };
+
+        if (option::is_some(&submitter)) {
+            module_store.submitter = option::extract(&mut submitter);
+        };
+
+        if (option::is_some(&quorum_ratio)) {
+            module_store.quorum_ratio = option::extract(&mut quorum_ratio);
+        };
+
+        if (option::is_some(&proposal_deposit_amount)) {
+            module_store.challenge_deposit_amount = option::extract(&mut proposal_deposit_amount);
+        };
     }
 
     //
@@ -308,12 +347,13 @@ module initia_std::vip_weight_vote {
 
     // proposal
 
-    public entry fun create_proposal(
+    public entry fun create_challenge_proposal(
         account: &signer,
-        type: String,
         title: String,
         summary: String,
-        args: vector<vector<u8>> // bcs encdoed arguments
+        merkle_root: vector<u8>,
+        api_uri: String,
+        snapshot_height: u64,
     ) acquires ModuleStore {
         let proposer = signer::address_of(account);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -334,78 +374,66 @@ module initia_std::vip_weight_vote {
             account,
             init_metadata(),
             object::address_from_extend_ref(&module_store.proposal_deposit_store),
-            module_store.proposal_deposit_amount,
+            module_store.challenge_deposit_amount,
         );
 
         let voting_power_stage = table_key::decode_u64(stage);
         let voting_end_time = timestamp + module_store.voting_period;
         let quorum = decimal128::mul_u64(&module_store.quorum_ratio, weight_vote.total_tally);
 
-        let proposal = Proposal {
+        // check can make challenge proposal
+        let current_weight_vote = table::borrow(&module_store.weight_votes, table_key::encode_u64(module_store.current_stage));
+        assert!(
+            current_weight_vote.voting_end_time > timestamp || module_store.stage_end_timestamp + module_store.snapshot_grace_period < timestamp,
+            error::invalid_state(ECANNOT_CREATE_CHALLENGE_PROPOSAL),
+        );
+
+        let stage_to_challenge = if (current_weight_vote.voting_end_time > timestamp) {
+            module_store.current_stage
+        } else {
+            module_store.current_stage + 1
+        };
+
+        let proposal = ChallengeProposal {
             proposer,
             voting_power_stage,
-            type,
             title,
             summary,
-            args,
+            stage: stage_to_challenge,
+            new_submitter: proposer,
+            merkle_root,
+            api_uri,
+            snapshot_height,
             votes: table::new(),
             tally: table::new(),
             quorum,
             voting_end_time,
-            emergency: false,
-            deposit_amount: module_store.proposal_deposit_amount,
+            deposit_amount: module_store.challenge_deposit_amount,
             is_executed: false,
         };
 
-        if (type == string::utf8(b"challenge")) {
-            proposal.emergency = true;
-            // check can make challenge proposal
-            let current_weight_vote = table::borrow(&module_store.weight_votes, table_key::encode_u64(module_store.current_stage));
-            assert!(
-                current_weight_vote.voting_end_time > timestamp || module_store.stage_end_timestamp + module_store.snapshot_grace_period < timestamp,
-                error::invalid_state(ECANNOT_CREATE_CHALLENGE_PROPOSAL),
-            );
-
-            let stage_to_challenge = if (current_weight_vote.voting_end_time > timestamp) {
-                module_store.current_stage
-            } else {
-                module_store.current_stage + 1
-            };
-
-            vector::reverse(&mut args);
-            vector::push_back(&mut args, bcs::to_bytes(&proposer));
-            vector::push_back(&mut args, bcs::to_bytes(&stage_to_challenge));
-            vector::reverse(&mut args);
-            proposal.args = args;
-            // check args
-            parse_challenge_args(&proposal.args);
-        } else if (type == string::utf8(b"update_params")) {
-            // check args
-            parse_update_params_args(&args);
-        } else {
-            abort(error::invalid_argument(EINVALID_PROPOSAL_TYPE))
-        };
-
         let iter = table::iter(&module_store.proposals, option::none(), option::none(), 2);
-        let proposal_id = if (!table::prepare<vector<u8>, Proposal>(&mut iter)) {
+        let proposal_id = if (!table::prepare<vector<u8>, ChallengeProposal>(&mut iter)) {
             1
         } else {
-            let (proposal_id, _) = table::next<vector<u8>, Proposal>(&mut iter);
+            let (proposal_id, _) = table::next<vector<u8>, ChallengeProposal>(&mut iter);
             table_key::decode_u64(proposal_id) + 1
         };
 
         table::add(&mut module_store.proposals, table_key::encode_u64(proposal_id), proposal);
-        event::emit(CreateProposalEvent {
+        event::emit(CreateChallengeProposalEvent {
             proposer,
             proposal_id,
-            type,
             title,
             summary,
-            args,
+            new_submitter: proposer,
+            merkle_root,
+            api_uri,
+            snapshot_height,
         })
     }
 
-    public entry fun vote_proposal(
+    public entry fun vote_challenge_proposal(
         account: &signer,
         proposal_id: u64,
         vote_yes: bool,
@@ -454,7 +482,7 @@ module initia_std::vip_weight_vote {
         let tally = table::borrow_mut_with_default(&mut proposal.tally, table_key::encode_u64(vote_option), 0);
         *tally = *tally + vote.voting_power;
 
-        event::emit(VoteProposalEvent {
+        event::emit(VoteChallengeProposalEvent {
             account: addr,
             proposal_id,
             voting_power,
@@ -462,12 +490,12 @@ module initia_std::vip_weight_vote {
         })
     }
 
-    public entry fun execute_proposal(
+    public entry fun execute_challenge_proposal(
         _account: &signer,
         proposal_id: u64,
     ) acquires ModuleStore {
         let success = execute_proposal_internal(proposal_id);
-        event::emit(ExecuteProposalEvent {
+        event::emit(ExecuteChallengeProposalEvent {
             proposal_id,
             success
         })
@@ -488,7 +516,7 @@ module initia_std::vip_weight_vote {
         let total_tally = yes_count + no_count;
 
         assert!(
-            proposal.voting_end_time < timestamp || (proposal.emergency && total_tally >= proposal.quorum),
+            proposal.voting_end_time < timestamp || total_tally >= proposal.quorum,
             error::invalid_state(EPROPOSAL_IN_PROGRESS),
         );
 
@@ -509,30 +537,10 @@ module initia_std::vip_weight_vote {
             return false
         };
 
-        if (proposal.type == string::utf8(b"challenge")) {
-            let (stage, new_submitter, merkle_root, api_uri, snapshot_height) = parse_challenge_args(&proposal.args);
-            return challenge(stage, new_submitter, merkle_root, api_uri, snapshot_height)
-        } else if (proposal.type == string::utf8(b"update_params")) {
-            let (stage_interval, snapshot_grace_period, voting_period, submitter, quorum_ratio, proposal_deposit_amount) =
-                parse_update_params_args(&proposal.args);
-            update_params(stage_interval, snapshot_grace_period, voting_period, submitter, quorum_ratio, proposal_deposit_amount);
-            return true
-        };
-
-        abort(error::invalid_argument(EINVALID_PROPOSAL_TYPE))
+        return challenge(proposal.stage, proposal.new_submitter, proposal.merkle_root, proposal.api_uri, proposal.snapshot_height)
     }
 
     // challenge
-
-    fun parse_challenge_args(args: &vector<vector<u8>>): (u64, address, vector<u8>, String, u64) {
-        let stage = from_bcs::to_u64(*vector::borrow(args, 0));
-        let new_submitter = from_bcs::to_address(*vector::borrow(args, 1));
-        let merkle_root = from_bcs::to_bytes(*vector::borrow(args, 2));
-        let api_uri = from_bcs::to_string(*vector::borrow(args, 3));
-        let snapshot_height = from_bcs::to_u64(*vector::borrow(args, 4));
-
-        return (stage, new_submitter, merkle_root, api_uri, snapshot_height)
-    }
 
     fun challenge(
         stage: u64,
@@ -620,41 +628,6 @@ module initia_std::vip_weight_vote {
         };
 
         return (stage_interval, snapshot_grace_period, voting_period, submitter, quorum_ratio, proposal_deposit_amount)
-    }
-
-    fun update_params(
-        stage_interval: Option<u64>,
-        snapshot_grace_period: Option<u64>,
-        voting_period: Option<u64>,
-        submitter: Option<address>,
-        quorum_ratio: Option<Decimal128>,
-        proposal_deposit_amount: Option<u64>,
-    ) acquires ModuleStore{
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-
-        if (option::is_some(&stage_interval)) {
-            module_store.stage_interval = option::extract(&mut stage_interval);
-        };
-
-        if (option::is_some(&snapshot_grace_period)) {
-            module_store.snapshot_grace_period = option::extract(&mut snapshot_grace_period);
-        };
-
-        if (option::is_some(&voting_period)) {
-            module_store.voting_period = option::extract(&mut voting_period);
-        };
-
-        if (option::is_some(&submitter)) {
-            module_store.submitter = option::extract(&mut submitter);
-        };
-
-        if (option::is_some(&quorum_ratio)) {
-            module_store.quorum_ratio = option::extract(&mut quorum_ratio);
-        };
-
-        if (option::is_some(&proposal_deposit_amount)) {
-            module_store.proposal_deposit_amount = option::extract(&mut proposal_deposit_amount);
-        };
     }
 
     fun from_bcs_option(bytes: vector<u8>): Option<vector<u8>> {
@@ -1043,18 +1016,13 @@ module initia_std::vip_weight_vote {
         // create challenge proposal
         let voting_powers = vector[15, 25, 35, 45];
         let tree = create_merkle_tree(addresses, voting_powers);
-        let args = vector[
-            bcs::to_bytes(&get_merkle_root(tree)),
-            bcs::to_bytes(&string::utf8(b"https://abc2.com")),
-            bcs::to_bytes(&100u64),
-        ];
-        create_proposal(u1, string::utf8(b"challenge"), string::utf8(b"challenge"), string::utf8(b"challenge"), args);
+        create_challenge_proposal(u1, string::utf8(b"challenge"),string::utf8(b"challenge"), get_merkle_root(tree), string::utf8(b"https://abc2.com"), 100u64);
 
         // vote proposal
-        vote_proposal(u1, 1, true);
+        vote_challenge_proposal(u1, 1, true);
 
         // execute challenge
-        execute_proposal(u1, 1);
+        execute_challenge_proposal(u1, 1);
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let vote = table::borrow(&module_store.weight_votes, table_key::encode_u64(2));
@@ -1069,18 +1037,13 @@ module initia_std::vip_weight_vote {
         // create challenge proposal
         let voting_powers = vector[10, 25, 35, 45];
         let tree = create_merkle_tree(addresses, voting_powers);
-        let args = vector[
-            bcs::to_bytes(&get_merkle_root(tree)),
-            bcs::to_bytes(&string::utf8(b"https://abc3.com")),
-            bcs::to_bytes(&100u64),
-        ];
-        create_proposal(u2, string::utf8(b"challenge"), string::utf8(b"challenge"), string::utf8(b"challenge"), args);
+        create_challenge_proposal(u2, string::utf8(b"challenge"), string::utf8(b"challenge"), get_merkle_root(tree), string::utf8(b"https://abc3.com"), 100u64);
 
         // vote proposal
-        vote_proposal(u2, 2, true);
+        vote_challenge_proposal(u2, 2, true);
 
         // execute proposal
-        execute_proposal(u2, 2);
+        execute_challenge_proposal(u2, 2);
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let vote = table::borrow(&module_store.weight_votes, table_key::encode_u64(2));
@@ -1090,80 +1053,5 @@ module initia_std::vip_weight_vote {
         assert!(module_store.submitter == signer::address_of(u2), 10);
         assert!(vote.merkle_root == get_merkle_root(tree), 11);
         assert!(vote.api_uri == string::utf8(b"https://abc3.com"), 12);
-    }
-
-    #[test(chain = @0x1, submitter = @0x2, u1 = @0x101, u2 = @0x102, u3 = @0x103, u4 = @0x104)]
-    fun update_params_end_to_end(
-        chain: &signer,
-        submitter: &signer,
-        u1: &signer,
-        u2: &signer,
-        u3: &signer,
-        u4: &signer,
-    ) acquires ModuleStore {
-        // fund
-        let mint_cap = init_test(chain);
-        coin::mint_to(&mint_cap, signer::address_of(u1), 100);
-
-        // submit root
-        let addresses = vector[
-            signer::address_of(u1),
-            signer::address_of(u2),
-            signer::address_of(u3),
-            signer::address_of(u4),
-        ];
-        let voting_powers = vector[10, 20, 30, 40];
-        let tree = create_merkle_tree(addresses, voting_powers);
-        let merkle_root = get_merkle_root(tree);
-        submit_merkle_root(submitter, merkle_root, string::utf8(b"https://abc.com"), 100);
-
-        // votes
-        vote(
-            u1,
-            1,
-            get_proofs(tree, 0),
-            10,
-            vector[1, 2],
-            vector[decimal128::from_ratio(1,5),decimal128::from_ratio(4,5)],
-        ); // 2, 8
-
-        vote(
-            u2,
-            1,
-            get_proofs(tree, 1),
-            20,
-            vector[1, 2],
-            vector[decimal128::from_ratio(2,5),decimal128::from_ratio(3,5)],
-        ); // 8, 12
-
-        // execute
-        set_block_info(100, 161);
-        execute_vote(u1);
-
-        // create update param proposal
-        let args = vector[
-            bcs::to_bytes(&option::some(200u64)),
-            bcs::to_bytes(&option::some(20u64)),
-            bcs::to_bytes(&option::some(100u64)),
-            bcs::to_bytes(&option::some(signer::address_of(u1))),
-            bcs::to_bytes(&option::some(decimal128::from_ratio(1, 2))),
-            bcs::to_bytes(&option::some(200u64)),
-        ];
-        create_proposal(u1, string::utf8(b"update_params"), string::utf8(b"update_params"), string::utf8(b"update_params"), args);
-
-        // vote proposal
-        vote_proposal(u1, 1, true);
-
-        // execute update_params
-        set_block_info(100, 212);
-        execute_proposal(u1, 1);
-
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        assert!(module_store.stage_interval == 200u64, 1);
-        assert!(module_store.snapshot_grace_period == 20u64, 2);
-        assert!(module_store.voting_period == 100u64, 3);
-        assert!(module_store.submitter == signer::address_of(u1), 4);
-        assert!(module_store.quorum_ratio == decimal128::from_ratio(1, 2), 5);
-        assert!(module_store.proposal_deposit_amount == 200u64, 6);
     }
 }
