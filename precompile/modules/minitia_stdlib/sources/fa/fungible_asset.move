@@ -8,6 +8,7 @@ module minitia_std::fungible_asset {
     use std::option::{Self, Option};
     use std::signer;
     use std::string::{Self, String};
+    use std::account;
 
     /// The transfer ref and the fungible asset do not match.
     const ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH: u64 = 2;
@@ -49,6 +50,8 @@ module minitia_std::fungible_asset {
     const ESUPPLY_UNDERFLOW: u64 = 20;
     /// Supply resource is not found for a metadata object.
     const ESUPPLY_NOT_FOUND: u64 = 21;
+    /// Module account store cannot be manipulated.
+    const ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE: u64 = 22;
 
     //
     // Constants
@@ -440,6 +443,10 @@ module minitia_std::fungible_asset {
 
         let metadata_addr = object::object_address(ref.metadata);
         let store_addr = object::object_address(store);
+        
+        // cannot freeze module account store
+        assert!(!is_module_account_store_addr(store_addr), error::invalid_argument(ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE));
+
         borrow_global_mut<FungibleStore>(store_addr).frozen = frozen;
         
         // emit event
@@ -470,6 +477,10 @@ module minitia_std::fungible_asset {
         assert!(metadata == store_metadata(store), error::invalid_argument(EBURN_REF_AND_STORE_MISMATCH));
 
         let store_addr = object::object_address(store);
+
+        // cannot burn module account funds
+        assert!(!is_module_account_store_addr(store_addr), error::invalid_argument(ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE));
+
         burn(ref, withdraw_internal(store_addr, amount));
     }
 
@@ -483,6 +494,10 @@ module minitia_std::fungible_asset {
             ref.metadata == store_metadata(store),
             error::invalid_argument(ETRANSFER_REF_AND_STORE_MISMATCH),
         );
+
+        // cannot withdraw module account funds
+        let store_addr = object::object_address(store);
+        assert!(!is_module_account_store_addr(store_addr), error::invalid_argument(ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE));
 
         withdraw_internal(object::object_address(store), amount)
     }
@@ -610,6 +625,12 @@ module minitia_std::fungible_asset {
         supply.current = supply.current - (amount as u128);
     }
 
+    fun is_module_account_store_addr(store_addr: address): bool {
+        let fungible_store = object::address_to_object<FungibleStore>(store_addr);
+        let owner_addr = object::owner(fungible_store);
+        account::exists_at(owner_addr) && account::is_module_account(owner_addr)
+    }
+
     inline fun borrow_fungible_metadata<T: key>(
         metadata: Object<T>
     ): &Metadata acquires Metadata {
@@ -627,7 +648,6 @@ module minitia_std::fungible_asset {
     inline fun borrow_store_resource<T: key>(store: Object<T>): &FungibleStore acquires FungibleStore {
         borrow_global<FungibleStore>(object::object_address(store))
     }
-
 
     #[test_only]
     struct TestToken has key {}
@@ -812,5 +832,46 @@ module minitia_std::fungible_asset {
             metadata: _,
             amount: _
         } = base;
+    }
+
+    #[test(creator = @0xcafe, module_acc = @0x123)]
+    #[expected_failure(abort_code = 0x10016, location = Self)]
+    fun test_freeze_module_account_store(creator: &signer, module_acc: &signer) acquires FungibleStore {
+        let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
+        let metadata = mint_ref.metadata;
+        
+        let module_acc_store = create_test_store(module_acc, metadata);
+        account::set_account_info(signer::address_of(module_acc), 10, 0, 3);
+
+        set_frozen_flag(&transfer_ref, module_acc_store, true);
+    }
+
+    #[test(creator = @0xcafe, module_acc = @0x123)]
+    #[expected_failure(abort_code = 0x10016, location = Self)]
+    fun test_burn_module_account_funds(creator: &signer, module_acc: &signer) acquires FungibleStore, Supply {
+        let (mint_ref, _transfer_ref, burn_ref, _) = create_fungible_asset(creator);
+        let metadata = mint_ref.metadata;
+        
+        let module_acc_store = create_test_store(module_acc, metadata);
+        account::set_account_info(signer::address_of(module_acc), 10, 0, 3);
+
+        let fa = mint(&mint_ref, 100);
+        deposit(module_acc_store, fa);
+        burn_from(&burn_ref, module_acc_store, 30);
+    }
+
+    #[test(creator = @0xcafe, module_acc = @0x123)]
+    #[expected_failure(abort_code = 0x10016, location = Self)]
+    fun test_withdraw_module_account_funds_with_ref(creator: &signer, module_acc: &signer) acquires FungibleStore, Supply {
+        let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
+        let metadata = mint_ref.metadata;
+        
+        let module_acc_store = create_test_store(module_acc, metadata);
+        account::set_account_info(signer::address_of(module_acc), 10, 0, 3);
+
+        let fa = mint(&mint_ref, 100);
+        deposit(module_acc_store, fa);
+        let fa = withdraw_with_ref(&transfer_ref, module_acc_store, 30);
+        deposit(module_acc_store, fa);
     }
 }

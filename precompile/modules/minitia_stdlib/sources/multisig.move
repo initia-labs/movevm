@@ -30,7 +30,7 @@ module minitia_std::multisig {
 
     const ENOT_PASS: u64 = 8;
 
-    const EPROPOSAL_NOT_FOUND: u64 = 8;
+    const EPROPOSAL_NOT_FOUND: u64 = 9;
 
     // constants
 
@@ -159,8 +159,8 @@ module minitia_std::multisig {
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
         let iter = table::iter(&multisig_wallet.proposals, option::none(), start_after, 2);
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<u64, Proposal>(&mut iter)) {
-            let (proposal_id, proposal) = table::next<u64, Proposal>(&mut iter);
+        while (vector::length(&res) < (limit as u64) && table::prepare<u64, Proposal>(iter)) {
+            let (proposal_id, proposal) = table::next<u64, Proposal>(iter);
             vector::push_back(&mut res, proposal_to_proposal_response(multisig_wallet, multisig_addr, proposal_id, proposal));
         };
 

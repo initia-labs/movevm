@@ -6,6 +6,7 @@ module initia_std::code {
     use std::event;
 
     use initia_std::table::{Self, Table};
+    use initia_std::simple_map;
 
     // ----------------------------------------------------------------------
     // Code Publishing
@@ -14,6 +15,9 @@ module initia_std::code {
         /// It is a list of addresses with permission to distribute contracts, 
         /// and an empty list is interpreted as allowing anyone to distribute.
         allowed_publishers: vector<address>,
+
+        /// The total number of modules published.
+        total_modules: u64,
     }
 
     struct MetadataStore has key {
@@ -48,9 +52,9 @@ module initia_std::code {
 
     /// allowed_publishers argument is invalid.
     const EINVALID_ALLOWED_PUBLISHERS: u64 = 0x6;
-    
-    /// The upgrade policy is unspecified.
-    const UPGRADE_POLICY_UNSPECIFIED: u8 = 0;
+
+    /// The module ID is duplicated.
+    const EDUPLICATE_MODULE_ID: u64 = 0x7;
 
     /// Whether a compatibility check should be performed for upgrades. The check only passes if
     /// a new module has (a) the same public functions (b) for existing resources, no layout change.
@@ -68,8 +72,37 @@ module initia_std::code {
     fun init_module(chain: &signer) {
         move_to(chain, ModuleStore {
             allowed_publishers: vector[],
+            total_modules: 0,
         });
-    } 
+    }
+
+    // view functions
+
+    #[view]
+    public fun allowed_publishers(): vector<address> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        module_store.allowed_publishers
+    }
+
+    #[view]
+    public fun total_modules(): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        module_store.total_modules
+    }
+
+    // private functions
+
+    fun increase_total_modules(num_modules: u64) acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.total_modules = module_store.total_modules + num_modules;
+    }
+
+    fun assert_allowed(allowed_publishers: &vector<address>, addr: address) {
+        assert!(
+            vector::is_empty(allowed_publishers) || vector::contains(allowed_publishers, &addr), 
+            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
+        )
+    }
 
     public entry fun init_genesis(
         chain: &signer, 
@@ -92,6 +125,7 @@ module initia_std::code {
         });
 
         set_allowed_publishers(chain, allowed_publishers);
+        increase_total_modules(vector::length(&module_ids));
     }
 
     public entry fun set_allowed_publishers(chain: &signer, allowed_publishers: vector<address>) acquires ModuleStore {
@@ -100,13 +134,6 @@ module initia_std::code {
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.allowed_publishers = allowed_publishers;
-    }
-
-    fun assert_allowed(allowed_publishers: &vector<address>, addr: address) {
-        assert!(
-            vector::is_empty(allowed_publishers) || vector::contains(allowed_publishers, &addr), 
-            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
-        )
     }
 
     /// Publishes a package at the given signer's address. The caller must provide package metadata describing the
@@ -119,11 +146,20 @@ module initia_std::code {
     ) acquires ModuleStore, MetadataStore {
         // Disallow incompatible upgrade mode. Governance can decide later if this should be reconsidered.
         assert!(vector::length(&code) == vector::length(&module_ids), error::invalid_argument(EINVALID_ARGUMENTS));
+
+        // duplication check
+        let module_ids_set = simple_map::create<String, bool>();
+        vector::for_each_ref(&module_ids, 
+            |module_id| {
+                assert!(!simple_map::contains_key(&module_ids_set, module_id), error::invalid_argument(EDUPLICATE_MODULE_ID));
+                simple_map::add(&mut module_ids_set, *module_id, true);
+            }
+        );
         
         // Check whether arbitrary publish is allowed or not.
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(
-            upgrade_policy > UPGRADE_POLICY_UNSPECIFIED,
+            upgrade_policy == UPGRADE_POLICY_COMPATIBLE || upgrade_policy == UPGRADE_POLICY_IMMUTABLE,
             error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED),
         );
 
@@ -162,6 +198,7 @@ module initia_std::code {
         );
 
         // Request publish
+        increase_total_modules(vector::length(&module_ids));
         request_publish(addr, module_ids, code, upgrade_policy)
     }
 

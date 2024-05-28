@@ -341,10 +341,10 @@ module initia_std::staking {
             2,
         );
 
-        let prepare = table::prepare(&mut delegations_iter);
+        let prepare = table::prepare(delegations_iter);
         let res: vector<DelegationResponse> = vector[];
         while (vector::length(&res) < (limit as u64) && prepare) {
-            let (validator, delegation) = table::next(&mut delegations_iter);
+            let (validator, delegation) = table::next(delegations_iter);
             let state = table::borrow(staking_states, validator);
             let reward = calculate_reward(delegation, state);
             vector::push_back(
@@ -356,7 +356,7 @@ module initia_std::staking {
                     unclaimed_reward: reward,
                 },
             );
-            prepare = table::prepare(&mut delegations_iter);
+            prepare = table::prepare(delegations_iter);
         };
 
         res
@@ -431,10 +431,8 @@ module initia_std::staking {
         );
 
         let res: vector<UnbondingResponse> = vector[];
-        while (vector::length(&res) < (limit as u64) && table::prepare<UnbondingKey, Unbonding>(
-            &mut unbondings_iter
-        )) {
-            let (_, unbonding) = table::next<UnbondingKey, Unbonding>(&mut unbondings_iter);
+        while (vector::length(&res) < (limit as u64) && table::prepare<UnbondingKey, Unbonding>(unbondings_iter)) {
+            let (_, unbonding) = table::next<UnbondingKey, Unbonding>(unbondings_iter);
             let unbonding_amount = get_unbonding_amount_from_unbonding(unbonding);
             vector::push_back(
                 &mut res,

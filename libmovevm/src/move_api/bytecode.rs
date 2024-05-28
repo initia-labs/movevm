@@ -32,6 +32,7 @@ pub trait Bytecode {
 
     fn address_identifier_at(&self, idx: AddressIdentifierIndex) -> &AccountAddress;
 
+    #[allow(dead_code)]
     fn find_entry_function(&self, name: &IdentStr) -> Option<MoveFunction>;
 
     fn new_move_struct_field(&self, def: &FieldDefinition) -> MoveStructField {

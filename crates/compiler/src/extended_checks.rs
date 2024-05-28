@@ -93,6 +93,12 @@ impl<'a> ExtendedChecker<'a> {
                     );
                 }
             }
+            if fun.get_parameters().len() > 1 {
+                self.env.error(
+                    &fun.get_loc(),
+                    "`init_module` function can only take at most one parameter",
+                );
+            }
             if fun.get_return_count() > 0 {
                 self.env.error(
                     &fun.get_loc(),

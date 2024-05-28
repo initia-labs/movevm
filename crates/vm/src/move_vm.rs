@@ -448,8 +448,7 @@ impl MoveVM {
         // `init_module` and verify some deployment conditions, while the VM need to do
         // the deserialization again. Consider adding an API to MoveVM which allows to
         // directly pass CompiledModule.
-        let sorted_module_bundle = module_bundle.sorted_code_and_modules();
-        let modules = self.deserialize_module_bundle(&sorted_module_bundle)?;
+        let modules = self.deserialize_module_bundle(&module_bundle)?;
         let modules: &Vec<CompiledModule> =
             traversal_context.referenced_module_bundles.alloc(modules);
 
@@ -467,7 +466,7 @@ impl MoveVM {
             )?;
 
             // Charge all modules in the bundle that is about to be published.
-            for (module, blob) in modules.iter().zip(sorted_module_bundle.iter()) {
+            for (module, blob) in modules.iter().zip(module_bundle.iter()) {
                 let module_id = &module.self_id();
                 gas_meter
                     .charge_dependency(
@@ -507,12 +506,13 @@ impl MoveVM {
         // validate modules are properly compiled with metadata
         validate_publish_request(session, modules)?;
 
-        if let Some(mut expected_modules) = expected_modules {
-            for m in modules {
-                if !expected_modules.remove(m.self_id().short_str_lossless().as_str()) {
+        if let Some(expected_modules) = expected_modules {
+            for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
+                if m.self_id().short_str_lossless().as_str() != expected_id {
                     return Err(metadata_validation_error(&format!(
-                        "unregistered module: '{}'",
-                        m.self_id().name()
+                        "unexpected module: '{}', expected: '{}'",
+                        m.self_id().name(),
+                        expected_id
                     )));
                 }
             }
@@ -520,15 +520,18 @@ impl MoveVM {
 
         // Check what modules exist before publishing.
         let mut exists = BTreeSet::new();
-        let mut published_module_ids = vec![];
-        for m in modules {
+        for m in modules.iter() {
             let id = m.self_id();
-            published_module_ids.push(id.short_str_lossless());
 
             if session.exists_module(&id)? {
                 exists.insert(id);
             }
         }
+
+        // sort the modules by dependencies
+        let (sorted_module_bundle, published_module_ids, sorted_compiled_modules) = module_bundle
+            .sorted_code_and_modules(modules)
+            .map_err(|e| e.finish(Location::Undefined))?;
 
         // publish and cache the modules on loader cache.
         session.publish_module_bundle_with_compat_config(
@@ -543,7 +546,13 @@ impl MoveVM {
         )?;
 
         // call init function of the each module
-        self.execute_module_initialization(session, gas_meter, modules, exists, &[destination])?;
+        self.execute_module_initialization(
+            session,
+            gas_meter,
+            sorted_compiled_modules,
+            exists,
+            &[destination],
+        )?;
 
         Ok(published_module_ids)
     }
@@ -553,7 +562,7 @@ impl MoveVM {
         &self,
         session: &mut SessionExt,
         gas_meter: &mut InitiaGasMeter,
-        modules: &[CompiledModule],
+        modules: Vec<&CompiledModule>,
         exists: BTreeSet<ModuleId>,
         senders: &[AccountAddress],
     ) -> VMResult<()> {
@@ -572,10 +581,14 @@ impl MoveVM {
             // with the general verify_module above.
             if init_function.is_ok() {
                 if verify_module_init_function(module).is_ok() {
-                    let args: Vec<Vec<u8>> = senders
-                        .iter()
-                        .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
-                        .collect();
+                    let args: Vec<Vec<u8>> = if init_function.unwrap().parameters.is_empty() {
+                        vec![]
+                    } else {
+                        senders
+                            .iter()
+                            .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
+                            .collect()
+                    };
 
                     // first execution does not execute `charge_call`, so need to record call here
                     gas_meter.record_call(&module.self_id());

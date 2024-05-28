@@ -77,7 +77,10 @@ impl BuiltPackage {
         new_config.architecture = None;
         new_config.generate_docs = false;
         new_config.generate_move_model = true;
-        new_config.compiler_config.known_attributes = metadata::get_all_attribute_names().clone();
+        new_config
+            .compiler_config
+            .known_attributes
+            .clone_from(metadata::get_all_attribute_names());
 
         let (mut package, model_opt) =
             new_config.compile_package_no_exit(&package_path, &mut stderr())?;

@@ -327,6 +327,8 @@ fn native_nft_transfer(
     debug_assert!(arguments.len() == 10);
 
     let memo = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    context.charge(gas_params.per_byte * NumBytes::new(memo.len() as u64))?;
+
     let timeout_timestamp = safely_pop_arg!(arguments, u64);
     let revision_height = safely_pop_arg!(arguments, u64);
     let revision_number = safely_pop_arg!(arguments, u64);
