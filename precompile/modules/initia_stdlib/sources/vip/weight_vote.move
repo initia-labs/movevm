@@ -48,6 +48,9 @@ module initia_std::vip_weight_vote {
 
     const PROOF_LENGTH: u64 = 32;
 
+    const VOTE_YES: u64 = 1;
+    const VOTE_NO: u64 = 0;
+
     struct ModuleStore has key {
         // current stage
         current_stage: u64,
@@ -76,7 +79,7 @@ module initia_std::vip_weight_vote {
         // quorum = quorum_ratio * total_voting_power.
         quorum_ratio: Decimal128,
         // init deposit amount to create challenge proposal
-        // if total tally doesn't reach to quorum, can not refun deposit
+        // if total tally doesn't reach to quorum, can not refund deposit
         challenge_deposit_amount: u64
     }
 
@@ -87,7 +90,7 @@ module initia_std::vip_weight_vote {
         tally: Table<vector<u8>/* bridge id */, u64/* tally */>,
         snapshot_height: u64,
         voting_end_time: u64,
-        api_uri: String,
+        api_uri: String, // api uri to serve merkle proofs
     }
 
     struct Vote has store {
@@ -290,6 +293,7 @@ module initia_std::vip_weight_vote {
         // remove former vote
         if (table::contains(&weight_vote.votes, addr)) {
             remove_former_vote(&mut weight_vote.votes, &mut weight_vote.tally, addr);
+            weight_vote.total_tally = weight_vote.total_tally - voting_power;
         };
 
         let target_hash = voting_power_hash(addr, voting_power);
@@ -372,7 +376,7 @@ module initia_std::vip_weight_vote {
         // transfer deposit
         primary_fungible_store::transfer(
             account,
-            init_metadata(),
+            uinit_metadata(),
             object::address_from_extend_ref(&module_store.proposal_deposit_store),
             module_store.challenge_deposit_amount,
         );
@@ -440,9 +444,9 @@ module initia_std::vip_weight_vote {
     ) acquires ModuleStore {
         let (_, timestamp) = get_block_info();
         let vote_option = if (vote_yes) {
-            1
+            VOTE_YES
         } else {
-            0
+            VOTE_NO
         };
 
         let addr = signer::address_of(account);
@@ -459,15 +463,11 @@ module initia_std::vip_weight_vote {
 
         if (table::contains(&proposal.votes, addr)) {
             let Vote { voting_power, weights } = table::remove(&mut proposal.votes, addr);
-            let len = vector::length(&weights);
-            let i = 0;
-            while (i < len) {
-                let weight = vector::borrow(&weights, i);
-                let bridge_weight = decimal128::mul_u64(&weight.weight, voting_power);
-                let tally = table::borrow_mut(&mut proposal.tally, table_key::encode_u64(weight.vote_option));
-                *tally = *tally - (bridge_weight as u64);
-                i = i + 1;
-            };
+            
+            let weight = vector::borrow(&weights, 0); // challenge proposal only has single weight (yes or no)
+            let bridge_weight = decimal128::mul_u64(&weight.weight, voting_power);
+            let tally = table::borrow_mut(&mut proposal.tally, table_key::encode_u64(weight.vote_option));
+            *tally = *tally - (bridge_weight as u64);
         };
 
         let weights = vector[Weight { vote_option, weight: decimal128::one() }];
@@ -525,12 +525,12 @@ module initia_std::vip_weight_vote {
         let object_signer = object::generate_signer_for_extending(&module_store.proposal_deposit_store);
 
         if (total_tally < proposal.quorum) {
-            cosmos::fund_community_pool(&object_signer, init_metadata(), proposal.deposit_amount);
+            cosmos::fund_community_pool(&object_signer, uinit_metadata(), proposal.deposit_amount);
             proposal.is_executed = true;
             return false
         };
 
-        primary_fungible_store::transfer(&object_signer, init_metadata(), proposal.proposer, proposal.deposit_amount);
+        primary_fungible_store::transfer(&object_signer, uinit_metadata(), proposal.proposer, proposal.deposit_amount);
         proposal.is_executed = true ;
 
         if (no_count > yes_count) {
@@ -676,7 +676,7 @@ module initia_std::vip_weight_vote {
         })
     }
 
-    inline fun remove_former_vote(votes: &mut Table<address, Vote>, tally: &mut Table<vector<u8>, u64>, addr: address) {
+    fun remove_former_vote(votes: &mut Table<address, Vote>, tally: &mut Table<vector<u8>, u64>, addr: address) {
         let Vote { voting_power, weights } = table::remove(votes, addr);
         let len = vector::length(&weights);
         let i = 0;
@@ -742,7 +742,7 @@ module initia_std::vip_weight_vote {
         assert!(vector::length(v2) == PROOF_LENGTH, error::invalid_argument(EINVALID_PROOF_LENGTH));
 
         let i = 0;
-        while (i < 32 ) {
+        while (i < PROOF_LENGTH ) {
             let e1 = *vector::borrow(v1, i);
             let e2 = *vector::borrow(v2, i);
             if (e1 > e2) {
@@ -781,7 +781,7 @@ module initia_std::vip_weight_vote {
         res
     }
 
-    fun init_metadata(): Object<Metadata> {
+    fun uinit_metadata(): Object<Metadata> {
         let addr = object::create_object_address(@initia_std, b"uinit");
         object::address_to_object<Metadata>(addr)
     }
