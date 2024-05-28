@@ -872,6 +872,21 @@ module initia_std::vip {
         });
     }
 
+    fun validate_vip_weights(module_store: &ModuleStore) {
+        let total_weight = decimal256::zero();
+
+        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
+                break
+            };
+            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
+        };
+
+        assert!(decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_WEIGHT));
+    }
+
     public entry fun update_vip_weights(
         chain: &signer,
         bridge_id: vector<u64>,
@@ -879,16 +894,15 @@ module initia_std::vip {
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
         assert!(vector::length(&bridge_id) == vector::length(&weight), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
 
-        let total_weight = decimal256::zero();
         vector::enumerate_ref(&bridge_id, |i, id| {
             let bridge = load_bridge_mut(&mut module_store.bridges, *id);
             bridge.vip_weight = *vector::borrow(&weight, i);
-            total_weight = decimal256::add(&total_weight, vector::borrow(&weight, i));
         });
-        
-        assert!(decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_WEIGHT));
+
+        validate_vip_weights(module_store);
     }
 
     public entry fun update_vip_weight(
@@ -900,6 +914,8 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let bridge = load_bridge_mut(&mut module_store.bridges, bridge_id);
         bridge.vip_weight = weight;
+
+        validate_vip_weights(module_store);
     }
 
     public entry fun update_vesting_period(
@@ -1330,11 +1346,11 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST)),
         );
 
-        update_vip_weight(
-            chain,
-            bridge_id,
-            decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)),
-        );
+        // update_vip_weight(
+        //     chain,
+        //     bridge_id,
+        //     decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)),
+        // );
 
         move_to(chain, TestCapability {
             burn_cap,
@@ -1885,7 +1901,7 @@ module initia_std::vip {
 
     }
 
-   #[test(chain=@0x1, agent=@0x2, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain=@0x1, agent=@0x2, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_deregistered_bridge(chain: &signer, agent:&signer, operator: &signer, receiver: &signer) 
         acquires ModuleStore, TestCapability {
         primary_fungible_store::init_module_for_test(chain);
@@ -2200,6 +2216,91 @@ module initia_std::vip {
         update_snapshot(chain, bridge_id, 1, x"7777777777777777777777777777777777777777777777777777777777777777", 100);
     }
 
+
+    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    #[expected_failure(abort_code = 0x10015, location = Self)]
+    fun failed_update_vip_weights(chain: &signer, operator: &signer) 
+        acquires ModuleStore {
+        primary_fungible_store::init_module_for_test(chain);
+        let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
+        init_module_for_test(chain);
+        
+        move_to(chain, TestCapability {
+            burn_cap,
+            freeze_cap,
+            mint_cap,
+        });
+
+        let operator_addr = signer::address_of(operator);
+        let (bridge_id1, bridge_id2) = (1, 2);
+        let (bridge_address1, bridge_address2) = (@0x999, @0x1000);
+        
+        register(
+            chain,
+            operator_addr,
+            bridge_id1,
+            bridge_address1,
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
+        );
+
+        // need other L2 to increase stage
+        register(
+            chain,
+            operator_addr,
+            bridge_id2,
+            bridge_address2,
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
+        );
+
+        update_vip_weights(chain, vector[1,2], vector[decimal256::from_string(&string::utf8(b"0.5")), decimal256::from_string(&string::utf8(b"0.7"))]);
+    }
+
+    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    #[expected_failure(abort_code = 0x10015, location = Self)]
+    fun failed_update_vip_weight(chain: &signer, operator: &signer) 
+        acquires ModuleStore {
+        primary_fungible_store::init_module_for_test(chain);
+        let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
+        init_module_for_test(chain);
+        
+        move_to(chain, TestCapability {
+            burn_cap,
+            freeze_cap,
+            mint_cap,
+        });
+
+        let operator_addr = signer::address_of(operator);
+        let (bridge_id1, bridge_id2) = (1, 2);
+        let (bridge_address1, bridge_address2) = (@0x999, @0x1000);
+        
+        register(
+            chain,
+            operator_addr,
+            bridge_id1,
+            bridge_address1,
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
+        );
+
+        // need other L2 to increase stage
+        register(
+            chain,
+            operator_addr,
+            bridge_id2,
+            bridge_address2,
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
+            decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)),
+        );
+
+        update_vip_weights(chain, vector[1,2], vector[decimal256::from_string(&string::utf8(b"0.5")), decimal256::from_string(&string::utf8(b"0.4"))]);
+        update_vip_weight(chain, 1, decimal256::from_string(&string::utf8(b"0.7")));
+    }
 
     #[test(chain=@0x1, operator=@0x111, operator2=@0x222)]
     fun test_get_next_stage(chain: &signer, operator: &signer, operator2: &signer) 
