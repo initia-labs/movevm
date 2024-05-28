@@ -638,6 +638,21 @@ module initia_std::vip {
         vested_reward
     }
 
+    fun validate_vip_weights(module_store: &ModuleStore) {
+        let total_weight = decimal256::zero();
+
+        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
+                break
+            };
+            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
+        };
+
+        assert!(decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_WEIGHT));
+    }
+    
     //
     // Entry Functions
     //
@@ -870,21 +885,6 @@ module initia_std::vip {
                 *vector::borrow(&l2_score, i),
             );
         });
-    }
-
-    fun validate_vip_weights(module_store: &ModuleStore) {
-        let total_weight = decimal256::zero();
-
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)){
-                break
-            };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
-            total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
-        };
-
-        assert!(decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_WEIGHT));
     }
 
     public entry fun update_vip_weights(
@@ -1346,11 +1346,11 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST)),
         );
 
-        // update_vip_weight(
-        //     chain,
-        //     bridge_id,
-        //     decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)),
-        // );
+        update_vip_weight(
+            chain,
+            bridge_id,
+            decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)),
+        );
 
         move_to(chain, TestCapability {
             burn_cap,
