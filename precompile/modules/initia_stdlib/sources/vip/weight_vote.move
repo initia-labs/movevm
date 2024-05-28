@@ -4,12 +4,13 @@ module initia_std::vip_weight_vote {
     use std::signer;
     use std::hash::sha3_256;
     use std::vector;
-    use std::string::{Self, String};
+    use std::string::String;
     use std::option::{Self, Option};
 
     use initia_std::block::get_block_info;
     use initia_std::cosmos;
     use initia_std::decimal128::{Self, Decimal128};
+    use initia_std::decimal256::{Self, Decimal256};
     use initia_std::event;
     use initia_std::fungible_asset::Metadata;
     use initia_std::primary_fungible_store;
@@ -362,16 +363,22 @@ module initia_std::vip_weight_vote {
 
         // check vote state
         let iter = table::iter(&module_store.weight_votes, option::none(), option::none(), 2);
-        assert!(table::prepare<vector<u8>, WeightVote>(&mut iter), error::not_found(ESTAGE_NOT_FOUND));
+        assert!(table::prepare<vector<u8>, WeightVote>(iter), error::not_found(ESTAGE_NOT_FOUND));
 
-        let (stage_key, weight_vote) = table::next<vector<u8>, WeightVote>(&mut iter);
+        let (stage_key, weight_vote) = table::next<vector<u8>, WeightVote>(iter);
         assert!(weight_vote.voting_end_time < timestamp, error::invalid_state(EVOTING_NOT_END));
 
-        // update vit weights
-        let iter = table::iter(&weight_vote.tally, option::none(), option::none(), 1);
-        while (table::prepare<vector<u8>, u64>(&mut iter)) {
-            let (id, tally) = table::next(&mut iter);
-            vip::update_vip_weight(table_key::decode_u64(id), *tally);
+        // update vip weights
+        let bridge_ids = vip::get_whitelisted_bridge_ids();
+        let index = 0;
+        let len = vector::length(&bridge_ids);
+        let weights: vector<Decimal256> = vector[];
+        while (index < len) {
+            let bridge_id = *vector::borrow(&bridge_ids, index);
+            let tally = table::borrow_with_default(&weight_vote.tally, table_key::encode_u64(bridge_id), &0);
+            let weight = decimal256::from_ratio((*tally as u256), (weight_vote.total_tally as u256));
+            vector::push_back(&mut weights, weight);
+            index = index + 1;
         };
 
         // emit event
@@ -394,13 +401,13 @@ module initia_std::vip_weight_vote {
 
         // get weight vote
         let iter = table::iter(&module_store.weight_votes, option::none(), option::none(), 2);
-        assert!(table::prepare<vector<u8>, WeightVote>(&mut iter), error::not_found(ESTAGE_NOT_FOUND));
-        let (stage, weight_vote) = table::next<vector<u8>, WeightVote>(&mut iter);
+        assert!(table::prepare<vector<u8>, WeightVote>(iter), error::not_found(ESTAGE_NOT_FOUND));
+        let (stage, weight_vote) = table::next<vector<u8>, WeightVote>(iter);
 
         // if current weight voting is in progress, use former voting power snapshot
         if (weight_vote.voting_end_time > timestamp) {
-            assert!(table::prepare<vector<u8>, WeightVote>(&mut iter), error::not_found(ESTAGE_NOT_FOUND));
-            (stage, weight_vote) = table::next<vector<u8>, WeightVote>(&mut iter);
+            assert!(table::prepare<vector<u8>, WeightVote>(iter), error::not_found(ESTAGE_NOT_FOUND));
+            (stage, weight_vote) = table::next<vector<u8>, WeightVote>(iter);
         };
 
         // transfer deposit
@@ -453,10 +460,10 @@ module initia_std::vip_weight_vote {
 
         // get next proposal id
         let iter = table::iter(&module_store.proposals, option::none(), option::none(), 2);
-        let proposal_id = if (!table::prepare<vector<u8>, ChallengeProposal>(&mut iter)) {
+        let proposal_id = if (!table::prepare<vector<u8>, ChallengeProposal>(iter)) {
             1
         } else {
-            let (proposal_id, _) = table::next<vector<u8>, ChallengeProposal>(&mut iter);
+            let (proposal_id, _) = table::next<vector<u8>, ChallengeProposal>(iter);
             table_key::decode_u64(proposal_id) + 1
         };
 
@@ -788,7 +795,7 @@ module initia_std::vip_weight_vote {
     use initia_std::coin;
 
     #[test_only]
-    use initia_std::decimal256;
+    use initia_std::string;
 
     #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
@@ -797,8 +804,8 @@ module initia_std::vip_weight_vote {
         primary_fungible_store::init_module_for_test(chain);
         let (mint_cap, _, _) = coin::initialize(chain, option::none(), string::utf8(b"uinit"), string::utf8(b"uinit"), 6, string::utf8(b""), string::utf8(b""));
         vip::init_module_for_test(chain);
-        vip::register(chain, @0x2, 1, @0x12, 0, decimal256::zero(), decimal256::zero(), decimal256::zero());
-        vip::register(chain, @0x2, 2, @0x12, 0, decimal256::zero(), decimal256::zero(), decimal256::zero());
+        vip::register(chain, @0x2, 1, @0x12, decimal256::zero(), decimal256::zero(), decimal256::zero());
+        vip::register(chain, @0x2, 2, @0x12, decimal256::zero(), decimal256::zero(), decimal256::zero());
         mint_cap
     }
 

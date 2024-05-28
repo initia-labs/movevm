@@ -22,6 +22,8 @@ module initia_std::vip {
     use initia_std::vip_vesting;
     use initia_std::vip_reward;
     use initia_std::vip_vault;
+    
+    friend initia_std::vip_weight_vote;
 
     //
     // Errors
@@ -652,6 +654,27 @@ module initia_std::vip {
 
         assert!(decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_WEIGHT));
     }
+
+    public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        table::contains(&module_store.bridges, table_key::encode_u64(bridge_id))
+    }
+
+    public(friend) fun update_vip_weights_for_friend(
+        bridge_id: vector<u64>,
+        weight: vector<Decimal256>,
+    ) acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
+        assert!(vector::length(&bridge_id) == vector::length(&weight), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+
+        vector::enumerate_ref(&bridge_id, |i, id| {
+            let bridge = load_bridge_mut(&mut module_store.bridges, *id);
+            bridge.vip_weight = *vector::borrow(&weight, i);
+        });
+
+        validate_vip_weights(module_store);
+    }
     
     //
     // Entry Functions
@@ -893,16 +916,7 @@ module initia_std::vip {
         weight: vector<Decimal256>,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-
-        assert!(vector::length(&bridge_id) == vector::length(&weight), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
-
-        vector::enumerate_ref(&bridge_id, |i, id| {
-            let bridge = load_bridge_mut(&mut module_store.bridges, *id);
-            bridge.vip_weight = *vector::borrow(&weight, i);
-        });
-
-        validate_vip_weights(module_store);
+        update_vip_weights_for_friend(bridge_id, weight);
     }
 
     public entry fun update_vip_weight(
