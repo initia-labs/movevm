@@ -1118,6 +1118,22 @@ module initia_std::vip {
     }
 
     #[view]
+    public fun get_whitelisted_bridge_ids(): vector<u64> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let bridge_ids = vector::empty<u64>();
+
+        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)){
+                break
+            };
+            let (key, _) = table::next<vector<u8>, Bridge>(iter);
+            vector::push_back(&mut bridge_ids, table_key::decode_u64(key));
+        };
+        bridge_ids
+    }
+
+    #[view]
     public fun get_next_stage(bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
@@ -1874,6 +1890,9 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST)),
             decimal256::from_string(&string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST))
         );
+
+        let whitelisted_bridge_ids = get_whitelisted_bridge_ids();
+        assert!(whitelisted_bridge_ids == vector[1, 2, 3], 0);
 
         update_pool_split_ratio(chain, decimal256::from_string(&string::utf8(b"0.7")));
         fund_reward_script(chain, 1, release_time, release_time);
