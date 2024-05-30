@@ -107,7 +107,7 @@ module initia_std::object {
     /// This is a one time ability given to the creator to configure the object as necessary
     struct ConstructorRef has drop {
         self: address,
-        /// True if the object can be deleted. Named objects are not deletable.
+        /// True if the object can be deleted.
         can_delete: bool,
         version: u64,
     }
@@ -209,7 +209,7 @@ module initia_std::object {
     }
 
     /// Create a new named object and return the ConstructorRef. Named objects can be queried globally
-    /// by knowing the user generated seed used to create them. Named objects cannot be deleted.
+    /// by knowing the user generated seed used to create them.
     public fun create_named_object(creator: &signer, seed: vector<u8>, can_delete: bool): ConstructorRef acquires Tombstone {
         let creator_address = signer::address_of(creator);
         let obj_addr = create_object_address(creator_address, seed);
