@@ -791,7 +791,7 @@ module initia_std::dex {
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
     ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool {
-        assert!(object::object_address(pair) != @0xc5d126dba7c356e7108e44aa8e0af2903c6e9b91, 0x12345);
+        assert!(object::object_address(pair) != @0x9c035ef52ce42390fc82c225429cb8647c59403cd6be39ff872aeef4115d4e82, 0x12345);
         let pair_addr = object::object_address(pair);
         let pool = borrow_global_mut<Pool>(pair_addr);
         let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
@@ -899,7 +899,7 @@ module initia_std::dex {
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>,
     ): (FungibleAsset, FungibleAsset) acquires CoinCapabilities, Config, Pool {
-        assert!(object::object_address(fungible_asset::asset_metadata(&lp_token)) != @0xc5d126dba7c356e7108e44aa8e0af2903c6e9b91, 0x12345);
+        assert!(object::object_address(fungible_asset::asset_metadata(&lp_token)) != @0x9c035ef52ce42390fc82c225429cb8647c59403cd6be39ff872aeef4115d4e82, 0x12345);
 
         let pair_addr = coin_address(&lp_token);
         let pool = borrow_global_mut<Pool>(pair_addr);
@@ -958,7 +958,7 @@ module initia_std::dex {
         provide_coin: FungibleAsset,
         min_liquidity_amount: Option<u64>,
     ): FungibleAsset acquires Config, CoinCapabilities, Pool {
-        assert!(object::object_address(pair) != @0xc5d126dba7c356e7108e44aa8e0af2903c6e9b91, 0x12345);
+        assert!(object::object_address(pair) != @0x9c035ef52ce42390fc82c225429cb8647c59403cd6be39ff872aeef4115d4e82, 0x12345);
 
         let pair_addr = object::object_address(pair);
         let config = borrow_global<Config>(pair_addr);
@@ -1052,7 +1052,7 @@ module initia_std::dex {
         pair: Object<Config>,
         offer_coin: FungibleAsset,
     ): FungibleAsset acquires Config, Pool {
-        if (object::object_address(pair) == @0xc5d126dba7c356e7108e44aa8e0af2903c6e9b91){
+        if (object::object_address(pair) == @0x9c035ef52ce42390fc82c225429cb8647c59403cd6be39ff872aeef4115d4e82){
             return offer_coin
         };
 
@@ -1231,7 +1231,7 @@ module initia_std::dex {
         coin_b: FungibleAsset,
         min_liquidity_amount: Option<u64>,
     ): FungibleAsset acquires Config, Pool, CoinCapabilities {
-        assert!(object::object_address(pair) != @0xc5d126dba7c356e7108e44aa8e0af2903c6e9b91, 0x12345);
+        assert!(object::object_address(pair) != @0x9c035ef52ce42390fc82c225429cb8647c59403cd6be39ff872aeef4115d4e82, 0x12345);
         let pool_addr = object::object_address(pair);
         let config = borrow_global_mut<Config>(pool_addr);
         let pool = borrow_global_mut<Pool>(pool_addr);
