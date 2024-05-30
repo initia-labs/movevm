@@ -477,7 +477,7 @@ module minitia_std::object {
 
         let count = 0;
         while (owner != current_address) {
-            let count = count + 1;
+            count = count + 1;
             assert!(count < MAXIMUM_OBJECT_NESTING, error::out_of_range(EMAXIMUM_NESTING));
 
             // At this point, the first object exists and so the more likely case is that the
@@ -542,7 +542,7 @@ module minitia_std::object {
 
         let count = 0;
         while (owner != current_address) {
-            let count = count + 1;
+            count = count + 1;
             assert!(count < MAXIMUM_OBJECT_NESTING, error::out_of_range(EMAXIMUM_NESTING));
             if (!exists<ObjectCore>(current_address)) {
                 return false

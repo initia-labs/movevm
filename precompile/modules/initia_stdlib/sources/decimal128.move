@@ -100,42 +100,54 @@ module initia_std::decimal128 {
 
         let cursor = 0;
         let dot_index = 0;
-        let val: u128 = 0;
+
+        let int_part = 0;
+        let frac_part = 0;
+
+
         while (cursor < len) {
             let s = *vector::borrow(vec, cursor);
-            cursor = cursor + 1;                
+            cursor = cursor + 1;
 
             // find `.` position
-            if (s == 46) continue;
+            if (s == 46) break;
 
-            val = val * 10;
+            int_part = int_part * 10;
             assert!(s >= 48 && s <= 57, error::invalid_argument(EFAILED_TO_DESERIALIZE));
 
             let n = (s - 48 as u128);
-            val = val + n;
-
-            if (cursor == dot_index + 1) {
-                // use `<` not `<=` to safely check "out of range"
-                // (i.e. to avoid fractional part checking)
-                assert!(val < MAX_INTEGER_PART, error::invalid_argument(EOUT_OF_RANGE));
-
-                dot_index = dot_index + 1;
-            };
+            int_part = int_part + n;
+            assert!(int_part < MAX_INTEGER_PART, error::invalid_argument(EOUT_OF_RANGE));
+            dot_index = dot_index + 1;
         };
 
+        while (cursor < len) {
+            let s = *vector::borrow(vec, cursor);
+            cursor = cursor + 1;
+
+            frac_part = frac_part * 10;
+            assert!(s >= 48 && s <= 57, error::invalid_argument(EFAILED_TO_DESERIALIZE));
+
+            let n = (s - 48 as u128);
+            frac_part = frac_part + n;
+            assert!(frac_part < MAX_INTEGER_PART, error::invalid_argument(EOUT_OF_RANGE));
+        };
+
+
+
         // ignore fractional part longer than `FRACTIONAL_LENGTH`
-        let val = if (dot_index == len) {
-            val * pow(10, FRACTIONAL_LENGTH)
+        let frac_part_val = if (dot_index == len) {
+            0
         } else {
             let fractional_length = len - dot_index - 1;
             if (fractional_length > FRACTIONAL_LENGTH) {
-                val / pow(10, fractional_length - FRACTIONAL_LENGTH)
+                frac_part / pow(10, fractional_length - FRACTIONAL_LENGTH)
             } else {
-                val * pow(10, FRACTIONAL_LENGTH - fractional_length)
+                frac_part * pow(10, FRACTIONAL_LENGTH - fractional_length)
             }
         };
 
-        new(val)
+        new(int_part * DECIMAL_FRACTIONAL + frac_part_val)
     }
 
     fun pow(num: u128, pow_amount: u64): u128 {
@@ -185,6 +197,12 @@ module initia_std::decimal128 {
         assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.6")), 2) == 201, 0);
         assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.7")), 2) == 201, 0);
         assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0x10001, location = Self)]
+    fun multible_dots() {
+        from_string(&string::utf8(b".1.1."));
     }
 
     #[test]
