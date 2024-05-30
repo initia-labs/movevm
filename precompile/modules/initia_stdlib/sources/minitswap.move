@@ -665,7 +665,11 @@ module initia_std::minitswap {
         } else {
             primary_fungible_store::deposit(pool_addr, offer_asset);
             let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
-            fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
+            fee_amount = decimal128::mul_u64_with_round_up(&module_store.swap_fee_rate, return_amount);
+            if (fee_amount == 0) {
+                fee_amount = 1;
+            };
+
             module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
             pool.l2_pool_amount = pool.l2_pool_amount + offer_amount;
@@ -697,7 +701,11 @@ module initia_std::minitswap {
         assert!(is_l1_init(&l1_init), error::invalid_argument(ENOT_L1_INIT));
         let (module_store, pool, module_signer, pool_signer) = borrow_all_mut(l2_init_metadata);
         let amount = fungible_asset::amount(&l1_init);
-        let fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, amount);
+        let fee_amount = decimal128::mul_u64_with_round_up(&module_store.swap_fee_rate, amount);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
+
         module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
         let offer_amount = amount - fee_amount;
         assert!(offer_amount <= pool.virtual_l1_balance, error::invalid_argument(ENOT_ENOUGH_BALANCE));
@@ -1039,7 +1047,11 @@ module initia_std::minitswap {
                 return_amount
             } else {
                 let return_amount = get_return_amount(offer_amount, l2_pool_amount, l1_pool_amount, pool.pool_size, pool.ann);
-                fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
+                fee_amount = decimal128::mul_u64_with_round_up(&module_store.swap_fee_rate, return_amount);
+                if (fee_amount == 0) {
+                    fee_amount = 1;
+                };
+
                 let return_amount = return_amount - fee_amount;
                 return_amount
             };

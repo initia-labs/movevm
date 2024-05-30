@@ -1006,7 +1006,10 @@ module initia_std::dex {
             &decimal128::sub(&decimal128::one(), &normalized_weight),
             amount_in
         );
-        let fee_amount = decimal128::mul_u64(&config.swap_fee_rate, adjusted_swap_amount);
+        let fee_amount = decimal128::mul_u64_with_round_up(&config.swap_fee_rate, adjusted_swap_amount);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
 
         // actual amount in after deducting fee amount
         let adjusted_amount_in = amount_in - fee_amount;
@@ -1369,7 +1372,7 @@ module initia_std::dex {
         let exp = decimal128::from_ratio(decimal128::val(&weight_in), decimal128::val(&weight_out));
 
         // avoid zero fee amount to prevent fee bypass attack
-        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        let fee_amount = decimal128::mul_u64_with_round_up(&swap_fee_rate, amount_in);
         if (fee_amount == 0) {
             fee_amount = 1;
         };
@@ -1396,7 +1399,10 @@ module initia_std::dex {
         let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);
 
         let amount_in = ( adjusted_amount_in / decimal128::val(&sub_one_fee) as u64);
-        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        let fee_amount = decimal128::mul_u64_with_round_up(&swap_fee_rate, amount_in);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
 
         (amount_in, fee_amount)
     }

@@ -793,7 +793,11 @@ module initia_std::stableswap {
 
         let y = get_y(offer_index, return_index, offer_amount, pool_amounts, ann);
         let return_amount = *vector::borrow(&pool_amounts, return_index) - y - 1; // sub 1 just in case
-        let fee_amount = decimal128::mul_u64(&pool.swap_fee_rate, return_amount);
+        let fee_amount = decimal128::mul_u64_with_round_up(&pool.swap_fee_rate, return_amount);
+        if (fee_amount == 0) {
+            fee_amount = 1
+        };
+
         (return_amount, fee_amount)
     }
 
@@ -871,6 +875,6 @@ module initia_std::stableswap {
         assert!(coin::balance(chain_addr, metadata_b) == 850000000, 2);
         swap_script(&chain, pool, metadata_a, metadata_b, 1000000, option::none());
         assert!(coin::balance(chain_addr, metadata_a) == 849000000, 3);
-        assert!(coin::balance(chain_addr, metadata_b) == 850999285, 3);
+        assert!(coin::balance(chain_addr, metadata_b) == 850999284, 3);
     }
 }

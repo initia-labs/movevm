@@ -58,8 +58,20 @@ module initia_std::decimal128 {
         (decimal.val * (val as u128) / DECIMAL_FRACTIONAL as u64)
     }
 
+    public fun mul_u64_with_round_up(decimal: &Decimal128, val: u64): u64 {
+        let val = decimal.val * (val as u128);
+        let val = val + DECIMAL_FRACTIONAL / 2;
+        (val / DECIMAL_FRACTIONAL as u64)
+    }
+
     public fun mul_u128(decimal: &Decimal128, val: u128): u128 {
         decimal.val * val / DECIMAL_FRACTIONAL
+    }
+
+    public fun mul_u128_with_round_up(decimal: &Decimal128, val: u128): u128 {
+        let val = decimal.val * val;
+        let val = val + DECIMAL_FRACTIONAL / 2;
+        val / DECIMAL_FRACTIONAL       
     }
 
     public fun mul(a: &Decimal128, b: &Decimal128): Decimal128 {
@@ -148,6 +160,31 @@ module initia_std::decimal128 {
             from_string(&string::utf8(b"340282366920938463462.0")) == new(340282366920938463462 * DECIMAL_FRACTIONAL),
             0
         );
+    }
+
+    #[test]
+    fun test_round_up() {
+        // u64
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.0")), 2) == 200, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.1")), 2) == 200, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.2")), 2) == 200, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.3")), 2) == 201, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.4")), 2) == 201, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.5")), 2) == 201, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.6")), 2) == 201, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.7")), 2) == 201, 0);
+        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
+
+        // u128
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.0")), 2) == 200, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.1")), 2) == 200, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.2")), 2) == 200, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.3")), 2) == 201, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.4")), 2) == 201, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.5")), 2) == 201, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.6")), 2) == 201, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.7")), 2) == 201, 0);
+        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
     }
 
     #[test]
