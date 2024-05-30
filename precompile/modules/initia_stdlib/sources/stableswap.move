@@ -759,6 +759,16 @@ module initia_std::stableswap {
         (y as u64)
     }
 
+    // avoid zero fee amount to prevent fee bypass attack
+    fun calculate_fee_with_minimum(swap_fee_rate: &Decimal128, amount_in: u64): u64 {
+        let fee_amount = decimal128::mul_u64_with_round_up(swap_fee_rate, amount_in);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
+
+        fee_amount
+    }
+
     public fun swap_simulation(
         pool_obj:Object<Pool>,
         offer_coin_metadata: Object<Metadata>,
@@ -793,10 +803,7 @@ module initia_std::stableswap {
 
         let y = get_y(offer_index, return_index, offer_amount, pool_amounts, ann);
         let return_amount = *vector::borrow(&pool_amounts, return_index) - y - 1; // sub 1 just in case
-        let fee_amount = decimal128::mul_u64_with_round_up(&pool.swap_fee_rate, return_amount);
-        if (fee_amount == 0) {
-            fee_amount = 1
-        };
+        let fee_amount = calculate_fee_with_minimum(&pool.swap_fee_rate, return_amount);
 
         (return_amount, fee_amount)
     }

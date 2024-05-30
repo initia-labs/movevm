@@ -624,6 +624,16 @@ module initia_std::minitswap {
         primary_fungible_store::withdraw(&module_signer, l1_init_metadata(), withdraw_amount)
     }
 
+    // avoid zero fee amount to prevent fee bypass attack
+    fun calculate_fee_with_minimum(swap_fee_rate: &Decimal128, amount_in: u64): u64 {
+        let fee_amount = decimal128::mul_u64_with_round_up(swap_fee_rate, amount_in);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
+
+        fee_amount
+    }
+
     public fun swap_internal(
         offer_asset: FungibleAsset,
         return_metadata: Object<Metadata>,
@@ -665,10 +675,7 @@ module initia_std::minitswap {
         } else {
             primary_fungible_store::deposit(pool_addr, offer_asset);
             let return_amount = get_return_amount(offer_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
-            fee_amount = decimal128::mul_u64_with_round_up(&module_store.swap_fee_rate, return_amount);
-            if (fee_amount == 0) {
-                fee_amount = 1;
-            };
+            fee_amount = calculate_fee_with_minimum(&module_store.swap_fee_rate, return_amount);
 
             module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
             pool.l1_pool_amount = pool.l1_pool_amount - return_amount;
@@ -701,10 +708,7 @@ module initia_std::minitswap {
         assert!(is_l1_init(&l1_init), error::invalid_argument(ENOT_L1_INIT));
         let (module_store, pool, module_signer, pool_signer) = borrow_all_mut(l2_init_metadata);
         let amount = fungible_asset::amount(&l1_init);
-        let fee_amount = decimal128::mul_u64_with_round_up(&module_store.swap_fee_rate, amount);
-        if (fee_amount == 0) {
-            fee_amount = 1;
-        };
+        let fee_amount = calculate_fee_with_minimum(&module_store.swap_fee_rate, amount);
 
         module_store.l1_init_amount = module_store.l1_init_amount + fee_amount;
         let offer_amount = amount - fee_amount;
@@ -1047,10 +1051,7 @@ module initia_std::minitswap {
                 return_amount
             } else {
                 let return_amount = get_return_amount(offer_amount, l2_pool_amount, l1_pool_amount, pool.pool_size, pool.ann);
-                fee_amount = decimal128::mul_u64_with_round_up(&module_store.swap_fee_rate, return_amount);
-                if (fee_amount == 0) {
-                    fee_amount = 1;
-                };
+                fee_amount = calculate_fee_with_minimum(&module_store.swap_fee_rate, return_amount);
 
                 let return_amount = return_amount - fee_amount;
                 return_amount
