@@ -574,7 +574,7 @@ module initia_std::vip {
             
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
             
-            let effectiv_bridge_balance = if (bridge_balance > max_effective_balance) {
+            let effective_bridge_balance = if (bridge_balance > max_effective_balance) {
                 max_effective_balance
             } else if (bridge_balance < module_store.minimum_eligible_tvl){
                 0
@@ -582,7 +582,7 @@ module initia_std::vip {
                 bridge_balance
             };
         
-            let share = decimal256::from_ratio_u64(effectiv_bridge_balance, total_balance);
+            let share = decimal256::from_ratio_u64(effective_bridge_balance, total_balance);
             simple_map::add(balance_shares, bridge_id, share
             
             );
