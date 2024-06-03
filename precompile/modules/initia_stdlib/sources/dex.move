@@ -1354,7 +1354,7 @@ module initia_std::dex {
 
     // avoid zero fee amount to prevent fee bypass attack
     fun calculate_fee_with_minimum(swap_fee_rate: &Decimal128, amount_in: u64): u64 {
-        let fee_amount = decimal128::mul_u64_with_round_up(swap_fee_rate, amount_in);
+        let fee_amount = decimal128::mul_u64_with_ceil(swap_fee_rate, amount_in);
         if (fee_amount == 0) {
             fee_amount = 1;
         };
