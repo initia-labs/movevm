@@ -46,6 +46,7 @@ module initia_std::vip_zapping {
         // lock period for zapping (in seconds)
         lock_period: u64,
         zappings: table::Table<u64 /* zapping id (zid)*/, Zapping>,
+        zid: u64,
     }
 
     struct Zapping has store {
@@ -170,6 +171,7 @@ module initia_std::vip_zapping {
             extend_ref,
             lock_period: DEFAULT_LOCK_PERIOD,
             zappings: table::new<u64, Zapping>(),
+            zid: 0,
         });
     }
 
@@ -411,8 +413,7 @@ module initia_std::vip_zapping {
         let delegation = staking::delegate(validator, lock_coin);
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let zid = table::length(&module_store.zappings);
-
+        let zid = module_store.zid;
         assert!(!table::contains(&module_store.zappings, zid), error::already_exists(EZAPPING_ALREADY_EXIST));
 
         let (_, block_time) = block::get_block_info();
@@ -443,7 +444,7 @@ module initia_std::vip_zapping {
                 share,
             }
         );
-
+        module_store.zid = zid + 1;
         (share, zid, delegation_res)
     }
 
@@ -724,6 +725,51 @@ module initia_std::vip_zapping {
         let zapping = get_zapping(1);
         assert!(zapping.stage == stage, 2);
         assert!(zapping.release_time == release_time+1, 3);
+    }
+
+    #[test(chain = @0x1, account = @0x999)]
+    fun test_zapping_multiple(
+        chain: &signer,
+        account: &signer,
+    ) acquires ModuleStore, LSStore {
+        let (
+            esinit_metadata, 
+            stakelisted_metadata,
+            lp_metadata, 
+            val 
+        )= test_setup_for_zapping(
+            chain, 
+            account,
+            1_000_000_000,
+            1_000_000_000,
+        );
+
+        let bridge_id = 1;
+        let (stage, lock_period, start_time) = (10, 3600, 1000000);
+        let release_time = start_time + lock_period;
+        update_lock_period_script(chain, lock_period);
+        
+        block::set_block_info(1, start_time);
+        
+        let zapping_times = 0;
+        while (zapping_times < 500) {
+            let esinit = primary_fungible_store::withdraw(account, esinit_metadata, 1_000);
+            let stakelisted = primary_fungible_store::withdraw(account, stakelisted_metadata, 1_000);
+            
+            zapping(
+                account,
+                bridge_id,
+                lp_metadata,
+                option::none(),
+                val,
+                stage,
+                esinit,
+                stakelisted,
+            );
+            block::set_block_info(2 + zapping_times, start_time + release_time * (zapping_times + 1) + 1);
+            claim_zapping_script(account, zapping_times);
+            zapping_times = zapping_times + 1;
+        }
     }
 
     #[test(chain = @0x1, account = @0x999)]
