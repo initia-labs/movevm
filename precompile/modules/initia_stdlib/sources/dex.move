@@ -1006,7 +1006,7 @@ module initia_std::dex {
             &decimal128::sub(&decimal128::one(), &normalized_weight),
             amount_in
         );
-        let fee_amount = decimal128::mul_u64(&config.swap_fee_rate, adjusted_swap_amount);
+        let fee_amount = calculate_fee_with_minimum(&config.swap_fee_rate, adjusted_swap_amount);
 
         // actual amount in after deducting fee amount
         let adjusted_amount_in = amount_in - fee_amount;
@@ -1352,6 +1352,16 @@ module initia_std::dex {
         )
     }
 
+    // avoid zero fee amount to prevent fee bypass attack
+    fun calculate_fee_with_minimum(swap_fee_rate: &Decimal128, amount_in: u64): u64 {
+        let fee_amount = decimal128::mul_u64_with_ceil(swap_fee_rate, amount_in);
+        if (fee_amount == 0) {
+            fee_amount = 1;
+        };
+
+        fee_amount
+    }
+
     /// Calculate out amount
     /// https://balancer.fi/whitepaper.pdf (15)
     /// return (return_amount, fee_amount)
@@ -1368,12 +1378,7 @@ module initia_std::dex {
         let one = decimal128::one();
         let exp = decimal128::from_ratio(decimal128::val(&weight_in), decimal128::val(&weight_out));
 
-        // avoid zero fee amount to prevent fee bypass attack
-        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
-        if (fee_amount == 0) {
-            fee_amount = 1;
-        };
-
+        let fee_amount = calculate_fee_with_minimum(&swap_fee_rate, amount_in);
         let adjusted_amount_in = amount_in - fee_amount;
         let base = decimal128::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
         let sub_amount = pow(&base, &exp);
@@ -1396,7 +1401,7 @@ module initia_std::dex {
         let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);
 
         let amount_in = ( adjusted_amount_in / decimal128::val(&sub_one_fee) as u64);
-        let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
+        let fee_amount = calculate_fee_with_minimum(&swap_fee_rate, amount_in);
 
         (amount_in, fee_amount)
     }
