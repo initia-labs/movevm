@@ -776,16 +776,22 @@ module initia_std::minitswap {
         if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
             let (x_fr, _) = get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.ann);
             let max_recover_amount = decimal128::mul_u64(&pool.recover_velocity, time_diff);
-            let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
-            let swap_amount = if (swap_amount_to_reach_fr < max_recover_amount) {
-                swap_amount_to_reach_fr
+
+            // due to x_fr is approximation pool.l1_pool_amount can bigger than x_fr
+            if (pool.l1_pool_amount > x_fr) {
+                (0, 0)
             } else {
-                max_recover_amount
-            };
+                let swap_amount_to_reach_fr = x_fr - pool.l1_pool_amount;
+                let swap_amount = if (swap_amount_to_reach_fr < max_recover_amount) {
+                    swap_amount_to_reach_fr
+                } else {
+                    max_recover_amount
+                };
 
-            let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.ann);
+                let return_amount = get_return_amount(swap_amount, pool.l1_pool_amount, pool.l2_pool_amount, pool.pool_size, pool.ann);
 
-            (swap_amount, return_amount)
+                (swap_amount, return_amount)
+            }
         } else {
             (0, 0)
         }
