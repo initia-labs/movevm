@@ -34,7 +34,7 @@ module initia_std::vip {
     const EINVALID_PROOF_LENGTH: u64 = 3;
     const EINVALID_VEST_PERIOD: u64 = 4;
     const EUNAUTHORIZED: u64 = 5;
-    const EINVALID_MIN_TVL: u64 = 6;
+    const EINVALID_MIN_ELIGIBLE_TVL: u64 = 6;
     const EINVALID_MAX_TVL: u64 = 7;
     const EINVALID_PROPORTION: u64 = 8;
     const EINVALID_TOTAL_SHARE: u64 = 9;
@@ -61,7 +61,7 @@ module initia_std::vip {
     const DEFAULT_PROPORTION_RATIO: vector<u8> = b"0.5";
     const DEFAULT_USER_VESTING_PERIOD: u64 = 52; // 52 times
     const DEFAULT_OPERATOR_VESTING_PERIOD: u64 = 52;
-    const DEFAULT_MINIMUM_TVL_RATIO: vector<u8> = b"0";
+    const DEFAULT_MINIMUM_ELIGIBLE_TVL: u64 = 0;
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 1;
@@ -83,10 +83,10 @@ module initia_std::vip {
         // if pool_split_ratio is 0.4, 
         // balance pool takes 0.4 and weight pool takes 0.6
         pool_split_ratio: Decimal256, 
-        // TVL cap of L2 INIT token to receive the reward.
+        // TVL cap of L2 INIT token to receive the reward. (% of total whitelisted l2 balance)
         maximum_tvl_ratio: Decimal256,
-        // minimum TVL of L2 INIT token to receive the reward.
-        minimum_tvl_ratio: Decimal256,
+        // minimum eligible TVL of L2 INIT token to receive the reward.
+        minimum_eligible_tvl: u64,
         // maximum weight of VIP reward
         maximum_weight_ratio: Decimal256,
         // a set of stage data
@@ -139,7 +139,7 @@ module initia_std::vip {
         pool_split_ratio: Decimal256,
         user_vesting_period: u64,
         operator_vesting_period: u64,
-        minimum_tvl_ratio: Decimal256,
+        minimum_eligible_tvl: u64,
         maximum_tvl_ratio: Decimal256,
     }
 
@@ -206,7 +206,7 @@ module initia_std::vip {
             pool_split_ratio: decimal256::from_string(&string::utf8(DEFAULT_POOL_SPLIT_RATIO)),
             agent: signer::address_of(chain),
             maximum_tvl_ratio: decimal256::from_string(&string::utf8(DEFAULT_MAXIMUM_TVL_RATIO)),
-            minimum_tvl_ratio: decimal256::from_string(&string::utf8(DEFAULT_MINIMUM_TVL_RATIO)),
+            minimum_eligible_tvl: DEFAULT_MINIMUM_ELIGIBLE_TVL,
             maximum_weight_ratio: decimal256::from_string(&string::utf8(DEFAULT_MAXIMUM_WEIGHT_RATIO)),
             stage_data: table::new<vector<u8>, StageData>(),
             bridges: table::new<vector<u8>, Bridge>(),
@@ -564,8 +564,7 @@ module initia_std::vip {
         balance_shares: &mut SimpleMap<u64, Decimal256>
     ): u64 {
         let total_balance = bridge_total_balance(module_store);
-        let max_eligible_balance = decimal256::mul_u64(&module_store.maximum_tvl_ratio, total_balance);
-        let min_eligible_balance = decimal256::mul_u64(&module_store.minimum_tvl_ratio, total_balance); 
+        let max_effective_balance = decimal256::mul_u64(&module_store.maximum_tvl_ratio, total_balance);
         
         let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
@@ -577,15 +576,15 @@ module initia_std::vip {
             
             let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr, vip_reward::reward_metadata());
             
-            let bridge_balance = if (bridge_balance > max_eligible_balance) {
-                max_eligible_balance
-            } else if (bridge_balance < min_eligible_balance){
+            let effective_bridge_balance = if (bridge_balance > max_effective_balance) {
+                max_effective_balance
+            } else if (bridge_balance < module_store.minimum_eligible_tvl){
                 0
             } else {
                 bridge_balance
             };
-
-            let share = decimal256::from_ratio_u64(bridge_balance, total_balance);
+        
+            let share = decimal256::from_ratio_u64(effective_bridge_balance, total_balance);
             simple_map::add(balance_shares, bridge_id, share
             
             );
@@ -660,22 +659,6 @@ module initia_std::vip {
         table::contains(&module_store.bridges, table_key::encode_u64(bridge_id))
     }
 
-    public(friend) fun update_vip_weights_for_friend(
-        bridge_id: vector<u64>,
-        weight: vector<Decimal256>,
-    ) acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-
-        assert!(vector::length(&bridge_id) == vector::length(&weight), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
-
-        vector::enumerate_ref(&bridge_id, |i, id| {
-            let bridge = load_bridge_mut(&mut module_store.bridges, *id);
-            bridge.vip_weight = *vector::borrow(&weight, i);
-        });
-
-        validate_vip_weights(module_store);
-    }
-    
     //
     // Entry Functions
     //
@@ -916,7 +899,16 @@ module initia_std::vip {
         weight: vector<Decimal256>,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        update_vip_weights_for_friend(bridge_id, weight);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
+        assert!(vector::length(&bridge_id) == vector::length(&weight), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
+
+        vector::enumerate_ref(&bridge_id, |i, id| {
+            let bridge = load_bridge_mut(&mut module_store.bridges, *id);
+            bridge.vip_weight = *vector::borrow(&weight, i);
+        });
+
+        validate_vip_weights(module_store);
     }
 
     public entry fun update_vip_weight(
@@ -944,14 +936,13 @@ module initia_std::vip {
         module_store.operator_vesting_period = operator_vesting_period;
     }
 
-    public entry fun update_minimum_tvl_ratio(
+    public entry fun update_minimum_eligible_tvl(
         chain: &signer,
-        minimum_tvl_ratio: Decimal256,
+        minimum_eligible_tvl: u64,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(decimal256::val(&minimum_tvl_ratio) >= 0,error::invalid_argument(EINVALID_MIN_TVL));
-        module_store.minimum_tvl_ratio = minimum_tvl_ratio;
+        module_store.minimum_eligible_tvl = minimum_eligible_tvl;
     }
 
     public entry fun update_maximum_tvl_ratio(
@@ -960,7 +951,7 @@ module initia_std::vip {
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(decimal256::val(&maximum_tvl_ratio) >= decimal256::val(&module_store.minimum_tvl_ratio), error::invalid_argument(EINVALID_MAX_TVL));
+        assert!(decimal256::val(&maximum_tvl_ratio) <= decimal256::val(&decimal256::one()), error::invalid_argument(EINVALID_MAX_TVL));
         module_store.maximum_tvl_ratio = maximum_tvl_ratio;
     }
 
@@ -970,11 +961,6 @@ module initia_std::vip {
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(
-            decimal256::val(&proportion) >= decimal256::val(&decimal256::zero()),
-            error::invalid_argument(EINVALID_PROPORTION)
-        );
-
         module_store.proportion = proportion;
     }
 
@@ -1177,7 +1163,7 @@ module initia_std::vip {
             pool_split_ratio: module_store.pool_split_ratio,
             user_vesting_period: module_store.user_vesting_period,
             operator_vesting_period: module_store.operator_vesting_period,
-            minimum_tvl_ratio: module_store.minimum_tvl_ratio,
+            minimum_eligible_tvl: module_store.minimum_eligible_tvl,
             maximum_tvl_ratio: module_store.maximum_tvl_ratio,
         }
     }
@@ -1687,9 +1673,9 @@ module initia_std::vip {
     }
 
 
-    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_update_minimum_tvl(chain: &signer, operator: &signer, receiver: &signer) acquires ModuleStore {
-        let bridge_id = test_setup(
+    #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun test_update_minimum_eligible_tvl(chain: &signer, operator: &signer) acquires ModuleStore {
+        test_setup(
             chain, 
             operator,
             1,
@@ -1697,14 +1683,18 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id, 0);
+        let module_response = get_module_store();
+        assert!(module_response.minimum_eligible_tvl == 0, 0);
+        
+        update_minimum_eligible_tvl(chain, 1_000_000_000_000);
 
-        update_minimum_tvl_ratio(chain, decimal256::from_string(&string::utf8(b"0.3")));
-        claim_user_reward_script(receiver, bridge_id, 1, *simple_map::borrow(&merkle_proof_map, &1), *simple_map::borrow(&score_map, &1));
+        let module_response = get_module_store();
+        assert!(module_response.minimum_eligible_tvl == 1_000_000_000_000, 0);
 
-        update_minimum_tvl_ratio(chain, decimal256::from_string(&string::utf8(b"0.5")));
-        claim_user_reward_script(receiver, bridge_id, 2, *simple_map::borrow(&merkle_proof_map, &2), *simple_map::borrow(&score_map, &2));
+        update_minimum_eligible_tvl(chain, 500_000_000_000);
+
+        let module_response = get_module_store();
+        assert!(module_response.minimum_eligible_tvl == 500_000_000_000, 0);
     }
 
     #[test(chain=@0x1, operator=@0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]

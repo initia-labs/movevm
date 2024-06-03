@@ -144,13 +144,13 @@ module initia_std::vip_operator {
 
         assert!(new_commission_rate <= max_commission_rate, error::invalid_argument(EOVER_MAX_COMMISSION_RATE));
 
-        if (old_commission_rate > new_commission_rate) {
-            let change = old_commission_rate - new_commission_rate;
-            assert!(change <= max_commission_change_rate, error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE));
+        let change = if (old_commission_rate > new_commission_rate) {
+            old_commission_rate - new_commission_rate
         } else {
-            let change = new_commission_rate - old_commission_rate;
-            assert!(change <= max_commission_change_rate, error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE));
+            new_commission_rate - old_commission_rate
         };
+
+        assert!(change <= max_commission_change_rate, error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE));
 
         operator_store.commission_rate = commission_rate;
         operator_store.last_changed_stage = stage;
@@ -267,6 +267,20 @@ module initia_std::vip_operator {
             commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
             commission_rate: decimal256::from_string(&string::utf8(b"0.2")),
         }, 2);
+
+        update_operator_commission(
+            operator,
+            bridge_id,
+            12,
+            decimal256::from_string(&string::utf8(b"0.1")),
+        );
+
+        assert!(get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
+            last_changed_stage: 12,
+            commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
+            commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
+            commission_rate: decimal256::from_string(&string::utf8(b"0.1")),
+        }, 3);
     }
 
     #[test(chain=@0x1, operator=@0x999)]
