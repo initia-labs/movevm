@@ -38,7 +38,7 @@ func Initialize(
 	env []byte,
 	moduleBundle []byte,
 	allowedPublishers []byte,
-) error {
+) ([]byte, error) {
 	var err error
 
 	callID := startCall()
@@ -59,13 +59,12 @@ func Initialize(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	_, err = C.initialize(vm.ptr, db, _api, e, mb, ap, &errmsg)
+	res, err := C.initialize(vm.ptr, db, _api, e, mb, ap, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
-		return errorWithMessage(err, errmsg)
+		return nil, errorWithMessage(err, errmsg)
 	}
 
-	return err
+	return copyAndDestroyUnmanagedVector(res), err
 }
 
 // ExecuteContract call ffi(`execute_contract`) to execute
