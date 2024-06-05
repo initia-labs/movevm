@@ -48,7 +48,7 @@ module initia_std::vip {
     const ESNAPSHOT_NOT_EXISTS: u64 = 19;
     const EALREADY_RELEASED: u64 = 20;
     const EINVALID_WEIGHT: u64 = 21;
-    
+    const EINVALID_STAGE_ORDER: u64 = 22;
     //
     //  Constants
     //
@@ -189,6 +189,13 @@ module initia_std::vip {
         user_vesting_release_time: u64,
         operator_vesting_release_time: u64,
         proportion: Decimal256,
+    }
+
+    #[event]
+    struct ReleaseTimeUpdateEvent has drop, store {
+        stage: u64,
+        user_vesting_release_time: u64,
+        operator_vesting_release_time: u64,
     }
 
     //
@@ -720,7 +727,39 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.agent = new_agent;
     }
+
+    public entry fun update_agent_by_chain(
+        chain: &signer,
+        new_agent: address,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.agent = new_agent;
+    }
     
+    public entry fun update_release_time(
+        agent: &signer,
+        stage: u64,
+        user_vesting_release_time: u64,
+        operator_vesting_release_time: u64,
+    ) acquires ModuleStore {
+        check_agent_permission(agent);
+
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        assert!(table::contains(&mut module_store.stage_data, table_key::encode_u64(stage)), error::not_found(ESTAGE_DATA_NOT_FOUND));
+        let stage_data = table::borrow_mut(&mut module_store.stage_data, table_key::encode_u64(stage));
+        stage_data.user_vesting_release_time = user_vesting_release_time;
+        stage_data.operator_vesting_release_time = operator_vesting_release_time;
+
+        event::emit(
+            ReleaseTimeUpdateEvent {
+                stage,
+                user_vesting_release_time,
+                operator_vesting_release_time,
+            }
+        );
+    }
+
     public entry fun fund_reward_script(
         agent: &signer,
         stage: u64,
@@ -856,7 +895,10 @@ module initia_std::vip {
         bridge_id: u64,
         stage: vector<u64>,
     ) acquires ModuleStore {
+        let prev_stage = 0;
         vector::enumerate_ref(&stage, |_i, s| {
+            assert!(*s > prev_stage, error::invalid_argument(EINVALID_STAGE_ORDER));
+            prev_stage = *s;
             claim_operator_reward_script(
                 operator,
                 bridge_id,
@@ -875,7 +917,10 @@ module initia_std::vip {
         assert!(vector::length(&stage) == vector::length(&merkle_proofs) && 
             vector::length(&merkle_proofs) == vector::length(&l2_score), error::invalid_argument(EINVALID_BATCH_ARGUMENT));
         
+        let prev_stage = 0;
         vector::enumerate_ref(&stage, |i, s| {
+            assert!(*s > prev_stage, error::invalid_argument(EINVALID_STAGE_ORDER));
+            prev_stage = *s;
             claim_user_reward_script(
                 account,
                 bridge_id,
