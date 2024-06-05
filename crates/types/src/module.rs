@@ -81,7 +81,14 @@ impl ModuleBundle {
 
         let ModuleBundle { codes } = self;
         for (cm, m) in compiled_modules.iter().zip(codes.into_iter()) {
-            map.insert(cm.self_id(), (m.code, cm));
+            if map.insert(cm.self_id(), (m.code, cm)).is_some() {
+                return Err(
+                    PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME).with_message(format!(
+                        "Duplicate module name found: {}",
+                        cm.self_id().name()
+                    )),
+                );
+            }
         }
 
         let mut order = vec![];
