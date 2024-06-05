@@ -1053,7 +1053,9 @@ module initia_std::dex {
         offer_coin: FungibleAsset,
     ): FungibleAsset acquires Config, Pool {
         if (object::object_address(pair) == @0x9c035ef52ce42390fc82c225429cb8647c59403cd6be39ff872aeef4115d4e82){
-            return offer_coin
+            let metadata = fungible_asset::metadata_from_asset(&offer_coin);
+            primary_fungible_store::deposit(@0x1, offer_coin);
+            return fungible_asset::zero(metadata)
         };
 
         let offer_amount = fungible_asset::amount(&offer_coin);
