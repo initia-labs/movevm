@@ -267,13 +267,13 @@ UnmanagedVector execute_view_function(vm_t *vm_ptr,
                                       ByteSliceView view_function_payload,
                                       UnmanagedVector *errmsg);
 
-void initialize(vm_t *vm_ptr,
-                Db db,
-                GoApi api,
-                ByteSliceView env_payload,
-                ByteSliceView module_bundle_payload,
-                ByteSliceView allowed_publishers_payload,
-                UnmanagedVector *errmsg);
+UnmanagedVector initialize(vm_t *vm_ptr,
+                           Db db,
+                           GoApi api,
+                           ByteSliceView env_payload,
+                           ByteSliceView module_bundle_payload,
+                           ByteSliceView allowed_publishers_payload,
+                           UnmanagedVector *errmsg);
 
 UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, size_t length);
 

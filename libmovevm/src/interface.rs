@@ -1,7 +1,6 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use crate::args::VM_ARG;
-use crate::error::handle_c_error_default;
 use crate::error::{handle_c_error_binary, Error};
 use crate::move_api::handler as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
@@ -58,7 +57,7 @@ pub extern "C" fn initialize(
     module_bundle_payload: ByteSliceView,
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
-) {
+) -> UnmanagedVector {
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
@@ -73,7 +72,8 @@ pub extern "C" fn initialize(
         None => Err(Error::unset_arg(VM_ARG)),
     };
 
-    handle_c_error_default(res, errmsg)
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
 }
 
 // exported function to execute (an entrypoint of) contract

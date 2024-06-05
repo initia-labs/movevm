@@ -28,7 +28,7 @@ pub(crate) fn initialize_vm(
     env: Env,
     module_bundle: ModuleBundle,
     allowed_publishers: Vec<AccountAddress>,
-) -> Result<(), Error> {
+) -> Result<Vec<u8>, Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
@@ -46,7 +46,8 @@ pub(crate) fn initialize_vm(
     // write state change to storage
     push_write_set(&mut storage, output.write_set())?;
 
-    Ok(())
+    let res = generate_result(output)?;
+    to_vec(&res)
 }
 
 pub(crate) fn execute_contract(

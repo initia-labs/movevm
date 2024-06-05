@@ -24,23 +24,23 @@ func (vm *VM) Initialize(
 	env types.Env,
 	moduleBundle types.ModuleBundle,
 	allowedPublishers []types.AccountAddress,
-) error {
+) (types.ExecutionResult, error) {
 	envBz, err := env.BcsSerialize()
 	if err != nil {
-		return err
+		return types.ExecutionResult{}, err
 	}
 
 	moduleBundleBz, err := moduleBundle.BcsSerialize()
 	if err != nil {
-		return err
+		return types.ExecutionResult{}, err
 	}
 
 	allowedPublishersBz, err := types.SerializeAddressVector(allowedPublishers)
 	if err != nil {
-		return err
+		return types.ExecutionResult{}, err
 	}
 
-	err = api.Initialize(
+	res, err := api.Initialize(
 		vm.inner,
 		kvStore,
 		goApi,
@@ -48,8 +48,12 @@ func (vm *VM) Initialize(
 		moduleBundleBz,
 		allowedPublishersBz,
 	)
+	if err != nil {
+		return types.ExecutionResult{}, err
+	}
 
-	return err
+	execRes, err := types.BcsDeserializeExecutionResult(res)
+	return execRes, err
 }
 
 // VM Destroyer
@@ -124,7 +128,6 @@ func (vm *VM) ExecuteEntryFunction(
 		sendersBz,
 		bz,
 	)
-
 	if err != nil {
 		return types.ExecutionResult{}, err
 	}
