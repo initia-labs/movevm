@@ -317,4 +317,14 @@ module initia_std::table {
 
         move_to(account, TableHolder { t });
     }
+
+    #[test(account = @0x1, account2 = @0x2)]
+    fun test_address_uniqueness(account: &signer, account2: &signer) {
+        let t1 = new<u64, u8>();
+        let t2 = new<u64, u8>();
+        assert!(handle(&t1) != handle(&t2), 1);
+
+        move_to(account, TableHolder { t: t1 });
+        move_to(account2, TableHolder { t: t2 });
+    }
 }
