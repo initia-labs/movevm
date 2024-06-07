@@ -1,6 +1,5 @@
 module initia_std::vip_vesting {
     use std::error;
-    use std::string;
     use std::signer;
     use std::vector;
     use std::option;
@@ -895,7 +894,9 @@ module initia_std::vip_vesting {
     //
     // Tests
     // 
-
+    #[test_only]
+    use std::string;
+    
     #[test_only]
     use initia_std::coin;
 
