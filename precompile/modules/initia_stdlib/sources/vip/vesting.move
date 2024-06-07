@@ -15,7 +15,8 @@ module initia_std::vip_vesting {
     use initia_std::bcs;
     use initia_std::vip_reward;
     use initia_std::type_info;
-    
+    use initia_std::address;
+
     friend initia_std::vip;
 
     //
@@ -29,6 +30,7 @@ module initia_std::vip_vesting {
     const EVESTING_NOT_CLAIMED: u64 = 5;
     const ESTAGE_ALREADY_CLAIMED: u64 = 6;
     const EREWARD_NOT_ENOUGH: u64 = 7;
+    const EINVALID_VESTING_TYPE: u64 = 8;
     
     //
     // Constants
@@ -156,15 +158,29 @@ module initia_std::vip_vesting {
         move_to(&object, vesting_store);
     }
 
-    fun generate_vesting_store_seed<Vesting: copy + drop + store>(bridge_id: u64): vector<u8>{
-        let seed = if (type_info::type_name<Vesting>() == string::utf8(b"0x1::vip_vesting::OperatorVesting")) {
-            vector[OPERATOR_VESTING_PREFIX]
-        } else {
-            vector[USER_VESTING_PREFIX]
-        };
+    fun generate_vesting_store_seed<Vesting: copy + drop + store>(
+        bridge_id: u64
+    ): vector<u8> {
+        let user_vesting = address::to_string(@initia_std);
+        let operator_vesting = address::to_string(@initia_std);
+        string::append(&mut user_vesting, string::utf8(b"::vip_vesting::UserVesting"));
+        string::append(&mut operator_vesting, string::utf8(b"::vip_vesting::OperatorVesting"));
+        
+        let seed =
+            if (type_info::type_name<Vesting>()
+                == operator_vesting) {
+                vector[OPERATOR_VESTING_PREFIX]
+            } else if (type_info::type_name<Vesting>()
+                == user_vesting){
+                vector[USER_VESTING_PREFIX]
+            } else {
+                abort(error::invalid_argument(EINVALID_VESTING_TYPE))
+            };
+
         vector::append(&mut seed, bcs::to_bytes(&bridge_id));
         return seed
     }
+
 
     fun add_vesting<Vesting: copy + drop + store>(
         account_addr: address, 
