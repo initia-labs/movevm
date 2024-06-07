@@ -15,7 +15,6 @@ module initia_std::vip_vesting {
     use initia_std::bcs;
     use initia_std::vip_reward;
     use initia_std::type_info;
-    use initia_std::address;
 
     friend initia_std::vip;
 
@@ -161,17 +160,12 @@ module initia_std::vip_vesting {
     fun generate_vesting_store_seed<Vesting: copy + drop + store>(
         bridge_id: u64
     ): vector<u8> {
-        let user_vesting = address::to_string(@initia_std);
-        let operator_vesting = address::to_string(@initia_std);
-        string::append(&mut user_vesting, string::utf8(b"::vip_vesting::UserVesting"));
-        string::append(&mut operator_vesting, string::utf8(b"::vip_vesting::OperatorVesting"));
-        
         let seed =
             if (type_info::type_name<Vesting>()
-                == operator_vesting) {
+                == type_info::type_name<OperatorVesting>()) {
                 vector[OPERATOR_VESTING_PREFIX]
             } else if (type_info::type_name<Vesting>()
-                == user_vesting){
+                == type_info::type_name<UserVesting>()){
                 vector[USER_VESTING_PREFIX]
             } else {
                 abort(error::invalid_argument(EINVALID_VESTING_TYPE))
