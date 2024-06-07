@@ -28,23 +28,18 @@ module TestAccount::TestCoin {
             coin.value = coin.value + value;
         };
 
-        
         // emit event
-        event::emit(
-            MintEvent {
-                amount: value,
-            }
-        );
+        event::emit(MintEvent { amount: value, });
     }
 
     #[view]
-    public fun get<CoinType>(account: address): u64 acquires Coin{
+    public fun get<CoinType>(account: address): u64 acquires Coin {
         let c = borrow_global<Coin<CoinType>>(account);
         c.value
     }
 
     #[view]
-    public fun number():u64 {
+    public fun number(): u64 {
         123
     }
 

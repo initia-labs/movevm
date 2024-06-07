@@ -42,16 +42,15 @@ module initia_std::ed25519 {
 
     /// Contructs an PublicKey struct, given 32-byte representation.
     public fun public_key_from_bytes(bytes: vector<u8>): PublicKey {
-        assert!(
-            std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
-            std::error::invalid_argument(PUBLIC_KEY_SIZE),
-        );
+        assert!(std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
+            std::error::invalid_argument(PUBLIC_KEY_SIZE),);
         PublicKey { bytes }
     }
 
     /// Constructs an Signature struct from the given 64 bytes.
     public fun signature_from_bytes(bytes: vector<u8>): Signature {
-        assert!(std::vector::length(&bytes) == SIGNATURE_SIZE, std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE));
+        assert!(std::vector::length(&bytes) == SIGNATURE_SIZE,
+            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE));
         Signature { bytes }
     }
 
@@ -67,9 +66,7 @@ module initia_std::ed25519 {
 
     /// Verifies a Ed25519 `signature` under an `public_key` on the specified `message`.
     public fun verify(
-        message: vector<u8>,
-        public_key: &PublicKey,
-        signature: &Signature,
+        message: vector<u8>, public_key: &PublicKey, signature: &Signature,
     ): bool {
         verify_internal(message, public_key.bytes, signature.bytes)
     }
@@ -99,15 +96,18 @@ module initia_std::ed25519 {
         let public_key_length = std::vector::length(&public_keys);
         let signature_length = std::vector::length(&signatures);
 
-        if ( message_length == 1) {
-            assert!(public_key_length == signature_length, std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
-            if(public_key_length == 0) return true;
+        if (message_length == 1) {
+            assert!(public_key_length == signature_length,
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
+            if (public_key_length == 0) return true;
         } else if (public_key_length == 1) {
-            assert!(message_length == signature_length, std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
-            if(message_length == 0) return true;
+            assert!(message_length == signature_length,
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
+            if (message_length == 0) return true;
         } else {
-            assert!(message_length == public_key_length && public_key_length == signature_length, std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
-            if(message_length == 0) return true;
+            assert!(message_length == public_key_length && public_key_length == signature_length,
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH));
+            if (message_length == 0) return true;
         };
 
         batch_verify_internal(messages, public_keys, signatures)
@@ -115,11 +115,8 @@ module initia_std::ed25519 {
 
     native fun verify_internal(message: vector<u8>, public_key: vector<u8>, signature: vector<u8>): bool;
 
-    native fun batch_verify_internal(
-        messages: vector<vector<u8>>,
-        public_keys: vector<PublicKey>,
-        signatures: vector<Signature>
-    ): bool;
+    native fun batch_verify_internal(messages: vector<vector<u8>>, public_keys: vector<PublicKey>,
+        signatures: vector<Signature>): bool;
 
     #[test_only]
     native public fun generate_keys(): (vector<u8>, vector<u8>);

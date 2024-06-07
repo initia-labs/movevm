@@ -5,7 +5,7 @@ module 0x2::TableTestData {
     use std::option;
     use initia_std::table as T;
 
-    struct S<phantom K: copy + drop,phantom V> has key {
+    struct S<phantom K: copy + drop, phantom V> has key {
         t: T::Table<K, V>
     }
 
@@ -25,7 +25,7 @@ module 0x2::TableTestData {
         let addr = signer::address_of(&acc);
         if (!exists<S<u64, u64>>(addr)) {
             let t = T::new<u64, u64>();
-            move_to(&acc, S{ t });
+            move_to(&acc, S { t });
         };
 
         let s = borrow_global_mut<S<u64, u64>>(addr);
@@ -33,28 +33,29 @@ module 0x2::TableTestData {
     }
 
     public entry fun move_table(to: signer, from: address) acquires S {
-        let S { t } = move_from<S<u64, u64>>(from); 
+        let S { t } = move_from<S<u64, u64>>(from);
 
         let tt = T::new<address, T::Table<u64, u64>>();
         T::add(&mut tt, from, t);
 
-        move_to(&to, S {t: tt});
+        move_to(&to, S { t: tt });
     }
 
     #[view]
-    public fun read_table_of_table(addr: address, inner_addr: address): (vector<u64>, vector<u64>) acquires S {
+    public fun read_table_of_table(addr: address, inner_addr: address)
+        : (vector<u64>, vector<u64>) acquires S {
         let tt = borrow_global<S<address, T::Table<u64, u64>>>(addr);
         let t = T::borrow(&tt.t, inner_addr);
         let iter = T::iter<u64, u64>(t, option::none(), option::none(), 1);
 
         let keys = vector::empty<u64>();
         let vals = vector::empty<u64>();
-        while(T::prepare<u64, u64>(iter)) {
+        while (T::prepare<u64, u64>(iter)) {
             let (key, value) = T::next<u64, u64>(iter);
 
             vector::push_back(&mut keys, key);
             vector::push_back(&mut vals, *value);
-        }; 
+        };
 
         (keys, vals)
     }
@@ -80,9 +81,9 @@ module 0x2::TableTestData {
         let t_ref = &borrow_global<S<u64, u64>>(acc).t;
 
         let iter = T::iter<u64, u64>(t_ref, option::none(), option::none(), 1);
-        
+
         let i = 1;
-        while(i < 11) {
+        while (i < 11) {
             assert!(T::prepare<u64, u64>(iter), 101);
             let (key, value) = T::next<u64, u64>(iter);
             assert!(key == i, 101);
@@ -93,9 +94,9 @@ module 0x2::TableTestData {
         assert!(!T::prepare<u64, u64>(iter), 101);
 
         let iter = T::iter(t_ref, option::some(2), option::some(5), 1);
-        
+
         let i = 2;
-        while(i < 5) {
+        while (i < 5) {
             assert!(T::prepare<u64, u64>(iter), 102);
             let (key, value) = T::next(iter);
             assert!(key == i, 102);
@@ -110,9 +111,9 @@ module 0x2::TableTestData {
         let t_ref = &borrow_global<S<u64, u64>>(acc).t;
 
         let iter = T::iter<u64, u64>(t_ref, option::none(), option::none(), 2);
-        
+
         let i = 10;
-        while(i > 0) {
+        while (i > 0) {
             assert!(T::prepare<u64, u64>(iter), 101);
             let (key, value) = T::next(iter);
             assert!(key == i, 101);
@@ -123,9 +124,9 @@ module 0x2::TableTestData {
         assert!(!T::prepare<u64, u64>(iter), 101);
 
         let iter = T::iter(t_ref, option::some(2), option::some(5), 2);
-        
+
         let i = 4;
-        while(i > 1) {
+        while (i > 1) {
             assert!(T::prepare<u64, u64>(iter), 102);
             let (key, value) = T::next(iter);
             assert!(key == i, 102);

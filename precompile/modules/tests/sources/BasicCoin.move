@@ -28,22 +28,17 @@ module std::BasicCoin {
         };
 
         // emit event
-        event::emit (
-            MintEvent {
-                amount: value,
-                coin_type: type_info::type_name<CoinType>(),
-            }
-        );
+        event::emit(MintEvent { amount: value, coin_type: type_info::type_name<CoinType>(), });
     }
 
     #[view]
-    public fun get<CoinType>(account: address): u64 acquires Coin{
+    public fun get<CoinType>(account: address): u64 acquires Coin {
         let c = borrow_global<Coin<CoinType>>(account);
         c.value
     }
 
     #[view]
-    public fun number():u64 {
+    public fun number(): u64 {
         123
     }
 
@@ -51,5 +46,4 @@ module std::BasicCoin {
     public fun get_coin<CoinType>(addr: address): Coin<CoinType> acquires Coin {
         *borrow_global<Coin<CoinType>>(addr)
     }
-
 }

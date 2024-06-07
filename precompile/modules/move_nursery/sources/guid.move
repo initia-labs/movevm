@@ -103,9 +103,8 @@ module std::guid {
 
     /// Return the number of the next GUID to be created by `addr`
     public fun get_next_creation_num(addr: address): u64 acquires Generator {
-        if (!exists<Generator>(addr)) {
-            0
-        } else {
+        if (!exists<Generator>(addr)) { 0 }
+        else {
             borrow_global<Generator>(addr).counter
         }
     }

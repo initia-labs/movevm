@@ -6,8 +6,8 @@ module TestAccount::TableUnitTests {
     use std::option;
 
     #[test]
-    fun simple(){
-        assert!(1==1,1);
+    fun simple() {
+        assert!(1 == 1, 1);
     }
 
     use std::table as T;
@@ -131,7 +131,7 @@ module TestAccount::TableUnitTests {
         let val_1 = 11;
         let val_2 = 45;
 
-        T::add(&mut t, @0xAB, Balance{ value: val_1 });
+        T::add(&mut t, @0xAB, Balance { value: val_1 });
         assert!(T::contains(&t, @0xAB), 101);
         assert!(*&T::borrow(&t, @0xAB).value == val_1, 102);
 
@@ -139,12 +139,11 @@ module TestAccount::TableUnitTests {
 
         let global_t = &mut borrow_global_mut<S<address, Balance>>(@0x42).t;
 
-        T::add(global_t, @0xCD, Balance{ value: val_2 });
+        T::add(global_t, @0xCD, Balance { value: val_2 });
         assert!(*&T::borrow(global_t, @0xAB).value == val_1, 103);
         assert!(*&T::borrow(global_t, @0xCD).value == val_2, 104);
 
-
-        let entry_mut_ref = T::borrow_mut(global_t , @0xCD);
+        let entry_mut_ref = T::borrow_mut(global_t, @0xCD);
         *&mut entry_mut_ref.value = entry_mut_ref.value - 1;
         assert!(*&T::borrow(global_t, @0xCD).value == val_2 - 1, 105);
 
@@ -170,7 +169,6 @@ module TestAccount::TableUnitTests {
         // Insert two small tables into the big table
         T::add(&mut t, @0x12, t1);
         T::add(&mut t, @0x34, t2);
-
 
         assert!(T::contains(T::borrow(&t, @0x12), @0xAB), 101);
         assert!(T::contains(T::borrow(&t, @0x34), @0xCD), 102);
@@ -275,7 +273,7 @@ module TestAccount::TableUnitTests {
         T::add(&mut t, 5, 5);
 
         let iter = T::iter(&t, option::some(1), option::some(5), 1);
-        
+
         assert!(T::prepare<u64, u64>(iter), 101);
         let (key, value) = T::next<u64, u64>(iter);
         assert!(key == 1, 101);

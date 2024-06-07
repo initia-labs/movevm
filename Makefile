@@ -12,6 +12,10 @@ SHARED_LIB_SRC = "" # File name of the shared library as created by the Rust bui
 SHARED_LIB_DST = "" # File name of the shared library that we store
 COMPILER_SHARED_LIB_SRC = ""
 COMPILER_SHARED_LIB_DST = ""
+
+MOVFMT_TOOL=movefmt
+INSTALL_COMMAND=cargo install --git https://github.com/movebit/movefmt --branch develop movefmt
+
 ifeq ($(OS),Windows_NT)
 	SHARED_LIB_SRC = movevm.dll
 	SHARED_LIB_DST = movevm.dll
@@ -80,7 +84,8 @@ build-go: prebuild-go
 
 fmt:
 	cargo fmt
-
+move-fmt:
+	@$(MOVFMT_TOOL) || (echo "Command failed, installing movefmt..."; $(INSTALL_COMMAND) && $(MOVFMT_TOOL))
 update-bindings:
 	cp libmovevm/bindings.h api
 	cp libcompiler/bindings_compiler.h api
