@@ -212,4 +212,25 @@ module minitia_std::account {
         assert!(is_object_account(new_address4), 1);
         assert!(exists_at(new_address4), 2);
     }
+
+    #[test(new_address = @0x42)]
+    #[expected_failure(abort_code = 0x80064, location = Self)]
+    public fun test_create_account_already_exists(new_address: address) {
+        create_account(new_address);
+        create_account(new_address);
+    }
+
+    #[test(new_address = @0x42)]
+    #[expected_failure(abort_code = 0x80064, location = Self)]
+    public fun test_create_table_account_already_exists(new_address: address) {
+        create_table_account(new_address);
+        create_table_account(new_address);
+    }
+
+    #[test(new_address = @0x42)]
+    #[expected_failure(abort_code = 0x80064, location = Self)]
+    public fun test_create_object_account_already_exists(new_address: address) {
+        create_table_account(new_address);
+        create_object_account(new_address);
+    }
 }
