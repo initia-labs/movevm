@@ -493,7 +493,7 @@ module initia_std::vip_zapping {
     }
 
     /// Claim lock staking rewards with Delegation
-    public fun claim(zapping: Zapping, zid: u64): (Delegation, FungibleAsset) {
+    fun claim(zapping: Zapping, zid: u64): (Delegation, FungibleAsset) {
         let (_, block_time) = block::get_block_info();
         assert!(block_time >= zapping.release_time, error::unavailable(ELOCK_STAKING_IN_PROGRESS));
 
