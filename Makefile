@@ -83,8 +83,10 @@ build-go: prebuild-go
 
 fmt:
 	cargo fmt
-move-fmt:
-	movefmt
+move-fmt: install-move-fmt
+	cargo fmt
+install-move-fmt:
+	cargo install --git https://github.com/movebit/movefmt --branch develop movefmt
 update-bindings:
 	cp libmovevm/bindings.h api
 	cp libcompiler/bindings_compiler.h api
