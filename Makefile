@@ -14,7 +14,6 @@ COMPILER_SHARED_LIB_SRC = ""
 COMPILER_SHARED_LIB_DST = ""
 
 
-
 ifeq ($(OS),Windows_NT)
 	SHARED_LIB_SRC = movevm.dll
 	SHARED_LIB_DST = movevm.dll
