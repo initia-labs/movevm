@@ -164,11 +164,13 @@ module initia_std::json {
             while (i < len) {
                 let array_value = vector::pop_back(&mut value);
                 let index = get_next_index(&current_index, i);
-                parse_internal(json_obj,
+                parse_internal(
+                    json_obj,
                     array_value.type,
                     option::none<String>(),
                     array_value.value,
-                    index);
+                    index,
+                );
                 i = i + 1;
             };
         } else if (type == JSON_VALUE_TYPE_OBJECT) {
@@ -182,11 +184,13 @@ module initia_std::json {
             while (i < len) {
                 let object_value = vector::pop_back(&mut value);
                 let index = get_next_index(&current_index, i);
-                parse_internal(json_obj,
+                parse_internal(
+                    json_obj,
                     object_value.type,
                     option::some(object_value.key),
                     object_value.value,
-                    index);
+                    index,
+                );
                 i = i + 1;
             };
         } else {
@@ -234,8 +238,7 @@ module initia_std::json {
         while (i < elem.value.child_length) {
             let next_index = get_next_index(index, i);
             let child_elem = borrow(obj, &next_index);
-            if (*string::bytes(option::borrow(&child_elem.key))
-                == *string::bytes(key)) { break };
+            if (*string::bytes(option::borrow(&child_elem.key)) == *string::bytes(key)) { break };
             i = i + 1;
         };
 
@@ -259,15 +262,13 @@ module initia_std::json {
     public fun set_bool(
         object: &mut JsonObject, index: JsonIndex, key: Option<String>, value: bool
     ) {
-        set_elem(object, index,
-            JsonElem { key: key, value: new_bool(value), });
+        set_elem(object, index, JsonElem { key: key, value: new_bool(value), });
     }
 
     fun set_number(
         object: &mut JsonObject, index: JsonIndex, key: Option<String>, value: Number
     ) {
-        set_elem(object, index,
-            JsonElem { key: key, value: new_number(value), });
+        set_elem(object, index, JsonElem { key: key, value: new_number(value), });
     }
 
     public fun set_int_raw(
@@ -276,8 +277,7 @@ module initia_std::json {
         is_positive: bool,
         value: u256
     ) {
-        set_elem(object, index,
-            JsonElem { key: key, value: new_int(is_positive, value), });
+        set_elem(object, index, JsonElem { key: key, value: new_int(is_positive, value), });
     }
 
     public fun set_int_string(
@@ -289,8 +289,7 @@ module initia_std::json {
         let int_number = new_int(is_positive, value);
         let int_string = stringify_number(as_number(int_number));
 
-        set_elem(object, index,
-            JsonElem { key: key, value: new_string(int_string), });
+        set_elem(object, index, JsonElem { key: key, value: new_string(int_string), });
     }
 
     public fun set_dec_string(
@@ -302,29 +301,25 @@ module initia_std::json {
         let dec_number = new_dec(is_positive, value);
         let dec_string = stringify_number(as_number(dec_number));
 
-        set_elem(object, index,
-            JsonElem { key: key, value: new_string(dec_string), });
+        set_elem(object, index, JsonElem { key: key, value: new_string(dec_string), });
     }
 
     public fun set_string(
         object: &mut JsonObject, index: JsonIndex, key: Option<String>, value: String
     ) {
-        set_elem(object, index,
-            JsonElem { key: key, value: new_string(value), });
+        set_elem(object, index, JsonElem { key: key, value: new_string(value), });
     }
 
     public fun set_array(
         object: &mut JsonObject, index: JsonIndex, key: Option<String>, child_length: u64
     ) {
-        set_elem(object, index,
-            JsonElem { key: key, value: new_array(child_length), });
+        set_elem(object, index, JsonElem { key: key, value: new_array(child_length), });
     }
 
     public fun set_object(
         object: &mut JsonObject, index: JsonIndex, key: Option<String>, child_length: u64
     ) {
-        set_elem(object, index,
-            JsonElem { key: key, value: new_object(child_length), });
+        set_elem(object, index, JsonElem { key: key, value: new_object(child_length), });
     }
 
     public fun new_bool(value: bool): JsonValue {
@@ -466,9 +461,11 @@ module initia_std::json {
     #[test]
     fun test_get_type() {
         assert!(get_type(&string::utf8(b"1234")) == JSON_VALUE_TYPE_NUMBER, 0);
-        assert!(get_type(&string::utf8(
-                    b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}"))
-            == JSON_VALUE_TYPE_OBJECT,
+        assert!(
+            get_type(
+                &string::utf8(
+                    b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}")) ==
+             JSON_VALUE_TYPE_OBJECT,
             1);
         assert!(get_type(&string::utf8(b"true")) == JSON_VALUE_TYPE_BOOL, 2);
         assert!(get_type(&string::utf8(b"\"true\"")) == JSON_VALUE_TYPE_STRING, 3);
@@ -526,14 +523,12 @@ module initia_std::json {
 
     #[test]
     fun test_string_to_number_max_u256() {
-        let test_str =
-            string::utf8(
-                b"-115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max_u256
+        let test_str = string::utf8(
+            b"-115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max_u256
         let res = parse_number(test_str);
         assert!(res.type == NUMBER_TYPE_INT, 0);
-        assert!(res.value
-            ==
-                115792089237316195423570985008687907853269984665640564039457584007913129639935,
+        assert!(res.value ==
+            115792089237316195423570985008687907853269984665640564039457584007913129639935,
             1);
         assert!(res.is_positive == false, 2);
         let res_string = stringify_number(res);
@@ -543,9 +538,8 @@ module initia_std::json {
     #[test]
     #[expected_failure(abort_code = 0x10066, location = Self)]
     fun test_string_to_number_exceeding_max_u256() {
-        let test_str =
-            string::utf8(
-                b"115792089237316195423570985008687907853269984665640564039457584007913129639936"); // max_u256
+        let test_str = string::utf8(
+            b"115792089237316195423570985008687907853269984665640564039457584007913129639936"); // max_u256
         parse_number(test_str);
     }
 
@@ -578,8 +572,8 @@ module initia_std::json {
 
     #[test]
     fun test_parse_object() {
-        let test_str =
-            string::utf8(b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}");
+        let test_str = string::utf8(
+            b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}");
         let res = parse_object(test_str);
 
         let res_abc = vector::borrow(&res, 0);
@@ -595,13 +589,11 @@ module initia_std::json {
 
     #[test]
     fun test_parse_object2() {
-        let test_str =
-            string::utf8(
-                b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
+        let test_str = string::utf8(
+            b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
         let obj = parse(test_str);
 
-        let index0 =
-            JsonIndex { data: vector::singleton<u64>(0), };
+        let index0 = JsonIndex { data: vector::singleton<u64>(0), };
         let elem0 = borrow(&obj, &index0);
         assert!(elem0.key == option::none<String>(), 0);
         assert!(elem0.value.type == JSON_VALUE_TYPE_OBJECT, 1);
@@ -611,10 +603,12 @@ module initia_std::json {
         let elem00 = borrow(&obj, &index00);
         assert!(elem00.key == option::some<String>(string::utf8(b"abc")), 2);
         assert!(elem00.value.type == JSON_VALUE_TYPE_NUMBER, 3);
-        let expected_value00 =
-            Number { type: NUMBER_TYPE_INT, value: 18446744073709551615, is_positive: true, };
-        assert!(elem00.value.value_number
-            == option::some<Number>(expected_value00), 4);
+        let expected_value00 = Number {
+            type: NUMBER_TYPE_INT,
+            value: 18446744073709551615,
+            is_positive: true,
+        };
+        assert!(elem00.value.value_number == option::some<Number>(expected_value00), 4);
         let (is_positive, value) = as_int(elem00.value);
         assert!(is_positive == true, 5);
         assert!(value == 18446744073709551615, 6);
@@ -633,28 +627,29 @@ module initia_std::json {
         let elem0100 = borrow(&obj, &index0100);
         assert!(elem0100.key == option::none<String>(), 11);
         assert!(elem0100.value.type == JSON_VALUE_TYPE_NUMBER, 12);
-        let expected_value0100 =
-            Number { type: NUMBER_TYPE_INT, value: 1, is_positive: false, };
-        assert!(elem0100.value.value_number
-            == option::some<Number>(expected_value0100), 13);
+        let expected_value0100 = Number { type: NUMBER_TYPE_INT, value: 1, is_positive: false, };
+        assert!(elem0100.value.value_number == option::some<Number>(expected_value0100),
+            13);
 
         let index0101 = get_next_index(&index010, 1);
         let elem0101 = borrow(&obj, &index0101);
         assert!(elem0101.key == option::none<String>(), 14);
         assert!(elem0101.value.type == JSON_VALUE_TYPE_NUMBER, 15);
-        let expected_value0101 =
-            Number { type: NUMBER_TYPE_INT, value: 312, is_positive: true, };
-        assert!(elem0101.value.value_number
-            == option::some<Number>(expected_value0101), 16);
+        let expected_value0101 = Number { type: NUMBER_TYPE_INT, value: 312, is_positive: true, };
+        assert!(elem0101.value.value_number == option::some<Number>(expected_value0101),
+            16);
 
         let index0102 = get_next_index(&index010, 2);
         let elem0102 = borrow(&obj, &index0102);
         assert!(elem0102.key == option::none<String>(), 17);
         assert!(elem0102.value.type == JSON_VALUE_TYPE_NUMBER, 18);
-        let expected_value0102 =
-            Number { type: NUMBER_TYPE_DEC, value: 45123240000000000000, is_positive: true, };
-        assert!(elem0102.value.value_number
-            == option::some<Number>(expected_value0102), 19);
+        let expected_value0102 = Number {
+            type: NUMBER_TYPE_DEC,
+            value: 45123240000000000000,
+            is_positive: true,
+        };
+        assert!(elem0102.value.value_number == option::some<Number>(expected_value0102),
+            19);
     }
 
     #[test]
@@ -685,11 +680,13 @@ module initia_std::json {
 
         let obj = empty();
         let index = start_index();
-        set_dec_string(&mut obj,
+        set_dec_string(
+            &mut obj,
             index,
             option::none<String>(),
             false,
-            decimal256::new(18446744073709551616));
+            decimal256::new(18446744073709551616),
+        );
 
         let json_string = stringify(&obj);
         assert!(json_string == string::utf8(b"\"-18.446744073709551616\""), 1);
@@ -723,7 +720,8 @@ module initia_std::json {
             get_next_index(&index, 0),
             option::none<String>(),
             true,
-            115792089237316195423570985008687907853269984665640564039457584007913129639935);
+            115792089237316195423570985008687907853269984665640564039457584007913129639935,
+        );
         set_dec_string(
             &mut obj,
             get_next_index(&index, 1),
@@ -731,20 +729,22 @@ module initia_std::json {
             false,
             decimal256::new(
 
-                    115792089237316195423570985008687907853269984665640564039457584007913129639935));
+
+                115792089237316195423570985008687907853269984665640564039457584007913129639935),
+        );
         set_string(
             &mut obj,
             get_next_index(&index, 2),
             option::none<String>(),
             string::utf8(
-                b"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935"));
+                b"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935"),
+        );
         set_array(&mut obj, get_next_index(&index, 3), option::none<String>(), 0);
         set_object(&mut obj, get_next_index(&index, 4), option::none<String>(), 0);
 
         let json_string = stringify(&obj);
         assert!(
-            json_string
-            == string::utf8(
+            json_string == string::utf8(
                 b"[115792089237316195423570985008687907853269984665640564039457584007913129639935,\"-115792089237316195423570985008687907853269984665640564039457.584007913129639935\",\"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935\",[],{}]"),
             0);
     }
@@ -765,11 +765,13 @@ module initia_std::json {
         let index0 = start_index();
         set_object(&mut obj, index0, option::none<String>(), 3);
 
-        set_int_raw(&mut obj,
+        set_int_raw(
+            &mut obj,
             get_next_index(&index0, 0),
             option::some(string::utf8(b"abc")),
             true,
-            18446744073709551615);
+            18446744073709551615,
+        );
         let index = get_next_index(&index0, 1);
         set_object(&mut obj, index, option::some(string::utf8(b"def")), 1);
 
@@ -778,18 +780,19 @@ module initia_std::json {
 
         set_int_raw(&mut obj, get_next_index(&index, 0), option::none<String>(), false, 1);
         set_int_raw(&mut obj, get_next_index(&index, 1), option::none<String>(), true, 312);
-        set_dec_string(&mut obj,
+        set_dec_string(
+            &mut obj,
             get_next_index(&index, 2),
             option::none<String>(),
             true,
-            decimal256::new(45123240000000000000));
+            decimal256::new(45123240000000000000),
+        );
 
         let index = get_next_index(&index0, 2);
         set_object(&mut obj, index, option::some(string::utf8(b"123")), 0);
 
         let json_string = stringify(&obj);
-        assert!(json_string
-            == string::utf8(
+        assert!(json_string == string::utf8(
                 b"{\"123\":{},\"abc\":18446744073709551615,\"def\":{\"d\":[-1,312,\"45.12324\"]}}"),
             0);
     }
@@ -806,9 +809,8 @@ module initia_std::json {
 
     #[test]
     fun test_find_key() {
-        let test_str =
-            string::utf8(
-                b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
+        let test_str = string::utf8(
+            b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
         let obj = parse(test_str);
         let index = start_index();
         let idx = find(&obj, &index, &string::utf8(b"abc"));

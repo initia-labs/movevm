@@ -113,13 +113,12 @@ module initia_std::vip_operator {
         object::disable_ungated_transfer(&transfer_ref);
         let object = object::generate_signer(&constructor_ref);
 
-        let operator_store =
-            OperatorStore {
-                last_changed_stage: stage,
-                commission_max_rate,
-                commission_max_change_rate,
-                commission_rate,
-            };
+        let operator_store = OperatorStore {
+            last_changed_stage: stage,
+            commission_max_rate,
+            commission_max_change_rate,
+            commission_rate,
+        };
         move_to(&object, operator_store);
     }
 
@@ -142,12 +141,11 @@ module initia_std::vip_operator {
         assert!(new_commission_rate <= max_commission_rate,
             error::invalid_argument(EOVER_MAX_COMMISSION_RATE));
 
-        let change =
-            if (old_commission_rate > new_commission_rate) {
-                old_commission_rate - new_commission_rate
-            } else {
-                new_commission_rate - old_commission_rate
-            };
+        let change = if (old_commission_rate > new_commission_rate) {
+            old_commission_rate - new_commission_rate
+        } else {
+            new_commission_rate - old_commission_rate
+        };
 
         assert!(change <= max_commission_change_rate,
             error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE));
@@ -231,16 +229,18 @@ module initia_std::vip_operator {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
-        register_operator_store(chain,
+        register_operator_store(
+            chain,
             operator_addr,
             bridge_id,
             10,
             decimal256::from_string(&string::utf8(b"0.2")),
             decimal256::from_string(&string::utf8(b"0.2")),
-            decimal256::from_string(&string::utf8(b"0")),);
+            decimal256::from_string(&string::utf8(b"0")),
+        );
 
-        assert!(get_operator_store(operator_addr, bridge_id)
-            == OperatorStoreResponse {
+        assert!(
+            get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
                 last_changed_stage: 10,
                 commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
                 commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
@@ -248,13 +248,15 @@ module initia_std::vip_operator {
             },
             1);
 
-        update_operator_commission(operator,
+        update_operator_commission(
+            operator,
             bridge_id,
             11,
-            decimal256::from_string(&string::utf8(b"0.2")),);
+            decimal256::from_string(&string::utf8(b"0.2")),
+        );
 
-        assert!(get_operator_store(operator_addr, bridge_id)
-            == OperatorStoreResponse {
+        assert!(
+            get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
                 last_changed_stage: 11,
                 commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
                 commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
@@ -262,13 +264,15 @@ module initia_std::vip_operator {
             },
             2);
 
-        update_operator_commission(operator,
+        update_operator_commission(
+            operator,
             bridge_id,
             12,
-            decimal256::from_string(&string::utf8(b"0.1")),);
+            decimal256::from_string(&string::utf8(b"0.1")),
+        );
 
-        assert!(get_operator_store(operator_addr, bridge_id)
-            == OperatorStoreResponse {
+        assert!(
+            get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
                 last_changed_stage: 12,
                 commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
                 commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
@@ -283,18 +287,22 @@ module initia_std::vip_operator {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
-        register_operator_store(chain,
+        register_operator_store(
+            chain,
             operator_addr,
             bridge_id,
             10,
             decimal256::from_string(&string::utf8(b"0.2")),
             decimal256::from_string(&string::utf8(b"0.1")),
-            decimal256::from_string(&string::utf8(b"0")),);
+            decimal256::from_string(&string::utf8(b"0")),
+        );
 
-        update_operator_commission(operator,
+        update_operator_commission(
+            operator,
             bridge_id,
             11,
-            decimal256::from_string(&string::utf8(b"0.2")),);
+            decimal256::from_string(&string::utf8(b"0.2")),
+        );
     }
 
     #[test(chain = @0x1, operator = @0x999)]
@@ -303,18 +311,22 @@ module initia_std::vip_operator {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
-        register_operator_store(chain,
+        register_operator_store(
+            chain,
             operator_addr,
             bridge_id,
             10,
             decimal256::from_string(&string::utf8(b"0.2")),
             decimal256::from_string(&string::utf8(b"0.2")),
-            decimal256::from_string(&string::utf8(b"0")),);
+            decimal256::from_string(&string::utf8(b"0")),
+        );
 
-        update_operator_commission(operator,
+        update_operator_commission(
+            operator,
             bridge_id,
             11,
-            decimal256::from_string(&string::utf8(b"0.3")),);
+            decimal256::from_string(&string::utf8(b"0.3")),
+        );
     }
 
     #[test(chain = @0x1, operator = @0x999)]
@@ -323,13 +335,15 @@ module initia_std::vip_operator {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
-        register_operator_store(chain,
+        register_operator_store(
+            chain,
             operator_addr,
             bridge_id,
             10,
             decimal256::from_string(&string::utf8(b"0.2")),
             decimal256::from_string(&string::utf8(b"0.2")),
-            decimal256::from_string(&string::utf8(b"0")),);
+            decimal256::from_string(&string::utf8(b"0")),
+        );
 
         update_operator_commission(operator, bridge_id, 10,
             decimal256::from_string(&string::utf8(b"0")),);
@@ -341,12 +355,14 @@ module initia_std::vip_operator {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
-        register_operator_store(chain,
+        register_operator_store(
+            chain,
             operator_addr,
             bridge_id,
             10,
             decimal256::from_string(&string::utf8(b"0.2")),
             decimal256::from_string(&string::utf8(b"0.2")),
-            decimal256::from_string(&string::utf8(b"1.5")),);
+            decimal256::from_string(&string::utf8(b"1.5")),
+        );
     }
 }

@@ -60,9 +60,8 @@ module initia_std::coin {
         icon_uri: String,
         project_uri: String,
     ): (MintCapability, BurnCapability, FreezeCapability) {
-        let (mint_cap, burn_cap, freeze_cap, _) =
-            initialize_and_generate_extend_ref(creator, maximum_supply, name, symbol,
-                decimals, icon_uri, project_uri,);
+        let (mint_cap, burn_cap, freeze_cap, _) = initialize_and_generate_extend_ref(creator,
+            maximum_supply, name, symbol, decimals, icon_uri, project_uri,);
 
         (mint_cap, burn_cap, freeze_cap)
     }
@@ -77,16 +76,18 @@ module initia_std::coin {
         project_uri: String,
     ): (MintCapability, BurnCapability, FreezeCapability, ExtendRef) {
         // create object for fungible asset metadata
-        let constructor_ref =
-            &object::create_named_object(creator, *string::bytes(&symbol), false);
+        let constructor_ref = &object::create_named_object(creator, *string::bytes(&symbol),
+            false);
 
-        primary_fungible_store::create_primary_store_enabled_fungible_asset(constructor_ref,
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            constructor_ref,
             maximum_supply,
             name,
             symbol,
             decimals,
             icon_uri,
-            project_uri,);
+            project_uri,
+        );
 
         let mint_ref = fungible_asset::generate_mint_ref(constructor_ref);
         let burn_ref = fungible_asset::generate_burn_ref(constructor_ref);
@@ -286,14 +287,14 @@ module initia_std::coin {
 
     #[view]
     public fun denom_to_metadata(denom: String): Object<Metadata> {
-        let addr =
-            if (string::length(&denom) > 5 && &b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
-                let len = string::length(&denom);
-                let hex_string = string::sub_string(&denom, 5, len);
-                from_bcs::to_address(hex::decode_string(&hex_string))
-            } else {
-                metadata_address(@initia_std, denom)
-            };
+        let addr = if (string::length(&denom) > 5 && &b"move/" == string::bytes(
+                &string::sub_string(&denom, 0, 5))) {
+            let len = string::length(&denom);
+            let hex_string = string::sub_string(&denom, 5, len);
+            from_bcs::to_address(hex::decode_string(&hex_string))
+        } else {
+            metadata_address(@initia_std, denom)
+        };
 
         object::address_to_object(addr)
     }
@@ -302,16 +303,17 @@ module initia_std::coin {
     fun initialized_coin(account: &signer, symbol: String,)
         : (BurnCapability, FreezeCapability,
         MintCapability) {
-        let (mint_cap, burn_cap, freeze_cap, _) =
-            initialize_and_generate_extend_ref(account,
-                std::option::none(),
-                string::utf8(b""),
-                symbol,
-                6,
-                string::utf8(b""),
-                string::utf8(b""),);
+        let (mint_cap, burn_cap, freeze_cap, _) = initialize_and_generate_extend_ref(
+            account,
+            std::option::none(),
+            string::utf8(b""),
+            symbol,
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
 
-        return(burn_cap, freeze_cap, mint_cap)
+        return (burn_cap, freeze_cap, mint_cap)
     }
 
     #[test(chain = @0x1, not_chain = @0x2)]
@@ -320,8 +322,7 @@ module initia_std::coin {
         initialized_coin(&chain, string::utf8(b"INIT"));
         initialized_coin(&not_chain, string::utf8(b"INIT"));
         let metadata = metadata(std::signer::address_of(&chain), string::utf8(b"INIT"));
-        let metadata_ =
-            metadata(std::signer::address_of(&not_chain), string::utf8(b"INIT"));
+        let metadata_ = metadata(std::signer::address_of(&not_chain), string::utf8(b"INIT"));
         let denom = metadata_to_denom(metadata);
         let denom_ = metadata_to_denom(metadata_);
         let metadata_from_denom = denom_to_metadata(denom);

@@ -106,7 +106,8 @@ module initia_std::code {
             error::permission_denied(EINVALID_CHAIN_OPERATOR));
 
         let metadata_table = table::new<String, ModuleMetadata>();
-        vector::for_each_ref(&module_ids,
+        vector::for_each_ref(
+            &module_ids,
             |module_id| {
                 table::add<String, ModuleMetadata>(&mut metadata_table, *module_id,
                     ModuleMetadata { upgrade_policy: UPGRADE_POLICY_COMPATIBLE, });
@@ -143,7 +144,8 @@ module initia_std::code {
 
         // duplication check
         let module_ids_set = simple_map::create<String, bool>();
-        vector::for_each_ref(&module_ids,
+        vector::for_each_ref(
+            &module_ids,
             |module_id| {
                 assert!(!simple_map::contains_key(&module_ids_set, module_id),
                     error::invalid_argument(EDUPLICATE_MODULE_ID));
@@ -164,15 +166,15 @@ module initia_std::code {
 
         // Check upgradability
         let metadata_table = &mut borrow_global_mut<MetadataStore>(addr).metadata;
-        vector::for_each_ref(&module_ids,
+        vector::for_each_ref(
+            &module_ids,
             |module_id| {
                 if (table::contains<String, ModuleMetadata>(metadata_table, *module_id)) {
-                    let metadata =
-                        table::borrow_mut<String, ModuleMetadata>(metadata_table, *module_id);
+                    let metadata = table::borrow_mut<String, ModuleMetadata>(metadata_table, *module_id);
                     assert!(metadata.upgrade_policy < UPGRADE_POLICY_IMMUTABLE,
                         error::invalid_argument(EUPGRADE_IMMUTABLE));
-                    assert!(can_change_upgrade_policy_to(metadata.upgrade_policy,
-                            upgrade_policy),
+                    assert!(
+                        can_change_upgrade_policy_to(metadata.upgrade_policy, upgrade_policy),
                         error::invalid_argument(EUPGRADE_WEAKER_POLICY));
 
                     metadata.upgrade_policy = upgrade_policy;

@@ -48,9 +48,8 @@ module minitia_std::managed_coin {
         icon_uri: String,
         project_uri: String,
     ) {
-        let (mint_cap, burn_cap, freeze_cap, extend_ref) =
-            coin::initialize_and_generate_extend_ref(account, maximum_supply, name, symbol,
-                decimals, icon_uri, project_uri,);
+        let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref(
+            account, maximum_supply, name, symbol, decimals, icon_uri, project_uri,);
 
         let metadata_signer = object::generate_signer_for_extending(&extend_ref);
         move_to(&metadata_signer, Capabilities { mint_cap, burn_cap, freeze_cap, });
@@ -121,13 +120,15 @@ module minitia_std::managed_coin {
         let source_addr = signer::address_of(&source);
         let destination_addr = signer::address_of(&destination);
 
-        initialize(&mod_account,
+        initialize(
+            &mod_account,
             option::none(),
             string::utf8(b"Fake Money"),
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),);
+            string::utf8(b""),
+        );
 
         let metadata = test_metadata();
         assert!(coin::is_coin_initialized(metadata), 0);
@@ -162,13 +163,15 @@ module minitia_std::managed_coin {
 
         let source_addr = signer::address_of(&source);
 
-        initialize(&mod_account,
+        initialize(
+            &mod_account,
             option::none(),
             string::utf8(b"Fake Money"),
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),);
+            string::utf8(b""),
+        );
 
         let metadata = test_metadata();
         mint(&destination, source_addr, metadata, 100);
@@ -183,13 +186,15 @@ module minitia_std::managed_coin {
 
         let source_addr = signer::address_of(&source);
 
-        initialize(&mod_account,
+        initialize(
+            &mod_account,
             option::none(),
             string::utf8(b"Fake Money"),
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),);
+            string::utf8(b""),
+        );
 
         let metadata = test_metadata();
         mint(&mod_account, source_addr, metadata, 100);

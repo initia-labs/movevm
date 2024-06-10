@@ -148,19 +148,17 @@ module minitia_std::table {
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */,
     ): &TableIter<K, V> {
-        let start_bytes: vector<u8> =
-            if (option::is_some(&start)) {
-                bcs::to_bytes<K>(&option::extract(&mut start))
-            } else {
-                vector::empty()
-            };
+        let start_bytes: vector<u8> = if (option::is_some(&start)) {
+            bcs::to_bytes<K>(&option::extract(&mut start))
+        } else {
+            vector::empty()
+        };
 
-        let end_bytes: vector<u8> =
-            if (option::is_some(&end)) {
-                bcs::to_bytes<K>(&option::extract(&mut end))
-            } else {
-                vector::empty()
-            };
+        let end_bytes: vector<u8> = if (option::is_some(&end)) {
+            bcs::to_bytes<K>(&option::extract(&mut end))
+        } else {
+            vector::empty()
+        };
 
         new_table_iter<K, V, Box<V>>(table, start_bytes, end_bytes, order)
     }
@@ -196,19 +194,17 @@ module minitia_std::table {
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */,
     ): &mut TableIter<K, V> {
-        let start_bytes: vector<u8> =
-            if (option::is_some(&start)) {
-                bcs::to_bytes<K>(&option::extract(&mut start))
-            } else {
-                vector::empty()
-            };
+        let start_bytes: vector<u8> = if (option::is_some(&start)) {
+            bcs::to_bytes<K>(&option::extract(&mut start))
+        } else {
+            vector::empty()
+        };
 
-        let end_bytes: vector<u8> =
-            if (option::is_some(&end)) {
-                bcs::to_bytes<K>(&option::extract(&mut end))
-            } else {
-                vector::empty()
-            };
+        let end_bytes: vector<u8> = if (option::is_some(&end)) {
+            bcs::to_bytes<K>(&option::extract(&mut end))
+        } else {
+            vector::empty()
+        };
 
         new_table_iter_mut<K, V, Box<V>>(table, start_bytes, end_bytes, order)
     }

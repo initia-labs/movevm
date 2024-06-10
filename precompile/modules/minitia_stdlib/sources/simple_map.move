@@ -103,7 +103,7 @@ module minitia_std::simple_map {
         let length = vector::length(&map.data);
 
         if (length == 0) {
-            return(option::none(), option::some(0))
+            return (option::none(), option::some(0))
         };
 
         let left = 0;

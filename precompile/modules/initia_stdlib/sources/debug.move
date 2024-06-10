@@ -130,8 +130,7 @@ module initia_std::debug {
         assert_equal(&u128, b"340282366920938463463374607431768211455");
 
         let u256 =
-
-                115792089237316195423570985008687907853269984665640564039457584007913129639935u256;
+            115792089237316195423570985008687907853269984665640564039457584007913129639935u256;
         assert_equal(&u256,
             b"115792089237316195423570985008687907853269984665640564039457584007913129639935");
 
@@ -153,14 +152,12 @@ module initia_std::debug {
 
     #[test]
     fun test_print_struct() {
-        let obj =
-            TestInner { val: 100, vec: vector[200u128, 400u128], msgs: vector[MSG_1, MSG_2], };
+        let obj = TestInner { val: 100, vec: vector[200u128, 400u128], msgs: vector[MSG_1, MSG_2], };
 
         assert_equal(&obj,
             b"0x1::debug::TestInner {\n  val: 100,\n  vec: [ 200, 400 ],\n  msgs: [\n    0x616263646566,\n    0x313233343536\n  ]\n}");
 
-        let obj =
-            TestInner { val: 10, vec: vector[], msgs: vector[], };
+        let obj = TestInner { val: 10, vec: vector[], msgs: vector[], };
 
         assert_equal(&obj, b"0x1::debug::TestInner {\n  val: 10,\n  vec: [],\n  msgs: []\n}");
     }
@@ -245,16 +242,15 @@ module initia_std::debug {
 
     #[test]
     fun test_print_nested_struct() {
-        let obj =
-            TestStruct {
-                addr: @0x1,
-                number: 255u8,
-                bytes: x"c0ffee",
-                name: std::string::utf8(b"He\"llo"),
-                vec: vector[
-                    TestInner { val: 1, vec: vector[130u128, 131u128], msgs: vector[] },
-                    TestInner { val: 2, vec: vector[132u128, 133u128], msgs: vector[] }],
-            };
+        let obj = TestStruct {
+            addr: @0x1,
+            number: 255u8,
+            bytes: x"c0ffee",
+            name: std::string::utf8(b"He\"llo"),
+            vec: vector[
+                TestInner { val: 1, vec: vector[130u128, 131u128], msgs: vector[] },
+                TestInner { val: 2, vec: vector[132u128, 133u128], msgs: vector[] }],
+        };
 
         assert_equal(
             &obj,

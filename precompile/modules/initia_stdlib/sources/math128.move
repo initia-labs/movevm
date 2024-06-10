@@ -161,8 +161,8 @@ module initia_std::math128 {
         assert!(ceil_div(13, 3) == 5, 0);
 
         // No overflow
-        assert!(ceil_div((((1u256 << 128) - 9) as u128), 11)
-            == 30934760629176223951215873402888019223, 0);
+        assert!(ceil_div((((1u256 << 128) - 9) as u128), 11) ==
+            30934760629176223951215873402888019223, 0);
     }
 
     #[test]
@@ -245,8 +245,8 @@ module initia_std::math128 {
             let taylor1 = ((1 << 32) / ((1u256 << idx)) as u128);
             let taylor2 = (taylor1 * taylor1) >> 32;
             let taylor3 = (taylor2 * taylor1) >> 32;
-            let expected =
-                expected - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) / 2977044472;
+            let expected = expected - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) /
+                2977044472;
             // verify it matches to 8 significant digits
             assert_approx_the_same((fixed_point32::get_raw_value(res) as u128), expected,
                 8);
@@ -272,9 +272,8 @@ module initia_std::math128 {
             let taylor2 = (taylor1 * taylor1) >> 64;
             let taylor3 = (taylor2 * taylor1) >> 64;
             let taylor4 = (taylor3 * taylor1) >> 64;
-            let expected =
-                expected - ((taylor1 + taylor2 / 2 + taylor3 / 3 + taylor4 / 4) << 64) /
-                    12786308645202655660;
+            let expected = expected - ((taylor1 + taylor2 / 2 + taylor3 / 3 + taylor4 / 4)
+                << 64) / 12786308645202655660;
             // verify it matches to 8 significant digits
             assert_approx_the_same(fixed_point64::get_raw_value(res), (expected as u128),
                 14);

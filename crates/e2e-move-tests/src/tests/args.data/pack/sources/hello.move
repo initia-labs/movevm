@@ -49,12 +49,11 @@ module 0xCAFE::test {
         find_hello_in_option_msgs(&msgs);
 
         let msg = vector::borrow(&msgs, i);
-        let str_msg =
-            if (option::is_some(msg)) {
-                *option::borrow(msg)
-            } else {
-                string::utf8(vector::empty())
-            };
+        let str_msg = if (option::is_some(msg)) {
+            *option::borrow(msg)
+        } else {
+            string::utf8(vector::empty())
+        };
 
         hi(sender, str_msg);
     }
@@ -89,8 +88,8 @@ module 0xCAFE::test {
             move_to(sender,
                 ModuleData<String> { state: *vector::borrow(vector::borrow(&msgs, i), j) });
         } else {
-            borrow_global_mut<ModuleData<String>>(addr).state = *vector::borrow(vector::borrow(
-                    &msgs, i), j);
+            borrow_global_mut<ModuleData<String>>(addr).state = *vector::borrow(
+                vector::borrow(&msgs, i), j);
         }
     }
 

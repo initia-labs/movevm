@@ -73,12 +73,11 @@ module minitia_std::math64 {
     public fun log2(x: u64): FixedPoint32 {
         let integer_part = floor_log2(x);
         // Normalize x to [1, 2) in fixed point 32.
-        let y =
-            (if (x >= 1 << 32) {
-                    x >> (integer_part - 32)
-                } else {
-                    x << (32 - integer_part)
-                } as u128);
+        let y = (if (x >= 1 << 32) {
+                x >> (integer_part - 32)
+            } else {
+                x << (32 - integer_part)
+            } as u128);
         let frac = 0;
         let delta = 1 << 31;
         while (delta != 0) {
@@ -133,7 +132,8 @@ module minitia_std::math64 {
         assert!(ceil_div(13, 3) == 5, 0);
 
         // No overflow
-        assert!(ceil_div((((1u128 << 64) - 9) as u64), 11) == 1676976733973595601, 0);
+        assert!(ceil_div((((1u128 << 64) - 9) as u64), 11)
+            == 1676976733973595601, 0);
     }
 
     #[test]
@@ -222,8 +222,8 @@ module minitia_std::math64 {
             let taylor1 = ((1 << 32) / ((1u256 << idx)) as u128);
             let taylor2 = (taylor1 * taylor1) >> 32;
             let taylor3 = (taylor2 * taylor1) >> 32;
-            let expected =
-                expected - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) / 2977044472;
+            let expected = expected - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) /
+                2977044472;
             // verify it matches to 8 significant digits
             assert_approx_the_same((fixed_point32::get_raw_value(res) as u128), expected,
                 8);

@@ -41,15 +41,16 @@ module initia_std::query {
         let obj = json::empty();
         let index = json::start_index();
         json::set_object(&mut obj, index, option::none<String>(), 1);
-        json::set_int_raw(&mut obj,
+        json::set_int_raw(
+            &mut obj,
             json::get_next_index(&index, 0),
             option::some(string::utf8(b"proposal_id")),
             true,
-            (proposal_id as u256));
+            (proposal_id as u256),
+        );
 
         let req = json::stringify(&obj);
-        let response =
-            query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
+        let response = query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
         let res = json::parse(string::utf8(response));
         let index = json::get_next_index(&index, 0);
 
@@ -76,8 +77,7 @@ module initia_std::query {
             (proposal_id as u256));
 
         let req = json::stringify(simple_json::to_json_object(&obj));
-        let res =
-            query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
+        let res = query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
         let res = simple_json::from_json_object(json::parse(string::utf8(res)));
         simple_json::increase_depth(&mut res);
         simple_json::increase_depth(&mut res);

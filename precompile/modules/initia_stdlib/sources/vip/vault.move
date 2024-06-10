@@ -48,7 +48,8 @@ module initia_std::vip_vault {
         let constructor_ref = object::create_named_object(chain, seed, false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
 
-        move_to(chain,
+        move_to(
+            chain,
             ModuleStore { extend_ref, claimable_stage: 1, reward_per_stage: 0, // set zero for safety
                 vault_store_addr });
     }
@@ -80,9 +81,8 @@ module initia_std::vip_vault {
 
         module_store.claimable_stage = stage + 1;
         let vault_signer = object::generate_signer_for_extending(&module_store.extend_ref);
-        let vault_store =
-            primary_fungible_store::ensure_primary_store_exists(module_store.vault_store_addr,
-                vip_reward::reward_metadata());
+        let vault_store = primary_fungible_store::ensure_primary_store_exists(module_store
+            .vault_store_addr, vip_reward::reward_metadata());
         fungible_asset::withdraw(&vault_signer, vault_store, module_store.reward_per_stage)
     }
 
