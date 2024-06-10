@@ -24,21 +24,21 @@ module TestAccount::NativeCoinTest {
         assert!(!initialized(), ERR_INITIALIZED);
         assert!(signer::address_of(account) == @TestAccount, ERR_UNAUTHORIZED);
 
-        let (mint_cap, burn_cap, freeze_cap) = coin::initialize(
-            account,
-            option::none(),
-            string::utf8(b"TestCoin"),
-            string::utf8(b"TC"),
-            8,
-            string::utf8(b""),
-            string::utf8(b""),
-        );
+        let (mint_cap, burn_cap, freeze_cap) =
+            coin::initialize(account,
+                option::none(),
+                string::utf8(b"TestCoin"),
+                string::utf8(b"TC"),
+                8,
+                string::utf8(b""),
+                string::utf8(b""),);
 
-        move_to(account, Capabilities {
-            burn_capability: burn_cap,
-            freeze_capability: freeze_cap,
-            mint_capability: mint_cap
-        })
+        move_to(account,
+            Capabilities {
+                burn_capability: burn_cap,
+                freeze_capability: freeze_cap,
+                mint_capability: mint_cap
+            })
     }
 
     public entry fun mint(account: &signer, recipient_addr: address, amount: u64) acquires Capabilities {
@@ -51,15 +51,14 @@ module TestAccount::NativeCoinTest {
     }
 
     spec initialized {
-    	pragma intrinsic;
-	}
+        pragma intrinsic;
+    }
 
     spec initialize {
-    	pragma intrinsic;
-	}
+        pragma intrinsic;
+    }
 
     spec mint {
-    	pragma intrinsic;
-	}
-
+        pragma intrinsic;
+    }
 }

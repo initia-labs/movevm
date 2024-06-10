@@ -20,11 +20,13 @@ module std::bit_vector {
         assert!(length < MAX_SIZE, ELENGTH);
         let counter = 0;
         let bit_field = vector::empty();
-        while ({spec {
-            invariant counter <= length;
-            invariant len(bit_field) == counter;
-        };
-            (counter < length)}) {
+        while ({
+                spec {
+                    invariant counter <= length;
+                    invariant len(bit_field) == counter;
+                };
+                (counter < length)
+            }) {
             vector::push_back(&mut bit_field, false);
             counter = counter + 1;
         };
@@ -33,16 +35,15 @@ module std::bit_vector {
             assert len(bit_field) == length;
         };
 
-        BitVector {
-            length,
-            bit_field,
-        }
+        BitVector { length, bit_field, }
     }
+
     spec new {
         include NewAbortsIf;
         ensures result.length == length;
         ensures len(result.bit_field) == length;
     }
+
     spec schema NewAbortsIf {
         length: u64;
         aborts_if length <= 0 with ELENGTH;
@@ -55,10 +56,12 @@ module std::bit_vector {
         let x = vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = true;
     }
+
     spec set {
         include SetAbortsIf;
         ensures bitvector.bit_field[bit_index];
     }
+
     spec schema SetAbortsIf {
         bitvector: BitVector;
         bit_index: u64;
@@ -71,10 +74,12 @@ module std::bit_vector {
         let x = vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = false;
     }
+
     spec unset {
         include UnsetAbortsIf;
         ensures !bitvector.bit_field[bit_index];
     }
+
     spec schema UnsetAbortsIf {
         bitvector: BitVector;
         bit_index: u64;
@@ -85,13 +90,13 @@ module std::bit_vector {
     /// bitvector's length the bitvector will be zeroed out.
     public fun shift_left(bitvector: &mut BitVector, amount: u64) {
         if (amount >= bitvector.length) {
-           let len = vector::length(&bitvector.bit_field);
-           let i = 0;
-           while (i < len) {
-               let elem = vector::borrow_mut(&mut bitvector.bit_field, i);
-               *elem = false;
-               i = i + 1;
-           };
+            let len = vector::length(&bitvector.bit_field);
+            let i = 0;
+            while (i < len) {
+                let elem = vector::borrow_mut(&mut bitvector.bit_field, i);
+                *elem = false;
+                i = i + 1;
+            };
         } else {
             let i = amount;
 
@@ -116,19 +121,21 @@ module std::bit_vector {
         assert!(bit_index < vector::length(&bitvector.bit_field), EINDEX);
         *vector::borrow(&bitvector.bit_field, bit_index)
     }
+
     spec is_index_set {
         include IsIndexSetAbortsIf;
         ensures result == bitvector.bit_field[bit_index];
     }
+
     spec schema IsIndexSetAbortsIf {
         bitvector: BitVector;
         bit_index: u64;
         aborts_if bit_index >= length(bitvector) with EINDEX;
     }
+
     spec fun spec_is_index_set(bitvector: BitVector, bit_index: u64): bool {
-        if (bit_index >= length(bitvector)) {
-            false
-        } else {
+        if (bit_index >= length(bitvector)) { false }
+        else {
             bitvector.bit_field[bit_index]
         }
     }
@@ -141,7 +148,9 @@ module std::bit_vector {
     /// Returns the length of the longest sequence of set bits starting at (and
     /// including) `start_index` in the `bitvector`. If there is no such
     /// sequence, then `0` is returned.
-    public fun longest_set_sequence_starting_at(bitvector: &BitVector, start_index: u64): u64 {
+    public fun longest_set_sequence_starting_at(
+        bitvector: &BitVector, start_index: u64
+    ): u64 {
         assert!(start_index < bitvector.length, EINDEX);
         let index = start_index;
 

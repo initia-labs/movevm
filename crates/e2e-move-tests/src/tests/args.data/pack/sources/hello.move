@@ -15,20 +15,20 @@ module 0xCAFE::test {
         let cons_ref = object::create_object(addr, false);
         let obj_signer = object::generate_signer(&cons_ref);
 
-        move_to(&obj_signer, ModuleData<String>{state: data});
+        move_to(&obj_signer, ModuleData<String> { state: data });
     }
 
     #[view]
     public fun get_object(obj: Object<ModuleData<String>>): String acquires ModuleData {
         let addr = object::object_address(obj);
 
-        borrow_global<ModuleData<String>>(addr).state    
+        borrow_global<ModuleData<String>>(addr).state
     }
 
     public entry fun hi(sender: &signer, msg: String) acquires ModuleData {
         let addr = signer::address_of(sender);
         if (!exists<ModuleData<String>>(addr)) {
-            move_to(sender, ModuleData<String>{state: msg});
+            move_to(sender, ModuleData<String> { state: msg });
         } else {
             borrow_global_mut<ModuleData<String>>(addr).state = msg;
         }
@@ -43,20 +43,25 @@ module 0xCAFE::test {
         }
     }
 
-    public entry fun option_str_vec(sender: &signer, msgs: vector<Option<String>>, i: u64) acquires ModuleData {
+    public entry fun option_str_vec(
+        sender: &signer, msgs: vector<Option<String>>, i: u64
+    ) acquires ModuleData {
         find_hello_in_option_msgs(&msgs);
 
         let msg = vector::borrow(&msgs, i);
-        let str_msg = if (option::is_some(msg)) {
-            *option::borrow(msg)
-        } else {
-            string::utf8(vector::empty())
-        };
+        let str_msg =
+            if (option::is_some(msg)) {
+                *option::borrow(msg)
+            } else {
+                string::utf8(vector::empty())
+            };
 
         hi(sender, str_msg);
     }
 
-     public entry fun str_vec_option(sender: &signer, msgs: Option<vector<String>>, i: u64) acquires ModuleData {
+    public entry fun str_vec_option(
+        sender: &signer, msgs: Option<vector<String>>, i: u64
+    ) acquires ModuleData {
         if (option::is_some(&msgs)) {
             let msgs = *option::borrow(&msgs);
             str_vec(sender, msgs, i);
@@ -69,19 +74,23 @@ module 0xCAFE::test {
         find_hello_in_msgs(&msgs);
         let addr = signer::address_of(sender);
         if (!exists<ModuleData<String>>(addr)) {
-            move_to(sender, ModuleData<String>{state: *vector::borrow(&msgs, i)});
+            move_to(sender, ModuleData<String> { state: *vector::borrow(&msgs, i) });
         } else {
             borrow_global_mut<ModuleData<String>>(addr).state = *vector::borrow(&msgs, i);
         }
     }
 
-    public entry fun str_vec_vec(sender: &signer, msgs: vector<vector<String>>, i: u64, j: u64) acquires ModuleData {
+    public entry fun str_vec_vec(
+        sender: &signer, msgs: vector<vector<String>>, i: u64, j: u64
+    ) acquires ModuleData {
         find_hello_in_msgs_of_msgs(&msgs);
         let addr = signer::address_of(sender);
         if (!exists<ModuleData<String>>(addr)) {
-            move_to(sender, ModuleData<String>{state: *vector::borrow(vector::borrow(&msgs, i), j)});
+            move_to(sender,
+                ModuleData<String> { state: *vector::borrow(vector::borrow(&msgs, i), j) });
         } else {
-            borrow_global_mut<ModuleData<String>>(addr).state = *vector::borrow(vector::borrow(&msgs, i), j);
+            borrow_global_mut<ModuleData<String>>(addr).state = *vector::borrow(vector::borrow(
+                    &msgs, i), j);
         }
     }
 
@@ -104,7 +113,7 @@ module 0xCAFE::test {
         let addr = signer::address_of(sender);
         let msg = *vector::borrow(vector::borrow(&msgs, i), j);
         if (!exists<ModuleData<String>>(addr)) {
-            move_to(sender, ModuleData<String>{state: msg});
+            move_to(sender, ModuleData<String> { state: msg });
         } else {
             borrow_global_mut<ModuleData<String>>(addr).state = msg;
         }

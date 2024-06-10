@@ -27,10 +27,7 @@ module initia_std::table {
     public fun new<K: copy + drop, V: store>(): Table<K, V> {
         let handle = new_table_handle<K, V>();
         account::create_table_account(handle);
-        Table {
-            handle,
-            length: 0,
-        }
+        Table { handle, length: 0, }
     }
 
     /// Destroy a table. The table must be empty to succeed.
@@ -61,10 +58,11 @@ module initia_std::table {
 
     /// Acquire an immutable reference to the value which `key` maps to.
     /// Returns specified default value if there is no entry for `key`.
-    public fun borrow_with_default<K: copy + drop, V>(table: &Table<K, V>, key: K, default: &V): &V {
-        if (!contains(table, copy key)) {
-            default
-        } else {
+    public fun borrow_with_default<K: copy + drop, V>(
+        table: &Table<K, V>, key: K, default: &V
+    ): &V {
+        if (!contains(table, copy key)) { default }
+        else {
             borrow(table, copy key)
         }
     }
@@ -87,7 +85,9 @@ module initia_std::table {
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Insert the pair (`key`, `default`) first if there is no entry for `key`.
-    public fun borrow_mut_with_default<K: copy + drop, V: drop>(table: &mut Table<K, V>, key: K, default: V): &mut V {
+    public fun borrow_mut_with_default<K: copy + drop, V: drop>(
+        table: &mut Table<K, V>, key: K, default: V
+    ): &mut V {
         if (!contains(table, copy key)) {
             add(table, copy key, default)
         };
@@ -96,7 +96,9 @@ module initia_std::table {
 
     /// Insert the pair (`key`, `value`) if there is no entry for `key`.
     /// update the value of the entry for `key` to `value` otherwise
-    public fun upsert<K: copy + drop, V: drop>(table: &mut Table<K, V>, key: K, value: V) {
+    public fun upsert<K: copy + drop, V: drop>(
+        table: &mut Table<K, V>, key: K, value: V
+    ) {
         if (!contains(table, copy key)) {
             add(table, copy key, value)
         } else {
@@ -126,38 +128,39 @@ module initia_std::table {
 
     /// Create iterator for `table`.
     /// A user has to check `prepare` before calling `next` to prevent abort.
-    /// 
+    ///
     /// let iter = table::iter(&t, start, end, order);
     /// loop {
     ///     if (!table::prepare<K, V>(&mut iter)) {
     ///         break;
     ///     }
-    /// 
+    ///
     ///     let (key, value) = table::next<K, V>(&mut iter);
-    /// } 
-    /// 
-    /// NOTE: The default BCS number encoding follows the Little Endian method. 
-    /// As a result, the byte order may differ from the numeric order. To maintain 
+    /// }
+    ///
+    /// NOTE: The default BCS number encoding follows the Little Endian method.
+    /// As a result, the byte order may differ from the numeric order. To maintain
     /// the numeric order, use `vector<u8>` as the key and utilize `0x1::std::table_key`
     /// functions to obtain the Big Endian key bytes of a number.
-    /// 
+    ///
     public fun iter<K: copy + drop, V>(
-        table: &Table<K, V>,
-        start: Option<K>, /* inclusive */
+        table: &Table<K, V>, start: Option<K>, /* inclusive */
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */,
     ): &TableIter<K, V> {
-        let start_bytes: vector<u8> = if (option::is_some(&start)) {
-            bcs::to_bytes<K>(&option::extract(&mut start))
-        } else {
-            vector::empty()
-        };
+        let start_bytes: vector<u8> =
+            if (option::is_some(&start)) {
+                bcs::to_bytes<K>(&option::extract(&mut start))
+            } else {
+                vector::empty()
+            };
 
-        let end_bytes: vector<u8> = if (option::is_some(&end)) {
-            bcs::to_bytes<K>(&option::extract(&mut end))
-        } else {
-            vector::empty()
-        };
+        let end_bytes: vector<u8> =
+            if (option::is_some(&end)) {
+                bcs::to_bytes<K>(&option::extract(&mut end))
+            } else {
+                vector::empty()
+            };
 
         new_table_iter<K, V, Box<V>>(table, start_bytes, end_bytes, order)
     }
@@ -173,38 +176,39 @@ module initia_std::table {
 
     /// Create mutable iterator for `table`.
     /// A user has to check `prepare` before calling `next` to prevent abort.
-    /// 
+    ///
     /// let iter = table::iter_mut(&t, start, end, order);
     /// loop {
     ///     if (!table::prepare_mut<K, V>(&mut iter)) {
     ///         break;
     ///     }
-    /// 
+    ///
     ///     let (key, value) = table::next_mut<K, V>(&mut iter);
-    /// } 
-    /// 
-    /// NOTE: The default BCS number encoding follows the Little Endian method. 
-    /// As a result, the byte order may differ from the numeric order. To maintain 
+    /// }
+    ///
+    /// NOTE: The default BCS number encoding follows the Little Endian method.
+    /// As a result, the byte order may differ from the numeric order. To maintain
     /// the numeric order, use `vector<u8>` as the key and utilize `0x1::std::table_key`
     /// functions to obtain the Big Endian key bytes of a number.
-    /// 
+    ///
     public fun iter_mut<K: copy + drop, V>(
-        table: &mut Table<K, V>,
-        start: Option<K>, /* inclusive */
+        table: &mut Table<K, V>, start: Option<K>, /* inclusive */
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */,
     ): &mut TableIter<K, V> {
-        let start_bytes: vector<u8> = if (option::is_some(&start)) {
-            bcs::to_bytes<K>(&option::extract(&mut start))
-        } else {
-            vector::empty()
-        };
+        let start_bytes: vector<u8> =
+            if (option::is_some(&start)) {
+                bcs::to_bytes<K>(&option::extract(&mut start))
+            } else {
+                vector::empty()
+            };
 
-        let end_bytes: vector<u8> = if (option::is_some(&end)) {
-            bcs::to_bytes<K>(&option::extract(&mut end))
-        } else {
-            vector::empty()
-        };
+        let end_bytes: vector<u8> =
+            if (option::is_some(&end)) {
+                bcs::to_bytes<K>(&option::extract(&mut end))
+            } else {
+                vector::empty()
+            };
 
         new_table_iter_mut<K, V, Box<V>>(table, start_bytes, end_bytes, order)
     }
@@ -244,19 +248,11 @@ module initia_std::table {
 
     native fun drop_unchecked_box<K: copy + drop, V, B>(table: Table<K, V>);
 
-    native fun new_table_iter<K: copy + drop, V, B>(
-        table: &Table<K, V>,
-        start: vector<u8>,
-        end: vector<u8>,
-        order: u8
-    ): &TableIter<K, V>;
+    native fun new_table_iter<K: copy + drop, V, B>(table: &Table<K, V>, start: vector<u8>, end: vector<u8>,
+        order: u8): &TableIter<K, V>;
 
-    native fun new_table_iter_mut<K: copy + drop, V, B>(
-        table: &mut Table<K, V>,
-        start: vector<u8>,
-        end: vector<u8>,
-        order: u8
-    ): &mut TableIter<K, V>;
+    native fun new_table_iter_mut<K: copy + drop, V, B>(table: &mut Table<K, V>, start: vector<u8>, end: vector<u8>,
+        order: u8): &mut TableIter<K, V>;
 
     native fun next_box<K: copy + drop, V, B>(table_iter: &TableIter<K, V>): (K, &Box<V>);
 
@@ -298,7 +294,7 @@ module initia_std::table {
         add(&mut t, key, 1);
         assert!(*borrow_with_default(&t, key, &12) == 1, error_code);
 
-        move_to(&account, TableHolder{ t });
+        move_to(&account, TableHolder { t });
     }
 
     #[test(account = @0x1)]

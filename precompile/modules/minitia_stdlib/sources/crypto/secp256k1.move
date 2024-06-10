@@ -42,16 +42,15 @@ module minitia_std::secp256k1 {
 
     /// Constructs an PublicKey struct, given 33-byte representation.
     public fun public_key_from_bytes(bytes: vector<u8>): PublicKey {
-        assert!(
-            std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
-            std::error::invalid_argument(PUBLIC_KEY_SIZE),
-        );
+        assert!(std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
+            std::error::invalid_argument(PUBLIC_KEY_SIZE),);
         PublicKey { bytes }
     }
 
     /// Constructs an Signature struct from the given 64 bytes.
     public fun signature_from_bytes(bytes: vector<u8>): Signature {
-        assert!(std::vector::length(&bytes) == SIGNATURE_SIZE, std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE));
+        assert!(std::vector::length(&bytes) == SIGNATURE_SIZE,
+            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE));
         Signature { bytes }
     }
 
@@ -67,14 +66,10 @@ module minitia_std::secp256k1 {
 
     /// Returns `true` only the signature can verify the public key on the message
     public fun verify(
-        message: vector<u8>,
-        public_key: &PublicKey,
-        signature: &Signature,
+        message: vector<u8>, public_key: &PublicKey, signature: &Signature,
     ): bool {
-        assert!(
-            std::vector::length(&message) == MESSAGE_SIZE,
-            std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),
-        );
+        assert!(std::vector::length(&message) == MESSAGE_SIZE,
+            std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),);
 
         return verify_internal(message, public_key.bytes, signature.bytes)
     }
@@ -86,16 +81,13 @@ module minitia_std::secp256k1 {
     /// incorrect public key. This recovery algorithm can only be used to check validity of a signature if the signer's
     /// public key (or its hash) is known beforehand.
     public fun recover_public_key(
-        message: vector<u8>,
-        recovery_id: u8,
-        signature: &Signature,
+        message: vector<u8>, recovery_id: u8, signature: &Signature,
     ): Option<PublicKey> {
-        assert!(
-            std::vector::length(&message) == MESSAGE_SIZE,
-            std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),
-        );
+        assert!(std::vector::length(&message) == MESSAGE_SIZE,
+            std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),);
 
-        let (pk, success) = recover_public_key_internal(recovery_id, message, signature.bytes);
+        let (pk, success) =
+            recover_public_key_internal(recovery_id, message, signature.bytes);
         if (success) {
             std::option::some(public_key_from_bytes(pk))
         } else {
@@ -103,25 +95,19 @@ module minitia_std::secp256k1 {
         }
     }
 
-    // 
+    //
     // Native functions
     //
 
     /// Returns `true` if `signature` verifies on `public_key` and `message`
     /// and returns `false` otherwise.
-    native fun verify_internal(
-        message: vector<u8>,
-        public_key: vector<u8>,
-        signature: vector<u8>,
-    ): bool;
+    native fun verify_internal(message: vector<u8>, public_key: vector<u8>, signature: vector<u8>,): bool;
 
     /// Returns `(public_key, true)` if `signature` verifies on `message` under the recovered `public_key`
     /// and returns `([], false)` otherwise.
-    native fun recover_public_key_internal(
-        recovery_id: u8,
-        message: vector<u8>,
-        signature: vector<u8>,
-    ): (vector<u8>, bool);
+    native fun recover_public_key_internal(recovery_id: u8, message: vector<u8>, signature: vector<u8>,): (
+        vector<u8>, bool
+    );
 
     #[test_only]
     /// Generates an secp256k1 ECDSA key pair.

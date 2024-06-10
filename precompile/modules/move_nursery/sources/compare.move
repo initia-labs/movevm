@@ -70,5 +70,4 @@ module std::compare {
         else if (i1 < i2) LESS_THAN
         else GREATER_THAN
     }
-
 }
