@@ -11,7 +11,8 @@ module initia_std::decimal256 {
     const FRACTIONAL_LENGTH: u64 = 18;
 
     // const MAX_U256: u256 = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
-    const MAX_INTEGER_PART: u256 = 115792089237316195423570985008687907853269984665640564039457;
+    const MAX_INTEGER_PART: u256 =
+        115792089237316195423570985008687907853269984665640564039457;
 
     /// A fixed-point decimal value with 18 fractional digits, i.e. Decimal256{ val: 1_000_000_000_000_000_000 } == 1.0
     struct Decimal256 has copy, drop, store {
@@ -132,7 +133,7 @@ module initia_std::decimal256 {
         decimal.val
     }
 
-     public fun round_up_u64(decimal: &Decimal256): u64 {
+    public fun round_up_u64(decimal: &Decimal256): u64 {
         let val = decimal.val + DECIMAL_FRACTIONAL / 2;
         (val / DECIMAL_FRACTIONAL as u64)
     }
@@ -204,19 +205,17 @@ module initia_std::decimal256 {
             assert!(frac_part < MAX_INTEGER_PART, error::invalid_argument(EOUT_OF_RANGE));
         };
 
-
-
         // ignore fractional part longer than `FRACTIONAL_LENGTH`
-        let frac_part_val = if (dot_index == len) {
-            0
-        } else {
-            let fractional_length = len - dot_index - 1;
-            if (fractional_length > FRACTIONAL_LENGTH) {
-                frac_part / pow(10, fractional_length - FRACTIONAL_LENGTH)
-            } else {
-                frac_part * pow(10, FRACTIONAL_LENGTH - fractional_length)
-            }
-        };
+        let frac_part_val =
+            if (dot_index == len) { 0 }
+            else {
+                let fractional_length = len - dot_index - 1;
+                if (fractional_length > FRACTIONAL_LENGTH) {
+                    frac_part / pow(10, fractional_length - FRACTIONAL_LENGTH)
+                } else {
+                    frac_part * pow(10, FRACTIONAL_LENGTH - fractional_length)
+                }
+            };
 
         new(int_part * DECIMAL_FRACTIONAL + frac_part_val)
     }
@@ -234,19 +233,16 @@ module initia_std::decimal256 {
 
     #[test]
     fun test() {
-        assert!(from_string(&string::utf8(b"1234.5678")) == new(1234567800000000000000), 0);
-        assert!(
-            from_string(&string::utf8(b"115792089237316195423570985008687907853269984665640564039456")) == new(
-                115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL
-            ),
-            0
-        );
-        assert!(
-            from_string(&string::utf8(b"115792089237316195423570985008687907853269984665640564039456.0")) == new(
-                115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL
-            ),
-            0
-        );
+        assert!(from_string(&string::utf8(b"1234.5678"))
+            == new(1234567800000000000000), 0);
+        assert!(from_string(&string::utf8(
+                    b"115792089237316195423570985008687907853269984665640564039456"))
+            == new(115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL),
+            0);
+        assert!(from_string(&string::utf8(
+                    b"115792089237316195423570985008687907853269984665640564039456.0"))
+            == new(115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL),
+            0);
     }
 
     #[test]
@@ -396,6 +392,7 @@ module initia_std::decimal256 {
     #[test]
     #[expected_failure(abort_code = 0x10002, location = Self)]
     fun failed_out_of_range() {
-        _ = from_string(&string::utf8(b"115792089237316195423570985008687907853269984665640564039457.0"));
+        _ = from_string(&string::utf8(
+                b"115792089237316195423570985008687907853269984665640564039457.0"));
     }
 }

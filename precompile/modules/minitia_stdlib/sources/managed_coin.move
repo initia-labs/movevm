@@ -6,7 +6,7 @@ module minitia_std::managed_coin {
     use std::signer;
     use std::string::String;
     use std::option::Option;
-    
+
     use minitia_std::object::{Self, Object};
     use minitia_std::fungible_asset::Metadata;
     use minitia_std::coin::{Self, BurnCapability, FreezeCapability, MintCapability};
@@ -48,42 +48,24 @@ module minitia_std::managed_coin {
         icon_uri: String,
         project_uri: String,
     ) {
-        let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref (
-            account,
-            maximum_supply,
-            name,
-            symbol,
-            decimals,
-            icon_uri,
-            project_uri,
-        );
+        let (mint_cap, burn_cap, freeze_cap, extend_ref) =
+            coin::initialize_and_generate_extend_ref(account, maximum_supply, name, symbol,
+                decimals, icon_uri, project_uri,);
 
         let metadata_signer = object::generate_signer_for_extending(&extend_ref);
-        move_to(&metadata_signer, Capabilities {
-            mint_cap,
-            burn_cap,
-            freeze_cap,
-        });
+        move_to(&metadata_signer, Capabilities { mint_cap, burn_cap, freeze_cap, });
     }
 
     /// Withdraw an `amount` of metadata coin from `account` and burn it.
     public entry fun burn(
-        account: &signer,
-        metadata: Object<Metadata>,
-        amount: u64,
+        account: &signer, metadata: Object<Metadata>, amount: u64,
     ) acquires Capabilities {
         let account_addr = signer::address_of(account);
 
-        assert!(
-            object::is_owner(metadata, account_addr),
-            error::not_found(EUNAUTHORIZED),
-        );
+        assert!(object::is_owner(metadata, account_addr), error::not_found(EUNAUTHORIZED),);
 
         let object_addr = object::object_address(metadata);
-        assert!(
-            exists<Capabilities>(object_addr),
-            error::not_found(ENO_CAPABILITIES),
-        );
+        assert!(exists<Capabilities>(object_addr), error::not_found(ENO_CAPABILITIES),);
 
         let capabilities = borrow_global<Capabilities>(object_addr);
 
@@ -100,16 +82,10 @@ module minitia_std::managed_coin {
     ) acquires Capabilities {
         let account_addr = signer::address_of(account);
 
-        assert!(
-            object::is_owner(metadata, account_addr),
-            error::not_found(EUNAUTHORIZED),
-        );
+        assert!(object::is_owner(metadata, account_addr), error::not_found(EUNAUTHORIZED),);
 
         let object_addr = object::object_address(metadata);
-        assert!(
-            exists<Capabilities>(object_addr),
-            error::not_found(ENO_CAPABILITIES),
-        );
+        assert!(exists<Capabilities>(object_addr), error::not_found(ENO_CAPABILITIES),);
 
         let capabilities = borrow_global<Capabilities>(object_addr);
         coin::mint_to(&capabilities.mint_cap, dst_addr, amount);
@@ -132,30 +108,26 @@ module minitia_std::managed_coin {
     const TEST_SYMBOL: vector<u8> = b"FMD";
 
     #[test_only]
-    public fun test_metadata (): Object<Metadata> {
+    public fun test_metadata(): Object<Metadata> {
         coin::metadata(@minitia_std, string::utf8(TEST_SYMBOL))
     }
 
     #[test(source = @0xa11ce, destination = @0xb0b, mod_account = @0x1)]
     public entry fun test_end_to_end(
-        source: signer,
-        destination: signer,
-        mod_account: signer
+        source: signer, destination: signer, mod_account: signer
     ) acquires Capabilities {
         primary_fungible_store::init_module_for_test(&mod_account);
 
         let source_addr = signer::address_of(&source);
         let destination_addr = signer::address_of(&destination);
 
-        initialize(
-            &mod_account,
+        initialize(&mod_account,
             option::none(),
             string::utf8(b"Fake Money"),
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),
-        );
+            string::utf8(b""),);
 
         let metadata = test_metadata();
         assert!(coin::is_coin_initialized(metadata), 0);
@@ -184,23 +156,19 @@ module minitia_std::managed_coin {
     #[test(source = @0xa11ce, destination = @0xb0b, mod_account = @0x1)]
     #[expected_failure(abort_code = 0x60002, location = Self)]
     public entry fun fail_mint(
-        source: signer,
-        destination: signer,
-        mod_account: signer,
+        source: signer, destination: signer, mod_account: signer,
     ) acquires Capabilities {
         primary_fungible_store::init_module_for_test(&mod_account);
 
         let source_addr = signer::address_of(&source);
 
-        initialize(
-            &mod_account,
+        initialize(&mod_account,
             option::none(),
             string::utf8(b"Fake Money"),
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),
-        );
+            string::utf8(b""),);
 
         let metadata = test_metadata();
         mint(&destination, source_addr, metadata, 100);
@@ -209,23 +177,19 @@ module minitia_std::managed_coin {
     #[test(source = @0xa11ce, destination = @0xb0b, mod_account = @0x1)]
     #[expected_failure(abort_code = 0x60002, location = Self)]
     public entry fun fail_burn(
-        source: signer,
-        destination: signer,
-        mod_account: signer,
+        source: signer, destination: signer, mod_account: signer,
     ) acquires Capabilities {
         primary_fungible_store::init_module_for_test(&mod_account);
 
         let source_addr = signer::address_of(&source);
 
-        initialize(
-            &mod_account,
+        initialize(&mod_account,
             option::none(),
             string::utf8(b"Fake Money"),
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),
-        );
+            string::utf8(b""),);
 
         let metadata = test_metadata();
         mint(&mod_account, source_addr, metadata, 100);

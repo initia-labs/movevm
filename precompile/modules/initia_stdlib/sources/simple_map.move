@@ -27,14 +27,11 @@ module initia_std::simple_map {
     }
 
     public fun create<Key: store, Value: store>(): SimpleMap<Key, Value> {
-        SimpleMap {
-            data: vector::empty(),
-        }
+        SimpleMap { data: vector::empty(), }
     }
 
     public fun borrow<Key: store, Value: store>(
-        map: &SimpleMap<Key, Value>,
-        key: &Key,
+        map: &SimpleMap<Key, Value>, key: &Key,
     ): &Value {
         let (maybe_idx, _) = find(map, key);
         assert!(option::is_some(&maybe_idx), error::invalid_argument(EKEY_NOT_FOUND));
@@ -43,8 +40,7 @@ module initia_std::simple_map {
     }
 
     public fun borrow_mut<Key: store, Value: store>(
-        map: &mut SimpleMap<Key, Value>,
-        key: &Key,
+        map: &mut SimpleMap<Key, Value>, key: &Key,
     ): &mut Value {
         let (maybe_idx, _) = find(map, key);
         assert!(option::is_some(&maybe_idx), error::invalid_argument(EKEY_NOT_FOUND));
@@ -53,22 +49,21 @@ module initia_std::simple_map {
     }
 
     public fun contains_key<Key: store, Value: store>(
-        map: &SimpleMap<Key, Value>,
-        key: &Key,
+        map: &SimpleMap<Key, Value>, key: &Key,
     ): bool {
         let (maybe_idx, _) = find(map, key);
         option::is_some(&maybe_idx)
     }
 
-    public fun destroy_empty<Key: store, Value: store>(map: SimpleMap<Key, Value>) {
+    public fun destroy_empty<Key: store, Value: store>(
+        map: SimpleMap<Key, Value>
+    ) {
         let SimpleMap { data } = map;
         vector::destroy_empty(data);
     }
 
     public fun add<Key: store, Value: store>(
-        map: &mut SimpleMap<Key, Value>,
-        key: Key,
-        value: Value,
+        map: &mut SimpleMap<Key, Value>, key: Key, value: Value,
     ) {
         let (maybe_idx, maybe_placement) = find(map, &key);
         assert!(option::is_none(&maybe_idx), error::invalid_argument(EKEY_ALREADY_EXISTS));
@@ -85,8 +80,7 @@ module initia_std::simple_map {
     }
 
     public fun remove<Key: store, Value: store>(
-        map: &mut SimpleMap<Key, Value>,
-        key: &Key,
+        map: &mut SimpleMap<Key, Value>, key: &Key,
     ): (Key, Value) {
         let (maybe_idx, _) = find(map, key);
         assert!(option::is_some(&maybe_idx), error::invalid_argument(EKEY_NOT_FOUND));
@@ -103,14 +97,13 @@ module initia_std::simple_map {
         (key, value)
     }
 
-    fun find<Key: store, Value: store>(
-        map: &SimpleMap<Key, Value>,
-        key: &Key,
-    ): (option::Option<u64>, option::Option<u64>) {
+    fun find<Key: store, Value: store>(map: &SimpleMap<Key, Value>, key: &Key,)
+        : (option::Option<u64>,
+        option::Option<u64>) {
         let length = vector::length(&map.data);
 
         if (length == 0) {
-            return (option::none(), option::some(0))
+            return(option::none(), option::some(0))
         };
 
         let left = 0;
@@ -128,9 +121,7 @@ module initia_std::simple_map {
 
         if (left != length && key == &vector::borrow(&map.data, left).key) {
             (option::some(left), option::none())
-        } else {
-            (option::none(), option::some(left))
-        }
+        } else { (option::none(), option::some(left)) }
     }
 
     #[test]

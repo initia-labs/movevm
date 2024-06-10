@@ -40,7 +40,7 @@ module minitia_std::transaction_context {
         use std::vector;
 
         let addr1 = minitia_std::transaction_context::generate_unique_address();
-        
+
         // UID_PREFIX for transaction context
         let bytes = x"00000001";
         let session_id = minitia_std::transaction_context::get_session_id();

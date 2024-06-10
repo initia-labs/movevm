@@ -12,10 +12,7 @@ module test::ViewOutputTests {
 
     #[view]
     public fun emit_event<TypeArg>(arg: string::String): string::String {
-        event::emit(ViewEvent {
-            type_arg: type_info::type_name<TypeArg>(),
-            arg,
-        });
+        event::emit(ViewEvent { type_arg: type_info::type_name<TypeArg>(), arg, });
 
         arg
     }

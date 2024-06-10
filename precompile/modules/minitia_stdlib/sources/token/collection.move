@@ -136,21 +136,16 @@ module minitia_std::collection {
         let collection_seed = create_collection_seed(&name);
         let constructor_ref = object::create_named_object(creator, collection_seed, false);
 
-        let supply = FixedSupply {
-            current_supply: 0,
-            max_supply,
-            total_minted: 0,
-        };
+        let supply =
+            FixedSupply { current_supply: 0, max_supply, total_minted: 0, };
 
-        create_collection_internal(
-            creator,
+        create_collection_internal(creator,
             constructor_ref,
             description,
             name,
             royalty,
             uri,
-            option::some(supply),
-        )
+            option::some(supply),)
     }
 
     /// Creates an unlimited collection. This has support for supply tracking but does not limit
@@ -165,20 +160,16 @@ module minitia_std::collection {
         let collection_seed = create_collection_seed(&name);
         let constructor_ref = object::create_named_object(creator, collection_seed, false);
 
-        let supply = UnlimitedSupply {
-            current_supply: 0,
-            total_minted: 0,
-        };
+        let supply =
+            UnlimitedSupply { current_supply: 0, total_minted: 0, };
 
-        create_collection_internal(
-            creator,
+        create_collection_internal(creator,
             constructor_ref,
             description,
             name,
             royalty,
             uri,
-            option::some(supply),
-        )
+            option::some(supply),)
     }
 
     /// Creates an untracked collection, or a collection that supports an arbitrary amount of
@@ -194,15 +185,13 @@ module minitia_std::collection {
         let collection_seed = create_collection_seed(&name);
         let constructor_ref = object::create_named_object(creator, collection_seed, false);
 
-        create_collection_internal<FixedSupply>(
-            creator,
+        create_collection_internal<FixedSupply>(creator,
             constructor_ref,
             description,
             name,
             royalty,
             uri,
-            option::none(),
-        )
+            option::none(),)
     }
 
     inline fun create_collection_internal<Supply: key>(
@@ -214,26 +203,27 @@ module minitia_std::collection {
         uri: String,
         supply: Option<Supply>,
     ): ConstructorRef {
-        assert!(string::length(&name) <= MAX_COLLECTION_NAME_LENGTH, error::out_of_range(ECOLLECTION_NAME_TOO_LONG));
+        assert!(string::length(&name) <= MAX_COLLECTION_NAME_LENGTH,
+            error::out_of_range(ECOLLECTION_NAME_TOO_LONG));
         assert!(string::length(&uri) <= MAX_URI_LENGTH, error::out_of_range(EURI_TOO_LONG));
-        assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH, error::out_of_range(EDESCRIPTION_TOO_LONG));
+        assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH,
+            error::out_of_range(EDESCRIPTION_TOO_LONG));
 
         let object_signer = &object::generate_signer(&constructor_ref);
         let creator_addr = signer::address_of(creator);
 
-        let collection = Collection {
-            creator: creator_addr,
-            description,
-            name,
-            uri,
-            nfts: table::new(),
-        };
+        let collection =
+            Collection { creator: creator_addr, description, name, uri, nfts: table::new(), };
         move_to(object_signer, collection);
 
         if (option::is_some(&supply)) {
             move_to(object_signer, option::destroy_some(supply));
             let collection_addr = signer::address_of(object_signer);
-            event::emit(CreateCollectionEvent { collection: collection_addr, creator: creator_addr, name });
+            event::emit(CreateCollectionEvent {
+                    collection: collection_addr,
+                    creator: creator_addr,
+                    name
+                });
         } else {
             option::destroy_none(supply)
         };
@@ -255,15 +245,14 @@ module minitia_std::collection {
 
     /// Named objects are derived from a seed, the collection's seed is its name.
     public fun create_collection_seed(name: &String): vector<u8> {
-        assert!(string::length(name) <= MAX_COLLECTION_NAME_LENGTH, error::out_of_range(ECOLLECTION_NAME_TOO_LONG));
+        assert!(string::length(name) <= MAX_COLLECTION_NAME_LENGTH,
+            error::out_of_range(ECOLLECTION_NAME_TOO_LONG));
         *string::bytes(name)
     }
 
     /// Called by nft on mint to increment supply if there's an appropriate Supply struct.
     public(friend) fun increment_supply(
-        collection: Object<Collection>,
-        token_id: String,
-        nft: address,
+        collection: Object<Collection>, token_id: String, nft: address,
     ) acquires Collection, FixedSupply, UnlimitedSupply {
         let collection_addr = object::object_address(collection);
         let collection = borrow_global_mut<Collection>(collection_addr);
@@ -271,30 +260,22 @@ module minitia_std::collection {
             let supply = borrow_global_mut<FixedSupply>(collection_addr);
             supply.current_supply = supply.current_supply + 1;
             supply.total_minted = supply.total_minted + 1;
-            assert!(
-                supply.current_supply <= supply.max_supply,
-                error::out_of_range(ECOLLECTION_SUPPLY_EXCEEDED),
-            );
+            assert!(supply.current_supply <= supply.max_supply,
+                error::out_of_range(ECOLLECTION_SUPPLY_EXCEEDED),);
             table::add(&mut collection.nfts, token_id, nft);
-            event::emit(
-                MintEvent { collection: collection_addr, token_id, nft },
-            );
+            event::emit(MintEvent { collection: collection_addr, token_id, nft },);
         } else if (exists<UnlimitedSupply>(collection_addr)) {
             let supply = borrow_global_mut<UnlimitedSupply>(collection_addr);
             supply.current_supply = supply.current_supply + 1;
             supply.total_minted = supply.total_minted + 1;
             table::add(&mut collection.nfts, token_id, nft);
-            event::emit(
-                MintEvent { collection: collection_addr, token_id, nft },
-            );
-        } 
+            event::emit(MintEvent { collection: collection_addr, token_id, nft },);
+        }
     }
 
     /// Called by nft on burn to decrement supply if there's an appropriate Supply struct.
     public(friend) fun decrement_supply(
-        collection: Object<Collection>,
-        token_id: String,
-        nft: address,
+        collection: Object<Collection>, token_id: String, nft: address,
     ) acquires Collection, FixedSupply, UnlimitedSupply {
         let collection_addr = object::object_address(collection);
         let collection = borrow_global_mut<Collection>(collection_addr);
@@ -302,16 +283,12 @@ module minitia_std::collection {
             let supply = borrow_global_mut<FixedSupply>(collection_addr);
             supply.current_supply = supply.current_supply - 1;
             table::remove(&mut collection.nfts, token_id);
-            event::emit(
-                BurnEvent { collection: collection_addr, token_id, nft },
-            );
+            event::emit(BurnEvent { collection: collection_addr, token_id, nft },);
         } else if (exists<UnlimitedSupply>(collection_addr)) {
             let supply = borrow_global_mut<UnlimitedSupply>(collection_addr);
             supply.current_supply = supply.current_supply - 1;
             table::remove(&mut collection.nfts, token_id);
-            event::emit(
-                BurnEvent { collection: collection_addr, token_id, nft },
-            );
+            event::emit(BurnEvent { collection: collection_addr, token_id, nft },);
         }
     }
 
@@ -324,10 +301,7 @@ module minitia_std::collection {
     // Accessors
 
     inline fun check_collection_exists(addr: address) {
-        assert!(
-            exists<Collection>(addr),
-            error::not_found(ECOLLECTION_DOES_NOT_EXIST),
-        );
+        assert!(exists<Collection>(addr), error::not_found(ECOLLECTION_DOES_NOT_EXIST),);
     }
 
     inline fun borrow<T: key>(collection: Object<T>): &Collection {
@@ -377,9 +351,7 @@ module minitia_std::collection {
     /// get nft list from collection
     /// if `start_after` is not none, seach nfts in range (start_after, ...]
     public fun nfts<T: key>(
-        collection: Object<T>,
-        start_after: Option<String>,
-        limit: u64,
+        collection: Object<T>, start_after: Option<String>, limit: u64,
     ): vector<NftResponse> acquires Collection {
         let collection = borrow(collection);
 
@@ -387,25 +359,15 @@ module minitia_std::collection {
             limit = MAX_QUERY_LIMIT;
         };
 
-        let nfts_iter = table::iter(
-            &collection.nfts,
-            option::none(),
-            start_after,
-            2,
-        );
+        let nfts_iter =
+            table::iter(&collection.nfts, option::none(), start_after, 2,);
 
         let res: vector<NftResponse> = vector[];
 
         while (table::prepare<String, address>(nfts_iter) && vector::length(&res) < (limit as u64)) {
             let (token_id, nft) = table::next<String, address>(nfts_iter);
 
-            vector::push_back(
-                &mut res,
-                NftResponse {
-                    token_id,
-                    nft: *nft,
-                },
-            );
+            vector::push_back(&mut res, NftResponse { token_id, nft: *nft, },);
         };
 
         res
@@ -423,30 +385,27 @@ module minitia_std::collection {
     }
 
     public fun set_description(mutator_ref: &MutatorRef, description: String) acquires Collection {
-        assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH, error::out_of_range(EDESCRIPTION_TOO_LONG));
+        assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH,
+            error::out_of_range(EDESCRIPTION_TOO_LONG));
         let collection = borrow_mut(mutator_ref);
-        event::emit(
-            MutationEvent {
+        event::emit(MutationEvent {
                 collection: mutator_ref.self,
                 mutated_field_name: string::utf8(b"description"),
                 old_value: collection.description,
                 new_value: description
-            },
-        );
+            },);
         collection.description = description;
     }
 
     public fun set_uri(mutator_ref: &MutatorRef, uri: String) acquires Collection {
         assert!(string::length(&uri) <= MAX_URI_LENGTH, error::out_of_range(EURI_TOO_LONG));
         let collection = borrow_mut(mutator_ref);
-        event::emit(
-            MutationEvent {
+        event::emit(MutationEvent {
                 collection: mutator_ref.self,
                 mutated_field_name: string::utf8(b"uri"),
                 old_value: collection.uri,
                 new_value: uri
-            },
-        );
+            },);
         collection.uri = uri;
     }
 
@@ -456,7 +415,8 @@ module minitia_std::collection {
     fun test_create_mint_burn_for_unlimited(creator: &signer) acquires Collection, FixedSupply, UnlimitedSupply {
         let creator_address = signer::address_of(creator);
         let name = string::utf8(b"collection name");
-        create_unlimited_collection(creator, string::utf8(b""), name, option::none(), string::utf8(b""));
+        create_unlimited_collection(creator, string::utf8(b""), name, option::none(),
+            string::utf8(b""));
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         assert!(count(collection) == option::some(0), 0);
@@ -470,7 +430,8 @@ module minitia_std::collection {
     fun test_create_mint_burn_for_fixed(creator: &signer) acquires Collection, FixedSupply, UnlimitedSupply {
         let creator_address = signer::address_of(creator);
         let name = string::utf8(b"collection name");
-        create_fixed_collection(creator, string::utf8(b""), 1, name, option::none(), string::utf8(b""));
+        create_fixed_collection(creator, string::utf8(b""), 1, name, option::none(),
+            string::utf8(b""));
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         assert!(count(collection) == option::some(0), 0);
@@ -487,9 +448,8 @@ module minitia_std::collection {
         let collection_name = string::utf8(b"collection name");
         create_collection_helper(creator, collection_name);
 
-        let collection = object::address_to_object<Collection>(
-            create_collection_address(creator_address, &collection_name),
-        );
+        let collection =
+            object::address_to_object<Collection>(create_collection_address(creator_address, &collection_name),);
         assert!(object::owner(collection) == creator_address, 1);
         object::transfer(creator, collection, signer::address_of(trader));
     }
@@ -506,9 +466,9 @@ module minitia_std::collection {
     entry fun test_set_description(creator: &signer) acquires Collection {
         let collection_name = string::utf8(b"collection name");
         let constructor_ref = create_collection_helper(creator, collection_name);
-        let collection = object::address_to_object<Collection>(
-            create_collection_address(signer::address_of(creator), &collection_name),
-        );
+        let collection =
+            object::address_to_object<Collection>(create_collection_address(signer::address_of(
+                        creator), &collection_name),);
         let mutator_ref = generate_mutator_ref(&constructor_ref);
         let description = string::utf8(b"no fail");
         assert!(description != description(collection), 0);
@@ -521,9 +481,9 @@ module minitia_std::collection {
         let collection_name = string::utf8(b"collection name");
         let constructor_ref = create_collection_helper(creator, collection_name);
         let mutator_ref = generate_mutator_ref(&constructor_ref);
-        let collection = object::address_to_object<Collection>(
-            create_collection_address(signer::address_of(creator), &collection_name),
-        );
+        let collection =
+            object::address_to_object<Collection>(create_collection_address(signer::address_of(
+                        creator), &collection_name),);
         let uri = string::utf8(b"no fail");
         assert!(uri != uri(collection), 0);
         set_uri(&mutator_ref, uri);
@@ -534,7 +494,8 @@ module minitia_std::collection {
     fun test_nfts_query(creator: &signer) acquires Collection, FixedSupply, UnlimitedSupply {
         let creator_address = signer::address_of(creator);
         let name = string::utf8(b"collection name");
-        create_unlimited_collection(creator, string::utf8(b""), name, option::none(), string::utf8(b""));
+        create_unlimited_collection(creator, string::utf8(b""), name, option::none(),
+            string::utf8(b""));
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         increment_supply(collection, string::utf8(b"1"), @0x001);
@@ -542,34 +503,27 @@ module minitia_std::collection {
         increment_supply(collection, string::utf8(b"3"), @0x003);
 
         let nfts = nfts(collection, option::none(), 5);
-        assert!(
-            nfts == vector[
+        assert!(nfts
+            == vector[
                 NftResponse { token_id: string::utf8(b"3"), nft: @0x003 },
                 NftResponse { token_id: string::utf8(b"2"), nft: @0x002 },
-                NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },
-            ],
-            0
-        );
+                NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },],
+            0);
 
         nfts = nfts(collection, option::some(string::utf8(b"3")), 5);
-        assert!(
-            nfts == vector[
+        assert!(nfts
+            == vector[
                 NftResponse { token_id: string::utf8(b"2"), nft: @0x002 },
-                NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },
-            ],
-            1
-        )
+                NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },],
+            1)
     }
-
 
     #[test_only]
     fun create_collection_helper(creator: &signer, name: String): ConstructorRef {
-        create_untracked_collection(
-            creator,
+        create_untracked_collection(creator,
             string::utf8(b"collection description"),
             name,
             option::none(),
-            string::utf8(b"collection uri"),
-        )
+            string::utf8(b"collection uri"),)
     }
 }

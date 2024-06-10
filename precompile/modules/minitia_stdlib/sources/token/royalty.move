@@ -49,7 +49,8 @@ module minitia_std::royalty {
 
     /// Creates a new royalty, verifying that it is a valid percentage
     public fun create(royalty: Decimal128, payee_address: address): Royalty {
-        assert!(decimal128::val(&royalty) <= decimal128::val(&decimal128::one()), error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM));
+        assert!(decimal128::val(&royalty) <= decimal128::val(&decimal128::one()),
+            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM));
 
         Royalty { royalty, payee_address }
     }
@@ -88,22 +89,25 @@ module minitia_std::royalty {
     #[test(creator = @0x123)]
     fun test_none(creator: &signer) acquires Royalty {
         let constructor_ref = object::create_named_object(creator, b"", false);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         assert!(option::none() == get(object), 0);
     }
 
     #[test(creator = @0x123)]
     fun test_init_and_update(creator: &signer) acquires Royalty {
         let constructor_ref = object::create_named_object(creator, b"", false);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
-        let init_royalty = create(decimal128::from_ratio(1,2), @0x123);
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
+        let init_royalty = create(decimal128::from_ratio(1, 2), @0x123);
         init(&constructor_ref, init_royalty);
         assert!(option::some(init_royalty) == get(object), 0);
         assert!(royalty(&init_royalty) == decimal128::from_ratio(1, 2), 1);
         assert!(payee_address(&init_royalty) == @0x123, 2);
 
-        let mutator_ref = generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
-        let update_royalty = create(decimal128::from_ratio(2,5), @0x456);
+        let mutator_ref =
+            generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
+        let update_royalty = create(decimal128::from_ratio(2, 5), @0x456);
         update(&mutator_ref, update_royalty);
         assert!(option::some(update_royalty) == get(object), 3);
         assert!(royalty(&update_royalty) == decimal128::from_ratio(2, 5), 4);
@@ -113,10 +117,12 @@ module minitia_std::royalty {
     #[test(creator = @0x123)]
     fun test_update_only(creator: &signer) acquires Royalty {
         let constructor_ref = object::create_named_object(creator, b"", false);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         assert!(option::none() == get(object), 0);
 
-        let mutator_ref = generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
+        let mutator_ref =
+            generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
         let update_royalty = create(decimal128::from_ratio(1, 5), @0x123);
         update(&mutator_ref, update_royalty);
         assert!(option::some(update_royalty) == get(object), 1);
@@ -131,6 +137,6 @@ module minitia_std::royalty {
     #[test]
     #[expected_failure(abort_code = 0x20002, location = Self)]
     fun test_exceeds_maximum() {
-        create(decimal128::from_ratio(6,5), @0x1);
+        create(decimal128::from_ratio(6, 5), @0x1);
     }
 }
