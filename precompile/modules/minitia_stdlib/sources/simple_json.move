@@ -43,7 +43,8 @@ module minitia_std::simple_json {
 
         let (prev_index, last) = json::get_prev_index(&object.index);
 
-        if (last == 0 && json::get_child_length(json::borrow(&object.obj, &prev_index)) == 0)
+        if (last == 0
+            && json::get_child_length(json::borrow(&object.obj, &prev_index)) == 0)
         return 0;
         object.index = json::get_next_index(&prev_index, last + 1);
         last + 1
@@ -210,24 +211,27 @@ module minitia_std::simple_json {
         set_int_raw(&mut obj,
             option::none<String>(),
             true,
-            115792089237316195423570985008687907853269984665640564039457584007913129639935);
+            115792089237316195423570985008687907853269984665640564039457584007913129639935,
+        );
         set_dec_string(&mut obj,
             option::none<String>(),
             false,
             decimal256::new(
 
-                    115792089237316195423570985008687907853269984665640564039457584007913129639935));
+
+                115792089237316195423570985008687907853269984665640564039457584007913129639935),
+        );
         set_string(&mut obj,
             option::none<String>(),
             string::utf8(
-                b"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935"));
+                b"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935"),
+        );
         set_array(&mut obj, option::none<String>());
         set_object(&mut obj, option::none<String>());
 
         let json_string = json::stringify(to_json_object(&obj));
         assert!(
-            json_string
-            == string::utf8(
+            json_string == string::utf8(
                 b"[115792089237316195423570985008687907853269984665640564039457584007913129639935,\"-115792089237316195423570985008687907853269984665640564039457.584007913129639935\",\"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935\",[],{}]"),
             0);
     }
@@ -262,8 +266,7 @@ module minitia_std::simple_json {
         set_object(&mut obj, option::some(string::utf8(b"123")));
 
         let json_string = json::stringify(to_json_object(&obj));
-        assert!(json_string
-            == string::utf8(
+        assert!(json_string == string::utf8(
                 b"{\"123\":{},\"abc\":18446744073709551615,\"def\":{\"d\":[-1,312,\"45.12324\"]}}"),
             0);
     }
@@ -309,9 +312,10 @@ module minitia_std::simple_json {
 
     #[test]
     fun test_find_and_set_key3() {
-        let obj =
-            from_json_object(json::parse(string::utf8(
-                        b"{\"forward\": {\"receiver\": \"chain-c-bech32-address\"}, \"wasm\":{}}")));
+        let obj = from_json_object(
+            json::parse(
+                string::utf8(
+                    b"{\"forward\": {\"receiver\": \"chain-c-bech32-address\"}, \"wasm\":{}}")));
         increase_depth(&mut obj);
         let ok = try_find_and_set_index(&mut obj, &string::utf8(b"move"));
         assert!(!ok, 0);
@@ -322,8 +326,7 @@ module minitia_std::simple_json {
         set_object(&mut obj, option::some(string::utf8(b"async_callback")));
 
         let json_str = json::stringify(to_json_object(&obj));
-        assert!(json_str
-            == string::utf8(
+        assert!(json_str == string::utf8(
                 b"{\"forward\":{\"receiver\":\"chain-c-bech32-address\"},\"move\":{\"async_callback\":{}},\"wasm\":{}}"),
             1)
     }

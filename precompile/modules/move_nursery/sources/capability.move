@@ -132,7 +132,8 @@ module std::capability {
             let root_addr = borrow_global<CapDelegateState<Feature>>(addr).root;
             // double check that requester is actually registered as a delegate
             assert!(exists<CapState<Feature>>(root_addr), error::invalid_state(EDELEGATE));
-            assert!(vector::contains(&borrow_global<CapState<Feature>>(root_addr).delegates, &addr),
+            assert!(
+                vector::contains(&borrow_global<CapState<Feature>>(root_addr).delegates, &addr),
                 error::invalid_state(EDELEGATE));
             root_addr
         } else {

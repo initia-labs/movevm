@@ -134,12 +134,10 @@ module initia_std::account {
     #[test]
     public fun test_create_account() {
         // base account
-        let bob =
-            create_address(
-                x"0000000000000000000000000000000000000000000000000000000000000b0b");
-        let carol =
-            create_address(
-                x"00000000000000000000000000000000000000000000000000000000000ca501");
+        let bob = create_address(
+            x"0000000000000000000000000000000000000000000000000000000000000b0b");
+        let carol = create_address(
+            x"00000000000000000000000000000000000000000000000000000000000ca501");
         assert!(!exists_at(bob), 0);
         assert!(!exists_at(carol), 1);
 
@@ -156,9 +154,8 @@ module initia_std::account {
         assert!(carol_account_num == get_account_number(carol), 7);
 
         // object account
-        let dan =
-            create_address(
-                x"000000000000000000000000000000000000000000000000000000000000da17");
+        let dan = create_address(
+            x"000000000000000000000000000000000000000000000000000000000000da17");
         assert!(!exists_at(dan), 8);
         let dan_object_account_num = create_object_account(dan);
         assert!(dan_object_account_num == get_account_number(dan), 9);
@@ -166,9 +163,8 @@ module initia_std::account {
         assert!(exists_at(dan), 11);
 
         // table account
-        let erin =
-            create_address(
-                x"00000000000000000000000000000000000000000000000000000000000e5117");
+        let erin = create_address(
+            x"00000000000000000000000000000000000000000000000000000000000e5117");
         assert!(!exists_at(erin), 12);
         let erin_table_account_num = create_table_account(erin);
         assert!(erin_table_account_num == get_account_number(erin), 13);
@@ -178,16 +174,14 @@ module initia_std::account {
 
     #[test]
     public fun test_create_address() {
-        let bob =
-            create_address(
-                x"0000000000000000000000000000000000000000000000000000000000000b0b");
-        let carol =
-            create_address(
-                x"00000000000000000000000000000000000000000000000000000000000ca501");
-        assert!(bob
-            == @0x0000000000000000000000000000000000000000000000000000000000000b0b, 0);
-        assert!(carol
-            == @0x00000000000000000000000000000000000000000000000000000000000ca501, 1);
+        let bob = create_address(
+            x"0000000000000000000000000000000000000000000000000000000000000b0b");
+        let carol = create_address(
+            x"00000000000000000000000000000000000000000000000000000000000ca501");
+        assert!(bob == @0x0000000000000000000000000000000000000000000000000000000000000b0b,
+            0);
+        assert!(carol ==
+            @0x00000000000000000000000000000000000000000000000000000000000ca501, 1);
     }
 
     #[test(new_address = @0x42)]
@@ -240,14 +234,18 @@ module initia_std::account {
 
     #[test(new_address = @0x42)]
     #[expected_failure(abort_code = 0x80064, location = Self)]
-    public fun test_create_table_account_already_exists(new_address: address) {
+    public fun test_create_table_account_already_exists(
+        new_address: address
+    ) {
         create_table_account(new_address);
         create_table_account(new_address);
     }
 
     #[test(new_address = @0x42)]
     #[expected_failure(abort_code = 0x80064, location = Self)]
-    public fun test_create_object_account_already_exists(new_address: address) {
+    public fun test_create_object_account_already_exists(
+        new_address: address
+    ) {
         create_table_account(new_address);
         create_object_account(new_address);
     }

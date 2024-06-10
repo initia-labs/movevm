@@ -13,14 +13,15 @@ module 0x2::StdCoin {
     }
 
     entry fun init(sender: &signer) {
-        let (mint, burn, freeze) =
-            coin::initialize(sender,
-                option::none(),
-                string::utf8(b"Std Coin"),
-                string::utf8(b"STDC"),
-                8,
-                string::utf8(b""),
-                string::utf8(b""),);
+        let (mint, burn, freeze) = coin::initialize(
+            sender,
+            option::none(),
+            string::utf8(b"Std Coin"),
+            string::utf8(b"STDC"),
+            8,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
 
         move_to(sender, CapStore { burn, freeze, mint });
     }

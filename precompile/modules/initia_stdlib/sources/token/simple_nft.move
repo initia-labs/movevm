@@ -50,7 +50,8 @@ module initia_std::simple_nft {
         mutable_nft_uri: bool,
         royalty: Decimal128,
     ) {
-        create_collection_object(creator,
+        create_collection_object(
+            creator,
             description,
             max_supply,
             name,
@@ -61,7 +62,8 @@ module initia_std::simple_nft {
             mutable_nft_description,
             mutable_nft_properties,
             mutable_nft_uri,
-            royalty,);
+            royalty,
+        );
     }
 
     public fun create_collection_object(
@@ -78,23 +80,23 @@ module initia_std::simple_nft {
         mutable_nft_uri: bool,
         royalty: Decimal128,
     ): Object<SimpleNftCollection> {
-        let (_, extend_ref) =
-            initia_nft::create_collection_object(creator,
-                description,
-                max_supply,
-                name,
-                uri,
-                mutable_description,
-                mutable_royalty,
-                mutable_uri,
-                mutable_nft_description,
-                mutable_nft_uri,
-                royalty,);
+        let (_, extend_ref) = initia_nft::create_collection_object(
+            creator,
+            description,
+            max_supply,
+            name,
+            uri,
+            mutable_description,
+            mutable_royalty,
+            mutable_uri,
+            mutable_nft_description,
+            mutable_nft_uri,
+            royalty,
+        );
 
         let object_signer = object::generate_signer_for_extending(&extend_ref);
 
-        let simple_nft_collection =
-            SimpleNftCollection { mutable_nft_properties, };
+        let simple_nft_collection = SimpleNftCollection { mutable_nft_properties, };
         move_to(&object_signer, simple_nft_collection);
         object::address_to_object<SimpleNftCollection>(signer::address_of(&object_signer))
     }
@@ -111,15 +113,16 @@ module initia_std::simple_nft {
         property_values: vector<vector<u8>>,
         to: Option<address>,
     ) {
-        let nft_object =
-            mint_nft_object(creator,
-                collection,
-                description,
-                token_id,
-                uri,
-                property_keys,
-                property_types,
-                property_values,);
+        let nft_object = mint_nft_object(
+            creator,
+            collection,
+            description,
+            token_id,
+            uri,
+            property_keys,
+            property_types,
+            property_values,
+        );
         if (option::is_some(&to)) {
             object::transfer(creator, nft_object, option::extract(&mut to));
         }
@@ -136,16 +139,17 @@ module initia_std::simple_nft {
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
     ): Object<SimpleNft> {
-        let (object, extend_ref) =
-            initia_nft::mint_nft_object(creator, collection, description, token_id, uri, true,);
+        let (object, extend_ref) = initia_nft::mint_nft_object(creator, collection,
+            description, token_id, uri, true,);
         let s = object::generate_signer_for_extending(&extend_ref);
 
-        let properties =
-            property_map::prepare_input(property_keys, property_types, property_values);
+        let properties = property_map::prepare_input(property_keys, property_types,
+            property_values);
         property_map::init(&s, properties);
 
-        let simple_nft =
-            SimpleNft { property_mutator_ref: property_map::generate_mutator_ref(&s), };
+        let simple_nft = SimpleNft {
+            property_mutator_ref: property_map::generate_mutator_ref(&s),
+        };
         move_to(&s, simple_nft);
 
         object::convert<InitiaNft, SimpleNft>(object)
@@ -259,8 +263,8 @@ module initia_std::simple_nft {
     // Collection accessors
 
     inline fun collection_object(creator: &signer, name: &String): Object<SimpleNftCollection> {
-        let collection_addr =
-            collection::create_collection_address(signer::address_of(creator), name);
+        let collection_addr = collection::create_collection_address(
+            signer::address_of(creator), name);
         object::address_to_object<SimpleNftCollection>(collection_addr)
     }
 
@@ -432,7 +436,8 @@ module initia_std::simple_nft {
     fun create_collection_helper(
         creator: &signer, collection_name: String, flag: bool,
     ): Object<SimpleNftCollection> {
-        create_collection_object(creator,
+        create_collection_object(
+            creator,
             string::utf8(b"collection description"),
             option::some(1),
             collection_name,
@@ -443,20 +448,23 @@ module initia_std::simple_nft {
             flag,
             flag,
             flag,
-            decimal128::from_ratio(1, 100),)
+            decimal128::from_ratio(1, 100),
+        )
     }
 
     #[test_only]
     fun mint_helper(
         creator: &signer, collection_name: String, token_id: String,
     ): Object<SimpleNft> {
-        mint_nft_object(creator,
+        mint_nft_object(
+            creator,
             collection_name,
             string::utf8(b"description"),
             token_id,
             string::utf8(b"uri"),
             vector[string::utf8(b"bool")],
             vector[string::utf8(b"bool")],
-            vector[vector[0x01]],)
+            vector[vector[0x01]],
+        )
     }
 }

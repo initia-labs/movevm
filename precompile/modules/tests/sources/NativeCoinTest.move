@@ -24,14 +24,15 @@ module TestAccount::NativeCoinTest {
         assert!(!initialized(), ERR_INITIALIZED);
         assert!(signer::address_of(account) == @TestAccount, ERR_UNAUTHORIZED);
 
-        let (mint_cap, burn_cap, freeze_cap) =
-            coin::initialize(account,
-                option::none(),
-                string::utf8(b"TestCoin"),
-                string::utf8(b"TC"),
-                8,
-                string::utf8(b""),
-                string::utf8(b""),);
+        let (mint_cap, burn_cap, freeze_cap) = coin::initialize(
+            account,
+            option::none(),
+            string::utf8(b"TestCoin"),
+            string::utf8(b"TC"),
+            8,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
 
         move_to(account,
             Capabilities {

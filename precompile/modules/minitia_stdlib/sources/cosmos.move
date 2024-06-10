@@ -47,13 +47,15 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<vector<u8>>,
     ) {
-        move_execute_internal(signer::address_of(sender),
+        move_execute_internal(
+            signer::address_of(sender),
             module_address,
             *string::bytes(&module_name),
             *string::bytes(&function_name),
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             args,
-            false,)
+            false,
+        )
     }
 
     public entry fun move_execute_with_json(
@@ -64,13 +66,15 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<String>,
     ) {
-        move_execute_internal(signer::address_of(sender),
+        move_execute_internal(
+            signer::address_of(sender),
             module_address,
             *string::bytes(&module_name),
             *string::bytes(&function_name),
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             vector::map_ref(&args, |v| *string::bytes(v)),
-            true,)
+            true,
+        )
     }
 
     public entry fun move_script(
@@ -79,11 +83,13 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<vector<u8>>,
     ) {
-        move_script_internal(signer::address_of(sender),
+        move_script_internal(
+            signer::address_of(sender),
             code_bytes,
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             args,
-            false,)
+            false,
+        )
     }
 
     public entry fun move_script_with_json(
@@ -92,11 +98,13 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<String>,
     ) {
-        move_script_internal(signer::address_of(sender),
+        move_script_internal(
+            signer::address_of(sender),
             code_bytes,
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             vector::map_ref(&args, |v| *string::bytes(v)),
-            false,)
+            false,
+        )
     }
 
     public entry fun delegate(
@@ -105,10 +113,12 @@ module minitia_std::cosmos {
         metadata: Object<Metadata>,
         amount: u64,
     ) {
-        delegate_internal(signer::address_of(delegator),
+        delegate_internal(
+            signer::address_of(delegator),
             *string::bytes(&validator),
             &metadata,
-            amount,)
+            amount,
+        )
     }
 
     public entry fun fund_community_pool(
@@ -131,7 +141,8 @@ module minitia_std::cosmos {
         timeout_timestamp: u64,
         memo: String,
     ) {
-        transfer_internal(signer::address_of(sender),
+        transfer_internal(
+            signer::address_of(sender),
             *string::bytes(&receiver),
             &metadata,
             token_amount,
@@ -140,7 +151,8 @@ module minitia_std::cosmos {
             revision_number,
             revision_height,
             timeout_timestamp,
-            *string::bytes(&memo),)
+            *string::bytes(&memo),
+        )
     }
 
     /// ICS721 ibc nft_transfer
@@ -157,7 +169,8 @@ module minitia_std::cosmos {
         timeout_timestamp: u64,
         memo: String,
     ) {
-        nft_transfer_internal(signer::address_of(sender),
+        nft_transfer_internal(
+            signer::address_of(sender),
             *string::bytes(&receiver),
             &collection,
             vector::map_ref(&token_ids, |v| *string::bytes(v)),
@@ -166,7 +179,8 @@ module minitia_std::cosmos {
             revision_number,
             revision_height,
             timeout_timestamp,
-            *string::bytes(&memo),)
+            *string::bytes(&memo),
+        )
     }
 
     /// ICS29 ibc relayer fee
@@ -182,7 +196,8 @@ module minitia_std::cosmos {
         timeout_fee_metadata: Object<Metadata>,
         timeout_fee_amount: u64,
     ) {
-        pay_fee_internal(signer::address_of(sender),
+        pay_fee_internal(
+            signer::address_of(sender),
             *string::bytes(&source_port),
             *string::bytes(&source_channel),
             &recv_fee_metadata,
@@ -190,12 +205,14 @@ module minitia_std::cosmos {
             &ack_fee_metadata,
             ack_fee_amount,
             &timeout_fee_metadata,
-            timeout_fee_amount,)
+            timeout_fee_amount,
+        )
     }
 
     native fun stargate_internal(sender: address, data: vector<u8>,);
 
-    native fun move_execute_internal(sender: address,
+    native fun move_execute_internal(
+        sender: address,
         module_address: address,
         module_name: vector<u8>,
         function_name: vector<u8>,
@@ -204,19 +221,22 @@ module minitia_std::cosmos {
         is_json: bool,
     );
 
-    native fun move_script_internal(sender: address,
+    native fun move_script_internal(
+        sender: address,
         code_bytes: vector<u8>,
         type_args: vector<vector<u8>>,
         args: vector<vector<u8>>,
         is_json: bool,
     );
 
-    native fun delegate_internal(delegator: address, validator: vector<u8>, metadata: &Object<Metadata>,
-        amount: u64,);
+    native fun delegate_internal(
+        delegator: address, validator: vector<u8>, metadata: &Object<Metadata>, amount: u64,
+    );
 
     native fun fund_community_pool_internal(sender: address, metadata: &Object<Metadata>, amount: u64,);
 
-    native fun transfer_internal(sender: address,
+    native fun transfer_internal(
+        sender: address,
         receiver: vector<u8>,
         metadata: &Object<Metadata>,
         token_amount: u64,
@@ -228,7 +248,8 @@ module minitia_std::cosmos {
         memo: vector<u8>,
     );
 
-    native fun nft_transfer_internal(sender: address,
+    native fun nft_transfer_internal(
+        sender: address,
         receiver: vector<u8>,
         collection: &Object<Collection>,
         token_ids: vector<vector<u8>>,
@@ -240,7 +261,8 @@ module minitia_std::cosmos {
         memo: vector<u8>,
     );
 
-    native fun pay_fee_internal(sender: address,
+    native fun pay_fee_internal(
+        sender: address,
         source_port: vector<u8>,
         source_channel: vector<u8>,
         recv_fee_metadata: &Object<Metadata>,

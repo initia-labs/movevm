@@ -220,8 +220,8 @@ module std::option {
     /// Different from swap(), swap_or_fill() allows for `t` not holding a value.
     public fun swap_or_fill<Element>(t: &mut Option<Element>, e: Element): Option<Element> {
         let vec_ref = &mut t.vec;
-        let old_value =
-            if (vector::is_empty(vec_ref)) none() else some(vector::pop_back(vec_ref));
+        let old_value = if (vector::is_empty(vec_ref)) none() else
+            some(vector::pop_back(vec_ref));
         vector::push_back(vec_ref, e);
         old_value
     }

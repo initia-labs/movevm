@@ -43,18 +43,16 @@ module initia_std::address {
     #[test]
     fun test_to_string() {
         let addr = @0x123abc;
-        let addr_str =
-            string::utf8(
-                b"0x0000000000000000000000000000000000000000000000000000000000123abc");
+        let addr_str = string::utf8(
+            b"0x0000000000000000000000000000000000000000000000000000000000123abc");
         assert!(to_string(addr) == addr_str, 0)
     }
 
     #[test]
     fun test_from_string() {
         let addr = @0x908def;
-        let addr_str =
-            string::utf8(
-                b"0x0000000000000000000000000000000000000000000000000000000000908def");
+        let addr_str = string::utf8(
+            b"0x0000000000000000000000000000000000000000000000000000000000908def");
         assert!(from_string(addr_str) == addr, 0)
     }
 

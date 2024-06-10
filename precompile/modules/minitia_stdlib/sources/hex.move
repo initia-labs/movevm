@@ -51,13 +51,12 @@ module minitia_std::hex {
             return vec
         };
 
-        let index =
-            if (len % 2 == 1) {
-                let l = decode_char(*vector::borrow(bz, 0));
-                vector::push_back(&mut vec, l);
+        let index = if (len % 2 == 1) {
+            let l = decode_char(*vector::borrow(bz, 0));
+            vector::push_back(&mut vec, l);
 
-                1
-            } else { 0 };
+            1
+        } else { 0 };
 
         while (index < len) {
             let h = decode_char(*vector::borrow(bz, index));
@@ -79,9 +78,8 @@ module minitia_std::hex {
     }
 
     fun encode_to_char_with_option(num: u8, is_upper: bool): u8 {
-        let adder =
-            if (is_upper) { UPPERA }
-            else { LOWERA };
+        let adder = if (is_upper) { UPPERA }
+        else { LOWERA };
         if (num < 10) {
             ZERO + num
         } else {
@@ -118,9 +116,12 @@ module minitia_std::hex {
     }
 
     fun is_hex_char(char: u8): bool {
-        if ((char >= ZERO && char <= ZERO + 9) // 0 - 9
-            || (char >= UPPERA && char <= UPPERA + 5) // A - F
-            || (char >= LOWERA && char <= LOWERA + 5)) { // a - f
+        if ((char >= ZERO
+                && char <= ZERO + 9) // 0 - 9
+            || (char >= UPPERA
+                && char <= UPPERA + 5) // A - F
+            || (char >= LOWERA
+                && char <= LOWERA + 5)) { // a - f
             return true
         };
         false

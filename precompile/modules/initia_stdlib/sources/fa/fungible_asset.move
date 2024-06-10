@@ -192,7 +192,8 @@ module initia_std::fungible_asset {
             error::out_of_range(EURI_TOO_LONG));
 
         // store metadata
-        move_to(metadata_object_signer,
+        move_to(
+            metadata_object_signer,
             Metadata { name, symbol, decimals, icon_uri, project_uri, });
 
         // store supply
@@ -344,7 +345,8 @@ module initia_std::fungible_asset {
         constructor_ref: &ConstructorRef, metadata: Object<T>,
     ): Object<FungibleStore> {
         let store_obj = &object::generate_signer(constructor_ref);
-        move_to(store_obj,
+        move_to(
+            store_obj,
             FungibleStore { metadata: object::convert(metadata), balance: 0, frozen: false, });
 
         object::object_from_constructor_ref<FungibleStore>(constructor_ref)
@@ -356,7 +358,8 @@ module initia_std::fungible_asset {
         extend_ref: &ExtendRef, metadata: Object<T>,
     ): Object<FungibleStore> {
         let store_obj = &object::generate_signer_for_extending(extend_ref);
-        move_to(store_obj,
+        move_to(
+            store_obj,
             FungibleStore { metadata: object::convert(metadata), balance: 0, frozen: false, });
 
         let obj_addr = object::address_from_extend_ref(extend_ref);
@@ -608,13 +611,15 @@ module initia_std::fungible_asset {
     #[test_only]
     public fun init_test_metadata(constructor_ref: &ConstructorRef)
         : (MintRef, TransferRef, BurnRef) {
-        add_fungibility(constructor_ref,
+        add_fungibility(
+            constructor_ref,
             option::some(100) /* max supply */,
             string::utf8(b"TEST"),
             string::utf8(b"@@"),
             0,
             string::utf8(b"http://www.example.com/favicon.ico"),
-            string::utf8(b"http://www.example.com"),);
+            string::utf8(b"http://www.example.com"),
+        );
         let mint_ref = generate_mint_ref(constructor_ref);
         let burn_ref = generate_burn_ref(constructor_ref);
         let transfer_ref = generate_transfer_ref(constructor_ref);
@@ -755,10 +760,8 @@ module initia_std::fungible_asset {
     ) {
         let (_, _, _, metadata1) = create_fungible_asset(creator);
         let (_, _, _, metadata2) = create_fungible_asset(aaron);
-        let base =
-            FungibleAsset { metadata: metadata1, amount: 1, };
-        let addon =
-            FungibleAsset { metadata: metadata2, amount: 1 };
+        let base = FungibleAsset { metadata: metadata1, amount: 1, };
+        let addon = FungibleAsset { metadata: metadata2, amount: 1 };
         merge(&mut base, addon);
         let FungibleAsset { metadata: _, amount: _ } = base;
     }

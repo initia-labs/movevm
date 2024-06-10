@@ -74,7 +74,8 @@ module minitia_std::vip_score {
     //
 
     fun init_module(chain: &signer) {
-        move_to(chain,
+        move_to(
+            chain,
             ModuleStore {
                 deployers: simple_map::create<address, bool>(),
                 scores: table::new<u64, Scores>(),
@@ -89,8 +90,8 @@ module minitia_std::vip_score {
 
     fun check_deployer_permission(deployer: &signer) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        let found =
-            simple_map::contains_key(&module_store.deployers, &signer::address_of(deployer));
+        let found = simple_map::contains_key(&module_store.deployers,
+            &signer::address_of(deployer));
         assert!(found, error::invalid_argument(EUNAUTHORIZED));
     }
 
@@ -127,9 +128,11 @@ module minitia_std::vip_score {
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
 
         if (!table::contains(&module_store.scores, stage)) {
-            table::add(&mut module_store.scores,
+            table::add(
+                &mut module_store.scores,
                 stage,
-                Scores { total_score: 0, is_finalized: false, score: table::new<address, u64>() });
+                Scores { total_score: 0, is_finalized: false, score: table::new<address, u64>() },
+            );
         };
     }
 
@@ -237,7 +240,8 @@ module minitia_std::vip_score {
             error::invalid_argument(ENOT_MATCH_LENGTH));
         prepare_stage(deployer, stage);
 
-        vector::enumerate_ref(&addrs,
+        vector::enumerate_ref(
+            &addrs,
             |i, addr| {
                 update_score(deployer, *addr, stage, *vector::borrow(&scores, i),);
             });
