@@ -4,7 +4,7 @@ module initia_std::minitswap {
     use std::error;
     use std::event;
     use std::option::{Self, Option};
-    use std::hash::sha2_256;
+    use std::hash::{sha2_256, sha3_256};
     use std::vector;
 
     use initia_std::address::to_sdk;
@@ -44,6 +44,7 @@ module initia_std::minitswap {
     const ERELEASE_TIME: u64 = 15;
     const EINVAILD_METADATA: u64 = 16;
     const ESMALL_ARB_PROFIT: u64 = 17;
+    const EVIRTUAL_POOL_EXISTS: u64 = 18;
 
     const A_PRECISION: u256 = 100;
     const U64_MAX: u128 = 18_446_744_073_709_551_615;
@@ -60,7 +61,7 @@ module initia_std::minitswap {
         /// Extend reference
         extend_ref: ExtendRef,
         /// List of pools
-        pools: Table<Object<Metadata>, Object<VirtualPool>>,
+        pools: Table<Object<Metadata>, Pools>,
         /// Max pool size change rate
         max_change_rate: Decimal128,
         /// If this state is True, every depositor related transaction sent to Minitswap will fail
@@ -80,6 +81,13 @@ module initia_std::minitswap {
         mint_cap: coin::MintCapability,
         /// burn capability of liquidity token
         burn_cap: coin::BurnCapability,
+
+        // stable swap configs
+
+        /// ANN
+        stableswap_ann: u64,
+        /// swap fee rate
+        stableswap_swap_fee_rate: Decimal128,
 
         // swap related configs
 
@@ -104,19 +112,6 @@ module initia_std::minitswap {
         global_arb_batch_map: Table<vector<u8>, Object<VirtualPool>>,
         /// arb batc index
         arb_batch_index: u64,
-    }
-
-    // extend pool store
-    struct StableswapPoolStore has key {
-        /// List of pools
-        pools: Table<Object<Metadata>, Object<Pool>>,
-
-        // initial configs
-
-        /// ANN
-        ann: u64,
-        /// swap fee rate
-        swap_fee_rate: Decimal128,
     }
 
     struct VirtualPool has key {
@@ -147,16 +142,23 @@ module initia_std::minitswap {
 
         // in house arb configs
 
+        /// op bridge id
+        op_bridge_id: u64,
+        /// ibc channel
+        ibc_channel: String,
         /// layer 2 vm type. One of MOVE or COSMWASM
         vm_type: u8,
-        /// IBC channel
-        ibc_channel: String,
-        /// l2 denom that start with l2~
-        l2_denom: String,
         /// hook contract
         hook_contract: String,
         /// ongoing in house arb info
         arb_batch_map: Table<vector<u8>, ArbInfo>,
+    }
+
+    struct Pools has store {
+        op_bridge_id: u64,
+        ibc_channel: String,
+        virtual_pool: Option<Object<VirtualPool>>,
+        stableswap_pool: Option<Object<Pool>>,
     }
 
     struct UnbondEntity has store {
@@ -244,8 +246,10 @@ module initia_std::minitswap {
         peg_keeper_return_amount: u64, // always l2 init
         offer_amount: u64,
         return_amount: u64,
-        swap_fee_amount: u64, // unit of returning asset
-        arb_fee_amount: u64, // unit of returning asset
+        init_swap_fee_amount: u64,
+        init_arb_fee_amount: u64,
+        ibc_op_init_swap_fee_amount: u64,
+        ibc_op_init_arb_fee_amount: u64,
     }
 
     #[event]
@@ -299,6 +303,8 @@ module initia_std::minitswap {
             unbond_wait_list: table::new(),
             mint_cap,
             burn_cap,
+            stableswap_ann: 3000,
+            stableswap_swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1%
             swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1%
             arb_fee_rate: decimal128::from_ratio(1, 1000), // 0.1% TODO: set initial value
             trigger_fee: 50000, // 0.5 init TODO: set initial value
@@ -309,12 +315,6 @@ module initia_std::minitswap {
             global_arb_batch_map: table::new(),
             arb_batch_index: 0,
         });
-
-        move_to(chain, StableswapPoolStore {
-            pools: table::new(),
-            ann: 3000, // TODO: adjust value
-            swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1%
-        })
     }
 
     //
@@ -327,8 +327,8 @@ module initia_std::minitswap {
         after_peg_keeper_swap: bool,
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        let pools = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
         assert!(pool.active, error::invalid_state(EINACTIVE));
         let (swap_amount, return_amount) = if (after_peg_keeper_swap) {
             calc_peg_keeper_swap(pool)
@@ -485,6 +485,60 @@ module initia_std::minitswap {
         return res
     }
 
+    #[view]
+    public fun get_module_store(): ModuleStoreResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+
+        return ModuleStoreResponse {
+            max_change_rate: module_store.max_change_rate,
+            emergency_state: module_store.emergency_state,
+            admin: module_store.admin,
+            depositor_owned_init: module_store.depositor_owned_init,
+            unbond_period: module_store.unbond_period,
+            swap_fee_rate: module_store.swap_fee_rate,
+            arb_fee_rate: module_store.arb_fee_rate,
+            trigger_fee: module_store.trigger_fee,
+            min_arb_profit: module_store.min_arb_profit,
+            ibc_timeout: module_store.ibc_timeout,
+            max_arb_batch: module_store.max_arb_batch,
+            min_arb_interval: module_store.min_arb_interval,
+            arb_batch_index: module_store.arb_batch_index,
+        }
+    }
+
+    #[view]
+    public fun virtual_pool_response(): ModuleStoreResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+
+        return ModuleStoreResponse {
+            max_change_rate: module_store.max_change_rate,
+            emergency_state: module_store.emergency_state,
+            admin: module_store.admin,
+            depositor_owned_init: module_store.depositor_owned_init,
+            unbond_period: module_store.unbond_period,
+            swap_fee_rate: module_store.swap_fee_rate,
+            arb_fee_rate: module_store.arb_fee_rate,
+            trigger_fee: module_store.trigger_fee,
+            min_arb_profit: module_store.min_arb_profit,
+            ibc_timeout: module_store.ibc_timeout,
+            max_arb_batch: module_store.max_arb_batch,
+            min_arb_interval: module_store.min_arb_interval,
+            arb_batch_index: module_store.arb_batch_index,
+        }
+    }
+
+    #[view]
+    public fun get_pools(l2_init_metadata: Object<Metadata>): PoolsResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pools = table::borrow(&module_store.pools, l2_init_metadata);
+        return PoolsResponse {
+            op_bridge_id: pools.op_bridge_id,
+            ibc_channel: pools.ibc_channel,
+            virtual_pool: pools.virtual_pool,
+            stableswap_pool: pools.stableswap_pool,
+        }
+    }
+
     //
     // View Function return types
     //
@@ -512,6 +566,53 @@ module initia_std::minitswap {
         return (res.id, res.executed_time, res.init_used, res.ibc_opinit_sent, res.triggering_fee)
     }
 
+    struct ModuleStoreResponse has drop {
+        max_change_rate: Decimal128,
+        emergency_state: bool,
+        admin: address,
+        depositor_owned_init: u64,
+        unbond_period: u64,
+        swap_fee_rate: Decimal128,
+        arb_fee_rate: Decimal128,
+        trigger_fee: u64,
+        min_arb_profit: u64,
+        ibc_timeout: u64,
+        max_arb_batch: u64,
+        min_arb_interval: u64,
+        arb_batch_index: u64,
+    }
+
+    public fun unpack_module_store_response(
+        res: ModuleStoreResponse
+    ): (Decimal128, bool, address, u64, u64, Decimal128, Decimal128, u64, u64, u64, u64, u64, u64) {
+        return (
+            res.max_change_rate,
+            res.emergency_state,
+            res.admin,
+            res.depositor_owned_init,
+            res.unbond_period,
+            res.swap_fee_rate,
+            res.arb_fee_rate,
+            res.trigger_fee,
+            res.min_arb_profit,
+            res.ibc_timeout,
+            res.max_arb_batch,
+            res.min_arb_interval,
+            res.arb_batch_index,
+        )
+    }
+
+    struct PoolsResponse has drop {
+        op_bridge_id: u64,
+        ibc_channel: String,
+        virtual_pool: Option<Object<VirtualPool>>,
+        stableswap_pool: Option<Object<Pool>>,
+    }
+
+    public fun unpack_pools_response(res: PoolsResponse): (u64, String, Option<Object<VirtualPool>>, Option<Object<Pool>>) {
+        return (res.op_bridge_id, res.ibc_channel, res.virtual_pool, res.stableswap_pool)
+    }
+
     //
     // Admin functions
     //
@@ -527,8 +628,8 @@ module initia_std::minitswap {
         recover_param: Decimal128,
         vm_type: u8,
         hook_contract: String,
+        op_bridge_id: u64,
         ibc_channel: String,
-        l2_denom: String,
     ) acquires ModuleStore {
         assert_is_chain(chain, false);
         assert!(pool_size > 0, error::invalid_argument(EPOOL_SIZE));
@@ -539,9 +640,7 @@ module initia_std::minitswap {
 
         assert!(vm_type == MOVE || vm_type == COSMWASM, error::invalid_argument(EVM_TYPE));
 
-        let ibc_denom = get_ibc_denom(ibc_channel, l2_denom);
-        let ibc_token_address = object::create_object_address(@initia_std, *string::bytes(&ibc_denom));
-        assert!(object::object_address(l2_init_metadata) == ibc_token_address, error::invalid_argument(EINVAILD_METADATA));
+        check_bridge_info(op_bridge_id, ibc_channel, l2_init_metadata);
 
         move_to(
             &pool_signer,
@@ -558,16 +657,19 @@ module initia_std::minitswap {
                 virtual_l2_balance: 0,
                 ann,
                 active: true,
+                op_bridge_id,
+                ibc_channel,
                 vm_type,
                 hook_contract,
-                ibc_channel,
-                l2_denom,
                 arb_batch_map: table::new(),
             }
         );
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        table::add(&mut module_store.pools, l2_init_metadata, object::object_from_constructor_ref<VirtualPool>(&constructor_ref));
+        let pools = borrow_pools_with_default(module_store, l2_init_metadata, op_bridge_id, ibc_channel);
+
+        assert!(option::is_none(&pools.virtual_pool), error::already_exists(EVIRTUAL_POOL_EXISTS));
+        pools.virtual_pool = option::some(object::object_from_constructor_ref<VirtualPool>(&constructor_ref));
 
         event::emit(CreatePoolEvent {
             l2_init_metadata,
@@ -590,8 +692,8 @@ module initia_std::minitswap {
     public entry fun deactivate(chain: &signer, l2_init_metadata: Object<Metadata>) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, true);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        let pools = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
         pool.active = false
     }
 
@@ -599,8 +701,8 @@ module initia_std::minitswap {
     public entry fun activate(chain: &signer, l2_init_metadata: Object<Metadata>) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, true);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        let pools = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
         pool.active = true
     }
 
@@ -613,8 +715,8 @@ module initia_std::minitswap {
         assert_is_chain(chain, false);
         assert!(new_pool_size > 0, error::invalid_argument(EPOOL_SIZE));
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        let pools = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
 
         let change_rate = if (new_pool_size > pool.pool_size) {
             decimal128::from_ratio_u64(new_pool_size - pool.pool_size, pool.pool_size)
@@ -770,8 +872,8 @@ module initia_std::minitswap {
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, false);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pool_obj = table::borrow(&mut module_store.pools, l2_init_metadata);
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        let pools = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
 
         if (option::is_some(&recover_velocity)) {
             pool.recover_velocity = option::extract(&mut recover_velocity);
@@ -885,9 +987,9 @@ module initia_std::minitswap {
 
         assert!(amount == arb_info.ibc_opinit_sent, error::invalid_argument(EAMOUNT_MISMATCH));
 
-        // execute finailze token withdrawal
+        // execute finalize token withdrawal
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
-        let withdrawal_msg = generate_finailze_token_withdrawal_msg(
+        let withdrawal_msg = generate_finalize_token_withdrawal_msg(
             bridge_id,
             output_index,
             withdrawal_proofs,
@@ -959,30 +1061,30 @@ module initia_std::minitswap {
 
     public entry fun create_stableswap_pool(
         account: &signer,
+        op_bridge_id: u64,
+        ibc_channel: String,
         l2_init_metadata: Object<Metadata>,
         l1_init_amount: u64,
         l2_init_amount: u64,
-    ) acquires ModuleStore, StableswapPoolStore {
+    ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let stableswap_pool_store = borrow_global_mut<StableswapPoolStore>(@initia_std);
+        let (_, ibc_denom) = check_bridge_info(op_bridge_id, ibc_channel, l2_init_metadata);
 
-        let l2_symbol = coin::symbol(l2_init_metadata);
-
-        assert!(coin::metadata(@initia_std, l2_symbol) == l2_init_metadata, error::invalid_argument(ENOT_L2_INIT));
         let creator = object::generate_signer_for_extending(&module_store.extend_ref);
         let symbol = string::utf8(b"INIT - ");
-        string::append(&mut symbol, l2_symbol);
+        string::append(&mut symbol, ibc_denom);
 
         let coins: vector<FungibleAsset> = vector[
             coin::withdraw(account, l1_init_metadata(), l1_init_amount),
             coin::withdraw(account, l2_init_metadata, l2_init_amount),
         ];
 
-        let liquidity_token = stableswap::create_pool(&creator, symbol, symbol, stableswap_pool_store.swap_fee_rate, coins, stableswap_pool_store.ann);
+        let liquidity_token = stableswap::create_pool(&creator, symbol, symbol, module_store.stableswap_swap_fee_rate, coins, module_store.stableswap_ann);
         let metadata = fungible_asset::metadata_from_asset(&liquidity_token);
         let pool = object::convert<Metadata, Pool>(metadata);
 
-        table::add(&mut stableswap_pool_store.pools, l2_init_metadata, object::convert<Metadata, Pool>(metadata));
+        let pools = borrow_pools_with_default(module_store, l2_init_metadata, op_bridge_id, ibc_channel);
+        pools.stableswap_pool = option::some(object::convert<Metadata, Pool>(metadata));
 
         primary_fungible_store::deposit(signer::address_of(account), liquidity_token);
         event::emit(CreateStableswapPoolEvent {
@@ -1091,25 +1193,35 @@ module initia_std::minitswap {
         assert!(pool.active, error::invalid_state(EINACTIVE));
 
         // l1 init offered, do user swap first
-        let (peg_keeper_offer_amount, peg_keeper_return_amount, return_asset, swap_fee_amount, arb_fee_amount) = if (is_l1_init_offered) {
+        let (
+            peg_keeper_offer_amount,
+            peg_keeper_return_amount, 
+            return_asset,
+            init_swap_fee_amount,
+            init_arb_fee_amount,
+            ibc_op_init_swap_fee_amount,
+            ibc_op_init_arb_fee_amount,
+        ) = if (is_l1_init_offered) {
             // user swap
-            let (return_asset, swap_fee_amount, arb_fee_amount)
+            let (return_asset, swap_fee_amount, arb_fee_amount, depositor_return_amount)
                 = user_swap(offer_asset, return_metadata, module_store, pool, module_signer, pool_signer, is_l1_init_offered);
 
             // peg keeper swap
             let (peg_keeper_offer_amount, peg_keeper_return_amount) = peg_keeper_swap(pool);
+            let init_arb_fee_amount = mul_div(depositor_return_amount, arb_fee_amount, arb_fee_amount + swap_fee_amount);
+            let init_swap_fee_amount = depositor_return_amount - init_arb_fee_amount;
 
-            (peg_keeper_offer_amount, peg_keeper_return_amount, return_asset, swap_fee_amount, arb_fee_amount)
+            (peg_keeper_offer_amount, peg_keeper_return_amount, return_asset, init_swap_fee_amount, init_arb_fee_amount, swap_fee_amount, arb_fee_amount)
         // if l2 init offered, do peg keeper swap first
         } else {
             // peg keeper swap
             let (peg_keeper_offer_amount, peg_keeper_return_amount) = peg_keeper_swap(pool);
 
             // user swap
-            let (return_asset, swap_fee_amount, arb_fee_amount)
+            let (return_asset, swap_fee_amount, arb_fee_amount, _)
                 = user_swap(offer_asset, return_metadata, module_store, pool, module_signer, pool_signer, is_l1_init_offered);
 
-            (peg_keeper_offer_amount, peg_keeper_return_amount, return_asset, swap_fee_amount, arb_fee_amount)
+            (peg_keeper_offer_amount, peg_keeper_return_amount, return_asset, swap_fee_amount, arb_fee_amount, 0, 0)
         };
 
         // check arb
@@ -1123,8 +1235,10 @@ module initia_std::minitswap {
                 peg_keeper_return_amount, // always l2 init
                 offer_amount,
                 return_amount: fungible_asset::amount(&return_asset),
-                swap_fee_amount, // unit of return asset
-                arb_fee_amount, // unit of return asset
+                init_swap_fee_amount,
+                init_arb_fee_amount,
+                ibc_op_init_swap_fee_amount,
+                ibc_op_init_arb_fee_amount,
             },
         );
 
@@ -1171,7 +1285,7 @@ module initia_std::minitswap {
     inline fun borrow_all_mut(metadata: Object<Metadata>): (&mut ModuleStore, &mut VirtualPool, signer, signer) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let module_signer = object::generate_signer_for_extending(&module_store.extend_ref);
-        let pool_addr = object::object_address(*table::borrow(&module_store.pools, metadata));
+        let pool_addr = object::object_address(*option::borrow(&table::borrow(&module_store.pools, metadata).virtual_pool));
         let pool = borrow_global_mut<VirtualPool>(pool_addr);
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         (module_store, pool, module_signer, pool_signer)
@@ -1179,19 +1293,18 @@ module initia_std::minitswap {
 
     inline fun borrow_all(metadata: Object<Metadata>): (&ModuleStore, &VirtualPool) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global<ModuleStore>(@initia_std);
-        let pool_addr = object::object_address(*table::borrow(&module_store.pools, metadata));
+        let pool_addr = object::object_address(*option::borrow(&table::borrow(&module_store.pools, metadata).virtual_pool));
         let pool = borrow_global<VirtualPool>(pool_addr);
         (module_store, pool)
     }
 
     inline fun virtual_pool_exists(metadata: Object<Metadata>): bool acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
-        table::contains(&module_store.pools, metadata)
-    }
-
-    inline fun stableswap_pool_exists(metadata: Object<Metadata>): bool acquires StableswapPoolStore {
-        let stableswap_pool_store = borrow_global<StableswapPoolStore>(@initia_std);
-        table::contains(&stableswap_pool_store.pools, metadata)
+        if (!table::contains(&module_store.pools, metadata)) {
+            false
+        } else {
+            option::is_some(&table::borrow(&module_store.pools, metadata).virtual_pool)
+        }
     }
 
     inline fun calc_peg_keeper_swap(pool: &VirtualPool): (u64, u64) acquires ModuleStore, VirtualPool {
@@ -1231,12 +1344,13 @@ module initia_std::minitswap {
         module_signer: signer,
         pool_signer: signer,
         is_l1_init_offered: bool,
-    ): (FungibleAsset, u64, u64) {
+    ): (FungibleAsset, u64, u64, u64) {
         let module_addr = signer::address_of(&module_signer);
         let pool_addr = signer::address_of(&pool_signer);
 
         let offer_amount = fungible_asset::amount(&offer_asset);
         let arb_fee_amount = 0;
+        let depositor_return_amount = 0;
         let (return_asset, swap_fee_amount) = if (is_l1_init_offered) {
             primary_fungible_store::deposit(module_addr, offer_asset);
 
@@ -1265,7 +1379,7 @@ module initia_std::minitswap {
             let total_fee_amount = swap_fee_amount + arb_fee_amount;
 
             // swap l2 init fee to l1 init for depositor
-            let depositor_return_amount = get_return_amount(total_fee_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
+            depositor_return_amount = get_return_amount(total_fee_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
             pool.l1_pool_amount = pool.l1_pool_amount - depositor_return_amount;
             pool.l2_pool_amount = pool.l2_pool_amount + total_fee_amount;
 
@@ -1291,7 +1405,7 @@ module initia_std::minitswap {
             (primary_fungible_store::withdraw(&module_signer, return_metadata, return_amount), swap_fee_amount)
         };
 
-        (return_asset, swap_fee_amount, arb_fee_amount)
+        (return_asset, swap_fee_amount, arb_fee_amount, depositor_return_amount)
     }
 
     fun peg_keeper_swap(pool: &mut VirtualPool): (u64, u64) {
@@ -1356,7 +1470,8 @@ module initia_std::minitswap {
         send_ibc_message(module_store, pool, arb_index, l2_init_metadata, arb_info.ibc_opinit_sent);
 
         // emit event
-        let pool_obj = *table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pools = table::borrow(&mut module_store.pools, l2_init_metadata);
+        let pool_obj = *option::borrow(&pools.virtual_pool);
         event::emit(InitiateArbEvent {
             pool: pool_obj,
             executed_time: arb_info.executed_time,
@@ -1370,10 +1485,36 @@ module initia_std::minitswap {
         table::add(&mut pool.arb_batch_map, table_key::encode_u64(arb_index), arb_info);
     }
 
-    fun send_ibc_message(module_store: &ModuleStore, pool: &mut VirtualPool, batch_index: u64, l2_init_metadata: Object<Metadata>, amount: u64) {
+    fun borrow_pools_with_default(module_store: &mut ModuleStore, l2_init_metadata: Object<Metadata>, op_bridge_id: u64, ibc_channel: String): &mut Pools {
+        if (table::contains(&module_store.pools, l2_init_metadata)) {
+            table::borrow_mut(&mut module_store.pools, l2_init_metadata)
+        } else {
+            table::add(
+                &mut module_store.pools,
+                l2_init_metadata,
+                Pools {
+                    op_bridge_id,
+                    ibc_channel,
+                    virtual_pool: option::none(),
+                    stableswap_pool: option::none(),
+                }
+            );
+
+            table::borrow_mut(&mut module_store.pools, l2_init_metadata)
+        }
+    }
+
+    fun send_ibc_message(
+        module_store: &ModuleStore,
+        pool: &mut VirtualPool,
+        batch_index: u64,
+        l2_init_metadata: Object<Metadata>,
+        amount: u64,
+    ) {
         // create memo (ibc hook)
         let obj = simple_json::empty();
         let receiver = to_sdk(object::address_from_extend_ref(&pool.extend_ref));
+        let op_denom = get_op_denom(pool.op_bridge_id, string::utf8(b"uinit"));
         simple_json::set_object(&mut obj, option::none<String>());
         simple_json::increase_depth(&mut obj);
         
@@ -1398,7 +1539,7 @@ module initia_std::minitswap {
             simple_json::set_array(&mut obj, option::some(string::utf8(b"args")));
             simple_json::increase_depth(&mut obj);
 
-            simple_json::set_string(&mut obj, option::none<String>(), base64::to_string(bcs::to_bytes(&pool.l2_denom))); // denom
+            simple_json::set_string(&mut obj, option::none<String>(), base64::to_string(bcs::to_bytes(&op_denom))); // denom
             simple_json::set_string(&mut obj, option::none<String>(), base64::to_string(bcs::to_bytes(&amount))); // amount
             simple_json::set_string(&mut obj, option::none<String>(), base64::to_string(bcs::to_bytes(&receiver))); // receiver
 
@@ -1417,7 +1558,7 @@ module initia_std::minitswap {
             simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"receiver")), receiver); // receiver
             simple_json::set_object(&mut obj, option::some<String>(string::utf8(b"token")));
             simple_json::increase_depth(&mut obj);
-            simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"denom")), pool.l2_denom); // denom
+            simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"denom")), op_denom); // denom
             simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"amount")), to_string(&amount)); // amount
 
             pool.hook_contract
@@ -1445,7 +1586,7 @@ module initia_std::minitswap {
         )
     }
 
-    fun generate_finailze_token_withdrawal_msg(
+    fun generate_finalize_token_withdrawal_msg(
         bridge_id: u64,
         output_index: u64,
         withdrawal_proofs: vector<String>,
@@ -1524,6 +1665,25 @@ module initia_std::minitswap {
         let denom = string::utf8(b"ibc/");
         string::append(&mut denom, hex::encode_to_string_with_option(&hash, true));
         denom
+    }
+
+    fun get_op_denom(op_bridge_id: u64, denom: String): String {
+        let bytes = table_key::encode_u64(op_bridge_id);
+        vector::append(&mut bytes, *string::bytes(&denom));
+        let hash = sha3_256(bytes);
+
+        let denom = string::utf8(b"l2/");
+        string::append(&mut denom, hex::encode_to_string(&hash));
+        denom
+    }
+
+    fun check_bridge_info(op_bridge_id: u64, ibc_channel: String, l2_init_metadata: Object<Metadata>): (String, String) {
+        let op_denom = get_op_denom(op_bridge_id, string::utf8(b"uinit"));
+        let ibc_denom = get_ibc_denom(ibc_channel, op_denom);
+        let ibc_token_address = object::create_object_address(@initia_std, *string::bytes(&ibc_denom));
+        assert!(object::object_address(l2_init_metadata) == ibc_token_address, error::invalid_argument(EINVAILD_METADATA));
+
+        (op_denom, ibc_denom)
     }
 
     fun mul_div(a: u64, b: u64, c: u64): u64 {
@@ -1786,9 +1946,42 @@ module initia_std::minitswap {
         return (burn_cap, freeze_cap, mint_cap)
     }
 
+    #[test_only]
+    fun finalize_arb_mock(
+        account: &signer,
+        arb_index: u64,
+        _bridge_id: u64,
+        _output_index: u64,
+        _withdrawal_proofs: vector<String>,
+        _sender: address,
+        _sequence: u64,
+        amount: u64,
+        _version: String,
+        _state_root: String,
+        _storage_root: String,
+        _latest_block_hash: String,
+        init_mint_cap: &coin::MintCapability,
+    ) acquires ModuleStore, VirtualPool {
+        // check arb info
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pool_obj = table::borrow(&module_store.global_arb_batch_map, table_key::encode_u64(arb_index));
+        let pool = borrow_global<VirtualPool>(object::object_address(*pool_obj));
+        let arb_info = table::borrow(&pool.arb_batch_map, table_key::encode_u64(arb_index));
+
+        assert!(amount == arb_info.ibc_opinit_sent, error::invalid_argument(EAMOUNT_MISMATCH));
+
+        // mock finalize withdraw
+        coin::mint_to(init_mint_cap, object::address_from_extend_ref(&pool.extend_ref), amount);
+
+        let module_signer = object::generate_signer_for_extending(&module_store.extend_ref);
+
+        // execute hook
+        finalize_arb_hook(&module_signer, arb_index, signer::address_of(account));
+    }
+
     #[test]
     fun test_finalize_token_withdrawal_msg() {
-        let msg = generate_finailze_token_withdrawal_msg(
+        let msg = generate_finalize_token_withdrawal_msg(
             1,
             2,
             vector[
@@ -1815,10 +2008,67 @@ module initia_std::minitswap {
         assert!(string::utf8(b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802") == ibc_denom, 0);
     }
 
+    #[test]
+    fun test_op_denom() {
+        let op_denom = get_op_denom(1, string::utf8(b"uinit"));
+        assert!(string::utf8(b"l2/771d639f30fbe45e3fbca954ffbe2fcc26f915f5513c67a4a2d0bc1d635bdefd") == op_denom, 0);
+    }
+
+    #[test(chain = @0x1)]
+    fun in_house_arb_test(chain: signer) acquires ModuleStore, VirtualPool {
+        initia_std::primary_fungible_store::init_module_for_test(&chain);
+        init_module(&chain);
+        block::set_block_info(0, 100);
+        let chain_addr = signer::address_of(&chain);
+
+        let (_, _, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"uinit"));
+        let (_, _, l2_mint_cap) = initialized_coin(&chain, string::utf8(b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"));
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
+        let l2_metadata = coin::metadata(chain_addr, string::utf8(b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"));
+        coin::mint_to(&initia_mint_cap, chain_addr, 1000000000);
+        coin::mint_to(&l2_mint_cap, chain_addr, 1000000000);
+        provide(&chain, 15000000, option::none());
+
+
+        create_pool(
+            &chain,
+            l2_metadata,
+            decimal128::from_ratio(100000, 1),
+            10000000,
+            3000,
+            decimal128::from_ratio(7, 10),
+            decimal128::from_ratio(2, 1),
+            MOVE,
+            string::utf8(b"0x1"),
+            1,
+            string::utf8(b"channel-0"),
+        );
+
+        swap(&chain, l2_metadata, init_metadata, 10000000, option::none());
+
+        block::set_block_info(0, 100000);
+
+        // trigger check arb
+        swap(&chain, l2_metadata, init_metadata, 10000000, option::none());
+
+        let arb_info = get_arb_info(0);
+
+        // finalize arb
+        let str = string::utf8(b"");
+        let excutor_balance_before = coin::balance(@0x1, init_metadata);
+
+        finalize_arb_mock(&chain, 0, 1, 1, vector[], @0x1, 1, arb_info.ibc_opinit_sent, str, str, str, str, &initia_mint_cap);
+
+        let excutor_balance_after = coin::balance(@0x1, init_metadata);
+
+        // check triggering fee
+        assert!(excutor_balance_after - excutor_balance_before == arb_info.triggering_fee, 0);
+    }
+
     #[test(chain = @0x1)]
     fun end_to_end(
         chain: signer,
-    ) acquires ModuleStore, VirtualPool, StableswapPoolStore {
+    ) acquires ModuleStore, VirtualPool {
         initia_std::primary_fungible_store::init_module_for_test(&chain);
         init_module(&chain);
         stableswap::init_module_for_test(&chain);
@@ -1828,11 +2078,11 @@ module initia_std::minitswap {
         let chain_addr = signer::address_of(&chain);
 
         let (_, _, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"uinit"));
-        let (_, _, l2_1_mint_cap) = initialized_coin(&chain, string::utf8(b"ibc/0360B0EF49818CE056162E7CFAD78048B2A2E9A112EAFAE3B1530B9433CF879D"));
-        let (_, _, l2_2_mint_cap) = initialized_coin(&chain, string::utf8(b"ibc/B67297A719A357797AABD10529C93DCD67180BFC62EE60BA5B87E72CE86B4D70"));
+        let (_, _, l2_1_mint_cap) = initialized_coin(&chain, string::utf8(b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"));
+        let (_, _, l2_2_mint_cap) = initialized_coin(&chain, string::utf8(b"ibc/AD8D520BF2D981113B652A3BCD55368EF146FCB9E016F8B1DAECAA5D570BC8A1"));
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
-        let l2_1_metadata = coin::metadata(chain_addr, string::utf8(b"ibc/0360B0EF49818CE056162E7CFAD78048B2A2E9A112EAFAE3B1530B9433CF879D"));
-        let l2_2_metadata = coin::metadata(chain_addr, string::utf8(b"ibc/B67297A719A357797AABD10529C93DCD67180BFC62EE60BA5B87E72CE86B4D70"));
+        let l2_1_metadata = coin::metadata(chain_addr, string::utf8(b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"));
+        let l2_2_metadata = coin::metadata(chain_addr, string::utf8(b"ibc/AD8D520BF2D981113B652A3BCD55368EF146FCB9E016F8B1DAECAA5D570BC8A1"));
 
         coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
         coin::mint_to(&l2_1_mint_cap, chain_addr, 1000000000);
@@ -1850,8 +2100,8 @@ module initia_std::minitswap {
             decimal128::from_ratio(2, 1),
             MOVE,
             string::utf8(b"0x1"),
-            string::utf8(b"channel-1"),
-            string::utf8(b"l2/1"),
+            1,
+            string::utf8(b"channel-0"),
         );
 
         create_pool(
@@ -1864,12 +2114,14 @@ module initia_std::minitswap {
             decimal128::from_ratio(2, 1),
             MOVE,
             string::utf8(b"0x1"),
+            2,
             string::utf8(b"channel-2"),
-            string::utf8(b"l2/2"),
         );
 
         create_stableswap_pool(
             &chain,
+            1,
+            string::utf8(b"channel-0"),
             l2_1_metadata,
             10000000,
             10000000
