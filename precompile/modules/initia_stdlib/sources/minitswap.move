@@ -968,7 +968,6 @@ module initia_std::minitswap {
     public entry fun finalize_arb(
         account: &signer,
         arb_index: u64,
-        bridge_id: u64,
         output_index: u64,
         withdrawal_proofs: vector<String>,
         sender: address,
@@ -990,7 +989,7 @@ module initia_std::minitswap {
         // execute finalize token withdrawal
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         let withdrawal_msg = generate_finalize_token_withdrawal_msg(
-            bridge_id,
+            pool.op_bridge_id,
             output_index,
             withdrawal_proofs,
             sender,
