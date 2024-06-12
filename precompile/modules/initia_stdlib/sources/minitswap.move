@@ -53,6 +53,8 @@ module initia_std::minitswap {
     const MOVE: u8 = 0;
     const COSMWASM: u8 = 1;
 
+    const MAX_LIMIT: u64 = 30;
+
 
     struct ModuleStore has key {
         /// Extend reference
@@ -390,6 +392,124 @@ module initia_std::minitswap {
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         let return_metadata = coin::denom_to_metadata(return_denom);
         swap_simulation(offer_metadata, return_metadata, offer_amount)
+    }
+
+    #[view]
+    public fun get_unbond_list(
+        account: address,
+        start_after: Option<u64>,
+        limit: u64,
+    ): vector<UnbondResponse> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let start_key = if (option::is_some(&start_after)) {
+            generate_unbond_key(account, *option::borrow(&start_after) + 1)
+        } else {
+            generate_unbond_key(account, 0)
+        };
+
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT
+        };
+
+        let iter = table::iter(&module_store.unbond_wait_list, option::some(start_key), option::none(), 1);
+
+        let i = 0;
+        let res: vector<UnbondResponse> = vector[];
+        while (i < limit && table::prepare(iter)) {
+            let (_, value) = table::next<vector<u8>, UnbondEntity>(iter);
+            if (value.account != account) break;
+
+            vector::push_back(&mut res, UnbondResponse {
+                account: value.account,
+                share_amount: value.share_amount,
+                withdraw_amount: value.withdraw_amount,
+                release_time: value.release_time,
+            });
+        };
+
+        return res
+    }
+
+    #[view]
+    public fun get_arb_info(
+        id: u64,
+    ): ArbResponse acquires ModuleStore, VirtualPool {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pool_obj = table::borrow(&module_store.global_arb_batch_map, table_key::encode_u64(id));
+        let pool = borrow_global<VirtualPool>(object::object_address(*pool_obj));
+        let arb_info = table::borrow(&pool.arb_batch_map, table_key::encode_u64(id));
+
+        return ArbResponse {
+            id,
+            executed_time: arb_info.executed_time,
+            init_used: arb_info.init_used,
+            ibc_opinit_sent: arb_info.ibc_opinit_sent,
+            triggering_fee: arb_info.triggering_fee,
+        }
+    }
+
+    #[view]
+    public fun get_arb_infos(
+        l2_init_metadata: Object<Metadata>,
+        start_after: Option<u64>,
+        limit: u64,
+    ): vector<ArbResponse> acquires ModuleStore, VirtualPool {
+        let (_, pool) = borrow_all(l2_init_metadata);
+        let start_key = if (option::is_some(&start_after)) {
+            table_key::encode_u64(*option::borrow(&start_after) + 1)
+        } else {
+            table_key::encode_u64(0)
+        };
+
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT
+        };
+
+        let iter = table::iter(&pool.arb_batch_map, option::some(start_key), option::none(), 1);
+
+        let i = 0;
+        let res: vector<ArbResponse> = vector[];
+        while (i < limit && table::prepare(iter)) {
+            let (key, arb_info) = table::next<vector<u8>, ArbInfo>(iter);
+            let id = table_key::decode_u64(key);
+
+            vector::push_back(&mut res, ArbResponse {
+                id,
+                executed_time: arb_info.executed_time,
+                init_used: arb_info.init_used,
+                ibc_opinit_sent: arb_info.ibc_opinit_sent,
+                triggering_fee: arb_info.triggering_fee,
+            });
+        };
+
+        return res
+    }
+
+    //
+    // View Function return types
+    //
+
+    struct UnbondResponse has drop {
+        account: address,
+        share_amount: u64,
+        withdraw_amount: u64,
+        release_time: u64,
+    }
+
+    public fun unpack_unbond_response(res: UnbondResponse): (address, u64, u64, u64) {
+        return (res.account, res.share_amount, res.withdraw_amount, res.release_time)
+    }
+
+    struct ArbResponse has drop {
+        id: u64,
+        executed_time: u64,
+        init_used: u64,
+        ibc_opinit_sent: u64,
+        triggering_fee: u64,
+    }
+
+    public fun unpack_arb_response(res: ArbResponse): (u64, u64, u64, u64, u64) {
+        return (res.id, res.executed_time, res.init_used, res.ibc_opinit_sent, res.triggering_fee)
     }
 
     //
