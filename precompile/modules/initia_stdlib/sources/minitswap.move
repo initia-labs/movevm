@@ -1350,8 +1350,7 @@ module initia_std::minitswap {
 
         let offer_amount = fungible_asset::amount(&offer_asset);
         let arb_fee_amount = 0;
-        let depositor_return_amount = 0;
-        let (return_asset, swap_fee_amount) = if (is_l1_init_offered) {
+        let (return_asset, swap_fee_amount, depositor_return_amount) = if (is_l1_init_offered) {
             primary_fungible_store::deposit(module_addr, offer_asset);
 
             // do swap
@@ -1379,14 +1378,14 @@ module initia_std::minitswap {
             let total_fee_amount = swap_fee_amount + arb_fee_amount;
 
             // swap l2 init fee to l1 init for depositor
-            depositor_return_amount = get_return_amount(total_fee_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
+            let depositor_return_amount = get_return_amount(total_fee_amount, pool.l2_pool_amount, pool.l1_pool_amount, pool.pool_size, pool.ann);
             pool.l1_pool_amount = pool.l1_pool_amount - depositor_return_amount;
             pool.l2_pool_amount = pool.l2_pool_amount + total_fee_amount;
 
             // increase depositor amount
             module_store.depositor_owned_init = module_store.depositor_owned_init + depositor_return_amount;
 
-            (primary_fungible_store::withdraw(&pool_signer, return_metadata, return_amount), swap_fee_amount)
+            (primary_fungible_store::withdraw(&pool_signer, return_metadata, return_amount), swap_fee_amount, depositor_return_amount)
         } else {
             primary_fungible_store::deposit(pool_addr, offer_asset);
 
@@ -1402,7 +1401,7 @@ module initia_std::minitswap {
             // increase depositor amount
             module_store.depositor_owned_init = module_store.depositor_owned_init + swap_fee_amount;
 
-            (primary_fungible_store::withdraw(&module_signer, return_metadata, return_amount), swap_fee_amount)
+            (primary_fungible_store::withdraw(&module_signer, return_metadata, return_amount), swap_fee_amount, swap_fee_amount)
         };
 
         (return_asset, swap_fee_amount, arb_fee_amount, depositor_return_amount)
