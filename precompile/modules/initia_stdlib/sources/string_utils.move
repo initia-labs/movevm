@@ -27,7 +27,7 @@ module initia_std::string_utils {
 
     /// Format emitting integers with types ie. 6u8 or 128u32.
     public fun to_string_with_integer_types<T>(s: &T): String {
-        native_format(s, false, true, true, false)
+        native_format(s, false, true, true, true)
     }
 
     /// Format vectors and structs with newlines and indentation.
