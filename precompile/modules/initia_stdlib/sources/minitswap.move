@@ -540,17 +540,126 @@ module initia_std::minitswap {
         }
     }
 
-    // #[view]
-    // public fun get_pool_list(start_after: Option<Object<Metadata>>, limit: u64): PoolsResponse acquires ModuleStore {
-    //     let module_store = borrow_global<ModuleStore>(@initia_std);
-    //     let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
-    //     return PoolsResponse {
-    //         op_bridge_id: pools.op_bridge_id,
-    //         ibc_channel: pools.ibc_channel,
-    //         virtual_pool: pools.virtual_pool,
-    //         stableswap_pool: pools.stableswap_pool,
-    //     }
-    // }
+    #[view]
+    public fun get_pools_list(start_after: Option<Object<Metadata>>, limit: u64): vector<PoolsResponse> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT
+        };
+
+        let iter = table::iter(&module_store.pools, option::none(), start_after, 2);
+
+        let i = 0;
+        let res: vector<PoolsResponse> = vector[];
+        while (i < limit && table::prepare(iter)) {
+            let (ibc_op_init_metadata, pools) = table::next<Object<Metadata>, Pools>(iter);
+
+            vector::push_back(&mut res, PoolsResponse {
+                ibc_op_init_metadata,
+                ibc_op_init_denom: coin::symbol(ibc_op_init_metadata),
+                op_bridge_id: pools.op_bridge_id,
+                ibc_channel: pools.ibc_channel,
+                virtual_pool: pools.virtual_pool,
+                stableswap_pool: pools.stableswap_pool,
+            });
+        };
+
+        return res
+    }
+
+    #[view]
+    public fun get_pools_detail(ibc_op_init_metadata: Object<Metadata>): PoolsDetailResponse acquires ModuleStore, VirtualPool {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
+        let virtual_pool = if (option::is_some(&pools.virtual_pool)) {
+            let vp = borrow_global<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
+            option::some(VirtualPoolDetail {
+                pool_size: vp.pool_size,
+                recover_velocity: vp.recover_velocity,
+                max_ratio: vp.max_ratio,
+                recover_param: vp.recover_param,
+                init_pool_amount: vp.init_pool_amount,
+                ibc_op_init_pool_amount: vp.ibc_op_init_pool_amount,
+                last_recovered_timestamp: vp.last_recovered_timestamp,
+                virtual_init_balance: vp.virtual_init_balance,
+                virtual_ibc_op_init_balance: vp.virtual_ibc_op_init_balance,
+                ann: vp.ann,
+                active: vp.active,
+            })
+        } else {
+            option::none()
+        };
+
+        let stableswap_pool = if (option::is_some(&pools.stableswap_pool)) {
+            option::some(stableswap::get_pool(*option::borrow(&pools.stableswap_pool)))
+        } else {
+            option::none()
+        };
+
+        return PoolsDetailResponse {
+            ibc_op_init_metadata,
+            ibc_op_init_denom: coin::symbol(ibc_op_init_metadata),
+            op_bridge_id: pools.op_bridge_id,
+            ibc_channel: pools.ibc_channel,
+            virtual_pool: virtual_pool,
+            stableswap_pool,
+        }
+    }
+
+    #[view]
+    public fun get_pools_detail_list(start_after: Option<Object<Metadata>>, limit: u64): vector<PoolsDetailResponse> acquires ModuleStore, VirtualPool {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT
+        };
+
+        let iter = table::iter(&module_store.pools, option::none(), start_after, 2);
+
+        let i = 0;
+        let res: vector<PoolsDetailResponse> = vector[];
+        while (i < limit && table::prepare(iter)) {
+            let (ibc_op_init_metadata, pools) = table::next<Object<Metadata>, Pools>(iter);
+
+            let virtual_pool = if (option::is_some(&pools.virtual_pool)) {
+                let vp = borrow_global<VirtualPool>(object::object_address(*option::borrow(&pools.virtual_pool)));
+                option::some(VirtualPoolDetail {
+                    pool_size: vp.pool_size,
+                    recover_velocity: vp.recover_velocity,
+                    max_ratio: vp.max_ratio,
+                    recover_param: vp.recover_param,
+                    init_pool_amount: vp.init_pool_amount,
+                    ibc_op_init_pool_amount: vp.ibc_op_init_pool_amount,
+                    last_recovered_timestamp: vp.last_recovered_timestamp,
+                    virtual_init_balance: vp.virtual_init_balance,
+                    virtual_ibc_op_init_balance: vp.virtual_ibc_op_init_balance,
+                    ann: vp.ann,
+                    active: vp.active,
+                })
+            } else {
+                option::none()
+            };
+
+            let stableswap_pool = if (option::is_some(&pools.stableswap_pool)) {
+                option::some(stableswap::get_pool(*option::borrow(&pools.stableswap_pool)))
+            } else {
+                option::none()
+            };
+
+            vector::push_back(&mut res, PoolsDetailResponse {
+                ibc_op_init_metadata,
+                ibc_op_init_denom: coin::symbol(ibc_op_init_metadata),
+                op_bridge_id: pools.op_bridge_id,
+                ibc_channel: pools.ibc_channel,
+                virtual_pool: virtual_pool,
+                stableswap_pool,
+            })
+        };
+
+        return res
+
+    }
 
     //
     // View Function return types
@@ -624,8 +733,56 @@ module initia_std::minitswap {
         stableswap_pool: Option<Object<Pool>>,
     }
 
-    public fun unpack_pools_response(res: PoolsResponse): (u64, String, Option<Object<VirtualPool>>, Option<Object<Pool>>) {
-        return (res.op_bridge_id, res.ibc_channel, res.virtual_pool, res.stableswap_pool)
+    public fun unpack_pools_response(res: PoolsResponse): (Object<Metadata>, String, u64, String, Option<Object<VirtualPool>>, Option<Object<Pool>>) {
+        return (res.ibc_op_init_metadata, res.ibc_op_init_denom, res.op_bridge_id, res.ibc_channel, res.virtual_pool, res.stableswap_pool)
+    }
+
+    struct PoolsDetailResponse has drop {
+        ibc_op_init_metadata: Object<Metadata>,
+        ibc_op_init_denom: String,
+        op_bridge_id: u64,
+        ibc_channel: String,
+        virtual_pool: Option<VirtualPoolDetail>,
+        stableswap_pool: Option<stableswap::PoolResponse>,
+    }
+
+    public fun unpack_pools_detail_response(
+        res: PoolsDetailResponse
+    ): (Object<Metadata>, String, u64, String, Option<VirtualPoolDetail>, Option<stableswap::PoolResponse>) {
+        let PoolsDetailResponse { ibc_op_init_metadata, ibc_op_init_denom, op_bridge_id, ibc_channel, virtual_pool, stableswap_pool } = res;
+        return (ibc_op_init_metadata, ibc_op_init_denom, op_bridge_id, ibc_channel, virtual_pool, stableswap_pool)
+    }
+
+    struct VirtualPoolDetail has drop {
+        pool_size: u64,
+        recover_velocity: Decimal128,
+        max_ratio: Decimal128,
+        recover_param: Decimal128,
+        init_pool_amount: u64,
+        ibc_op_init_pool_amount: u64,
+        last_recovered_timestamp: u64,
+        virtual_init_balance: u64,
+        virtual_ibc_op_init_balance: u64,
+        ann: u64,
+        active: bool,
+    }
+
+    public fun unpack_virtual_pool_detail(
+        res: VirtualPoolDetail
+    ): (u64, Decimal128, Decimal128, Decimal128, u64, u64, u64, u64, u64, u64, bool) {
+        return (
+            res.pool_size,
+            res.recover_velocity,
+            res.max_ratio,
+            res.recover_param,
+            res.init_pool_amount,
+            res.ibc_op_init_pool_amount,
+            res.last_recovered_timestamp,
+            res.virtual_init_balance,
+            res.virtual_ibc_op_init_balance,
+            res.ann,
+            res.active,
+        )
     }
 
     //
