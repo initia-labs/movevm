@@ -942,7 +942,7 @@ module initia_std::minitswap {
 
             // 1. swap to make 5:5
             let init_swap_amount = pool.pool_size - pool.init_pool_amount;
-            let ibc_op_init_swap_amount =  pool.ibc_op_init_pool_amount - pool.pool_size;
+            let ibc_op_init_swap_amount = pool.ibc_op_init_pool_amount - pool.pool_size;
             // pool.init_pool_amount = pool.pool_size;
             // pool.ibc_op_init_pool_amount = pool.pool_size;
             pool.virtual_init_balance = pool.virtual_init_balance + init_swap_amount;
@@ -1100,10 +1100,10 @@ module initia_std::minitswap {
 
         // check emergency
         assert!(!module_store.emergency_state, error::invalid_state(EEMERGENCY));
-    
+
         // remove unbond entity
         let key = generate_unbond_key(addr, release_time);
-        let UnbondEntity { account: _, share_amount, withdraw_amount, release_time } 
+        let UnbondEntity { account: _, share_amount, withdraw_amount, release_time }
             = table::remove(&mut module_store.unbond_wait_list, key);
 
         // check release time
@@ -1201,13 +1201,13 @@ module initia_std::minitswap {
 
         let pool_obj = table::remove(&mut module_store.global_arb_batch_map, table_key::encode_u64(arb_index));
         let pool = borrow_global_mut<VirtualPool>(object::object_address(pool_obj));
-        let ArbInfo { executed_time: _, init_used, ibc_opinit_sent, triggering_fee } 
+        let ArbInfo { executed_time: _, init_used, ibc_opinit_sent, triggering_fee }
             = table::remove(&mut pool.arb_batch_map, table_key::encode_u64(arb_index));
 
         assert!(pool.active, error::invalid_state(EINACTIVE));
 
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
-        
+
         // transfer trigger fee
         primary_fungible_store::transfer(&pool_signer, init_metadata(), executor, triggering_fee);
 
@@ -1366,7 +1366,7 @@ module initia_std::minitswap {
         // init offered, do user swap first
         let (
             peg_keeper_offer_amount,
-            peg_keeper_return_amount, 
+            peg_keeper_return_amount,
             return_asset,
             init_swap_fee_amount,
             init_arb_fee_amount,
@@ -1423,7 +1423,7 @@ module initia_std::minitswap {
     public entry fun ibc_ack(module_signer: &signer, callback_id: u64, success: bool) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         assert!(signer::address_of(module_signer) == object::address_from_extend_ref(&module_store.extend_ref), error::permission_denied(EUNAUTHORIZED));
-        
+
         // do nothing
         if (success) {
             return
@@ -1443,7 +1443,7 @@ module initia_std::minitswap {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pool_obj = table::remove(&mut module_store.global_arb_batch_map, table_key::encode_u64(callback_id));
         let pool = borrow_global_mut<VirtualPool>(object::object_address(pool_obj));
-        let ArbInfo { executed_time: _, init_used, ibc_opinit_sent, triggering_fee: _ } 
+        let ArbInfo { executed_time: _, init_used, ibc_opinit_sent, triggering_fee: _ }
             = table::remove(&mut pool.arb_batch_map, table_key::encode_u64(callback_id));
         pool.virtual_init_balance = pool.virtual_init_balance + init_used;
         pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + ibc_opinit_sent;
@@ -1565,7 +1565,7 @@ module initia_std::minitswap {
             pool.init_pool_amount = pool.init_pool_amount - return_amount;
             pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount + offer_amount;
 
-            // take swap fee 
+            // take swap fee
             let swap_fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
             let return_amount = return_amount - swap_fee_amount;
 
@@ -1617,7 +1617,7 @@ module initia_std::minitswap {
         // check min arb interval
         let (_, timestamp) = block::get_block_info();
         if (timestamp < module_store.min_arb_interval + last_arb_timestamp) {
-            return 
+            return
         };
 
         // get new arb batch index
@@ -1687,7 +1687,7 @@ module initia_std::minitswap {
         let op_denom = get_op_denom(pool.op_bridge_id, string::utf8(b"uinit"));
         simple_json::set_object(&mut obj, option::none<String>());
         simple_json::increase_depth(&mut obj);
-        
+
         // set async callback
         simple_json::set_object(&mut obj, option::some<String>(string::utf8(b"move")));
         simple_json::increase_depth(&mut obj);
@@ -1794,7 +1794,7 @@ module initia_std::minitswap {
         simple_json::set_string(&mut obj, option::some(string::utf8(b"state_root")), state_root);
         simple_json::set_string(&mut obj, option::some(string::utf8(b"storage_root")), storage_root);
         simple_json::set_string(&mut obj, option::some(string::utf8(b"latest_block_hash")), latest_block_hash);
-        
+
         json::stringify(simple_json::to_json_object(&obj))
     }
 
@@ -1929,7 +1929,7 @@ module initia_std::minitswap {
 
         // y = (y**2 + c) / (2*y + b)
 
-        let c = d * d * d * A_PRECISION / ann / 4 / x; // d ** (2 + 1) / ann / 2 ** 2  / x
+        let c = d * d * d * A_PRECISION / ann / 4 / x; // d ** (2 + 1) / ann / 2 ** 2 / x
         let b_plus_d = x + d * A_PRECISION / ann; // need to sub d but sub later due to value must be less than 0
 
         let y_prev;
