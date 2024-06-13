@@ -1417,9 +1417,11 @@ module initia_std::minitswap {
     // ibc async callback
     //
 
-    public entry fun ibc_ack(module_signer: &signer, callback_id: u64, success: bool) acquires ModuleStore, VirtualPool {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        assert!(signer::address_of(module_signer) == object::address_from_extend_ref(&module_store.extend_ref), error::permission_denied(EUNAUTHORIZED));
+    public entry fun ibc_ack(pool_signer: &signer, callback_id: u64, success: bool) acquires ModuleStore, VirtualPool {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let pool_obj = table::borrow(&mut module_store.global_arb_batch_map, table_key::encode_u64(callback_id));
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        assert!(signer::address_of(pool_signer) == object::address_from_extend_ref(&pool.extend_ref), error::permission_denied(EUNAUTHORIZED));
 
         // do nothing
         if (success) {
@@ -1429,9 +1431,11 @@ module initia_std::minitswap {
         revert_arb_state(callback_id);
     }
 
-    public entry fun ibc_timeout(module_signer: &signer, callback_id: u64) acquires ModuleStore, VirtualPool {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        assert!(signer::address_of(module_signer) == object::address_from_extend_ref(&module_store.extend_ref), error::permission_denied(EUNAUTHORIZED));
+    public entry fun ibc_timeout(pool_signer: &signer, callback_id: u64) acquires ModuleStore, VirtualPool {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let pool_obj = table::borrow(&mut module_store.global_arb_batch_map, table_key::encode_u64(callback_id));
+        let pool = borrow_global_mut<VirtualPool>(object::object_address(*pool_obj));
+        assert!(signer::address_of(pool_signer) == object::address_from_extend_ref(&pool.extend_ref), error::permission_denied(EUNAUTHORIZED));
 
         revert_arb_state(callback_id);
     }
@@ -1691,7 +1695,7 @@ module initia_std::minitswap {
         simple_json::set_object(&mut obj, option::some<String>(string::utf8(b"async_callback")));
         simple_json::increase_depth(&mut obj);
         simple_json::set_int_raw(&mut obj, option::some<String>(string::utf8(b"id")), true, (batch_index as u256));
-        simple_json::set_string(&mut obj, option::some(string::utf8(b"module_address")), to_sdk(@initia_std));
+        simple_json::set_string(&mut obj, option::some(string::utf8(b"module_address")), to_string(&bcs::to_bytes(&@initia_std)));
         simple_json::set_string(&mut obj, option::some(string::utf8(b"module_name")), string::utf8(b"minitswap"));
         simple_json::decrease_depth(&mut obj);
 
