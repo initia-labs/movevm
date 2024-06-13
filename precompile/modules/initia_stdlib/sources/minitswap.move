@@ -1736,11 +1736,11 @@ module initia_std::minitswap {
         let memo = json::stringify(simple_json::to_json_object(&obj));
 
         // execute ibc transfer
-        let module_signer = object::generate_signer_for_extending(&module_store.extend_ref);
+        let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         let (_, timestamp) = block::get_block_info();
 
         cosmos::transfer(
-            &module_signer,
+            &pool_signer,
             ibc_receiver,
             ibc_op_init_metadata,
             amount,
