@@ -1144,7 +1144,6 @@ module initia_std::minitswap {
         withdrawal_proofs: vector<String>,
         sender: address,
         sequence: u64,
-        amount: u64,
         version: String,
         state_root: String,
         storage_root: String,
@@ -1156,8 +1155,6 @@ module initia_std::minitswap {
         let pool = borrow_global<VirtualPool>(object::object_address(*pool_obj));
         let arb_info = table::borrow(&pool.arb_batch_map, table_key::encode_u64(arb_index));
 
-        assert!(amount == arb_info.ibc_opinit_sent, error::invalid_argument(EAMOUNT_MISMATCH));
-
         // execute finalize token withdrawal
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         let withdrawal_msg = generate_finalize_token_withdrawal_msg(
@@ -1168,7 +1165,7 @@ module initia_std::minitswap {
             signer::address_of(&pool_signer),
             sequence,
             string::utf8(b"uinit"),
-            amount,
+            arb_info.ibc_opinit_sent,
             version,
             state_root,
             storage_root,
