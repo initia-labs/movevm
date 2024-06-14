@@ -1727,10 +1727,6 @@ module initia_std::minitswap {
             simple_json::set_object(&mut obj, option::some<String>(string::utf8(b"minitswap_hook")));
             simple_json::increase_depth(&mut obj);
             simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"receiver")), receiver); // receiver
-            simple_json::set_object(&mut obj, option::some<String>(string::utf8(b"token")));
-            simple_json::increase_depth(&mut obj);
-            simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"denom")), op_denom); // denom
-            simple_json::set_string(&mut obj, option::some<String>(string::utf8(b"amount")), to_string(&amount)); // amount
 
             pool.hook_contract
         } else {
