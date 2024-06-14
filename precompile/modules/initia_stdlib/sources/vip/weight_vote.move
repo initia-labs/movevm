@@ -189,6 +189,11 @@ module initia_std::vip_weight_vote {
         executed: bool,
     }
 
+    struct WeightVoteResponse has drop {
+        voting_power: u64,
+        weights: vector<Weight>,
+    }
+
     // events
 
     #[event]
@@ -980,6 +985,21 @@ module initia_std::vip_weight_vote {
         }
     }
 
+    #[view]
+    public fun get_weight_vote(stage: u64, user: address): WeightVoteResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let stage_key = table_key::encode_u64(stage);
+        assert!(table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND));
+        let proposal = table::borrow(&module_store.proposals, stage_key);
+        let vote = table::borrow(&proposal.votes, user);
+
+        WeightVoteResponse {
+            voting_power: vote.voting_power,
+            weights: vote.weights,
+        }
+    }
+
     #[test_only]
     use initia_std::block::set_block_info;
 
@@ -1175,6 +1195,10 @@ module initia_std::vip_weight_vote {
         assert!(vote1 == 60, 1);
         assert!(vote2 == 40, 2);
         assert!(total_tally == 100, 3);
+
+        let weight_vote = get_weight_vote(1, signer::address_of(u1));
+        assert!(weight_vote.voting_power == 10, 4);
+        assert!(vector::length(&weight_vote.weights) == 2, 5);
 
         set_block_info(100, 201);
         execute_proposal();
