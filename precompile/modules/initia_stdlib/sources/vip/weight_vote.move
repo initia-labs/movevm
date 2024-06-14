@@ -903,7 +903,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_module_store(): ModuleResponse acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
 
         ModuleResponse {
             current_stage: module_store.current_stage,
