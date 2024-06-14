@@ -12,13 +12,13 @@ module initia_std::vip_weight_vote {
     use initia_std::decimal128::{Self, Decimal128};
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::event;
-    use initia_std::fungible_asset::Metadata;
     use initia_std::primary_fungible_store;
-    use initia_std::object::{Self, Object};
+    use initia_std::object::{Self};
     use initia_std::table::{Self, Table};
     use initia_std::table_key;
 
     use initia_std::vip;
+    use initia_std::vip_reward;
 
     //
     // Errors
@@ -139,6 +139,54 @@ module initia_std::vip_weight_vote {
 
     struct DroppedProposal has key {
         proposal: Proposal
+    }
+
+    //
+    // responses
+    //
+
+    struct ModuleResponse has drop {
+        current_stage: u64,
+        stage_start_timestamp: u64,
+        stage_end_timestamp: u64,
+        stage_interval: u64,
+        snapshot_grace_period: u64,
+        voting_period: u64,
+        submitter: address,
+        min_voting_period: u64,
+        quorum_ratio: Decimal128,
+        challenge_deposit_amount: u64,
+    }
+
+    struct ChallengeResponse has drop {
+        title: String,
+        summary: String,
+        api_uri: String,
+
+        stage: u64,
+        challenger: address,
+        voting_power_stage: u64,
+
+        new_submitter: address,
+        merkle_root: vector<u8>,
+        snapshot_height: u64,
+
+        yes_tally: u64,
+        no_tally: u64,
+        quorum: u64,
+        voting_end_time: u64,
+        min_voting_end_time: u64,
+        deposit_amount: u64,
+        is_executed: bool,
+    }
+
+    struct ProposalResponse has drop {
+        merkle_root: vector<u8>,
+        total_tally: u64,
+        snapshot_height: u64,
+        voting_end_time: u64,
+        api_uri: String,
+        executed: bool,
     }
 
     // events
@@ -400,7 +448,7 @@ module initia_std::vip_weight_vote {
         // transfer deposit
         primary_fungible_store::transfer(
             account,
-            uinit_metadata(),
+            vip_reward::reward_metadata(),
             object::address_from_extend_ref(&module_store.challenge_deposit_store),
             module_store.challenge_deposit_amount,
         );
@@ -564,13 +612,18 @@ module initia_std::vip_weight_vote {
 
         // if total tally doesn't reach quorum, transfer deposit to community pool and return false
         if (total_tally < challenge.quorum) {
-            cosmos::fund_community_pool(&object_signer, uinit_metadata(), challenge.deposit_amount);
+            cosmos::fund_community_pool(&object_signer, vip_reward::reward_metadata(),
+                challenge.deposit_amount);
             return false
         };
 
         // return deposit to challenger
-        primary_fungible_store::transfer(&object_signer, uinit_metadata(), challenge.challenger,
-            challenge.deposit_amount);
+        primary_fungible_store::transfer(
+            &object_signer,
+            vip_reward::reward_metadata(),
+            challenge.challenger,
+            challenge.deposit_amount,
+        );
 
         if (no_count > yes_count) {
             return false
@@ -826,11 +879,6 @@ module initia_std::vip_weight_vote {
         n_weights
     }
 
-    fun uinit_metadata(): Object<Metadata> {
-        let addr = object::create_object_address(@initia_std, b"uinit");
-        object::address_to_object<Metadata>(addr)
-    }
-
     // if submitter submit merkle root after grace period, set voting end time to current timestamp + voting period
     // else set it to former stage end time + grace period + voting period
     fun calculate_voting_end_time(
@@ -841,6 +889,94 @@ module initia_std::vip_weight_vote {
         } else {
             return module_store.stage_end_timestamp + module_store.snapshot_grace_period + module_store
                 .voting_period
+        }
+    }
+
+    //
+    // views
+    //
+
+    #[view]
+    public fun get_module_store(): ModuleResponse acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
+        ModuleResponse {
+            current_stage: module_store.current_stage,
+            stage_start_timestamp: module_store.stage_start_timestamp,
+            stage_end_timestamp: module_store.stage_end_timestamp,
+            stage_interval: module_store.stage_interval,
+            snapshot_grace_period: module_store.snapshot_grace_period,
+            voting_period: module_store.voting_period,
+            submitter: module_store.submitter,
+            min_voting_period: module_store.min_voting_period,
+            quorum_ratio: module_store.quorum_ratio,
+            challenge_deposit_amount: module_store.challenge_deposit_amount,
+        }
+    }
+
+    #[view]
+    public fun get_total_tally(stage: u64): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let stage_key = table_key::encode_u64(stage);
+        assert!(table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND));
+        let proposal = table::borrow(&module_store.proposals, stage_key);
+        proposal.total_tally
+    }
+
+    #[view]
+    public fun get_tally(stage: u64, bridge_id: u64): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let stage_key = table_key::encode_u64(stage);
+        assert!(table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND));
+        let proposal = table::borrow(&module_store.proposals, stage_key);
+        *table::borrow_with_default(&proposal.tally, table_key::encode_u64(bridge_id), &0)
+    }
+
+    #[view]
+    public fun get_challenge(challenge_id: u64): ChallengeResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let challenge_key = table_key::encode_u64(challenge_id);
+        assert!(table::contains(&module_store.challenges, challenge_key),
+            error::not_found(ECHALLENGE_NOT_FOUND));
+        let challenge = table::borrow(&module_store.challenges, challenge_key);
+
+        ChallengeResponse {
+            title: challenge.title,
+            summary: challenge.summary,
+            api_uri: challenge.api_uri,
+            stage: challenge.stage,
+            challenger: challenge.challenger,
+            voting_power_stage: challenge.voting_power_stage,
+            new_submitter: challenge.new_submitter,
+            merkle_root: challenge.merkle_root,
+            snapshot_height: challenge.snapshot_height,
+            yes_tally: challenge.yes_tally,
+            no_tally: challenge.no_tally,
+            quorum: challenge.quorum,
+            voting_end_time: challenge.voting_end_time,
+            min_voting_end_time: challenge.min_voting_end_time,
+            deposit_amount: challenge.deposit_amount,
+            is_executed: challenge.is_executed,
+        }
+    }
+
+    #[view]
+    public fun get_proposal(stage: u64): ProposalResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let stage_key = table_key::encode_u64(stage);
+        assert!(table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND));
+        let proposal = table::borrow(&module_store.proposals, stage_key);
+
+        ProposalResponse {
+            merkle_root: proposal.merkle_root,
+            total_tally: proposal.total_tally,
+            snapshot_height: proposal.snapshot_height,
+            voting_end_time: proposal.voting_end_time,
+            api_uri: proposal.api_uri,
+            executed: proposal.executed,
         }
     }
 
@@ -1030,10 +1166,15 @@ module initia_std::vip_weight_vote {
             vector[decimal128::from_ratio(4, 5), decimal128::from_ratio(1, 5)], // 32, 8
         );
 
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        let vote = table::borrow(&module_store.proposals, table_key::encode_u64(1));
-        assert!(*table::borrow(&vote.tally, table_key::encode_u64(1)) == 60, 0);
-        assert!(*table::borrow(&vote.tally, table_key::encode_u64(2)) == 40, 1);
+        let proposal = get_proposal(1);
+        assert!(proposal.total_tally == 100, 0);
+
+        let vote1 = get_tally(1, 1);
+        let vote2 = get_tally(1, 2);
+        let total_tally = get_total_tally(1);
+        assert!(vote1 == 60, 1);
+        assert!(vote2 == 40, 2);
+        assert!(total_tally == 100, 3);
 
         set_block_info(100, 201);
         execute_proposal();
@@ -1116,12 +1257,12 @@ module initia_std::vip_weight_vote {
         // execute challenge
         execute_challenge(1);
 
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        let vote = table::borrow(&module_store.proposals, table_key::encode_u64(2));
-        assert!(module_store.stage_start_timestamp == 200, 2);
-        assert!(module_store.stage_end_timestamp == 300, 3);
-        assert!(module_store.current_stage == 2, 4);
-        assert!(module_store.submitter == signer::address_of(u1), 5);
+        let module_response = get_module_store();
+        let vote = get_proposal(2);
+        assert!(module_response.stage_start_timestamp == 200, 2);
+        assert!(module_response.stage_end_timestamp == 300, 3);
+        assert!(module_response.current_stage == 2, 4);
+        assert!(module_response.submitter == signer::address_of(u1), 5);
         assert!(vote.merkle_root == get_merkle_root(tree), 6);
         assert!(vote.api_uri == string::utf8(b"https://abc2.com"), 6);
 
@@ -1148,13 +1289,23 @@ module initia_std::vip_weight_vote {
         // execute proposal
         execute_challenge(2);
 
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        let vote = table::borrow(&module_store.proposals, table_key::encode_u64(2));
-        assert!(module_store.stage_start_timestamp == 300, 7);
-        assert!(module_store.stage_end_timestamp == 400, 8);
-        assert!(module_store.current_stage == 2, 9);
-        assert!(module_store.submitter == signer::address_of(u2), 10);
+        module_response = get_module_store();
+        vote = get_proposal(2);
+        assert!(module_response.stage_start_timestamp == 300, 7);
+        assert!(module_response.stage_end_timestamp == 400, 8);
+        assert!(module_response.current_stage == 2, 9);
+        assert!(module_response.submitter == signer::address_of(u2), 10);
         assert!(vote.merkle_root == get_merkle_root(tree), 11);
         assert!(vote.api_uri == string::utf8(b"https://abc3.com"), 12);
+
+        let challenge = get_challenge(2);
+        assert!(challenge.title == string::utf8(b"challenge"), 13);
+        assert!(challenge.summary == string::utf8(b"challenge"), 14);
+        assert!(challenge.api_uri == string::utf8(b"https://abc3.com"), 15);
+        assert!(challenge.stage == 2, 16);
+        assert!(challenge.yes_tally == 20, 17);
+        assert!(challenge.no_tally == 0, 18);
+        assert!(challenge.quorum == 9, 19);
+        assert!(challenge.is_executed == true, 20);
     }
 }
