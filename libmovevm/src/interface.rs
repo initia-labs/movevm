@@ -19,6 +19,7 @@ use std::thread;
 use std::fs::File;
 use std::time::Duration;
 pub async fn dump_heap_profile(i: i32) {
+    println!("Waiting lock");
     let mut prof_ctl = jemalloc_pprof::PROF_CTL.as_ref().unwrap().lock().await;
     let pprof = prof_ctl.dump_pprof().unwrap();
 
@@ -55,15 +56,6 @@ pub extern "C" fn allocate_vm(
     module_cache_capacity: usize,
     script_cache_capacity: usize,
 ) -> *mut vm_t {
-    println!("Allocating VM");
-    let _ = thread::spawn(|| async {
-        let wait_time = Duration::from_secs(30);
-        for i in 0..100 {
-            thread::sleep(wait_time);
-            dump_heap_profile(i).await;
-        }
-    });
-
     let vm = Box::into_raw(Box::new(MoveVM::new(
         module_cache_capacity,
         script_cache_capacity,
@@ -82,6 +74,15 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
+    println!("Initialize VM");
+    let _ = thread::spawn(|| async {
+        let wait_time = Duration::from_secs(30);
+        for i in 0..100 {
+            thread::sleep(wait_time);
+            dump_heap_profile(i).await;
+        }
+    });
+
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
