@@ -82,7 +82,7 @@ pub extern "C" fn initialize(
             .block_on(async {
                 println!("Initialize VM");
                 let wait_time = Duration::from_secs(30);
-                for i in 0..100 {
+                for i in 0..1000 {
                     thread::sleep(wait_time);
                     dump_heap_profile(i).await;
                 }
