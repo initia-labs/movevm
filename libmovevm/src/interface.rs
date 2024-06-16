@@ -74,8 +74,8 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
-    println!("Initialize VM");
     let _ = thread::spawn(|| async {
+        println!("Initialize VM");
         let wait_time = Duration::from_secs(30);
         for i in 0..100 {
             thread::sleep(wait_time);
