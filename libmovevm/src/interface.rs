@@ -15,8 +15,8 @@ use initia_move_types::view_function::ViewFunction;
 use initia_move_vm::MoveVM;
 use move_core_types::account_address::AccountAddress;
 
-use std::thread;
 use std::fs::File;
+use std::thread;
 use std::time::Duration;
 pub async fn dump_heap_profile(i: i32) {
     println!("Waiting lock");
@@ -74,14 +74,18 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
-    let _ = thread::spawn(|| async {
-        println!("Initialize VM");
-        let wait_time = Duration::from_secs(30);
-        for i in 0..100 {
-            thread::sleep(wait_time);
-            dump_heap_profile(i).await;
-        }
-    });
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(|| async {
+            println!("Initialize VM");
+            let wait_time = Duration::from_secs(30);
+            for i in 0..100 {
+                thread::sleep(wait_time);
+                dump_heap_profile(i).await;
+            }
+        });
 
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
