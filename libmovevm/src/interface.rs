@@ -74,19 +74,20 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
-    tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(async {
-            println!("Initialize VM");
-            let wait_time = Duration::from_secs(30);
-            for i in 0..100 {
-                thread::sleep(wait_time);
-                dump_heap_profile(i).await;
-            }
-        });
+    thread::spawn(|| {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                println!("Initialize VM");
+                let wait_time = Duration::from_secs(30);
+                for i in 0..100 {
+                    thread::sleep(wait_time);
+                    dump_heap_profile(i).await;
+                }
+            });
+    });
 
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
