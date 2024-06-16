@@ -78,7 +78,7 @@ pub extern "C" fn initialize(
         .enable_all()
         .build()
         .unwrap()
-        .block_on(|| async {
+        .block_on(async {
             println!("Initialize VM");
             let wait_time = Duration::from_secs(30);
             for i in 0..100 {
