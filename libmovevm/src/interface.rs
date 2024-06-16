@@ -18,7 +18,7 @@ use move_core_types::account_address::AccountAddress;
 use std::thread;
 use std::fs::File;
 use std::time::Duration;
-pub async fn dump_heap_profile(i: i32) {
+pub fn dump_heap_profile(i: i32) {
     let mut prof_ctl = jemalloc_pprof::PROF_CTL.as_ref().unwrap().lock().await;
     let pprof = prof_ctl.dump_pprof().unwrap();
 
