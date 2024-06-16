@@ -54,4 +54,4 @@ move-binary-format = { workspace = true }
 cbindgen = { workspace = true }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = { version = "0.5", features = ["profiling"] }
+tikv-jemallocator = { version = "0.5", features = ["profiling", "stats"] }
