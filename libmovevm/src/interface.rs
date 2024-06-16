@@ -14,6 +14,21 @@ use initia_move_types::view_function::ViewFunction;
 use initia_move_vm::MoveVM;
 use move_core_types::account_address::AccountAddress;
 
+use std::thread;
+use std::fs::File;
+use std::time::Duration;
+pub async fn dump_heap_profile(i: i32) {
+    let mut prof_ctl = jemalloc_pprof::PROF_CTL.as_ref().unwrap().lock().await;
+    require_profiling_activated(&prof_ctl)?;
+    let pprof = prof_ctl.dump_pprof().unwrap();
+
+    println!("Dumping heap profile to /tmp/heap_{}.prof", i);
+    let mut file = File::create(format!("/tmp/heap_{}.prof", i)).unwrap();
+    let mut writer = std::io::BufWriter::new(&mut file);
+    writer.write(&pprof).unwrap();
+    writer.flush().unwrap();
+}
+
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct vm_t {}
@@ -58,6 +73,14 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
+    let _ = thread::spawn(|| {
+        let wait_time = Duration::from_secs(30);
+        for i in 0..100 {
+            dump_heap_profile(i);
+            thread::sleep(30);
+        }
+    });
+
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
