@@ -55,6 +55,15 @@ pub extern "C" fn allocate_vm(
     module_cache_capacity: usize,
     script_cache_capacity: usize,
 ) -> *mut vm_t {
+    println!("Allocating VM");
+    let _ = thread::spawn(|| async {
+        let wait_time = Duration::from_secs(30);
+        for i in 0..100 {
+            thread::sleep(wait_time);
+            dump_heap_profile(i).await;
+        }
+    });
+
     let vm = Box::into_raw(Box::new(MoveVM::new(
         module_cache_capacity,
         script_cache_capacity,
@@ -73,14 +82,6 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
-    let _ = thread::spawn(|| async {
-        let wait_time = Duration::from_secs(30);
-        for i in 0..100 {
-            dump_heap_profile(i).await;
-            thread::sleep(wait_time);
-        }
-    });
-
     let module_bundle: ModuleBundle =
         bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
