@@ -19,7 +19,6 @@ use std::fs::File;
 use std::time::Duration;
 pub async fn dump_heap_profile(i: i32) {
     let mut prof_ctl = jemalloc_pprof::PROF_CTL.as_ref().unwrap().lock().await;
-    require_profiling_activated(&prof_ctl)?;
     let pprof = prof_ctl.dump_pprof().unwrap();
 
     println!("Dumping heap profile to /tmp/heap_{}.prof", i);
