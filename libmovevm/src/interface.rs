@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use crate::args::VM_ARG;
@@ -76,7 +77,7 @@ pub extern "C" fn initialize(
         let wait_time = Duration::from_secs(30);
         for i in 0..100 {
             dump_heap_profile(i);
-            thread::sleep(30);
+            thread::sleep(wait_time);
         }
     });
 
