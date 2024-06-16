@@ -73,7 +73,7 @@ pub extern "C" fn initialize(
     allowed_publishers_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
-    let _ = thread::spawn(|| {
+    let _ = thread::spawn(async || {
         let wait_time = Duration::from_secs(30);
         for i in 0..100 {
             dump_heap_profile(i).await;
