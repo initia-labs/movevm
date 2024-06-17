@@ -134,6 +134,8 @@ module initia_std::minitswap {
         virtual_init_balance: u64,
         /// ibc op INIT balance of peg keeper
         virtual_ibc_op_init_balance: u64,
+        /// ibc op INIT balance of peg keeper which also include unprocessed arb_batch state.
+        pegkeeper_owned_ibc_op_init_balance: u64,
         /// ANN
         ann: u64,
         /// Is pool in active
@@ -827,6 +829,7 @@ module initia_std::minitswap {
                 last_recovered_timestamp: timestamp,
                 virtual_init_balance: 0,
                 virtual_ibc_op_init_balance: 0,
+                pegkeeper_owned_ibc_op_init_balance: 0,
                 ann,
                 active: true,
                 op_bridge_id,
@@ -927,6 +930,7 @@ module initia_std::minitswap {
 
             pool.virtual_init_balance = pool.virtual_init_balance + net_init_delta;
             pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + net_ibc_op_init_delta;
+            pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance + net_ibc_op_init_delta;
         } else {
             /*
                 Increase size process
@@ -947,6 +951,7 @@ module initia_std::minitswap {
             // pool.ibc_op_init_pool_amount = pool.pool_size;
             pool.virtual_init_balance = pool.virtual_init_balance + init_swap_amount;
             pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + ibc_op_init_swap_amount;
+            pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance + ibc_op_init_swap_amount;
 
             // 2. change pool size
             pool.init_pool_amount = new_pool_size;
@@ -958,11 +963,12 @@ module initia_std::minitswap {
             pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount + ibc_op_init_swap_amount;
             pool.init_pool_amount = pool.init_pool_amount - return_amount;
             pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance - ibc_op_init_swap_amount;
+            pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance - ibc_op_init_swap_amount;
 
             if (pool.virtual_init_balance < return_amount) {
                 let remain = return_amount - pool.virtual_init_balance;
                 module_store.depositor_owned_init = module_store.depositor_owned_init + remain;
-                pool.virtual_init_balance = 0
+                pool.virtual_init_balance = 0;
             } else {
                 pool.virtual_init_balance = pool.virtual_init_balance - return_amount;
             }
@@ -1483,7 +1489,7 @@ module initia_std::minitswap {
         let (_, timestamp) = block::get_block_info();
 
         let imbalance = decimal128::from_ratio_u64(
-            pool.virtual_ibc_op_init_balance + pool.ibc_op_init_pool_amount - pool.pool_size, // same with real ibc op init balance
+            pool.pegkeeper_owned_ibc_op_init_balance + pool.ibc_op_init_pool_amount - pool.pool_size, // same with real ibc op init balance
             pool.pool_size,
         );
         // Peg keeper swap
@@ -1587,6 +1593,7 @@ module initia_std::minitswap {
         pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount - peg_keeper_return_amount;
         pool.virtual_init_balance = pool.virtual_init_balance + peg_keeper_offer_amount;
         pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + peg_keeper_return_amount;
+        pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance + peg_keeper_offer_amount;
         pool.last_recovered_timestamp = timestamp;
 
         (peg_keeper_offer_amount, peg_keeper_return_amount)
