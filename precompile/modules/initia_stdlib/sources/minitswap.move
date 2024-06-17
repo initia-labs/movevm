@@ -1211,6 +1211,9 @@ module initia_std::minitswap {
 
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
 
+        // update pegkeeper owned balance
+        pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance - ibc_opinit_sent;
+
         // transfer trigger fee
         primary_fungible_store::transfer(&pool_signer, init_metadata(), executor, triggering_fee);
 
