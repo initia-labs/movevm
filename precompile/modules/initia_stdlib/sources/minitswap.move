@@ -508,27 +508,6 @@ module initia_std::minitswap {
     }
 
     #[view]
-    public fun virtual_pool_response(): ModuleStoreResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-
-        return ModuleStoreResponse {
-            max_change_rate: module_store.max_change_rate,
-            emergency_state: module_store.emergency_state,
-            admin: module_store.admin,
-            depositor_owned_init: module_store.depositor_owned_init,
-            unbond_period: module_store.unbond_period,
-            swap_fee_rate: module_store.swap_fee_rate,
-            arb_fee_rate: module_store.arb_fee_rate,
-            trigger_fee: module_store.trigger_fee,
-            min_arb_profit: module_store.min_arb_profit,
-            ibc_timeout: module_store.ibc_timeout,
-            max_arb_batch: module_store.max_arb_batch,
-            min_arb_interval: module_store.min_arb_interval,
-            arb_batch_index: module_store.arb_batch_index,
-        }
-    }
-
-    #[view]
     public fun get_pools(ibc_op_init_metadata: Object<Metadata>): PoolsResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
@@ -2103,6 +2082,11 @@ module initia_std::minitswap {
         return_amount = return_amount - fee_amount;
 
         (return_amount, fee_amount)
+    }
+
+    #[test_only]
+    public fun init_module_for_test(account: &signer) {
+        init_module(account);
     }
 
     #[test_only]
