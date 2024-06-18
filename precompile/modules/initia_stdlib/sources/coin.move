@@ -21,6 +21,7 @@ module initia_std::coin {
     use initia_std::hex;
 
     friend initia_std::managed_coin;
+    friend initia_std::staking;
 
     struct ManagingRefs has key {
         mint_ref: MintRef,

@@ -675,7 +675,8 @@ module initia_std::staking {
             );
 
             // deposit to relayer for fund community pool
-            coin::deposit(@relayer, slash_coin);
+            // relayer is module address, so we need to use sudo_deposit
+            coin::sudo_deposit(@relayer, slash_coin);
             let staking_module = create_signer(@relayer);
 
             // fund to community pool
@@ -904,8 +905,9 @@ module initia_std::staking {
         );
         state.total_share = state.total_share + (share_diff as u128);
 
-        // deposit to relayer
-        coin::deposit(@relayer, fa);
+        // deposit to relayer 
+        // relayer is module address, so we need to use sudo_deposit
+        coin::sudo_deposit(@relayer, fa);
 
         Delegation {
             metadata,
