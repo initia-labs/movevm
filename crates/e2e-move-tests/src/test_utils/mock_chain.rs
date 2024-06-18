@@ -331,7 +331,8 @@ impl MockAccountAPI {
 
 impl MockAccountAPI {
     fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8, bool)> {
-        if let Some((account_number, sequence, account_type, is_blocked)) = self.accounts.get(&addr) {
+        if let Some((account_number, sequence, account_type, is_blocked)) = self.accounts.get(&addr)
+        {
             Ok((true, *account_number, *sequence, *account_type, *is_blocked))
         } else {
             Ok((false, 0, 0, 0, false))
