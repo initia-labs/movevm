@@ -238,7 +238,8 @@ module minitia_std::json {
         while (i < elem.value.child_length) {
             let next_index = get_next_index(index, i);
             let child_elem = borrow(obj, &next_index);
-            if (*string::bytes(option::borrow(&child_elem.key)) == *string::bytes(key)) { break };
+            if (*string::bytes(option::borrow(&child_elem.key))
+                == *string::bytes(key)) { break };
             i = i + 1;
         };
 
@@ -464,8 +465,8 @@ module minitia_std::json {
         assert!(
             get_type(
                 &string::utf8(
-                    b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}")) ==
-             JSON_VALUE_TYPE_OBJECT,
+                    b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}"))
+            == JSON_VALUE_TYPE_OBJECT,
             1);
         assert!(get_type(&string::utf8(b"true")) == JSON_VALUE_TYPE_BOOL, 2);
         assert!(get_type(&string::utf8(b"\"true\"")) == JSON_VALUE_TYPE_STRING, 3);
@@ -523,11 +524,13 @@ module minitia_std::json {
 
     #[test]
     fun test_string_to_number_max_u256() {
-        let test_str = string::utf8(
-            b"-115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max_u256
+        let test_str =
+            string::utf8(
+                b"-115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max_u256
         let res = parse_number(test_str);
         assert!(res.type == NUMBER_TYPE_INT, 0);
-        assert!(res.value ==
+        assert!(res.value
+            ==
             115792089237316195423570985008687907853269984665640564039457584007913129639935,
             1);
         assert!(res.is_positive == false, 2);
@@ -538,8 +541,9 @@ module minitia_std::json {
     #[test]
     #[expected_failure(abort_code = 0x10066, location = Self)]
     fun test_string_to_number_exceeding_max_u256() {
-        let test_str = string::utf8(
-            b"115792089237316195423570985008687907853269984665640564039457584007913129639936"); // max_u256
+        let test_str =
+            string::utf8(
+                b"115792089237316195423570985008687907853269984665640564039457584007913129639936"); // max_u256
         parse_number(test_str);
     }
 
@@ -572,8 +576,8 @@ module minitia_std::json {
 
     #[test]
     fun test_parse_object() {
-        let test_str = string::utf8(
-            b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}");
+        let test_str =
+            string::utf8(b"{ \"def\": 18446744073709551616, \"abc\": 18446744073709551615}");
         let res = parse_object(test_str);
 
         let res_abc = vector::borrow(&res, 0);
@@ -589,8 +593,9 @@ module minitia_std::json {
 
     #[test]
     fun test_parse_object2() {
-        let test_str = string::utf8(
-            b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
+        let test_str =
+            string::utf8(
+                b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
         let obj = parse(test_str);
 
         let index0 = JsonIndex { data: vector::singleton<u64>(0), };
@@ -608,7 +613,8 @@ module minitia_std::json {
             value: 18446744073709551615,
             is_positive: true,
         };
-        assert!(elem00.value.value_number == option::some<Number>(expected_value00), 4);
+        assert!(elem00.value.value_number
+            == option::some<Number>(expected_value00), 4);
         let (is_positive, value) = as_int(elem00.value);
         assert!(is_positive == true, 5);
         assert!(value == 18446744073709551615, 6);
@@ -628,16 +634,16 @@ module minitia_std::json {
         assert!(elem0100.key == option::none<String>(), 11);
         assert!(elem0100.value.type == JSON_VALUE_TYPE_NUMBER, 12);
         let expected_value0100 = Number { type: NUMBER_TYPE_INT, value: 1, is_positive: false, };
-        assert!(elem0100.value.value_number == option::some<Number>(expected_value0100),
-            13);
+        assert!(elem0100.value.value_number
+            == option::some<Number>(expected_value0100), 13);
 
         let index0101 = get_next_index(&index010, 1);
         let elem0101 = borrow(&obj, &index0101);
         assert!(elem0101.key == option::none<String>(), 14);
         assert!(elem0101.value.type == JSON_VALUE_TYPE_NUMBER, 15);
         let expected_value0101 = Number { type: NUMBER_TYPE_INT, value: 312, is_positive: true, };
-        assert!(elem0101.value.value_number == option::some<Number>(expected_value0101),
-            16);
+        assert!(elem0101.value.value_number
+            == option::some<Number>(expected_value0101), 16);
 
         let index0102 = get_next_index(&index010, 2);
         let elem0102 = borrow(&obj, &index0102);
@@ -648,8 +654,8 @@ module minitia_std::json {
             value: 45123240000000000000,
             is_positive: true,
         };
-        assert!(elem0102.value.value_number == option::some<Number>(expected_value0102),
-            19);
+        assert!(elem0102.value.value_number
+            == option::some<Number>(expected_value0102), 19);
     }
 
     #[test]
@@ -744,7 +750,8 @@ module minitia_std::json {
 
         let json_string = stringify(&obj);
         assert!(
-            json_string == string::utf8(
+            json_string
+            == string::utf8(
                 b"[115792089237316195423570985008687907853269984665640564039457584007913129639935,\"-115792089237316195423570985008687907853269984665640564039457.584007913129639935\",\"-11579208923731619542357098500868790785326998abc640564039457.584007913129639935\",[],{}]"),
             0);
     }
@@ -792,7 +799,8 @@ module minitia_std::json {
         set_object(&mut obj, index, option::some(string::utf8(b"123")), 0);
 
         let json_string = stringify(&obj);
-        assert!(json_string == string::utf8(
+        assert!(json_string
+            == string::utf8(
                 b"{\"123\":{},\"abc\":18446744073709551615,\"def\":{\"d\":[-1,312,\"45.12324\"]}}"),
             0);
     }
@@ -809,8 +817,9 @@ module minitia_std::json {
 
     #[test]
     fun test_find_key() {
-        let test_str = string::utf8(
-            b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
+        let test_str =
+            string::utf8(
+                b"{ \"def\": {\"d\": [-1, 312, \"45.12324\"]}, \"abc\": 18446744073709551615}");
         let obj = parse(test_str);
         let index = start_index();
         let idx = find(&obj, &index, &string::utf8(b"abc"));

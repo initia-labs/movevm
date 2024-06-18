@@ -48,8 +48,9 @@ module initia_std::managed_coin {
         icon_uri: String,
         project_uri: String,
     ) {
-        let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref(
-            account, maximum_supply, name, symbol, decimals, icon_uri, project_uri,);
+        let (mint_cap, burn_cap, freeze_cap, extend_ref) =
+            coin::initialize_and_generate_extend_ref(account, maximum_supply, name, symbol,
+                decimals, icon_uri, project_uri,);
 
         let metadata_signer = object::generate_signer_for_extending(&extend_ref);
         move_to(&metadata_signer, Capabilities { mint_cap, burn_cap, freeze_cap, });

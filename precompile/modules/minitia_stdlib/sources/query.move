@@ -50,7 +50,8 @@ module minitia_std::query {
         );
 
         let req = json::stringify(&obj);
-        let response = query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
+        let response =
+            query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
         let res = json::parse(string::utf8(response));
         let index = json::get_next_index(&index, 0);
 
@@ -77,7 +78,8 @@ module minitia_std::query {
             (proposal_id as u256));
 
         let req = json::stringify(simple_json::to_json_object(&obj));
-        let res = query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
+        let res =
+            query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
         let res = simple_json::from_json_object(json::parse(string::utf8(res)));
         simple_json::increase_depth(&mut res);
         simple_json::increase_depth(&mut res);

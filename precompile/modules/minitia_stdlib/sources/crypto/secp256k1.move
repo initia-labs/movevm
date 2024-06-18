@@ -86,7 +86,8 @@ module minitia_std::secp256k1 {
         assert!(std::vector::length(&message) == MESSAGE_SIZE,
             std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),);
 
-        let (pk, success) = recover_public_key_internal(recovery_id, message, signature.bytes);
+        let (pk, success) =
+            recover_public_key_internal(recovery_id, message, signature.bytes);
         if (success) {
             std::option::some(public_key_from_bytes(pk))
         } else {

@@ -51,12 +51,13 @@ module initia_std::hex {
             return vec
         };
 
-        let index = if (len % 2 == 1) {
-            let l = decode_char(*vector::borrow(bz, 0));
-            vector::push_back(&mut vec, l);
+        let index =
+            if (len % 2 == 1) {
+                let l = decode_char(*vector::borrow(bz, 0));
+                vector::push_back(&mut vec, l);
 
-            1
-        } else { 0 };
+                1
+            } else { 0 };
 
         while (index < len) {
             let h = decode_char(*vector::borrow(bz, index));
@@ -116,12 +117,9 @@ module initia_std::hex {
     }
 
     fun is_hex_char(char: u8): bool {
-        if ((char >= ZERO
-                && char <= ZERO + 9) // 0 - 9
-            || (char >= UPPERA
-                && char <= UPPERA + 5) // A - F
-            || (char >= LOWERA
-                && char <= LOWERA + 5)) { // a - f
+        if ((char >= ZERO && char <= ZERO + 9) // 0 - 9
+            || (char >= UPPERA && char <= UPPERA + 5) // A - F
+            || (char >= LOWERA && char <= LOWERA + 5)) { // a - f
             return true
         };
         false

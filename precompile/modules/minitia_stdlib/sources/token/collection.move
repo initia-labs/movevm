@@ -458,8 +458,9 @@ module minitia_std::collection {
         let collection_name = string::utf8(b"collection name");
         create_collection_helper(creator, collection_name);
 
-        let collection = object::address_to_object<Collection>(
-            create_collection_address(creator_address, &collection_name),);
+        let collection =
+            object::address_to_object<Collection>(
+                create_collection_address(creator_address, &collection_name),);
         assert!(object::owner(collection) == creator_address, 1);
         object::transfer(creator, collection, signer::address_of(trader));
     }
@@ -476,8 +477,9 @@ module minitia_std::collection {
     entry fun test_set_description(creator: &signer) acquires Collection {
         let collection_name = string::utf8(b"collection name");
         let constructor_ref = create_collection_helper(creator, collection_name);
-        let collection = object::address_to_object<Collection>(
-            create_collection_address(signer::address_of(creator), &collection_name),);
+        let collection =
+            object::address_to_object<Collection>(
+                create_collection_address(signer::address_of(creator), &collection_name),);
         let mutator_ref = generate_mutator_ref(&constructor_ref);
         let description = string::utf8(b"no fail");
         assert!(description != description(collection), 0);
@@ -490,8 +492,9 @@ module minitia_std::collection {
         let collection_name = string::utf8(b"collection name");
         let constructor_ref = create_collection_helper(creator, collection_name);
         let mutator_ref = generate_mutator_ref(&constructor_ref);
-        let collection = object::address_to_object<Collection>(
-            create_collection_address(signer::address_of(creator), &collection_name),);
+        let collection =
+            object::address_to_object<Collection>(
+                create_collection_address(signer::address_of(creator), &collection_name),);
         let uri = string::utf8(b"no fail");
         assert!(uri != uri(collection), 0);
         set_uri(&mutator_ref, uri);
@@ -512,7 +515,8 @@ module minitia_std::collection {
 
         let nfts = nfts(collection, option::none(), 5);
         assert!(
-            nfts == vector[
+            nfts
+            == vector[
                 NftResponse { token_id: string::utf8(b"3"), nft: @0x003 },
                 NftResponse { token_id: string::utf8(b"2"), nft: @0x002 },
                 NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },],
@@ -520,7 +524,8 @@ module minitia_std::collection {
 
         nfts = nfts(collection, option::some(string::utf8(b"3")), 5);
         assert!(
-            nfts == vector[
+            nfts
+            == vector[
                 NftResponse { token_id: string::utf8(b"2"), nft: @0x002 },
                 NftResponse { token_id: string::utf8(b"1"), nft: @0x001 },],
             1)

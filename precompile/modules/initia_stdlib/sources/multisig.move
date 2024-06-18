@@ -157,7 +157,8 @@ module initia_std::multisig {
         };
         let res: vector<ProposalResponse> = vector[];
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let iter = table::iter(&multisig_wallet.proposals, option::none(), start_after, 2);
+        let iter =
+            table::iter(&multisig_wallet.proposals, option::none(), start_after, 2);
 
         while (vector::length(&res) < (limit as u64) && table::prepare<u64, Proposal>(iter)) {
             let (proposal_id, proposal) = table::next<u64, Proposal>(iter);
@@ -197,8 +198,8 @@ module initia_std::multisig {
         assert_member(&members, &signer::address_of(account));
         assert!(vector::length(&members) >= threshold,
             error::invalid_argument(EINVALID_THRESHOLD));
-        let constructor_ref = object::create_named_object(account, *string::bytes(&name),
-            false);
+        let constructor_ref =
+            object::create_named_object(account, *string::bytes(&name), false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let multisig_signer = object::generate_signer(&constructor_ref);
         let multisig_addr = signer::address_of(&multisig_signer);
@@ -318,7 +319,8 @@ module initia_std::multisig {
             .threshold,
             error::invalid_state(ENOT_PASS),);
 
-        let multisig_signer = &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
         move_execute(
             multisig_signer,
             proposal.module_address,
@@ -375,15 +377,17 @@ module initia_std::multisig {
         max_period: &Period, proposal_height: u64, proposal_timestamp: u64
     ): bool {
         let (height, timestamp) = get_block_info();
-        let expired_height = if (option::is_some(&max_period.height)) {
-            let max_voting_period_height = *option::borrow(&max_period.height);
-            (max_voting_period_height + proposal_height) >= height
-        } else { false };
+        let expired_height =
+            if (option::is_some(&max_period.height)) {
+                let max_voting_period_height = *option::borrow(&max_period.height);
+                (max_voting_period_height + proposal_height) >= height
+            } else { false };
 
-        let expired_timestamp = if (option::is_some(&max_period.timestamp)) {
-            let max_voting_period_timestamp = *option::borrow(&max_period.timestamp);
-            (max_voting_period_timestamp + proposal_timestamp) >= timestamp
-        } else { false };
+        let expired_timestamp =
+            if (option::is_some(&max_period.timestamp)) {
+                let max_voting_period_timestamp = *option::borrow(&max_period.timestamp);
+                (max_voting_period_timestamp + proposal_timestamp) >= timestamp
+            } else { false };
 
         expired_height || expired_timestamp
     }
@@ -420,8 +424,9 @@ module initia_std::multisig {
         proposal: &Proposal,
     ): ProposalResponse {
         let status_index = proposal.status;
-        let is_expired = is_proposal_expired(&multisig_wallet.max_voting_period, proposal.proposal_height,
-            proposal.proposal_timestamp);
+        let is_expired =
+            is_proposal_expired(&multisig_wallet.max_voting_period, proposal.proposal_height,
+                proposal.proposal_timestamp);
         let yes_vote_count = yes_vote_count(&proposal.votes, &multisig_wallet.members);
         if (status_index == 0 && is_expired) {
             status_index = 2
@@ -450,7 +455,8 @@ module initia_std::multisig {
     inline fun assert_config_version(
         multisig_wallet_config_version: u64, execute_proposal: &Proposal
     ) {
-        assert!(multisig_wallet_config_version == execute_proposal.config_version,
+        assert!(multisig_wallet_config_version
+            == execute_proposal.config_version,
             error::invalid_state(EOLD_CONFIG_VERSION))
     }
 
@@ -762,7 +768,8 @@ module initia_std::multisig {
         vote_proposal(&account3, multisig_addr, 1, false);
 
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let multisig_signer = object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        let multisig_signer =
+            object::generate_signer_for_extending(&multisig_wallet.extend_ref);
         update_config(
             &multisig_signer,
             vector[addr1, addr2, addr4],

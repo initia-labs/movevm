@@ -80,19 +80,20 @@ module minitia_std::simple_nft {
         mutable_nft_uri: bool,
         royalty: Decimal128,
     ): Object<SimpleNftCollection> {
-        let (_, extend_ref) = initia_nft::create_collection_object(
-            creator,
-            description,
-            max_supply,
-            name,
-            uri,
-            mutable_description,
-            mutable_royalty,
-            mutable_uri,
-            mutable_nft_description,
-            mutable_nft_uri,
-            royalty,
-        );
+        let (_, extend_ref) =
+            initia_nft::create_collection_object(
+                creator,
+                description,
+                max_supply,
+                name,
+                uri,
+                mutable_description,
+                mutable_royalty,
+                mutable_uri,
+                mutable_nft_description,
+                mutable_nft_uri,
+                royalty,
+            );
 
         let object_signer = object::generate_signer_for_extending(&extend_ref);
 
@@ -113,16 +114,17 @@ module minitia_std::simple_nft {
         property_values: vector<vector<u8>>,
         to: Option<address>,
     ) {
-        let nft_object = mint_nft_object(
-            creator,
-            collection,
-            description,
-            token_id,
-            uri,
-            property_keys,
-            property_types,
-            property_values,
-        );
+        let nft_object =
+            mint_nft_object(
+                creator,
+                collection,
+                description,
+                token_id,
+                uri,
+                property_keys,
+                property_types,
+                property_values,
+            );
         if (option::is_some(&to)) {
             object::transfer(creator, nft_object, option::extract(&mut to));
         }
@@ -139,12 +141,12 @@ module minitia_std::simple_nft {
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
     ): Object<SimpleNft> {
-        let (object, extend_ref) = initia_nft::mint_nft_object(creator, collection,
-            description, token_id, uri, true,);
+        let (object, extend_ref) =
+            initia_nft::mint_nft_object(creator, collection, description, token_id, uri, true,);
         let s = object::generate_signer_for_extending(&extend_ref);
 
-        let properties = property_map::prepare_input(property_keys, property_types,
-            property_values);
+        let properties =
+            property_map::prepare_input(property_keys, property_types, property_values);
         property_map::init(&s, properties);
 
         let simple_nft = SimpleNft {
@@ -263,8 +265,8 @@ module minitia_std::simple_nft {
     // Collection accessors
 
     inline fun collection_object(creator: &signer, name: &String): Object<SimpleNftCollection> {
-        let collection_addr = collection::create_collection_address(
-            signer::address_of(creator), name);
+        let collection_addr =
+            collection::create_collection_address(signer::address_of(creator), name);
         object::address_to_object<SimpleNftCollection>(collection_addr)
     }
 

@@ -280,22 +280,24 @@ module initia_std::vip_zapping {
         let (coin_a_metadata, _) = dex::pool_metadata(pair);
 
         // if pair is reversed, swap coin_a and coin_b
-        let (coin_a, coin_b) = if (coin_a_metadata == esinit_metadata) { (esinit, stakelisted) }
-        else { (stakelisted, esinit) };
+        let (coin_a, coin_b) =
+            if (coin_a_metadata == esinit_metadata) { (esinit, stakelisted) }
+            else { (stakelisted, esinit) };
 
-        let zid = provide_lock_stake(
-            account,
-            bridge_id,
-            coin_a,
-            coin_b,
-            pair,
-            min_liquidity,
-            validator,
-            stage,
-            release_time,
-            esinit_metadata,
-            stakelisted_metadata,
-        );
+        let zid =
+            provide_lock_stake(
+                account,
+                bridge_id,
+                coin_a,
+                coin_b,
+                pair,
+                min_liquidity,
+                validator,
+                stage,
+                release_time,
+                esinit_metadata,
+                stakelisted_metadata,
+            );
 
         event::emit(
             ZappingEvent {
@@ -341,16 +343,17 @@ module initia_std::vip_zapping {
             staking::register(account);
         };
 
-        let (share, zid, delegation_res) = create_lock_stake_entry(
-            bridge_id,
-            account_addr,
-            validator,
-            stage,
-            release_time,
-            lock_coin,
-            esinit_metadata,
-            stakelisted_metadata,
-        );
+        let (share, zid, delegation_res) =
+            create_lock_stake_entry(
+                bridge_id,
+                account_addr,
+                validator,
+                stage,
+                release_time,
+                lock_coin,
+                esinit_metadata,
+                stakelisted_metadata,
+            );
 
         // deposit lock stake to account store
         deposit_lock_stake_entry(account_addr, release_time, share, zid, delegation_res);
@@ -373,16 +376,17 @@ module initia_std::vip_zapping {
     ): u64 acquires LSStore, ModuleStore {
         let lp_token = dex::provide_liquidity(pair, coin_a, coin_b, min_liquidity,);
 
-        let zid = lock_stake(
-            account,
-            bridge_id,
-            lp_token,
-            validator,
-            stage,
-            release_time,
-            esinit_metadata,
-            stakelisted_metadata,
-        );
+        let zid =
+            lock_stake(
+                account,
+                bridge_id,
+                lp_token,
+                validator,
+                stage,
+                release_time,
+                esinit_metadata,
+                stakelisted_metadata,
+            );
 
         zid
     }
@@ -400,8 +404,8 @@ module initia_std::vip_zapping {
     ): (u64, u64, DelegationResponse) acquires ModuleStore {
         let bond_amount = fungible_asset::amount(&lock_coin);
         let share = bond_amount;
-        let coin_metadata = object::object_address(
-            fungible_asset::asset_metadata(&lock_coin));
+        let coin_metadata =
+            object::object_address(fungible_asset::asset_metadata(&lock_coin));
         let delegation = staking::delegate(validator, lock_coin);
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -426,7 +430,8 @@ module initia_std::vip_zapping {
             share
         };
 
-        let delegation_res = staking::get_delegation_response_from_delegation(&zapping.delegation);
+        let delegation_res =
+            staking::get_delegation_response_from_delegation(&zapping.delegation);
         table::add(&mut module_store.zappings, zid, zapping);
 
         event::emit(LockEvent { coin_metadata, bond_amount, release_time, share, });
@@ -469,7 +474,8 @@ module initia_std::vip_zapping {
         let zapping = table::remove(&mut module_store.zappings, zid);
         simple_map::remove(&mut ls_store.entries, &zid);
 
-        let delegation_res = staking::get_delegation_response_from_delegation(&zapping.delegation);
+        let delegation_res =
+            staking::get_delegation_response_from_delegation(&zapping.delegation);
 
         event::emit<WithdrawEvent>(
             WithdrawEvent {
@@ -562,7 +568,8 @@ module initia_std::vip_zapping {
             error::not_found(EZAPPING_NOT_EXIST));
         let zapping = table::borrow(&module_store.zappings, zid);
 
-        let delegation_res = staking::get_delegation_response_from_delegation(&zapping.delegation);
+        let delegation_res =
+            staking::get_delegation_response_from_delegation(&zapping.delegation);
         let delegation_info = delegation_res_to_delegation_info(&delegation_res);
 
         delegation_info
@@ -592,15 +599,16 @@ module initia_std::vip_zapping {
     #[test_only]
     fun initialize_coin(account: &signer, symbol: String,)
         : (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability) {
-        let (mint_cap, burn_cap, freeze_cap, _) = coin::initialize_and_generate_extend_ref(
-            account,
-            option::none(),
-            string::utf8(b""),
-            symbol,
-            6,
-            string::utf8(b""),
-            string::utf8(b""),
-        );
+        let (mint_cap, burn_cap, freeze_cap, _) =
+            coin::initialize_and_generate_extend_ref(
+                account,
+                option::none(),
+                string::utf8(b""),
+                symbol,
+                6,
+                string::utf8(b""),
+                string::utf8(b""),
+            );
 
         return (burn_cap, freeze_cap, mint_cap)
     }
@@ -625,10 +633,10 @@ module initia_std::vip_zapping {
         coin::mint_to(&mint_cap, signer::address_of(chain), stakelisted_amount * 2);
         coin::mint_to(&mint_cap, signer::address_of(account), stakelisted_amount);
 
-        let esinit_metadata =
-            coin::metadata(signer::address_of(chain), string::utf8(b"INIT"));
-        let stakelisted_metadata =
-            coin::metadata(signer::address_of(chain), string::utf8(b"USDC"));
+        let esinit_metadata = coin::metadata(signer::address_of(chain),
+            string::utf8(b"INIT"));
+        let stakelisted_metadata = coin::metadata(signer::address_of(chain),
+            string::utf8(b"USDC"));
         let validator = string::utf8(b"val");
 
         dex::create_pair_script(
@@ -658,8 +666,8 @@ module initia_std::vip_zapping {
             stakelisted_amount,
         );
 
-        let lp_metadata = coin::metadata(signer::address_of(chain),
-            string::utf8(b"INIT-USDC"));
+        let lp_metadata =
+            coin::metadata(signer::address_of(chain), string::utf8(b"INIT-USDC"));
         staking::initialize_for_chain(chain, lp_metadata);
         staking::set_staking_share_ratio(*string::bytes(&validator), &lp_metadata, 1, 1);
 
@@ -668,8 +676,8 @@ module initia_std::vip_zapping {
 
     #[test(chain = @0x1, account = @0x999)]
     fun test_zapping(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
-        let (esinit_metadata, stakelisted_metadata, lp_metadata, val) = test_setup_for_zapping(
-            chain, account, 1_000_000_000, 1_000_000_000,);
+        let (esinit_metadata, stakelisted_metadata, lp_metadata, val) =
+            test_setup_for_zapping(chain, account, 1_000_000_000, 1_000_000_000,);
 
         let bridge_id = 1;
         let stage = 10;
@@ -678,10 +686,10 @@ module initia_std::vip_zapping {
         let release_time = start_time + lock_period;
 
         block::set_block_info(1, start_time);
-        let esinit = primary_fungible_store::withdraw(account, esinit_metadata,
-            500_000_000);
-        let stakelisted = primary_fungible_store::withdraw(account, stakelisted_metadata,
-            500_000_000);
+        let esinit =
+            primary_fungible_store::withdraw(account, esinit_metadata, 500_000_000);
+        let stakelisted =
+            primary_fungible_store::withdraw(account, stakelisted_metadata, 500_000_000);
 
         zapping(
             account,
@@ -699,10 +707,10 @@ module initia_std::vip_zapping {
         assert!(zapping.release_time == release_time, 1);
 
         block::set_block_info(1, start_time + 1);
-        let esinit = primary_fungible_store::withdraw(account, esinit_metadata,
-            500_000_000);
-        let stakelisted = primary_fungible_store::withdraw(account, stakelisted_metadata,
-            500_000_000);
+        let esinit =
+            primary_fungible_store::withdraw(account, esinit_metadata, 500_000_000);
+        let stakelisted =
+            primary_fungible_store::withdraw(account, stakelisted_metadata, 500_000_000);
 
         zapping(
             account,
@@ -722,8 +730,8 @@ module initia_std::vip_zapping {
 
     #[test(chain = @0x1, account = @0x999)]
     fun test_zapping_multiple(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
-        let (esinit_metadata, stakelisted_metadata, lp_metadata, val) = test_setup_for_zapping(
-            chain, account, 1_000_000_000, 1_000_000_000,);
+        let (esinit_metadata, stakelisted_metadata, lp_metadata, val) =
+            test_setup_for_zapping(chain, account, 1_000_000_000, 1_000_000_000,);
 
         let bridge_id = 1;
         let (stage, lock_period, start_time) = (10, 3600, 1000000);
@@ -734,9 +742,10 @@ module initia_std::vip_zapping {
 
         let zapping_times = 0;
         while (zapping_times < 500) {
-            let esinit = primary_fungible_store::withdraw(account, esinit_metadata, 1_000);
-            let stakelisted = primary_fungible_store::withdraw(account, stakelisted_metadata,
-                1_000);
+            let esinit =
+                primary_fungible_store::withdraw(account, esinit_metadata, 1_000);
+            let stakelisted =
+                primary_fungible_store::withdraw(account, stakelisted_metadata, 1_000);
 
             zapping(
                 account,
@@ -772,8 +781,8 @@ module initia_std::vip_zapping {
 
     #[test(chain = @0x1, account = @0x3, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
     fun test_claim_reward(chain: &signer, account: &signer, relayer: &signer,) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val) = test_setup_for_zapping(chain, account, 1_000_000_000,
-            1_000_000_000,);
+        let (e_m, s_m, l_m, val) =
+            test_setup_for_zapping(chain, account, 1_000_000_000, 1_000_000_000,);
         let (stage, lock_period, start_time) = (10, 3600, 1000000);
         staking::fund_reward_coin(chain, signer::address_of(relayer), 2_000_000);
 
@@ -801,8 +810,8 @@ module initia_std::vip_zapping {
     fun test_zapping_claim(
         chain: &signer, user_a: &signer, user_b: &signer, relayer: &signer,
     ) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val) = test_setup_for_zapping(chain, user_a, 1_000_000_000,
-            1_000_000_000,);
+        let (e_m, s_m, l_m, val) =
+            test_setup_for_zapping(chain, user_a, 1_000_000_000, 1_000_000_000,);
 
         let esinit = coin::withdraw(user_a, e_m, 250_000_000);
         coin::deposit(signer::address_of(user_b), esinit);
@@ -838,15 +847,16 @@ module initia_std::vip_zapping {
         batch_claim_zapping_script(user_a, vector[0]);
         assert!(
             primary_fungible_store::balance(signer::address_of(user_a),
-                vip_reward::reward_metadata()) == (validator_reward * 2) / 3,
+                vip_reward::reward_metadata())
+            == (validator_reward * 2) / 3,
             3);
     }
 
     #[test(chain = @0x1, account = @0x2)]
     #[expected_failure(abort_code = 0xD0002, location = Self)]
     fun test_zapping_claim_not_released(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val) = test_setup_for_zapping(chain, account, 1_000_000_000,
-            1_000_000_000,);
+        let (e_m, s_m, l_m, val) =
+            test_setup_for_zapping(chain, account, 1_000_000_000, 1_000_000_000,);
         let (stage, start_time) = (10, 1000000);
 
         block::set_block_info(1, start_time);

@@ -170,7 +170,8 @@ module minitia_std::code {
             &module_ids,
             |module_id| {
                 if (table::contains<String, ModuleMetadata>(metadata_table, *module_id)) {
-                    let metadata = table::borrow_mut<String, ModuleMetadata>(metadata_table, *module_id);
+                    let metadata =
+                        table::borrow_mut<String, ModuleMetadata>(metadata_table, *module_id);
                     assert!(metadata.upgrade_policy < UPGRADE_POLICY_IMMUTABLE,
                         error::invalid_argument(EUPGRADE_IMMUTABLE));
                     assert!(

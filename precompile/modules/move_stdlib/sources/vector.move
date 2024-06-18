@@ -597,16 +597,13 @@ module std::vector {
     spec module {
         /// Check if `v1` is equal to the result of adding `e` at the end of `v2`
         fun eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
-            len(v1) == len(v2) + 1
-                && v1[len(v1) - 1] == e
-                && v1[0..len(v1) - 1] == v2[0..len(v2)]
+            len(v1) == len(v2) + 1 && v1[len(v1) - 1] == e && v1[0..len(v1) - 1] == v2[0..len(
+                    v2)]
         }
 
         /// Check if `v` is equal to the result of concatenating `v1` and `v2`
         fun eq_append<Element>(v: vector<Element>, v1: vector<Element>, v2: vector<Element>): bool {
-            len(v) == len(v1) + len(v2)
-                && v[0..len(v1)] == v1
-                && v[len(v1)..len(v)] == v2
+            len(v) == len(v1) + len(v2) && v[0..len(v1)] == v1 && v[len(v1)..len(v)] == v2
         }
 
         /// Check `v1` is equal to the result of removing the first element of `v2`
@@ -616,9 +613,8 @@ module std::vector {
 
         /// Check that `v1` is equal to the result of removing the element at index `i` from `v2`.
         fun eq_remove_elem_at_index<Element>(i: u64, v1: vector<Element>, v2: vector<Element>): bool {
-            len(v1) + 1 == len(v2)
-                && v1[0..i] == v2[0..i]
-                && v1[i..len(v1)] == v2[i + 1..len(v2)]
+            len(v1) + 1 == len(v2) && v1[0..i] == v2[0..i] && v1[i..len(v1)] == v2[i + 1..len(
+                    v2)]
         }
 
         /// Check if `v` contains `e`.

@@ -81,8 +81,9 @@ module initia_std::vip_vault {
 
         module_store.claimable_stage = stage + 1;
         let vault_signer = object::generate_signer_for_extending(&module_store.extend_ref);
-        let vault_store = primary_fungible_store::ensure_primary_store_exists(module_store
-            .vault_store_addr, vip_reward::reward_metadata());
+        let vault_store =
+            primary_fungible_store::ensure_primary_store_exists(module_store.vault_store_addr,
+                vip_reward::reward_metadata());
         fungible_asset::withdraw(&vault_signer, vault_store, module_store.reward_per_stage)
     }
 
