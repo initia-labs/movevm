@@ -34,6 +34,7 @@ pub struct GoApi_vtable {
         *mut u64,             // account_number
         *mut u64,             // sequence
         *mut u8,              // account_type
+        *mut bool,            // is_blocked
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub amount_to_share: extern "C" fn(
@@ -83,7 +84,7 @@ unsafe impl Send for GoApi {}
 
 impl AccountAPI for GoApi {
     // return latest block height and timestamp
-    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8)> {
+    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8, bool)> {
         // DO NOT DELETE; same reason with KeepAlive in go
         let addr_bytes = addr.into_bytes();
 
@@ -92,6 +93,7 @@ impl AccountAPI for GoApi {
         let mut account_number = 0_u64;
         let mut sequence = 0_u64;
         let mut account_type: u8 = 0_u8;
+        let mut is_blocked = false;
         let mut error_msg = UnmanagedVector::default();
 
         let go_error: GoError = (self.vtable.get_account_info)(
@@ -101,6 +103,7 @@ impl AccountAPI for GoApi {
             &mut account_number as *mut u64,
             &mut sequence as *mut u64,
             &mut account_type as *mut u8,
+            &mut is_blocked as *mut bool,
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
@@ -113,7 +116,7 @@ impl AccountAPI for GoApi {
             }
         }
 
-        Ok((found, account_number, sequence, account_type))
+        Ok((found, account_number, sequence, account_type, is_blocked))
     }
 }
 

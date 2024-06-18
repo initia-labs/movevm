@@ -31,6 +31,8 @@ module initia_std::primary_fungible_store {
     use std::string::String;
     use std::vector;
 
+    friend initia_std::coin;
+
     /// A resource that holds the derive ref for the fungible asset metadata object. This is used to create primary
     /// stores for users with deterministic addresses so that users can easily deposit/withdraw/transfer fungible
     /// assets.
@@ -198,6 +200,32 @@ module initia_std::primary_fungible_store {
         };
 
         (metadata_vec, balance_vec)
+    }
+
+    /// Deposit fungible asset `fa` to the given account's primary store.
+    ///
+    /// This function is only callable by the chain.
+    public(friend) fun sudo_deposit(owner: address, fa: FungibleAsset) acquires DeriveRefPod, ModuleStore {
+        let metadata = fungible_asset::asset_metadata(&fa);
+        let store = ensure_primary_store_exists(owner, metadata);
+        fungible_asset::sudo_deposit(store, fa);
+
+        // create cosmos side account
+        if (!account::exists_at(owner)) {
+            let _acc_num = account::create_account(owner);
+        };
+    }
+
+    /// Transfer `amount` of fungible asset from sender's primary store to receiver's primary store.
+    ///
+    /// This function is only callable by the chain.
+    public(friend) entry fun sudo_transfer<T: key>(
+        sender: &signer, metadata: Object<T>, recipient: address, amount: u64,
+    ) acquires DeriveRefPod, ModuleStore {
+        let sender_store =
+            ensure_primary_store_exists(signer::address_of(sender), metadata);
+        let recipient_store = ensure_primary_store_exists(recipient, metadata);
+        fungible_asset::sudo_transfer(sender, sender_store, recipient_store, amount);
     }
 
     /// Withdraw `amount` of fungible asset from the given account's primary store.

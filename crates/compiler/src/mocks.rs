@@ -63,8 +63,9 @@ impl AccountAPI for BlankAccountAPIImpl {
         u64,  /* account_number */
         u64,  /* sequence */
         u8,   /* account_type */
+        bool, /* is_blocked */
     )> {
-        Ok((false, 0, 0, 0))
+        Ok((false, 0, 0, 0, false))
     }
 }
 

@@ -4,6 +4,8 @@ module initia_std::coin {
     use std::from_bcs;
     use std::option::Option;
     use std::string::{Self, String};
+    use std::error;
+    use std::signer;
 
     use initia_std::event;
     use initia_std::primary_fungible_store;
@@ -17,6 +19,8 @@ module initia_std::coin {
     };
     use initia_std::object::{Self, Object, ExtendRef};
     use initia_std::hex;
+
+    friend initia_std::managed_coin;
 
     struct ManagingRefs has key {
         mint_ref: MintRef,
@@ -45,6 +49,33 @@ module initia_std::coin {
 
     struct FreezeCapability has drop, store {
         metadata: Object<Metadata>,
+    }
+
+    const EUNAUTHORIZED: u64 = 1;
+
+    //
+    // sudo interfaces
+    //
+
+    fun check_sudo(account: &signer) {
+        assert!(signer::address_of(account) == @initia_std,
+            error::permission_denied(EUNAUTHORIZED));
+    }
+
+    public entry fun sudo_transfer(
+        chain: &signer,
+        sender: &signer,
+        recipient: address,
+        metadata: Object<Metadata>,
+        amount: u64,
+    ) {
+        check_sudo(chain);
+
+        primary_fungible_store::sudo_transfer(sender, metadata, recipient, amount)
+    }
+
+    public(friend) fun sudo_deposit(account_addr: address, fa: FungibleAsset,) {
+        primary_fungible_store::sudo_deposit(account_addr, fa)
     }
 
     //

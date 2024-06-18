@@ -255,6 +255,7 @@ impl AccountAPI for MockAPI {
         u64,  /* account_number */
         u64,  /* sequence */
         u8,   /* account_type */
+        bool, /* is_blocked */
     )> {
         self.account_api.get_account_info(addr)
     }
@@ -305,7 +306,7 @@ impl OracleAPI for MockAPI {
 }
 
 pub struct MockAccountAPI {
-    pub accounts: BTreeMap<AccountAddress, (u64, u64, u8)>,
+    pub accounts: BTreeMap<AccountAddress, (u64, u64, u8, bool)>,
 }
 
 impl MockAccountAPI {
@@ -321,18 +322,19 @@ impl MockAccountAPI {
         account_number: u64,
         sequence: u64,
         account_type: u8,
+        is_blocked: bool,
     ) {
         self.accounts
-            .insert(addr, (account_number, sequence, account_type));
+            .insert(addr, (account_number, sequence, account_type, is_blocked));
     }
 }
 
 impl MockAccountAPI {
-    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8)> {
-        if let Some((account_number, sequence, account_type)) = self.accounts.get(&addr) {
-            Ok((true, *account_number, *sequence, *account_type))
+    fn get_account_info(&self, addr: AccountAddress) -> anyhow::Result<(bool, u64, u64, u8, bool)> {
+        if let Some((account_number, sequence, account_type, is_blocked)) = self.accounts.get(&addr) {
+            Ok((true, *account_number, *sequence, *account_type, *is_blocked))
         } else {
-            Ok((false, 0, 0, 0))
+            Ok((false, 0, 0, 0, false))
         }
     }
 }
@@ -552,8 +554,9 @@ impl AccountAPI for BlankAccountAPIImpl {
         u64,  /* account_number */
         u64,  /* sequence */
         u8,   /* account_ype */
+        bool, /* is_blocked */
     )> {
-        Ok((false, 0, 0, 0))
+        Ok((false, 0, 0, 0, false))
     }
 }
 
