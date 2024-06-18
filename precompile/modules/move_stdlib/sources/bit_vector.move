@@ -20,13 +20,15 @@ module std::bit_vector {
         assert!(length < MAX_SIZE, ELENGTH);
         let counter = 0;
         let bit_field = vector::empty();
-        while ({
+        while (
+            {
                 spec {
                     invariant counter <= length;
                     invariant len(bit_field) == counter;
                 };
                 (counter < length)
-            }) {
+            }
+        ) {
             vector::push_back(&mut bit_field, false);
             counter = counter + 1;
         };
@@ -35,7 +37,7 @@ module std::bit_vector {
             assert len(bit_field) == length;
         };
 
-        BitVector { length, bit_field, }
+        BitVector {length, bit_field,}
     }
 
     spec new {
@@ -51,8 +53,14 @@ module std::bit_vector {
     }
 
     /// Set the bit at `bit_index` in the `bitvector` regardless of its previous state.
-    public fun set(bitvector: &mut BitVector, bit_index: u64) {
-        assert!(bit_index < vector::length(&bitvector.bit_field), EINDEX);
+    public fun set(
+        bitvector: &mut BitVector,
+        bit_index: u64
+    ) {
+        assert!(
+            bit_index < vector::length(&bitvector.bit_field),
+            EINDEX
+        );
         let x = vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = true;
     }
@@ -69,8 +77,14 @@ module std::bit_vector {
     }
 
     /// Unset the bit at `bit_index` in the `bitvector` regardless of its previous state.
-    public fun unset(bitvector: &mut BitVector, bit_index: u64) {
-        assert!(bit_index < vector::length(&bitvector.bit_field), EINDEX);
+    public fun unset(
+        bitvector: &mut BitVector,
+        bit_index: u64
+    ) {
+        assert!(
+            bit_index < vector::length(&bitvector.bit_field),
+            EINDEX
+        );
         let x = vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = false;
     }
@@ -88,7 +102,10 @@ module std::bit_vector {
 
     /// Shift the `bitvector` left by `amount`. If `amount` is greater than the
     /// bitvector's length the bitvector will be zeroed out.
-    public fun shift_left(bitvector: &mut BitVector, amount: u64) {
+    public fun shift_left(
+        bitvector: &mut BitVector,
+        amount: u64
+    ) {
         if (amount >= bitvector.length) {
             let len = vector::length(&bitvector.bit_field);
             let i = 0;
@@ -118,7 +135,10 @@ module std::bit_vector {
     /// Return the value of the bit at `bit_index` in the `bitvector`. `true`
     /// represents "1" and `false` represents a 0
     public fun is_index_set(bitvector: &BitVector, bit_index: u64): bool {
-        assert!(bit_index < vector::length(&bitvector.bit_field), EINDEX);
+        assert!(
+            bit_index < vector::length(&bitvector.bit_field),
+            EINDEX
+        );
         *vector::borrow(&bitvector.bit_field, bit_index)
     }
 
@@ -134,10 +154,7 @@ module std::bit_vector {
     }
 
     spec fun spec_is_index_set(bitvector: BitVector, bit_index: u64): bool {
-        if (bit_index >= length(bitvector)) { false }
-        else {
-            bitvector.bit_field[bit_index]
-        }
+        if (bit_index >= length(bitvector)) { false } else {bitvector.bit_field[bit_index]}
     }
 
     /// Return the length (number of usable bits) of this bitvector
@@ -149,9 +166,13 @@ module std::bit_vector {
     /// including) `start_index` in the `bitvector`. If there is no such
     /// sequence, then `0` is returned.
     public fun longest_set_sequence_starting_at(
-        bitvector: &BitVector, start_index: u64
+        bitvector: &BitVector,
+        start_index: u64
     ): u64 {
-        assert!(start_index < bitvector.length, EINDEX);
+        assert!(
+            start_index < bitvector.length,
+            EINDEX
+        );
         let index = start_index;
 
         // Find the greatest index in the vector such that all indices less than it are set.
@@ -165,6 +186,6 @@ module std::bit_vector {
 
     #[test_only]
     public fun word_size(): u64 {
-        WORD_SIZE
+         WORD_SIZE
     }
 }

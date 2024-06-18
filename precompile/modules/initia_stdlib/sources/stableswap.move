@@ -148,8 +148,12 @@ module initia_std::stableswap {
         return_metadata: Object<Metadata>,
         offer_amount: u64,
     ): u64 acquires Pool {
-        let (return_amount, fee_amount) = swap_simulation(pool_obj, offer_metadata,
-            return_metadata, offer_amount,);
+        let (return_amount, fee_amount) = swap_simulation(
+            pool_obj,
+            offer_metadata,
+            return_metadata,
+            offer_amount,
+        );
 
         return_amount - fee_amount
     }
@@ -163,21 +167,43 @@ module initia_std::stableswap {
     ): u64 acquires Pool {
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         let return_metadata = coin::denom_to_metadata(return_denom);
-        get_swap_simulation(pool_obj, offer_metadata, return_metadata, offer_amount)
+        get_swap_simulation(
+            pool_obj,
+            offer_metadata,
+            return_metadata,
+            offer_amount
+        )
     }
 
     #[view]
     public fun get_pool(pool: Object<Pool>,): PoolResponse acquires Pool {
-        let (coin_metadata, coin_balances, current_ann, swap_fee_rate) = pool_info(pool);
-        let coin_denoms = vector::map(coin_metadata, |metadata| coin::metadata_to_denom(metadata));
+        let (
+            coin_metadata,
+            coin_balances,
+            current_ann,
+            swap_fee_rate
+        ) = pool_info(pool);
+        let coin_denoms = vector::map(
+            coin_metadata,
+            |metadata| coin::metadata_to_denom(metadata)
+        );
 
-        PoolResponse { coin_metadata, coin_denoms, coin_balances, current_ann, swap_fee_rate }
+        PoolResponse {
+            coin_metadata,
+            coin_denoms,
+            coin_balances,
+            current_ann,
+            swap_fee_rate
+        }
     }
 
     #[view]
     // get all kinds of pool
     // return vector of PoolResponse
-    public fun get_all_pools(start_after: Option<address>, limit: u8,): vector<PoolResponse> acquires ModuleStore, Pool {
+    public fun get_all_pools(
+        start_after: Option<address>,
+        limit: u8,
+    ): vector<PoolResponse> acquires ModuleStore, Pool {
         if (limit > MAX_LIMIT) {
             limit = MAX_LIMIT;
         };
@@ -185,12 +211,22 @@ module initia_std::stableswap {
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
         let res = vector[];
-        let pools_iter = table::iter(&module_store.pools, option::none(), start_after, 2,);
+        let pools_iter = table::iter(
+            &module_store.pools,
+            option::none(),
+            start_after,
+            2,
+        );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<address, bool>(
-                pools_iter)) {
+        while (
+            vector::length(&res) <(limit as u64) && table::prepare<address, bool>(
+                pools_iter
+            )
+        ) {
             let (key, _) = table::next<address, bool>(pools_iter);
-            let pool_response = get_pool(object::address_to_object<Pool>(key));
+            let pool_response = get_pool(
+                object::address_to_object<Pool>(key)
+            );
             vector::push_back(&mut res, pool_response)
         };
 
@@ -198,13 +234,25 @@ module initia_std::stableswap {
     }
 
     fun init_module(chain: &signer) {
-        move_to(chain, ModuleStore { pools: table::new(), pool_count: 0 })
+        move_to(
+            chain,
+            ModuleStore {
+                pools: table::new(),
+                pool_count: 0
+            }
+        )
     }
 
     public fun unpack_pool_response(pool_response: &PoolResponse)
-        : (vector<Object<Metadata>>, vector<String>,
-        vector<u64>, u64, Decimal128) {
-        (pool_response.coin_metadata,
+        : (
+        vector<Object<Metadata>>,
+        vector<String>,
+        vector<u64>,
+        u64,
+        Decimal128
+    ) {
+        (
+            pool_response.coin_metadata,
             pool_response.coin_denoms,
             pool_response.coin_balances,
             pool_response.current_ann,
@@ -227,17 +275,31 @@ module initia_std::stableswap {
         while (i < n) {
             let metadata = *vector::borrow(&coin_metadata, i);
             let amount = *vector::borrow(&coin_amounts, i);
-            vector::push_back(&mut coins,
-                primary_fungible_store::withdraw(creator, metadata, amount));
+            vector::push_back(
+                &mut coins,
+                primary_fungible_store::withdraw(creator, metadata, amount)
+            );
             i = i + 1;
         };
 
-        let liquidity_token = create_pool(creator, name, symbol, swap_fee_rate, coins, ann);
-        primary_fungible_store::deposit(signer::address_of(creator), liquidity_token);
+        let liquidity_token = create_pool(
+            creator,
+            name,
+            symbol,
+            swap_fee_rate,
+            coins,
+            ann
+        );
+        primary_fungible_store::deposit(
+            signer::address_of(creator),
+            liquidity_token
+        );
     }
 
     public entry fun update_swap_fee_rate(
-        account: &signer, pool_obj: Object<Pool>, new_swap_fee_rate: Decimal128
+        account: &signer,
+        pool_obj: Object<Pool>,
+        new_swap_fee_rate: Decimal128
     ) acquires Pool {
         check_chain_permission(account);
         let pool = borrow_pool_mut(pool_obj);
@@ -245,7 +307,10 @@ module initia_std::stableswap {
     }
 
     public entry fun update_ann(
-        account: &signer, pool_obj: Object<Pool>, ann_after: u64, timestamp_after: u64
+        account: &signer,
+        pool_obj: Object<Pool>,
+        ann_after: u64,
+        timestamp_after: u64
     ) acquires Pool {
         check_chain_permission(account);
         let (_, timestamp) = block::get_block_info();
@@ -270,13 +335,18 @@ module initia_std::stableswap {
         while (i < n) {
             let metadata = *vector::borrow(&pool.coin_metadata, i);
             let amount = *vector::borrow(&coin_amounts, i);
-            vector::push_back(&mut coins,
-                primary_fungible_store::withdraw(account, metadata, amount));
+            vector::push_back(
+                &mut coins,
+                primary_fungible_store::withdraw(account, metadata, amount)
+            );
             i = i + 1;
         };
 
         let liquidity_token = provide_liquidity(pool_obj, coins, min_liquidity);
-        primary_fungible_store::deposit(signer::address_of(account), liquidity_token);
+        primary_fungible_store::deposit(
+            signer::address_of(account),
+            liquidity_token
+        );
     }
 
     public entry fun withdraw_liquidity_script(
@@ -285,8 +355,9 @@ module initia_std::stableswap {
         liquidity_amount: u64,
         min_return_amounts: vector<Option<u64>>
     ) acquires Pool {
-        let liquidity_token = primary_fungible_store::withdraw(account, pool_obj,
-            liquidity_amount);
+        let liquidity_token = primary_fungible_store::withdraw(
+            account, pool_obj, liquidity_amount
+        );
         let coins = withdraw_liquidity(liquidity_token, min_return_amounts);
 
         let i = 0;
@@ -312,10 +383,21 @@ module initia_std::stableswap {
         offer_amount: u64,
         min_return_amount: Option<u64>,
     ) acquires Pool {
-        let offer_coin = primary_fungible_store::withdraw(account, offer_coin_metadata,
-            offer_amount);
-        let return_coin = swap(pool_obj, offer_coin, return_coin_metadata, min_return_amount);
-        primary_fungible_store::deposit(signer::address_of(account), return_coin);
+        let offer_coin = primary_fungible_store::withdraw(
+            account,
+            offer_coin_metadata,
+            offer_amount
+        );
+        let return_coin = swap(
+            pool_obj,
+            offer_coin,
+            return_coin_metadata,
+            min_return_amount
+        );
+        primary_fungible_store::deposit(
+            signer::address_of(account),
+            return_coin
+        );
     }
 
     public fun create_pool(
@@ -326,10 +408,25 @@ module initia_std::stableswap {
         coins: vector<FungibleAsset>,
         ann: u64,
     ): FungibleAsset acquires Pool, ModuleStore {
-        assert!(vector::length(&coins) >= 2, error::invalid_argument(EN_COINS));
+        assert!(
+            vector::length(&coins) >= 2,
+            error::invalid_argument(EN_COINS)
+        );
         let (_, timestamp) = block::get_block_info();
-        let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref(
-            creator, option::none(), name, symbol, 6, string::utf8(b""), string::utf8(b""),);
+        let (
+            mint_cap,
+            burn_cap,
+            freeze_cap,
+            extend_ref
+        ) = coin::initialize_and_generate_extend_ref(
+            creator,
+            option::none(),
+            name,
+            symbol,
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
 
         let coin_metadata: vector<Object<Metadata>> = vector[];
         let len = vector::length(&coins);
@@ -337,20 +434,26 @@ module initia_std::stableswap {
         while (i < len) {
             let j = i + 1;
             let coin_metadata_i = fungible_asset::metadata_from_asset(
-                vector::borrow(&coins, i));
+                vector::borrow(&coins, i)
+            );
             while (j < len) {
                 let coin_metadata_j = fungible_asset::metadata_from_asset(
-                    vector::borrow(&coins, j));
-                assert!(coin_metadata_i != coin_metadata_j,
-                    error::invalid_argument(ESAME_COIN_TYPE));
+                    vector::borrow(&coins, j)
+                );
+                assert!(
+                    coin_metadata_i != coin_metadata_j,
+                    error::invalid_argument(ESAME_COIN_TYPE)
+                );
                 j = j + 1;
             };
             vector::push_back(&mut coin_metadata, coin_metadata_i);
             i = i + 1;
         };
 
-        assert!(decimal128::val(&swap_fee_rate) < MAX_FEE_RATE,
-            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE));
+        assert!(
+            decimal128::val(&swap_fee_rate) < MAX_FEE_RATE,
+            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
+        );
 
         let pool_signer = &object::generate_signer_for_extending(&extend_ref);
         let pool_address = signer::address_of(pool_signer);
@@ -372,16 +475,24 @@ module initia_std::stableswap {
                 burn_cap,
                 freeze_cap,
                 mint_cap,
-            });
+            }
+        );
 
         let liquidity_token = provide_liquidity(
-            object::address_to_object<Pool>(pool_address), coins, option::none(),);
+            object::address_to_object<Pool>(pool_address),
+            coins,
+            option::none(),
+        );
 
         // update module store
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.pool_count = module_store.pool_count + 1;
 
-        table::add(&mut module_store.pools, pool_address, true,);
+        table::add(
+            &mut module_store.pools,
+            pool_address,
+            true,
+        );
 
         // emit create pool event
         event::emit<CreatePoolEvent>(
@@ -390,13 +501,16 @@ module initia_std::stableswap {
                 liquidity_token: pool_address,
                 ann,
                 swap_fee_rate,
-            },);
+            },
+        );
 
         return liquidity_token
     }
 
     public fun provide_liquidity(
-        pool_obj: Object<Pool>, coins: vector<FungibleAsset>, min_liquidity: Option<u64>
+        pool_obj: Object<Pool>,
+        coins: vector<FungibleAsset>,
+        min_liquidity: Option<u64>
     ): FungibleAsset acquires Pool {
         let pool = borrow_pool(pool_obj);
         let pool_addr = object::object_address(pool_obj);
@@ -405,7 +519,9 @@ module initia_std::stableswap {
 
         let pool_amounts_before = get_pool_amounts(pool_addr, pool.coin_metadata);
         let d_before = get_d(pool_amounts_before, ann);
-        let total_supply = option::extract(&mut fungible_asset::supply(pool_obj));
+        let total_supply = option::extract(
+            &mut fungible_asset::supply(pool_obj)
+        );
         let amounts = get_amounts(&coins);
 
         // pool amounts before adjust fee
@@ -415,9 +531,15 @@ module initia_std::stableswap {
             let pool_amount = *vector::borrow(&pool_amounts_before, i);
             let offer_amount = *vector::borrow(&amounts, i);
             if (total_supply == 0) {
-                assert!(offer_amount > 0, error::invalid_argument(EZERO_LIQUIDITY));
+                assert!(
+                    offer_amount > 0,
+                    error::invalid_argument(EZERO_LIQUIDITY)
+                );
             };
-            vector::push_back(&mut pool_amounts_after, pool_amount + offer_amount);
+            vector::push_back(
+                &mut pool_amounts_after,
+                pool_amount + offer_amount
+            );
             i = i + 1;
         };
 
@@ -425,13 +547,18 @@ module initia_std::stableswap {
 
         // calc fees
         let liquidity_amount = if (total_supply > 0) {
-            let provide_fee_rate = decimal128::new(decimal128::val(&pool.swap_fee_rate) * (n as u128)
-                / (4 * (n - 1) as u128));
+            let provide_fee_rate = decimal128::new(
+                decimal128::val(&pool.swap_fee_rate) * (n as u128) / (4 * (n - 1) as u128)
+            );
             i = 0;
             while (i < n) {
                 let pool_amount_before = *vector::borrow(&pool_amounts_before, i);
                 let pool_amount_after = vector::borrow_mut(&mut pool_amounts_after, i);
-                let ideal_balance = mul_div_u64(d_ideal, pool_amount_before, d_before);
+                let ideal_balance = mul_div_u64(
+                    d_ideal,
+                    pool_amount_before,
+                    d_before
+                );
                 let diff = if (ideal_balance > *pool_amount_after) {
                     ideal_balance - *pool_amount_after
                 } else {
@@ -443,11 +570,19 @@ module initia_std::stableswap {
             };
 
             let d_real = get_d(pool_amounts_after, ann);
-            (mul_div_u128(total_supply, (d_real - d_before as u128), (d_before as u128)) as u64)
+            (
+                mul_div_u128(
+                    total_supply,
+                    (d_real - d_before as u128),
+                    (d_before as u128)
+                ) as u64
+            )
         } else { d_ideal };
 
-        assert!(option::is_none(&min_liquidity) || *option::borrow(&min_liquidity) <= liquidity_amount,
-            error::invalid_state(EMIN_LIQUIDITY),);
+        assert!(
+            option::is_none(&min_liquidity) || *option::borrow(&min_liquidity) <= liquidity_amount,
+            error::invalid_state(EMIN_LIQUIDITY),
+        );
 
         i = 0;
         while (i < n) {
@@ -465,22 +600,30 @@ module initia_std::stableswap {
                 coin_amounts: amounts,
                 liquidity_token: pool_addr,
                 liquidity: liquidity_amount,
-            },);
+            },
+        );
 
         return liquidity_token
     }
 
     public fun withdraw_liquidity(
-        liquidity_token: FungibleAsset, min_return_amounts: vector<Option<u64>>
+        liquidity_token: FungibleAsset,
+        min_return_amounts: vector<Option<u64>>
     ): vector<FungibleAsset> acquires Pool {
         let pool_addr = object::object_address(
-            fungible_asset::metadata_from_asset(&liquidity_token));
+            fungible_asset::metadata_from_asset(&liquidity_token)
+        );
         let pool_obj = object::address_to_object<Pool>(pool_addr);
         let liquidity_amount = fungible_asset::amount(&liquidity_token);
-        assert!(liquidity_amount != 0, error::invalid_argument(EZERO_LIQUIDITY));
+        assert!(
+            liquidity_amount != 0,
+            error::invalid_argument(EZERO_LIQUIDITY)
+        );
         let pool = borrow_pool(pool_obj);
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
-        let total_supply = option::extract(&mut fungible_asset::supply(pool_obj));
+        let total_supply = option::extract(
+            &mut fungible_asset::supply(pool_obj)
+        );
         let n = vector::length(&pool.coin_metadata);
 
         let return_coins: vector<FungibleAsset> = vector[];
@@ -491,17 +634,29 @@ module initia_std::stableswap {
         while (i < n) {
             let pool_amount = *vector::borrow(&pool_amounts, i);
             let return_amount = (
-                mul_div_u128((pool_amount as u128), (liquidity_amount as u128), total_supply) as u64
+                mul_div_u128(
+                    (pool_amount as u128),
+                    (liquidity_amount as u128),
+                    total_supply
+                ) as u64
             );
             let min_return = vector::borrow(&min_return_amounts, i);
             let coin_metadata = *vector::borrow(&pool.coin_metadata, i);
 
-            assert!(option::is_none(min_return) || *option::borrow(min_return) <= return_amount,
-                error::invalid_state(EMIN_WITHDRAW),);
+            assert!(
+                option::is_none(min_return) || *option::borrow(min_return) <= return_amount,
+                error::invalid_state(EMIN_WITHDRAW),
+            );
 
             vector::push_back(&mut coin_amounts, return_amount);
-            vector::push_back(&mut return_coins,
-                primary_fungible_store::withdraw(&pool_signer, coin_metadata, return_amount));
+            vector::push_back(
+                &mut return_coins,
+                primary_fungible_store::withdraw(
+                    &pool_signer,
+                    coin_metadata,
+                    return_amount
+                )
+            );
             i = i + 1;
         };
 
@@ -513,7 +668,8 @@ module initia_std::stableswap {
                 coin_amounts,
                 liquidity_token: pool_addr,
                 liquidity: liquidity_amount,
-            },);
+            },
+        );
 
         return return_coins
     }
@@ -530,20 +686,29 @@ module initia_std::stableswap {
     ): FungibleAsset acquires Pool {
         let offer_coin_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_amount = fungible_asset::amount(&offer_coin);
-        let (return_amount, fee_amount) = swap_simulation(pool_obj, offer_coin_metadata,
-            return_coin_metadata, offer_amount);
+        let (return_amount, fee_amount) = swap_simulation(
+            pool_obj,
+            offer_coin_metadata,
+            return_coin_metadata,
+            offer_amount
+        );
         return_amount = return_amount - fee_amount;
 
-        assert!(option::is_none(&min_return_amount) || *option::borrow(&min_return_amount)
-            <= return_amount,
-            error::invalid_state(EMIN_RETURN),);
+        assert!(
+            option::is_none(&min_return_amount) || *option::borrow(&min_return_amount) <=
+                return_amount,
+            error::invalid_state(EMIN_RETURN),
+        );
 
         let pool = borrow_pool(pool_obj);
         let pool_addr = object::object_address(pool_obj);
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         primary_fungible_store::deposit(pool_addr, offer_coin);
-        let return_coin = primary_fungible_store::withdraw(&pool_signer,
-            return_coin_metadata, return_amount);
+        let return_coin = primary_fungible_store::withdraw(
+            &pool_signer,
+            return_coin_metadata,
+            return_amount
+        );
 
         event::emit<SwapEvent>(
             SwapEvent {
@@ -553,21 +718,31 @@ module initia_std::stableswap {
                 fee_amount,
                 offer_amount,
                 return_amount,
-            },);
+            },
+        );
 
         return return_coin
     }
 
     public fun pool_info(pool_obj: Object<Pool>)
-        : (vector<Object<Metadata>>, vector<u64>, u64,
-        Decimal128) acquires Pool {
+        : (
+        vector<Object<Metadata>>,
+        vector<u64>,
+        u64,
+        Decimal128
+    ) acquires Pool {
         let pool_addr = object::object_address(pool_obj);
         let pool = borrow_global<Pool>(pool_addr);
 
         let ann = get_current_ann(&pool.ann);
         let pool_amounts = get_pool_amounts(pool_addr, pool.coin_metadata);
 
-        (pool.coin_metadata, pool_amounts, ann, pool.swap_fee_rate,)
+        (
+            pool.coin_metadata,
+            pool_amounts,
+            ann,
+            pool.swap_fee_rate,
+        )
     }
 
     inline fun borrow_pool(pool_obj: Object<Pool>): &Pool {
@@ -586,25 +761,38 @@ module initia_std::stableswap {
         };
 
         if (ann.ann_after > ann.ann_before) {
-            return ann.ann_before + (ann.ann_after - ann.ann_before) * (timestamp - ann.timestamp_before)
-                / (ann.timestamp_after - ann.timestamp_before)
+            return ann.ann_before + (ann.ann_after - ann.ann_before) * (
+                timestamp - ann.timestamp_before
+            ) / (
+                ann.timestamp_after - ann.timestamp_before
+            )
         } else {
-            return ann.ann_before - (ann.ann_before - ann.ann_after) * (timestamp - ann.timestamp_before)
-                / (ann.timestamp_after - ann.timestamp_before)
+            return ann.ann_before - (ann.ann_before - ann.ann_after) * (
+                timestamp - ann.timestamp_before
+            ) / (
+                ann.timestamp_after - ann.timestamp_before
+            )
         }
     }
 
     fun check_coin_metadata(
-        coin_metadata: &vector<Object<Metadata>>, coins: &vector<FungibleAsset>
+        coin_metadata: &vector<Object<Metadata>>,
+        coins: &vector<FungibleAsset>
     ): u64 {
         let len = vector::length(coin_metadata);
-        assert!(len == vector::length(coins), error::invalid_argument(EN_COINS));
+        assert!(
+            len == vector::length(coins),
+            error::invalid_argument(EN_COINS)
+        );
 
         let i = 0;
         while (i < len) {
             let metadata = vector::borrow(coin_metadata, i);
             let metadata_ = fungible_asset::metadata_from_asset(vector::borrow(coins, i));
-            assert!(*metadata == metadata_, error::invalid_argument(ECOIN_TYPE));
+            assert!(
+                *metadata == metadata_,
+                error::invalid_argument(ECOIN_TYPE)
+            );
             i = i + 1;
         };
 
@@ -612,15 +800,18 @@ module initia_std::stableswap {
     }
 
     fun get_pool_amounts(
-        pool_addr: address, coin_metadata: vector<Object<Metadata>>
+        pool_addr: address,
+        coin_metadata: vector<Object<Metadata>>
     ): vector<u64> {
         let amounts: vector<u64> = vector[];
         let len = vector::length(&coin_metadata);
         let i = 0;
         while (i < len) {
             let metadata = *vector::borrow(&coin_metadata, i);
-            vector::push_back(&mut amounts,
-                primary_fungible_store::balance(pool_addr, metadata));
+            vector::push_back(
+                &mut amounts,
+                primary_fungible_store::balance(pool_addr, metadata)
+            );
             i = i + 1;
         };
 
@@ -640,7 +831,9 @@ module initia_std::stableswap {
         return amounts
     }
 
-    fun get_coin_addresses(coin_metadata: vector<Object<Metadata>>): vector<address> {
+    fun get_coin_addresses(
+        coin_metadata: vector<Object<Metadata>>
+    ): vector<address> {
         let addresses: vector<address> = vector[];
         let len = vector::length(&coin_metadata);
         let i = 0;
@@ -659,7 +852,7 @@ module initia_std::stableswap {
         let sum: u256 = 0;
         let n = (vector::length(&amounts) as u256);
         let i = 0;
-        while (i < (n as u64)) {
+        while (i <(n as u64)) {
             sum = sum + (*vector::borrow(&amounts, i) as u256);
             i = i + 1;
         };
@@ -670,27 +863,24 @@ module initia_std::stableswap {
 
         // converge
         // d = (ann * sum - d_prod) / (ann - 1)
-        while (i < 255) {
+        while (i <255) {
             let d_prev = d;
             // D ** (n + 1) / (n ** n * prod)
             let d_prod = d;
             let j = 0;
-            while (j < (n as u64)) {
+            while (j <(n as u64)) {
                 d_prod = d_prod * d / (n as u256) / (*vector::borrow(&amounts, j) as u256);
                 j = j + 1;
             };
 
-            d = (ann * sum / A_PRECISION + d_prod * n) * d / ((ann - A_PRECISION) * d / A_PRECISION
-                + (n + 1) * d_prod);
-            if (d > d_prev) {
-                if (d - d_prev <= 1) break
-            } else {
-                if (d_prev - d <= 1) break
-            };
+            d = (ann * sum / A_PRECISION + d_prod * n) * d / (
+                (ann - A_PRECISION) * d / A_PRECISION + (n + 1) * d_prod
+            );
+            if (d > d_prev) {if (d - d_prev <= 1) break} else {if (d_prev - d <= 1) break};
             i = i + 1;
         };
 
-        return (d as u64)
+        return(d as u64)
     }
 
     /// get counterparty's amount
@@ -719,8 +909,15 @@ module initia_std::stableswap {
                 continue
             };
 
-            let pool_amount = if (i == offer_index) { (*vector::borrow(&pool_amounts, i) + offer_amount as u256) }
-            else { (*vector::borrow(&pool_amounts, i) as u256) };
+            let pool_amount = if (i == offer_index) {
+                (
+                    *vector::borrow(&pool_amounts, i) + offer_amount as u256
+                )
+            } else {
+                (
+                    *vector::borrow(&pool_amounts, i) as u256
+                )
+            };
 
             sum = sum + pool_amount;
             c = c * d / (pool_amount * (n as u256));
@@ -735,15 +932,11 @@ module initia_std::stableswap {
 
         let i = 0;
         // converge
-        while (i < 255) {
+        while (i <255) {
             y_prev = y;
             y = (y * y + c) / (2 * y + b_plus_d - d); // sub d here
 
-            if (y > y_prev) {
-                if (y - y_prev <= 1) break
-            } else {
-                if (y_prev - y <= 1) break
-            };
+            if (y > y_prev) {if (y - y_prev <= 1) break} else {if (y_prev - y <= 1) break};
             i = i + 1;
         };
 
@@ -752,7 +945,8 @@ module initia_std::stableswap {
 
     // avoid zero fee amount to prevent fee bypass attack
     fun calculate_fee_with_minimum(
-        swap_fee_rate: &Decimal128, amount_in: u64
+        swap_fee_rate: &Decimal128,
+        amount_in: u64
     ): u64 {
         let fee_amount = decimal128::mul_u64_with_ceil(swap_fee_rate, amount_in);
         if (fee_amount == 0) {
@@ -768,8 +962,10 @@ module initia_std::stableswap {
         return_coin_metadata: Object<Metadata>,
         offer_amount: u64,
     ): (u64, u64) acquires Pool {
-        assert!(offer_coin_metadata != return_coin_metadata,
-            error::invalid_argument(ESAME_COIN_TYPE));
+        assert!(
+            offer_coin_metadata != return_coin_metadata,
+            error::invalid_argument(ESAME_COIN_TYPE)
+        );
         let pool = borrow_pool(pool_obj);
         let pool_addr = object::object_address(pool_obj);
         let n = vector::length(&pool.coin_metadata);
@@ -781,19 +977,24 @@ module initia_std::stableswap {
         let i = 0;
         while (i < n) {
             let metadata = *vector::borrow(&pool.coin_metadata, i);
-            if (metadata == offer_coin_metadata) {
-                offer_index = i
-            };
-            if (metadata == return_coin_metadata) {
-                return_index = i
-            };
+            if (metadata == offer_coin_metadata) {offer_index = i};
+            if (metadata == return_coin_metadata) {return_index = i};
             if (offer_index != n && return_index != n) { break };
             i = i + 1;
         };
 
-        assert!(offer_index != n && return_index != n, error::invalid_argument(ECOIN_TYPE));
+        assert!(
+            offer_index != n && return_index != n,
+            error::invalid_argument(ECOIN_TYPE)
+        );
 
-        let y = get_y(offer_index, return_index, offer_amount, pool_amounts, ann);
+        let y = get_y(
+            offer_index,
+            return_index,
+            offer_amount,
+            pool_amounts,
+            ann
+        );
         let return_amount = *vector::borrow(&pool_amounts, return_index) - y - 1; // sub 1 just in case
         let fee_amount = calculate_fee_with_minimum(&pool.swap_fee_rate, return_amount);
 
@@ -801,17 +1002,23 @@ module initia_std::stableswap {
     }
 
     fun mul_div_u64(a: u64, b: u64, c: u64): u64 {
-        return ((a as u128) * (b as u128) / (c as u128) as u64)
+        return(
+            (a as u128) * (b as u128) / (c as u128) as u64
+        )
     }
 
     fun mul_div_u128(a: u128, b: u128, c: u128): u128 {
-        return ((a as u256) * (b as u256) / (c as u256) as u128)
+        return(
+            (a as u256) * (b as u256) / (c as u256) as u128
+        )
     }
 
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
-        assert!(signer::address_of(chain) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED));
+        assert!(
+            signer::address_of(chain) == @initia_std,
+            error::permission_denied(EUNAUTHORIZED)
+        );
     }
 
     #[test_only]
@@ -821,7 +1028,11 @@ module initia_std::stableswap {
 
     #[test_only]
     fun initialized_coin(account: &signer, symbol: String,)
-        : (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability) {
+        : (
+        coin::BurnCapability,
+        coin::FreezeCapability,
+        coin::MintCapability
+    ) {
         let (mint_cap, burn_cap, freeze_cap, _) = coin::initialize_and_generate_extend_ref(
             account,
             option::none(),
@@ -832,7 +1043,7 @@ module initia_std::stableswap {
             string::utf8(b""),
         );
 
-        return (burn_cap, freeze_cap, mint_cap)
+        return(burn_cap, freeze_cap, mint_cap)
     }
 
     #[test(chain = @0x1)]
@@ -859,19 +1070,69 @@ module initia_std::stableswap {
         let metadata_lp = coin::metadata(chain_addr, string::utf8(b"lp"));
         let pool = object::convert<Metadata, Pool>(metadata_lp);
 
-        assert!(coin::balance(chain_addr, metadata_lp) == 200000000, 0);
-        assert!(coin::balance(chain_addr, metadata_a) == 900000000, 0);
-        assert!(coin::balance(chain_addr, metadata_b) == 900000000, 0);
-        provide_liquidity_script(&chain, pool, vector[100000000, 100000000], option::none());
-        assert!(coin::balance(chain_addr, metadata_lp) == 400000000, 1);
-        assert!(coin::balance(chain_addr, metadata_a) == 800000000, 1);
-        assert!(coin::balance(chain_addr, metadata_b) == 800000000, 1);
-        withdraw_liquidity_script(&chain, pool, 100000000, vector[option::none(), option::none()]);
-        assert!(coin::balance(chain_addr, metadata_lp) == 300000000, 2);
-        assert!(coin::balance(chain_addr, metadata_a) == 850000000, 2);
-        assert!(coin::balance(chain_addr, metadata_b) == 850000000, 2);
-        swap_script(&chain, pool, metadata_a, metadata_b, 1000000, option::none());
-        assert!(coin::balance(chain_addr, metadata_a) == 849000000, 3);
-        assert!(coin::balance(chain_addr, metadata_b) == 850999284, 3);
+        assert!(
+            coin::balance(chain_addr, metadata_lp) == 200000000,
+            0
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_a) == 900000000,
+            0
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_b) == 900000000,
+            0
+        );
+        provide_liquidity_script(
+            &chain,
+            pool,
+            vector[100000000, 100000000],
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_lp) == 400000000,
+            1
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_a) == 800000000,
+            1
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_b) == 800000000,
+            1
+        );
+        withdraw_liquidity_script(
+            &chain,
+            pool,
+            100000000,
+            vector[option::none(), option::none()]
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_lp) == 300000000,
+            2
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_a) == 850000000,
+            2
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_b) == 850000000,
+            2
+        );
+        swap_script(
+            &chain,
+            pool,
+            metadata_a,
+            metadata_b,
+            1000000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_a) == 849000000,
+            3
+        );
+        assert!(
+            coin::balance(chain_addr, metadata_b) == 850999284,
+            3
+        );
     }
 }

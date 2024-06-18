@@ -162,9 +162,15 @@ module initia_std::object {
 
     /// Produces an ObjectId from the given address. This is not verified.
     public fun address_to_object<T: key>(object: address): Object<T> {
-        assert!(exists<ObjectCore>(object), error::not_found(EOBJECT_DOES_NOT_EXIST));
-        assert!(exists_at<T>(object), error::not_found(ERESOURCE_DOES_NOT_EXIST));
-        Object<T> { inner: object }
+        assert!(
+            exists<ObjectCore>(object),
+            error::not_found(EOBJECT_DOES_NOT_EXIST)
+        );
+        assert!(
+            exists_at<T>(object),
+            error::not_found(ERESOURCE_DOES_NOT_EXIST)
+        );
+        Object<T> {inner: object}
     }
 
     /// Returns true if there exists an object or the remnants of an object.
@@ -176,16 +182,21 @@ module initia_std::object {
     public fun create_object_address(source: address, seed: vector<u8>): address {
         let bytes = bcs::to_bytes(&source);
         vector::append(&mut bytes, seed);
-        vector::push_back(&mut bytes, OBJECT_FROM_SEED_ADDRESS_SCHEME);
+        vector::push_back(
+            &mut bytes,
+            OBJECT_FROM_SEED_ADDRESS_SCHEME
+        );
         from_bcs::to_address(hash::sha3_256(bytes))
     }
 
     /// Derives an object address from the source address and an object: sha3_256([source | object addr | 0xFC]).
-    public fun create_user_derived_object_address(
-        source: address, derive_from: address
-    ): address {
+    public fun create_user_derived_object_address(source: address, derive_from: address)
+        : address {
         let bytes = bcs::to_bytes(&source);
-        vector::append(&mut bytes, bcs::to_bytes(&derive_from));
+        vector::append(
+            &mut bytes,
+            bcs::to_bytes(&derive_from)
+        );
         vector::push_back(&mut bytes, OBJECT_DERIVED_SCHEME);
         from_bcs::to_address(hash::sha3_256(bytes))
     }
@@ -194,7 +205,10 @@ module initia_std::object {
     public fun create_guid_object_address(source: address, creation_num: u64): address {
         let id = guid::create_id(source, creation_num);
         let bytes = bcs::to_bytes(&id);
-        vector::push_back(&mut bytes, OBJECT_FROM_GUID_ADDRESS_SCHEME);
+        vector::push_back(
+            &mut bytes,
+            OBJECT_FROM_GUID_ADDRESS_SCHEME
+        );
         from_bcs::to_address(hash::sha3_256(bytes))
     }
 
@@ -213,36 +227,60 @@ module initia_std::object {
     /// Create a new named object and return the ConstructorRef. Named objects can be queried globally
     /// by knowing the user generated seed used to create them.
     public fun create_named_object(
-        creator: &signer, seed: vector<u8>, can_delete: bool
+        creator: &signer,
+        seed: vector<u8>,
+        can_delete: bool
     ): ConstructorRef acquires Tombstone {
         let creator_address = signer::address_of(creator);
         let obj_addr = create_object_address(creator_address, seed);
-        create_object_internal(creator_address, obj_addr, can_delete)
+        create_object_internal(
+            creator_address,
+            obj_addr,
+            can_delete
+        )
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.
     /// Derivde objects, similar to named objects, cannot be deleted.
     public(friend) fun create_user_derived_object(
-        creator_address: address, derive_ref: &DeriveRef, can_delete: bool
+        creator_address: address,
+        derive_ref: &DeriveRef,
+        can_delete: bool
     ): ConstructorRef acquires Tombstone {
         let obj_addr = create_user_derived_object_address(creator_address, derive_ref.self);
-        create_object_internal(creator_address, obj_addr, can_delete)
+        create_object_internal(
+            creator_address,
+            obj_addr,
+            can_delete
+        )
     }
 
     /// Create a new object by generating a random unique address based on transaction hash.
     /// The unique address is computed sha3_256([transaction hash | auid counter | 0xFB]).
-    public fun create_object(owner_address: address, can_delete: bool): ConstructorRef acquires Tombstone {
+    public fun create_object(
+        owner_address: address,
+        can_delete: bool
+    ): ConstructorRef acquires Tombstone {
         let unique_address = transaction_context::generate_unique_address();
-        create_object_internal(owner_address, unique_address, can_delete)
+        create_object_internal(
+            owner_address,
+            unique_address,
+            can_delete
+        )
     }
 
     fun create_object_internal(
-        creator_address: address, object: address, can_delete: bool,
+        creator_address: address,
+        object: address,
+        can_delete: bool,
     ): ConstructorRef acquires Tombstone {
         // create resource account to prevent address overapping.
         account::create_object_account(object);
 
-        assert!(!exists<ObjectCore>(object), error::already_exists(EOBJECT_EXISTS));
+        assert!(
+            !exists<ObjectCore>(object),
+            error::already_exists(EOBJECT_EXISTS)
+        );
         let object_signer = account::create_signer(object);
         let version = if (exists<Tombstone>(object)) {
             let Tombstone { version } = move_from<Tombstone>(object);
@@ -251,34 +289,60 @@ module initia_std::object {
 
         move_to(
             &object_signer,
-            ObjectCore { owner: creator_address, allow_ungated_transfer: true, version, },);
+            ObjectCore {
+                owner: creator_address,
+                allow_ungated_transfer: true,
+                version,
+            },
+        );
 
-        event::emit(CreateEvent { owner: creator_address, object, version, });
+        event::emit(
+            CreateEvent {
+                owner: creator_address,
+                object,
+                version,
+            }
+        );
 
-        ConstructorRef { self: object, version, can_delete }
+        ConstructorRef {self: object, version, can_delete}
     }
 
     // Creation helpers
 
     /// Generates the DeleteRef, which can be used to remove ObjectCore from global storage.
     public fun generate_delete_ref(ref: &ConstructorRef): DeleteRef {
-        assert!(ref.can_delete, error::permission_denied(ECANNOT_DELETE));
-        DeleteRef { self: ref.self, version: ref.version }
+        assert!(
+            ref.can_delete,
+            error::permission_denied(ECANNOT_DELETE)
+        );
+        DeleteRef {
+            self: ref.self,
+            version: ref.version
+        }
     }
 
     /// Generates the ExtendRef, which can be used to add new events and resources to the object.
     public fun generate_extend_ref(ref: &ConstructorRef): ExtendRef {
-        ExtendRef { self: ref.self, version: ref.version }
+        ExtendRef {
+            self: ref.self,
+            version: ref.version
+        }
     }
 
     /// Generates the TransferRef, which can be used to manage object transfers.
     public fun generate_transfer_ref(ref: &ConstructorRef): TransferRef {
-        TransferRef { self: ref.self, version: ref.version }
+        TransferRef {
+            self: ref.self,
+            version: ref.version
+        }
     }
 
     /// Generates the DeriveRef, which can be used to create determnistic derived objects from the current object.
     public fun generate_derive_ref(ref: &ConstructorRef): DeriveRef {
-        DeriveRef { self: ref.self, version: ref.version }
+        DeriveRef {
+            self: ref.self,
+            version: ref.version
+        }
     }
 
     /// Create a signer for the ConstructorRef
@@ -316,13 +380,22 @@ module initia_std::object {
     /// Removes from the specified Object from global storage.
     public fun delete(ref: DeleteRef) acquires ObjectCore {
         let object_core = move_from<ObjectCore>(ref.self);
-        assert!(ref.version == object_core.version,
-            error::permission_denied(EVERSION_MISMATCH));
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
 
-        let ObjectCore { owner: _, allow_ungated_transfer: _, version, } = object_core;
+        let ObjectCore {
+            owner: _,
+            allow_ungated_transfer: _,
+            version,
+        } = object_core;
 
         // set tombstone
-        move_to<Tombstone>(&account::create_signer(ref.self), Tombstone { version, });
+        move_to<Tombstone>(
+            &account::create_signer(ref.self),
+            Tombstone {version,}
+        );
     }
 
     // Extension helpers
@@ -330,8 +403,10 @@ module initia_std::object {
     /// Create a signer for the ExtendRef
     public fun generate_signer_for_extending(ref: &ExtendRef): signer acquires ObjectCore {
         let object_core = borrow_global<ObjectCore>(ref.self);
-        assert!(ref.version == object_core.version,
-            error::permission_denied(EVERSION_MISMATCH));
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
 
         account::create_signer(ref.self)
     }
@@ -346,8 +421,10 @@ module initia_std::object {
     /// Disable direct transfer, transfers can only be triggered via a TransferRef
     public fun disable_ungated_transfer(ref: &TransferRef) acquires ObjectCore {
         let object_core = borrow_global_mut<ObjectCore>(ref.self);
-        assert!(ref.version == object_core.version,
-            error::permission_denied(EVERSION_MISMATCH));
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
 
         object_core.allow_ungated_transfer = false;
     }
@@ -355,8 +432,10 @@ module initia_std::object {
     /// Enable direct transfer.
     public fun enable_ungated_transfer(ref: &TransferRef) acquires ObjectCore {
         let object_core = borrow_global_mut<ObjectCore>(ref.self);
-        assert!(ref.version == object_core.version,
-            error::permission_denied(EVERSION_MISMATCH));
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
 
         object_core.allow_ungated_transfer = true;
     }
@@ -365,8 +444,10 @@ module initia_std::object {
     /// time of generation is the owner at the time of transferring.
     public fun generate_linear_transfer_ref(ref: &TransferRef): LinearTransferRef acquires ObjectCore {
         let object_core = borrow_global<ObjectCore>(ref.self);
-        assert!(ref.version == object_core.version,
-            error::permission_denied(EVERSION_MISMATCH));
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
 
         LinearTransferRef {
             self: ref.self,
@@ -378,24 +459,41 @@ module initia_std::object {
     /// Transfer to the destination address using a LinearTransferRef.
     public fun transfer_with_ref(ref: LinearTransferRef, to: address) acquires ObjectCore {
         let object_core = borrow_global_mut<ObjectCore>(ref.self);
-        assert!(ref.version == object_core.version,
-            error::permission_denied(EVERSION_MISMATCH));
-        assert!(object_core.owner == ref.owner, error::permission_denied(ENOT_OBJECT_OWNER));
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
+        assert!(
+            object_core.owner == ref.owner,
+            error::permission_denied(ENOT_OBJECT_OWNER)
+        );
 
-        event::emit(TransferEvent { object: ref.self, from: object_core.owner, to, },);
+        event::emit(
+            TransferEvent {
+                object: ref.self,
+                from: object_core.owner,
+                to,
+            },
+        );
 
         object_core.owner = to;
     }
 
     /// Entry function that can be used to transfer, if allow_ungated_transfer is set true.
-    public entry fun transfer_call(owner: &signer, object: address, to: address,) acquires ObjectCore {
+    public entry fun transfer_call(
+        owner: &signer,
+        object: address,
+        to: address,
+    ) acquires ObjectCore {
         transfer_raw(owner, object, to)
     }
 
     /// Transfers ownership of the object (and all associated resources) at the specified address
     /// for Object<T> to the "to" address.
     public entry fun transfer<T: key>(
-        owner: &signer, object: Object<T>, to: address,
+        owner: &signer,
+        object: Object<T>,
+        to: address,
     ) acquires ObjectCore {
         transfer_raw(owner, object.inner, to)
     }
@@ -404,20 +502,32 @@ module initia_std::object {
     /// allow_ungated_transfer is set true. Note, that this allows the owner of a nested object to
     /// transfer that object, so long as allow_ungated_transfer is enabled at each stage in the
     /// hierarchy.
-    public fun transfer_raw(owner: &signer, object: address, to: address,) acquires ObjectCore {
+    public fun transfer_raw(
+        owner: &signer,
+        object: address,
+        to: address,
+    ) acquires ObjectCore {
         let owner_address = signer::address_of(owner);
         verify_ungated_and_descendant(owner_address, object);
 
         let object_core = borrow_global_mut<ObjectCore>(object);
         if (object_core.owner == to) { return };
 
-        event::emit(TransferEvent { object: object, from: object_core.owner, to, },);
+        event::emit(
+            TransferEvent {
+                object: object,
+                from: object_core.owner,
+                to,
+            },
+        );
         object_core.owner = to;
     }
 
     /// Transfer the given object to another object. See `transfer` for more information.
     public entry fun transfer_to_object<O: key, T: key>(
-        owner: &signer, object: Object<O>, to: Object<T>,
+        owner: &signer,
+        object: Object<O>,
+        to: Object<T>,
     ) acquires ObjectCore {
         transfer(owner, object, to.inner)
     }
@@ -427,27 +537,38 @@ module initia_std::object {
     /// objects may have cyclic dependencies.
     fun verify_ungated_and_descendant(owner: address, destination: address) acquires ObjectCore {
         let current_address = destination;
-        assert!(exists<ObjectCore>(current_address),
-            error::not_found(EOBJECT_DOES_NOT_EXIST),);
+        assert!(
+            exists<ObjectCore>(current_address),
+            error::not_found(EOBJECT_DOES_NOT_EXIST),
+        );
 
         let object = borrow_global<ObjectCore>(current_address);
-        assert!(object.allow_ungated_transfer,
-            error::permission_denied(ENO_UNGATED_TRANSFERS),);
+        assert!(
+            object.allow_ungated_transfer,
+            error::permission_denied(ENO_UNGATED_TRANSFERS),
+        );
 
         let current_address = object.owner;
 
         let count = 0;
         while (owner != current_address) {
             count = count + 1;
-            assert!(count < MAXIMUM_OBJECT_NESTING, error::out_of_range(EMAXIMUM_NESTING));
+            assert!(
+                count < MAXIMUM_OBJECT_NESTING,
+                error::out_of_range(EMAXIMUM_NESTING)
+            );
 
             // At this point, the first object exists and so the more likely case is that the
             // object's owner is not an object. So we return a more sensible error.
-            assert!(exists<ObjectCore>(current_address),
-                error::permission_denied(ENOT_OBJECT_OWNER),);
+            assert!(
+                exists<ObjectCore>(current_address),
+                error::permission_denied(ENOT_OBJECT_OWNER),
+            );
             let object = borrow_global<ObjectCore>(current_address);
-            assert!(object.allow_ungated_transfer,
-                error::permission_denied(ENO_UNGATED_TRANSFERS),);
+            assert!(
+                object.allow_ungated_transfer,
+                error::permission_denied(ENO_UNGATED_TRANSFERS),
+            );
 
             current_address = object.owner;
         };
@@ -458,14 +579,20 @@ module initia_std::object {
     #[view]
     /// Return true if ungated transfer is allowed.
     public fun ungated_transfer_allowed<T: key>(object: Object<T>): bool acquires ObjectCore {
-        assert!(exists<ObjectCore>(object.inner), error::not_found(EOBJECT_DOES_NOT_EXIST),);
+        assert!(
+            exists<ObjectCore>(object.inner),
+            error::not_found(EOBJECT_DOES_NOT_EXIST),
+        );
         borrow_global<ObjectCore>(object.inner).allow_ungated_transfer
     }
 
     #[view]
     /// Return the current owner.
     public fun owner<T: key>(object: Object<T>): address acquires ObjectCore {
-        assert!(exists<ObjectCore>(object.inner), error::not_found(EOBJECT_DOES_NOT_EXIST),);
+        assert!(
+            exists<ObjectCore>(object.inner),
+            error::not_found(EOBJECT_DOES_NOT_EXIST),
+        );
         borrow_global<ObjectCore>(object.inner).owner
     }
 
@@ -483,8 +610,10 @@ module initia_std::object {
             return true
         };
 
-        assert!(exists<ObjectCore>(current_address),
-            error::not_found(EOBJECT_DOES_NOT_EXIST),);
+        assert!(
+            exists<ObjectCore>(current_address),
+            error::not_found(EOBJECT_DOES_NOT_EXIST),
+        );
 
         let object = borrow_global<ObjectCore>(current_address);
         let current_address = object.owner;
@@ -492,10 +621,11 @@ module initia_std::object {
         let count = 0;
         while (owner != current_address) {
             count = count + 1;
-            assert!(count < MAXIMUM_OBJECT_NESTING, error::out_of_range(EMAXIMUM_NESTING));
-            if (!exists<ObjectCore>(current_address)) {
-                return false
-            };
+            assert!(
+                count < MAXIMUM_OBJECT_NESTING,
+                error::out_of_range(EMAXIMUM_NESTING)
+            );
+            if (!exists<ObjectCore>(current_address)) {return false};
 
             let object = borrow_global<ObjectCore>(current_address);
             current_address = object.owner;
@@ -529,7 +659,10 @@ module initia_std::object {
     public fun create_hero(creator: &signer): (ConstructorRef, Object<Hero>) acquires Tombstone {
         let hero_constructor_ref = create_named_object(creator, b"hero", true);
         let hero_signer = generate_signer(&hero_constructor_ref);
-        move_to(&hero_signer, Hero { weapon: option::none(), },);
+        move_to(
+            &hero_signer,
+            Hero {weapon: option::none(),},
+        );
 
         let hero = object_from_constructor_ref<Hero>(&hero_constructor_ref);
         (hero_constructor_ref, hero)
@@ -537,7 +670,7 @@ module initia_std::object {
 
     #[test_only]
     public fun delete_hero(delete_ref: DeleteRef) acquires Hero, ObjectCore {
-        let Hero { weapon: _ } = move_from<Hero>(delete_ref.self);
+        let Hero {weapon: _} = move_from<Hero>(delete_ref.self);
         delete(delete_ref);
     }
 
@@ -552,22 +685,34 @@ module initia_std::object {
 
     #[test_only]
     public fun hero_equip(
-        owner: &signer, hero: Object<Hero>, weapon: Object<Weapon>,
+        owner: &signer,
+        hero: Object<Hero>,
+        weapon: Object<Weapon>,
     ) acquires Hero, ObjectCore {
         transfer_to_object(owner, weapon, hero);
         let hero_obj = borrow_global_mut<Hero>(object_address(hero));
         option::fill(&mut hero_obj.weapon, weapon);
-        event::emit(HeroEquipEvent { weapon_id: option::some(weapon) },);
+        event::emit(
+            HeroEquipEvent {weapon_id: option::some(weapon)},
+        );
     }
 
     #[test_only]
     public fun hero_unequip(
-        owner: &signer, hero: Object<Hero>, weapon: Object<Weapon>,
+        owner: &signer,
+        hero: Object<Hero>,
+        weapon: Object<Weapon>,
     ) acquires Hero, ObjectCore {
-        transfer(owner, weapon, signer::address_of(owner));
+        transfer(
+            owner,
+            weapon,
+            signer::address_of(owner)
+        );
         let hero = borrow_global_mut<Hero>(object_address(hero));
         option::extract(&mut hero.weapon);
-        event::emit(HeroEquipEvent { weapon_id: option::none() },);
+        event::emit(
+            HeroEquipEvent {weapon_id: option::none()},
+        );
     }
 
     #[test(creator = @0x123)]
@@ -615,9 +760,7 @@ module initia_std::object {
 
     #[test(creator = @0x123, receiver = @0x456)]
     #[expected_failure(abort_code = 0x50009, location = Self)]
-    fun test_cannot_use_linear_transfer_ref_with_old_version(
-        creator: &signer, receiver: address
-    ) acquires Tombstone, ObjectCore, Hero {
+    fun test_cannot_use_linear_transfer_ref_with_old_version(creator: &signer, receiver: address) acquires Tombstone, ObjectCore, Hero {
         let (hero_constructor, _) = create_hero(creator);
         let delete_ref = generate_delete_ref(&hero_constructor);
         let transfer_ref = generate_transfer_ref(&hero_constructor);

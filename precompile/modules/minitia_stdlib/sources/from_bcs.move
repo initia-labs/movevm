@@ -63,7 +63,10 @@ module minitia_std::from_bcs {
     public fun to_string(v: vector<u8>): String {
         // To make this safe, we need to evaluate the utf8 invariant.
         let s = from_bytes<String>(v);
-        assert!(string::internal_check_utf8(string::bytes(&s)), EINVALID_UTF8);
+        assert!(
+            string::internal_check_utf8(string::bytes(&s)),
+            EINVALID_UTF8
+        );
         s
     }
 

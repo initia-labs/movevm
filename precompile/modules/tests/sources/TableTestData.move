@@ -27,10 +27,15 @@ module TestAccount::TableTestData {
     public entry fun iterate_ascending(acc: address) acquires S {
         let t_ref = &borrow_global<S<u64, u64>>(acc).t;
 
-        let iter = T::iter<u64, u64>(t_ref, option::none(), option::none(), 1);
+        let iter = T::iter<u64, u64>(
+            t_ref,
+            option::none(),
+            option::none(),
+            1
+        );
 
         let i = 1;
-        while (i < 11) {
+        while (i <11) {
             assert!(T::prepare<u64, u64>(iter), 101);
             let (key, value) = T::next<u64, u64>(iter);
             assert!(key == i, 101);
@@ -40,10 +45,15 @@ module TestAccount::TableTestData {
         };
         assert!(!T::prepare<u64, u64>(iter), 101);
 
-        let iter = T::iter(t_ref, option::some(2), option::some(5), 1);
+        let iter = T::iter(
+            t_ref,
+            option::some(2),
+            option::some(5),
+            1
+        );
 
         let i = 2;
-        while (i < 5) {
+        while (i <5) {
             assert!(T::prepare<u64, u64>(iter), 102);
             let (key, value) = T::next(iter);
             assert!(key == i, 102);
@@ -57,7 +67,12 @@ module TestAccount::TableTestData {
     public entry fun iterate_descending(acc: address) acquires S {
         let t_ref = &borrow_global<S<u64, u64>>(acc).t;
 
-        let iter = T::iter<u64, u64>(t_ref, option::none(), option::none(), 2);
+        let iter = T::iter<u64, u64>(
+            t_ref,
+            option::none(),
+            option::none(),
+            2
+        );
 
         let i = 10;
         while (i > 0) {
@@ -70,7 +85,12 @@ module TestAccount::TableTestData {
         };
         assert!(!T::prepare<u64, u64>(iter), 101);
 
-        let iter = T::iter(t_ref, option::some(2), option::some(5), 2);
+        let iter = T::iter(
+            t_ref,
+            option::some(2),
+            option::some(5),
+            2
+        );
 
         let i = 4;
         while (i > 1) {

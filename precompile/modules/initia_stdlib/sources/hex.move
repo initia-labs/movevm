@@ -32,8 +32,14 @@ module initia_std::hex {
         let index = 0;
         while (index < len) {
             let val = *vector::borrow(bz, index);
-            vector::push_back(&mut vec, encode_to_char_with_option(val / 0x10, is_upper));
-            vector::push_back(&mut vec, encode_to_char_with_option(val % 0x10, is_upper));
+            vector::push_back(
+                &mut vec,
+                encode_to_char_with_option(val / 0x10, is_upper)
+            );
+            vector::push_back(
+                &mut vec,
+                encode_to_char_with_option(val % 0x10, is_upper)
+            );
             index = index + 1;
         };
 
@@ -42,7 +48,10 @@ module initia_std::hex {
 
     // decode hex string to bytes
     public fun decode_string(str: &String): vector<u8> {
-        assert!(is_hex_string(str), error::invalid_argument(ENOT_HEXSTRING));
+        assert!(
+            is_hex_string(str),
+            error::invalid_argument(ENOT_HEXSTRING)
+        );
 
         let vec: vector<u8> = vector[];
         let bz = string::bytes(str);
@@ -62,7 +71,7 @@ module initia_std::hex {
             let h = decode_char(*vector::borrow(bz, index));
             let l = decode_char(*vector::borrow(bz, index + 1));
 
-            vector::push_back(&mut vec, (h << 4) + l);
+            vector::push_back(&mut vec,(h << 4) + l);
             index = index + 2
         };
 
@@ -70,7 +79,7 @@ module initia_std::hex {
     }
 
     fun encode_to_char(num: u8): u8 {
-        if (num < 10) {
+        if (num <10) {
             ZERO + num
         } else {
             LOWERA + (num - 10)
@@ -78,9 +87,8 @@ module initia_std::hex {
     }
 
     fun encode_to_char_with_option(num: u8, is_upper: bool): u8 {
-        let adder = if (is_upper) { UPPERA }
-        else { LOWERA };
-        if (num < 10) {
+        let adder = if (is_upper) { UPPERA } else { LOWERA };
+        if (num <10) {
             ZERO + num
         } else {
             adder + (num - 10)
@@ -90,11 +98,14 @@ module initia_std::hex {
     fun decode_char(num: u8): u8 {
         if (num >= LOWERA && num <= LOWERA + 5) {
             num - LOWERA + 10
-        } else if (num >= UPPERA && num <= UPPERA + 5) {
+        }
+        else if (num >= UPPERA && num <= UPPERA + 5) {
             num - UPPERA + 10
-        } else if (num >= ZERO && num <= ZERO + 9) {
+        }
+        else if (num >= ZERO && num <= ZERO + 9) {
             num - ZERO
-        } else {
+        }
+        else {
             abort error::invalid_argument(ENOT_HEXSTRING)
         }
     }
@@ -106,9 +117,7 @@ module initia_std::hex {
         let index = 0;
         while (index < len) {
             let char = *vector::borrow(bz, index);
-            if (!is_hex_char(char)) {
-                return false
-            };
+            if (!is_hex_char(char)) {return false};
             index = index + 1;
         };
 
@@ -116,12 +125,10 @@ module initia_std::hex {
     }
 
     fun is_hex_char(char: u8): bool {
-        if ((char >= ZERO
-                && char <= ZERO + 9) // 0 - 9
-            || (char >= UPPERA
-                && char <= UPPERA + 5) // A - F
-            || (char >= LOWERA
-                && char <= LOWERA + 5)) { // a - f
+        if (
+            (char >= ZERO && char <= ZERO + 9) // 0 - 9
+            || (char >= UPPERA && char <= UPPERA + 5) // A - F
+            || (char >= LOWERA && char <= LOWERA + 5)) { // a - f
             return true
         };
         false
@@ -131,15 +138,21 @@ module initia_std::hex {
     fun test_encode_to_string() {
         let raw_bytes = b"hello world!";
         let hex_string = encode_to_string(&raw_bytes);
-        assert!(*string::bytes(&hex_string) == b"68656c6c6f20776f726c6421", 0);
+        assert!(
+            *string::bytes(&hex_string) == b"68656c6c6f20776f726c6421",
+            0
+        );
 
         // test odd bytes
         let odd_bytes = vector::empty<u8>();
         vector::push_back(&mut odd_bytes, 1);
-        vector::push_back(&mut odd_bytes, (2 << 4) + 3);
+        vector::push_back(&mut odd_bytes,(2 << 4) + 3);
 
         let hex_string = encode_to_string(&odd_bytes);
-        assert!(*string::bytes(&hex_string) == b"0123", 0);
+        assert!(
+            *string::bytes(&hex_string) == b"0123",
+            0
+        );
     }
 
     #[test]
@@ -151,7 +164,7 @@ module initia_std::hex {
         // test odd bytes
         let odd_bytes = vector::empty<u8>();
         vector::push_back(&mut odd_bytes, 1);
-        vector::push_back(&mut odd_bytes, (2 << 4) + 3);
+        vector::push_back(&mut odd_bytes,(2 << 4) + 3);
 
         let hex_string = string::utf8(b"0123");
         let raw_bytes = decode_string(&hex_string);

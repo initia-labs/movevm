@@ -16,7 +16,8 @@ module minitia_std::keccak {
 
         let outputs = vector[
             x"5f16f4c7f149ac4f9510d9cf8cf384038ad348b3bcdc01915f95de12df9d1b02",
-            x"c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",];
+            x"c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+        ];
 
         let i = 0;
         while (i < std::vector::length(&inputs)) {

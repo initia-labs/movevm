@@ -23,10 +23,14 @@ module 0x2::StdCoin {
             string::utf8(b""),
         );
 
-        move_to(sender, CapStore { burn, freeze, mint });
+        move_to(sender, CapStore {burn, freeze, mint});
     }
 
-    entry fun mint(sender: &signer, account_to: address, amount: u64) acquires CapStore {
+    entry fun mint(
+        sender: &signer,
+        account_to: address,
+        amount: u64
+    ) acquires CapStore {
         let sender_address = signer::address_of(sender);
         let caps = borrow_global<CapStore>(sender_address);
 
