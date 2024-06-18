@@ -225,7 +225,8 @@ module minitia_std::object {
     public(friend) fun create_user_derived_object(
         creator_address: address, derive_ref: &DeriveRef, can_delete: bool
     ): ConstructorRef acquires Tombstone {
-        let obj_addr = create_user_derived_object_address(creator_address, derive_ref.self);
+        let obj_addr =
+            create_user_derived_object_address(creator_address, derive_ref.self);
         create_object_internal(creator_address, obj_addr, can_delete)
     }
 
@@ -244,10 +245,11 @@ module minitia_std::object {
 
         assert!(!exists<ObjectCore>(object), error::already_exists(EOBJECT_EXISTS));
         let object_signer = account::create_signer(object);
-        let version = if (exists<Tombstone>(object)) {
-            let Tombstone { version } = move_from<Tombstone>(object);
-            (version + 1)
-        } else { 1 };
+        let version =
+            if (exists<Tombstone>(object)) {
+                let Tombstone { version } = move_from<Tombstone>(object);
+                (version + 1)
+            } else { 1 };
 
         move_to(
             &object_signer,

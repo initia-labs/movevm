@@ -342,25 +342,28 @@ module initia_std::vip {
 
         assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)),
             error::not_found(ESTAGE_DATA_NOT_FOUND));
-        let stage_data = table::borrow(&module_store.stage_data,
-            table_key::encode_u64(stage));
-        let snapshot = table::borrow(&stage_data.snapshots, table_key::encode_u64(bridge_id));
+        let stage_data =
+            table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
+        let snapshot =
+            table::borrow(&stage_data.snapshots, table_key::encode_u64(bridge_id));
         assert!(block_time >= stage_data.user_vesting_release_time,
             error::unavailable(EVESTING_IN_PROGRESS));
 
-        let target_hash = score_hash(bridge_id, stage, account_addr, l2_score, snapshot.total_l2_score,);
+        let target_hash =
+            score_hash(bridge_id, stage, account_addr, l2_score, snapshot.total_l2_score,);
 
         assert_merkle_proofs(merkle_proofs, snapshot.merkle_root, target_hash,);
 
-        let vested_reward = vip_vesting::claim_user_reward(
-            account_addr,
-            bridge_id,
-            stage,
-            stage + stage_data.user_vesting_period,
-            l2_score,
-            snapshot.total_l2_score,
-            stage_data.proportion,
-        );
+        let vested_reward =
+            vip_vesting::claim_user_reward(
+                account_addr,
+                bridge_id,
+                stage,
+                stage + stage_data.user_vesting_period,
+                l2_score,
+                snapshot.total_l2_score,
+                stage_data.proportion,
+            );
 
         vested_reward
     }
@@ -377,12 +380,13 @@ module initia_std::vip {
         stakelisted_metadata: Object<Metadata>,
     ) {
         let account_addr = signer::address_of(account);
-        let esinit = vip_vesting::zapping_vesting(account_addr, bridge_id, stage,
-            zapping_amount);
+        let esinit =
+            vip_vesting::zapping_vesting(account_addr, bridge_id, stage, zapping_amount);
         assert!(primary_fungible_store::balance(account_addr, stakelisted_metadata) >= stakelisted_amount,
             error::invalid_argument(EZAPPING_STAKELISTED_NOT_ENOUGH));
-        let stakelisted = primary_fungible_store::withdraw(account, stakelisted_metadata,
-            stakelisted_amount);
+        let stakelisted =
+            primary_fungible_store::withdraw(account, stakelisted_metadata,
+                stakelisted_amount);
 
         vip_zapping::zapping(
             account,
@@ -400,8 +404,8 @@ module initia_std::vip {
         operator_addr: address, bridge_id: u64, reward: FungibleAsset,
     ): (FungibleAsset, FungibleAsset) {
         let commission_rate = vip_operator::get_operator_commission(operator_addr, bridge_id);
-        let commission_amount = decimal256::mul_u64(&commission_rate,
-            fungible_asset::amount(&reward));
+        let commission_amount =
+            decimal256::mul_u64(&commission_rate, fungible_asset::amount(&reward));
         let commission = fungible_asset::extract(&mut reward, commission_amount);
         (commission, reward)
     }
@@ -422,21 +426,24 @@ module initia_std::vip {
         let total_operator_funded_reward = 0;
 
         let index = 0;
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        let iter =
+            table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
 
             let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
-            let balance_reward = split_reward_with_share(balance_shares, bridge_id,
-                initial_balance_pool_reward_amount, &mut balance_pool_reward);
-            let (balance_commission, balance_user_reward) = extract_commission(bridge.operator_addr,
-                bridge_id, balance_reward);
+            let balance_reward =
+                split_reward_with_share(balance_shares, bridge_id,
+                    initial_balance_pool_reward_amount, &mut balance_pool_reward);
+            let (balance_commission, balance_user_reward) =
+                extract_commission(bridge.operator_addr, bridge_id, balance_reward);
 
-            let weight_reward = split_reward_with_share(weight_shares, bridge_id,
-                initial_weight_pool_reward_amount, &mut weight_pool_reward);
-            let (weight_commission, weight_user_reward) = extract_commission(bridge.operator_addr,
-                bridge_id, weight_reward);
+            let weight_reward =
+                split_reward_with_share(weight_shares, bridge_id,
+                    initial_weight_pool_reward_amount, &mut weight_pool_reward);
+            let (weight_commission, weight_user_reward) =
+                extract_commission(bridge.operator_addr, bridge_id, weight_reward);
 
             fungible_asset::merge(&mut balance_commission, weight_commission);
             fungible_asset::merge(&mut balance_user_reward, weight_user_reward);
@@ -485,8 +492,8 @@ module initia_std::vip {
         total_reward_amount: u64,
         reward: &mut FungibleAsset,
     ): FungibleAsset {
-        let split_amount = split_reward_with_share_internal(shares, bridge_id,
-            total_reward_amount);
+        let split_amount =
+            split_reward_with_share_internal(shares, bridge_id, total_reward_amount);
         fungible_asset::extract(reward, split_amount)
     }
 
@@ -511,20 +518,21 @@ module initia_std::vip {
         let total_balance = calculate_balance_share(module_store, &mut balance_shares);
         assert!(total_balance > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
         calculate_weight_share(module_store, &mut weight_shares);
-        let balance_pool_reward_amount = decimal256::mul_u64(&module_store.pool_split_ratio,
-            initial_amount);
-        let balance_pool_reward = fungible_asset::extract(&mut initial_reward,
-            balance_pool_reward_amount);
+        let balance_pool_reward_amount =
+            decimal256::mul_u64(&module_store.pool_split_ratio, initial_amount);
+        let balance_pool_reward =
+            fungible_asset::extract(&mut initial_reward, balance_pool_reward_amount);
         let weight_pool_reward = initial_reward;
 
-        let (total_operator_funded_reward, total_user_funded_reward) = split_reward(
-            module_store,
-            stage,
-            &balance_shares,
-            &weight_shares,
-            balance_pool_reward,
-            weight_pool_reward,
-        );
+        let (total_operator_funded_reward, total_user_funded_reward) =
+            split_reward(
+                module_store,
+                stage,
+                &balance_shares,
+                &weight_shares,
+                balance_pool_reward,
+                weight_pool_reward,
+            );
 
         (total_operator_funded_reward, total_user_funded_reward)
     }
@@ -532,12 +540,14 @@ module initia_std::vip {
     fun bridge_total_balance(module_store: &ModuleStore,): u64 {
         let total_balance = 0;
 
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        let iter =
+            table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
-            let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr,
-                vip_reward::reward_metadata());
+            let bridge_balance =
+                primary_fungible_store::balance(bridge.bridge_addr,
+                    vip_reward::reward_metadata());
             total_balance = total_balance + bridge_balance;
         };
 
@@ -548,23 +558,27 @@ module initia_std::vip {
         module_store: &ModuleStore, balance_shares: &mut SimpleMap<u64, Decimal256>
     ): u64 {
         let total_balance = bridge_total_balance(module_store);
-        let max_effective_balance = decimal256::mul_u64(&module_store.maximum_tvl_ratio,
-            total_balance);
+        let max_effective_balance =
+            decimal256::mul_u64(&module_store.maximum_tvl_ratio, total_balance);
 
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        let iter =
+            table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
 
-            let bridge_balance = primary_fungible_store::balance(bridge.bridge_addr,
-                vip_reward::reward_metadata());
+            let bridge_balance =
+                primary_fungible_store::balance(bridge.bridge_addr,
+                    vip_reward::reward_metadata());
 
-            let effective_bridge_balance = if (bridge_balance > max_effective_balance) { max_effective_balance }
-            else if (bridge_balance < module_store.minimum_eligible_tvl) { 0 }
-            else { bridge_balance };
+            let effective_bridge_balance =
+                if (bridge_balance > max_effective_balance) { max_effective_balance }
+                else if (bridge_balance < module_store.minimum_eligible_tvl) { 0 }
+                else { bridge_balance };
 
-            let share = decimal256::from_ratio_u64(effective_bridge_balance, total_balance);
+            let share =
+                decimal256::from_ratio_u64(effective_bridge_balance, total_balance);
             simple_map::add(balance_shares, bridge_id, share);
         };
 
@@ -574,17 +588,19 @@ module initia_std::vip {
     fun calculate_weight_share(
         module_store: &ModuleStore, weight_shares: &mut SimpleMap<u64, Decimal256>
     ) {
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        let iter =
+            table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
 
-            let weight = if (decimal256::val(&bridge.vip_weight) > decimal256::val(&module_store.maximum_weight_ratio)) {
-                module_store.maximum_weight_ratio
-            } else {
-                bridge.vip_weight
-            };
+            let weight =
+                if (decimal256::val(&bridge.vip_weight) > decimal256::val(&module_store.maximum_weight_ratio)) {
+                    module_store.maximum_weight_ratio
+                } else {
+                    bridge.vip_weight
+                };
 
             simple_map::add(weight_shares, bridge_id, weight);
         }
@@ -598,17 +614,18 @@ module initia_std::vip {
         // assert claimable conditions
         assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)),
             error::not_found(ESTAGE_DATA_NOT_FOUND));
-        let stage_data = table::borrow(&module_store.stage_data,
-            table_key::encode_u64(stage));
+        let stage_data =
+            table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
         assert!(block_time >= stage_data.operator_vesting_release_time,
             error::unavailable(EVESTING_IN_PROGRESS));
 
-        let vested_reward = vip_vesting::claim_operator_reward(
-            operator_addr,
-            bridge_id,
-            stage,
-            stage + stage_data.operator_vesting_period,
-        );
+        let vested_reward =
+            vip_vesting::claim_operator_reward(
+                operator_addr,
+                bridge_id,
+                stage,
+                stage + stage_data.operator_vesting_period,
+            );
 
         vested_reward
     }
@@ -616,7 +633,8 @@ module initia_std::vip {
     fun validate_vip_weights(module_store: &ModuleStore) {
         let total_weight = decimal256::zero();
 
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        let iter =
+            table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
@@ -737,8 +755,8 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(table::contains(&mut module_store.stage_data, table_key::encode_u64(stage)),
             error::not_found(ESTAGE_DATA_NOT_FOUND));
-        let stage_data =
-            table::borrow_mut(&mut module_store.stage_data, table_key::encode_u64(stage));
+        let stage_data = table::borrow_mut(&mut module_store.stage_data,
+            table_key::encode_u64(stage));
         stage_data.user_vesting_release_time = user_vesting_release_time;
         stage_data.operator_vesting_release_time = operator_vesting_release_time;
 
@@ -811,8 +829,8 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)),
             error::not_found(ESTAGE_DATA_NOT_FOUND));
-        let stage_data = table::borrow_mut(&mut module_store.stage_data,
-            table_key::encode_u64(stage));
+        let stage_data =
+            table::borrow_mut(&mut module_store.stage_data, table_key::encode_u64(stage));
 
         assert!(!table::contains(&stage_data.snapshots, table_key::encode_u64(bridge_id)),
             error::already_exists(ESNAPSHOT_ALREADY_EXISTS));
@@ -834,8 +852,8 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)),
             error::not_found(ESTAGE_DATA_NOT_FOUND));
-        let stage_data = table::borrow_mut(&mut module_store.stage_data,
-            table_key::encode_u64(stage));
+        let stage_data =
+            table::borrow_mut(&mut module_store.stage_data, table_key::encode_u64(stage));
 
         let (_, block_time) = block::get_block_info();
         assert!(block_time < stage_data.user_vesting_release_time,
@@ -845,8 +863,8 @@ module initia_std::vip {
         assert!(table::contains(&stage_data.snapshots, table_key::encode_u64(bridge_id)),
             error::not_found(ESNAPSHOT_NOT_EXISTS));
 
-        let snapshot = table::borrow_mut(&mut stage_data.snapshots,
-            table_key::encode_u64(bridge_id));
+        let snapshot =
+            table::borrow_mut(&mut stage_data.snapshots, table_key::encode_u64(bridge_id));
         snapshot.merkle_root = merkle_root;
         snapshot.total_l2_score = total_l2_score;
     }
@@ -874,8 +892,8 @@ module initia_std::vip {
             vip_vesting::register_user_vesting_store(account, bridge_id);
         };
 
-        let vested_reward = claim_user_reward(account, bridge_id, stage, merkle_proofs,
-            l2_score,);
+        let vested_reward =
+            claim_user_reward(account, bridge_id, stage, merkle_proofs, l2_score,);
 
         coin::deposit(signer::address_of(account), vested_reward);
     }
@@ -900,8 +918,9 @@ module initia_std::vip {
         merkle_proofs: vector<vector<vector<u8>>>,
         l2_score: vector<u64>,
     ) acquires ModuleStore {
-        assert!(vector::length(&stage) == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) ==
-             vector::length(&l2_score),
+        assert!(vector::length(&stage) == vector::length(&merkle_proofs)
+            && vector::length(&merkle_proofs)
+            == vector::length(&l2_score),
             error::invalid_argument(EINVALID_BATCH_ARGUMENT));
 
         let prev_stage = 0;
@@ -1068,10 +1087,12 @@ module initia_std::vip {
 
         assert!(table::contains(&module_store.stage_data, table_key::encode_u64(stage)),
             error::not_found(ESTAGE_DATA_NOT_FOUND));
-        let snapshots = table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
+        let snapshots =
+            table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
         assert!(table::contains(&snapshots.snapshots, table_key::encode_u64(bridge_id)),
             error::not_found(ESNAPSHOT_NOT_EXISTS));
-        let snapshot = table::borrow(&snapshots.snapshots, table_key::encode_u64(bridge_id));
+        let snapshot =
+            table::borrow(&snapshots.snapshots, table_key::encode_u64(bridge_id));
 
         SnapshotResponse {
             merkle_root: snapshot.merkle_root,
@@ -1091,16 +1112,19 @@ module initia_std::vip {
         assert!(fund_reward_amount > 0, error::invalid_argument(EINVALID_TOTAL_REWARD));
         assert!(total_balance > 0, error::invalid_state(EINVALID_TOTAL_SHARE));
 
-        let weight_ratio = decimal256::sub(&decimal256::one(), &module_store.pool_split_ratio);
-        let balance_pool_reward_amount = decimal256::mul_u64(&module_store.pool_split_ratio,
+        let weight_ratio =
+            decimal256::sub(&decimal256::one(), &module_store.pool_split_ratio);
+        let balance_pool_reward_amount =
+            decimal256::mul_u64(&module_store.pool_split_ratio, fund_reward_amount);
+        let weight_pool_reward_amount = decimal256::mul_u64(&weight_ratio,
             fund_reward_amount);
-        let weight_pool_reward_amount =
-            decimal256::mul_u64(&weight_ratio, fund_reward_amount);
 
-        let balance_split_amount = split_reward_with_share_internal(&balance_shares,
-            bridge_id, balance_pool_reward_amount);
-        let weight_split_amount = split_reward_with_share_internal(&weight_shares, bridge_id,
-            weight_pool_reward_amount);
+        let balance_split_amount =
+            split_reward_with_share_internal(&balance_shares, bridge_id,
+                balance_pool_reward_amount);
+        let weight_split_amount =
+            split_reward_with_share_internal(&weight_shares, bridge_id,
+                weight_pool_reward_amount);
 
         balance_split_amount + weight_split_amount
     }
@@ -1108,8 +1132,8 @@ module initia_std::vip {
     #[view]
     public fun get_stage_data(stage: u64): StageDataResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
-        let stage_data = table::borrow(&module_store.stage_data,
-            table_key::encode_u64(stage));
+        let stage_data =
+            table::borrow(&module_store.stage_data, table_key::encode_u64(stage));
 
         StageDataResponse {
             pool_split_ratio: stage_data.pool_split_ratio,
@@ -1142,7 +1166,8 @@ module initia_std::vip {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let bridge_ids = vector::empty<u64>();
 
-        let iter = table::iter(&module_store.bridges, option::none(), option::none(), 1);
+        let iter =
+            table::iter(&module_store.bridges, option::none(), option::none(), 1);
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (key, _) = table::next<vector<u8>, Bridge>(iter);
@@ -1155,7 +1180,8 @@ module initia_std::vip {
     public fun get_next_stage(bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
-        let iter = table::iter(&module_store.stage_data, option::none(), option::none(), 2);
+        let iter =
+            table::iter(&module_store.stage_data, option::none(), option::none(), 2);
         loop {
             if (!table::prepare<vector<u8>, StageData>(iter)) { break };
 
@@ -1205,12 +1231,13 @@ module initia_std::vip {
         vector::enumerate_ref(
             &initial_reward,
             |i, reward| {
-                let (claimed_reward, remaining_reward) = simulate_user_claim_reward(
-                    *reward,
-                    *vector::borrow(&minimum_score, i),
-                    *vector::borrow(&vesting_period, i),
-                    *vector::borrow(&l2_scores, i),
-                );
+                let (claimed_reward, remaining_reward) =
+                    simulate_user_claim_reward(
+                        *reward,
+                        *vector::borrow(&minimum_score, i),
+                        *vector::borrow(&vesting_period, i),
+                        *vector::borrow(&l2_scores, i),
+                    );
                 vector::push_back(&mut claimable_list, claimed_reward);
                 vector::push_back(&mut remaining_list, remaining_reward);
             });
@@ -1227,11 +1254,12 @@ module initia_std::vip {
         vector::enumerate_ref(
             &l2_scores,
             |_i, l2_score| {
-                let score_ratio = if (*l2_score >= minimum_score) {
-                    decimal256::one()
-                } else {
-                    decimal256::from_ratio_u64(*l2_score, minimum_score)
-                };
+                let score_ratio =
+                    if (*l2_score >= minimum_score) {
+                        decimal256::one()
+                    } else {
+                        decimal256::from_ratio_u64(*l2_score, minimum_score)
+                    };
 
                 let max_ratio = decimal256::div_u64(&decimal256::one(), vesting_period);
                 let vest_ratio = decimal256::mul(&max_ratio, &score_ratio);
@@ -1307,15 +1335,16 @@ module initia_std::vip {
     fun initialize_coin(account: &signer, symbol: string::String,)
         : (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability,
         Object<Metadata>) {
-        let (mint_cap, burn_cap, freeze_cap) = coin::initialize(
-            account,
-            option::none(),
-            string::utf8(b""),
-            symbol,
-            6,
-            string::utf8(b""),
-            string::utf8(b""),
-        );
+        let (mint_cap, burn_cap, freeze_cap) =
+            coin::initialize(
+                account,
+                option::none(),
+                string::utf8(b""),
+                symbol,
+                6,
+                string::utf8(b""),
+                string::utf8(b""),
+            );
         let metadata = coin::metadata(signer::address_of(account), symbol);
 
         (burn_cap, freeze_cap, mint_cap, metadata)
@@ -1632,11 +1661,13 @@ module initia_std::vip {
         );
         assert!(
             vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver),
-                bridge_id, 1) == *simple_map::borrow(&score_map, &1),
+                bridge_id, 1)
+            == *simple_map::borrow(&score_map, &1),
             1);
         assert!(
             vip_vesting::get_user_vesting_minimum_score(signer::address_of(receiver),
-                bridge_id, 2) == *simple_map::borrow(&score_map, &2),
+                bridge_id, 2)
+            == *simple_map::borrow(&score_map, &2),
             2);
 
         update_proportion(chain, decimal256::from_string(&string::utf8(b"10")));
@@ -1793,14 +1824,15 @@ module initia_std::vip {
 
         assert!(get_stage_data(1).user_vesting_period == vesting_period, 1);
 
-        let expected_reward = (reward_per_stage / vesting_period + reward_per_stage / (
-                vesting_period * 2
-            ) + reward_per_stage / (vesting_period * 2) + reward_per_stage / vesting_period // stage 1
-            + reward_per_stage / (vesting_period * 2) + reward_per_stage / (vesting_period
-                * 2) + reward_per_stage / vesting_period // stage 2
-            + reward_per_stage / vesting_period + reward_per_stage / vesting_period // stage 3
-            + reward_per_stage / vesting_period // stage 4
-        );
+        let expected_reward =
+            (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2) + reward_per_stage
+                / (vesting_period * 2) + reward_per_stage / vesting_period // stage 1
+                + reward_per_stage / (vesting_period * 2) + reward_per_stage / (
+                    vesting_period * 2
+                ) + reward_per_stage / vesting_period // stage 2
+                + reward_per_stage / vesting_period + reward_per_stage / vesting_period // stage 3
+                + reward_per_stage / vesting_period // stage 4
+            );
 
         assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) ==
              expected_reward,
@@ -2015,17 +2047,20 @@ module initia_std::vip {
             *simple_map::borrow(&score_map, &6),
         );
 
-        let initia_reward_amount = vip_vesting::get_user_vesting_initial_reward(
-            signer::address_of(receiver), bridge_id, 1);
+        let initia_reward_amount =
+            vip_vesting::get_user_vesting_initial_reward(signer::address_of(receiver),
+                bridge_id, 1);
 
-        let remaining_reward_amount = vip_vesting::get_user_vesting_remaining_reward(
-            signer::address_of(receiver), bridge_id, 1);
+        let remaining_reward_amount =
+            vip_vesting::get_user_vesting_remaining_reward(signer::address_of(receiver),
+                bridge_id, 1);
 
         let reward_by_stage_1 = initia_reward_amount - remaining_reward_amount;
         let max_reward_per_claim = reward_per_stage / vesting_period;
 
         // score_ratio = l2_score > minimum_score ? 1 : l2_score / minimum_score
-        assert!(reward_by_stage_1 == max_reward_per_claim // score_ratio = 1
+        assert!(reward_by_stage_1
+            == max_reward_per_claim // score_ratio = 1
             + (max_reward_per_claim + max_reward_per_claim) // score_ratio = 1
             + (max_reward_per_claim / 3 + max_reward_per_claim / 3) // score_ratio = 1/3
             ,
@@ -2060,8 +2095,8 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_proof_map, &3),
             *simple_map::borrow(&score_map, &3),
         );
-        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) ==
-             (reward_per_stage / (vesting_period * 2)),
+        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata())
+            == (reward_per_stage / (vesting_period * 2)),
             1);
     }
 
@@ -2127,14 +2162,14 @@ module initia_std::vip {
         assert!(get_expected_reward(3, DEFAULT_REWARD_PER_STAGE_FOR_TEST) ==
             17_500_000_000, 0); // 0.7 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * (1/4) + 0.3 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * 0
 
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(1)) == get_expected_reward(
-                1, DEFAULT_REWARD_PER_STAGE_FOR_TEST),
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(1))
+            == get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST),
             0);
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(2)) == get_expected_reward(
-                2, DEFAULT_REWARD_PER_STAGE_FOR_TEST),
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(2))
+            == get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST),
             0);
-        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(3)) == get_expected_reward(
-                3, DEFAULT_REWARD_PER_STAGE_FOR_TEST),
+        assert!(vip_reward::balance(vip_vesting::get_user_reward_store_address(3))
+            == get_expected_reward(3, DEFAULT_REWARD_PER_STAGE_FOR_TEST),
             0);
 
         fund_reward_script(chain, 2, release_time, release_time);
@@ -2151,11 +2186,11 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(b"0.5")));
         fund_reward_script(chain, 3, release_time, release_time);
 
-        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(1)) == get_expected_reward(
-                1, DEFAULT_REWARD_PER_STAGE_FOR_TEST) / 2,
+        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(1))
+            == get_expected_reward(1, DEFAULT_REWARD_PER_STAGE_FOR_TEST) / 2,
             0);
-        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(2)) == get_expected_reward(
-                2, DEFAULT_REWARD_PER_STAGE_FOR_TEST) / 2,
+        assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(2))
+            == get_expected_reward(2, DEFAULT_REWARD_PER_STAGE_FOR_TEST) / 2,
             0);
         assert!(vip_reward::balance(vip_vesting::get_operator_reward_store_address(3)) ==
             0, 0);
@@ -2314,8 +2349,8 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_proof_map, &2),
             *simple_map::borrow(&score_map, &2),
         );
-        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) ==
-             (reward_per_stage / vesting_period),
+        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata())
+            == (reward_per_stage / vesting_period),
             3);
 
         // half score
@@ -2326,8 +2361,8 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_proof_map, &3),
             *simple_map::borrow(&score_map, &3),
         );
-        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) ==
-             (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
+        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata())
+            == (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
                 + reward_per_stage / (vesting_period * 2)),
             4);
 
@@ -2338,8 +2373,8 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_proof_map, &4),
             *simple_map::borrow(&score_map, &4),
         );
-        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) ==
-             (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
+        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata())
+            == (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
                 + reward_per_stage / (vesting_period * 2) // stage 1
                 + reward_per_stage / (vesting_period * 2) + reward_per_stage / (
                     vesting_period * 2
@@ -2355,8 +2390,8 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_proof_map, &5),
             *simple_map::borrow(&score_map, &5),
         );
-        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata()) ==
-             (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
+        assert!(coin::balance(signer::address_of(receiver), vip_reward::reward_metadata())
+            == (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
                 + reward_per_stage / (vesting_period * 2) + reward_per_stage / vesting_period // stage 1
                 + reward_per_stage / (vesting_period * 2) + reward_per_stage / (
                     vesting_period * 2
@@ -2366,49 +2401,53 @@ module initia_std::vip {
             ),
             6);
 
-        let proportion = decimal256::from_string(
-            &string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST));
-        let (claimable_list, _) = batch_simulate_user_claim_reward(
-            vector[reward_per_stage, reward_per_stage],
-            vector[
-                decimal256::mul_u64(&proportion, *simple_map::borrow(&score_map, &1)),
-                decimal256::mul_u64(&proportion, *simple_map::borrow(&score_map, &2)),],
-            vector[vesting_period, vesting_period],
-            vector[
+        let proportion =
+            decimal256::from_string(&string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST));
+        let (claimable_list, _) =
+            batch_simulate_user_claim_reward(
+                vector[reward_per_stage, reward_per_stage],
                 vector[
-                    *simple_map::borrow(&score_map, &2),
-                    *simple_map::borrow(&score_map, &3),
-                    *simple_map::borrow(&score_map, &4),
-                    *simple_map::borrow(&score_map, &5)],
+                    decimal256::mul_u64(&proportion, *simple_map::borrow(&score_map, &1)),
+                    decimal256::mul_u64(&proportion, *simple_map::borrow(&score_map, &2)),],
+                vector[vesting_period, vesting_period],
                 vector[
-                    *simple_map::borrow(&score_map, &3),
-                    *simple_map::borrow(&score_map, &4),
-                    *simple_map::borrow(&score_map, &5)],],
-        );
+                    vector[
+                        *simple_map::borrow(&score_map, &2),
+                        *simple_map::borrow(&score_map, &3),
+                        *simple_map::borrow(&score_map, &4),
+                        *simple_map::borrow(&score_map, &5)],
+                    vector[
+                        *simple_map::borrow(&score_map, &3),
+                        *simple_map::borrow(&score_map, &4),
+                        *simple_map::borrow(&score_map, &5)],],
+            );
 
         let claimable_v1 = *vector::borrow(&claimable_list, 0);
         let claimable_v2 = *vector::borrow(&claimable_list, 1);
-        assert!(claimable_v1 == (reward_per_stage / vesting_period + reward_per_stage / (
-                    vesting_period * 2
-                ) + reward_per_stage / (vesting_period * 2) + reward_per_stage / vesting_period),
+        assert!(claimable_v1
+            == (reward_per_stage / vesting_period + reward_per_stage / (vesting_period * 2)
+                + reward_per_stage / (vesting_period * 2) + reward_per_stage / vesting_period),
             0);
-        assert!(claimable_v2 == (reward_per_stage / (vesting_period * 2) + reward_per_stage
-                / (vesting_period * 2) + reward_per_stage / vesting_period),
+        assert!(claimable_v2
+            == (reward_per_stage / (vesting_period * 2) + reward_per_stage / (
+                    vesting_period * 2
+                ) + reward_per_stage / vesting_period),
             0);
 
         let user_reward_store_addr = vip_vesting::get_user_reward_store_address(bridge_id);
-        let operator_reward_store_addr =
-            vip_vesting::get_operator_reward_store_address(bridge_id);
+        let operator_reward_store_addr = vip_vesting::get_operator_reward_store_address(
+            bridge_id);
         let bridge_info = get_bridge_info(bridge_id);
         assert!(bridge_info.user_reward_store_addr == user_reward_store_addr
-            && bridge_info.operator_reward_store_addr == operator_reward_store_addr
+            && bridge_info.operator_reward_store_addr
+            == operator_reward_store_addr
             && bridge_info.operator_addr == operator_addr
             && bridge_info.bridge_addr == @0x99
             && decimal256::is_same(&bridge_info.vip_weight,
                 &decimal256::from_string(&string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST))),
             7);
-        assert!(vip_reward::get_stage_reward(user_reward_store_addr, 1) == total_reward_per_stage,
-            8);
+        assert!(vip_reward::get_stage_reward(user_reward_store_addr, 1)
+            == total_reward_per_stage, 8);
         assert!(vip_reward::get_stage_reward(user_reward_store_addr, 100) == 0, 9); // not exists
     }
 
@@ -2514,7 +2553,8 @@ module initia_std::vip {
                 bridge_id,
                 2,
                 *simple_map::borrow(&score_map, &2),
-            ) == (reward_per_stage_by_vesting),
+            )
+            == (reward_per_stage_by_vesting),
             0);
 
         claim_user_reward_script(
@@ -2530,7 +2570,8 @@ module initia_std::vip {
                 bridge_id,
                 3,
                 *simple_map::borrow(&score_map, &3),
-            ) == (reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2)),
+            )
+            == (reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2)),
             0);
 
         claim_user_reward_script(
@@ -2547,20 +2588,21 @@ module initia_std::vip {
                 bridge_id,
                 4,
                 *simple_map::borrow(&score_map, &4),
-            ) == (reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2) + reward_per_stage_by_vesting),
+            )
+            == (reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2) + reward_per_stage_by_vesting),
             0);
         assert!(
             vip_vesting::get_user_vesting_initial_reward(signer::address_of(receiver),
-                bridge_id, 4) == (reward_per_stage - decimal256::mul_u64(&commission_rate,
-                    reward_per_stage)),
+                bridge_id, 4)
+            == (reward_per_stage - decimal256::mul_u64(&commission_rate, reward_per_stage)),
             0);
         assert!(
             vip_vesting::get_operator_unlocked_reward(signer::address_of(operator),
                 bridge_id, 4) == 0, 0);
         assert!(
             vip_vesting::get_operator_vesting_initial_reward(signer::address_of(operator),
-                bridge_id, 4) == (decimal256::mul_u64(&commission_rate,
-                    total_reward_per_stage)),
+                bridge_id, 4)
+            == (decimal256::mul_u64(&commission_rate, total_reward_per_stage)),
             0);
 
         claim_user_reward_script(
@@ -2577,20 +2619,21 @@ module initia_std::vip {
                 bridge_id,
                 5,
                 *simple_map::borrow(&score_map, &5),
-            ) == (reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2) + reward_per_stage_by_vesting
+            )
+            == (reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2) + reward_per_stage_by_vesting
                 + decimal256::mul_u64(&decimal256::from_string(&string::utf8(b"0.97")),
                     reward_per_stage_by_vesting)),
             0);
         assert!(
             vip_vesting::get_operator_unlocked_reward(signer::address_of(operator),
-                bridge_id, 5) == (decimal256::mul_u64(&commission_rate,
-                    total_reward_per_stage / operator_vesting_period)),
+                bridge_id, 5)
+            == (decimal256::mul_u64(&commission_rate, total_reward_per_stage / operator_vesting_period)),
             0);
 
-        let user_claimed_stages = vip_vesting::get_user_claimed_stages(
-            signer::address_of(receiver), bridge_id);
-        let operator_claimed_stages = vip_vesting::get_operator_claimed_stages(
-            signer::address_of(operator), bridge_id);
+        let user_claimed_stages =
+            vip_vesting::get_user_claimed_stages(signer::address_of(receiver), bridge_id);
+        let operator_claimed_stages =
+            vip_vesting::get_operator_claimed_stages(signer::address_of(operator), bridge_id);
 
         assert!(user_claimed_stages == vector[1, 2, 3, 4, 5], 0);
         assert!(operator_claimed_stages == vector[4, 5], 0);
@@ -2609,7 +2652,8 @@ module initia_std::vip {
             0,
         );
         let snapshot = get_snapshot(bridge_id, 1);
-        assert!(snapshot.merkle_root == x"8888888888888888888888888888888888888888888888888888888888888888",
+        assert!(snapshot.merkle_root
+            == x"8888888888888888888888888888888888888888888888888888888888888888",
             0);
         assert!(snapshot.total_l2_score == 0, 0);
 
@@ -2621,7 +2665,8 @@ module initia_std::vip {
             100,
         );
         let snapshot = get_snapshot(bridge_id, 1);
-        assert!(snapshot.merkle_root == x"7777777777777777777777777777777777777777777777777777777777777777",
+        assert!(snapshot.merkle_root
+            == x"7777777777777777777777777777777777777777777777777777777777777777",
             100);
         assert!(snapshot.total_l2_score == 100, 0);
     }
@@ -2870,8 +2915,8 @@ module initia_std::vip {
             mint_amount,
         );
 
-        let lp_metadata = coin::metadata(signer::address_of(chain),
-            string::utf8(b"INIT-USDC"));
+        let lp_metadata =
+            coin::metadata(signer::address_of(chain), string::utf8(b"INIT-USDC"));
         staking::initialize_for_chain(chain, lp_metadata);
         staking::set_staking_share_ratio(*string::bytes(&validator), &lp_metadata, 1, 1);
 
@@ -2883,8 +2928,8 @@ module initia_std::vip {
         chain: &signer, operator: &signer, receiver: &signer, relayer: &signer,
     ) acquires ModuleStore {
         let mint_amount = 10_000_000_000_000;
-        let (bridge_id, reward_metadata, stakelisted_metadata, lp_metadata, validator) = test_setup_for_zapping(
-            chain, operator, receiver, 1, @0x99, mint_amount,);
+        let (bridge_id, reward_metadata, stakelisted_metadata, lp_metadata, validator) =
+            test_setup_for_zapping(chain, operator, receiver, 1, @0x99, mint_amount,);
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
@@ -2904,8 +2949,9 @@ module initia_std::vip {
 
         block::set_block_info(1, start_time);
         vip_zapping::update_lock_period_script(chain, lock_period);
-        let zapping_amount = vip_vesting::get_user_locked_reward(
-            signer::address_of(receiver), bridge_id, stage);
+        let zapping_amount =
+            vip_vesting::get_user_locked_reward(signer::address_of(receiver), bridge_id,
+                stage);
 
         // zap vesting in stage 1
         zapping_script(
@@ -2927,11 +2973,11 @@ module initia_std::vip {
         staking::fund_reward_coin(chain, signer::address_of(relayer), staking_reward_amount);
         staking::deposit_reward_for_chain(chain, lp_metadata, vector[val], vector[staking_reward_amount]);
 
-        let before_balance = primary_fungible_store::balance(signer::address_of(receiver),
-            reward_metadata);
+        let before_balance =
+            primary_fungible_store::balance(signer::address_of(receiver), reward_metadata);
         vip_zapping::claim_reward_script(receiver, 0);
-        let after_balance = primary_fungible_store::balance(signer::address_of(receiver),
-            reward_metadata);
+        let after_balance =
+            primary_fungible_store::balance(signer::address_of(receiver), reward_metadata);
 
         assert!(after_balance - before_balance == staking_reward_amount, 0);
         vip_zapping::claim_zapping_script(receiver, 0);
@@ -2943,8 +2989,8 @@ module initia_std::vip {
         chain: &signer, operator: &signer, receiver: &signer,
     ) acquires ModuleStore {
         let vesting_period = 10;
-        let (bridge_id, _reward_metadata, stakelisted_metadata, lp_metadata, validator) = test_setup_for_zapping(
-            chain, operator, receiver, 1, @0x99, 1_000_000_000_000,);
+        let (bridge_id, _reward_metadata, stakelisted_metadata, lp_metadata, validator) =
+            test_setup_for_zapping(chain, operator, receiver, 1, @0x99, 1_000_000_000_000,);
         let idx = 1;
         let zapping_amount = 100_000_000;
         let release_time = 0;

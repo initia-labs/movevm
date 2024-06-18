@@ -96,7 +96,8 @@ module minitia_std::nft {
 
         let object_signer = object::generate_signer(constructor_ref);
 
-        let collection_addr = collection::create_collection_address(creator_address, &collection_name);
+        let collection_addr =
+            collection::create_collection_address(creator_address, &collection_name);
         let collection = object::address_to_object<Collection>(collection_addr);
         collection::increment_supply(collection, token_id,
             signer::address_of(&object_signer));
@@ -221,8 +222,8 @@ module minitia_std::nft {
             let creator = creator(nft);
             let collection_name = collection_name(nft);
             let collection_address = collection::create_collection_address(creator, &collection_name);
-            let collection = object::address_to_object<collection::Collection>(
-                collection_address);
+            let collection =
+                object::address_to_object<collection::Collection>(collection_address);
             royalty::get(collection)
         }
     }
@@ -316,8 +317,8 @@ module minitia_std::nft {
         object::transfer(creator, nft, signer::address_of(trader));
         assert!(object::owner(nft) == signer::address_of(trader), 1);
 
-        let expected_royalty = royalty::create(
-            minitia_std::decimal128::from_ratio(25, 10000), creator_address);
+        let expected_royalty =
+            royalty::create(minitia_std::decimal128::from_ratio(25, 10000), creator_address);
         assert!(option::some(expected_royalty) == royalty(nft), 2);
     }
 
@@ -327,8 +328,8 @@ module minitia_std::nft {
         let token_id = string::utf8(b"nft token_id");
 
         let creator_address = signer::address_of(creator);
-        let expected_royalty = royalty::create(
-            minitia_std::decimal128::from_ratio(10, 1000), creator_address);
+        let expected_royalty =
+            royalty::create(minitia_std::decimal128::from_ratio(10, 1000), creator_address);
         collection::create_fixed_collection(
             creator,
             string::utf8(b"collection description"),
@@ -410,8 +411,9 @@ module minitia_std::nft {
 
         create_collection_helper(creator, collection_name, 1);
         let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, token_id);
-        let nft = object::address_to_object<Nft>(
-            create_nft_address(signer::address_of(creator), &collection_name, &token_id),);
+        let nft =
+            object::address_to_object<Nft>(
+                create_nft_address(signer::address_of(creator), &collection_name, &token_id),);
 
         let description = string::utf8(b"no fail");
         assert!(description != description(nft), 0);
@@ -426,8 +428,9 @@ module minitia_std::nft {
 
         create_collection_helper(creator, collection_name, 1);
         let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, token_id);
-        let nft = object::address_to_object<Nft>(
-            create_nft_address(signer::address_of(creator), &collection_name, &token_id),);
+        let nft =
+            object::address_to_object<Nft>(
+                create_nft_address(signer::address_of(creator), &collection_name, &token_id),);
 
         let uri = string::utf8(b"no fail");
         assert!(uri != uri(nft), 0);
@@ -441,14 +444,15 @@ module minitia_std::nft {
         let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let constructor_ref = create(
-            creator,
-            collection_name,
-            string::utf8(b"nft description"),
-            token_id,
-            option::none(),
-            string::utf8(b"nft uri"),
-        );
+        let constructor_ref =
+            create(
+                creator,
+                collection_name,
+                string::utf8(b"nft description"),
+                token_id,
+                option::none(),
+                string::utf8(b"nft uri"),
+            );
         let burn_ref = generate_burn_ref(&constructor_ref);
         let nft_addr = object::address_from_constructor_ref(&constructor_ref);
         assert!(exists<Nft>(nft_addr), 0);
@@ -464,16 +468,17 @@ module minitia_std::nft {
         let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let constructor_ref = create(
-            creator,
-            collection_name,
-            string::utf8(b"nft description"),
-            token_id,
-            option::some(
-                royalty::create(minitia_std::decimal128::from_ratio(1, 1),
-                    signer::address_of(creator))),
-            string::utf8(b"nft uri"),
-        );
+        let constructor_ref =
+            create(
+                creator,
+                collection_name,
+                string::utf8(b"nft description"),
+                token_id,
+                option::some(
+                    royalty::create(minitia_std::decimal128::from_ratio(1, 1),
+                        signer::address_of(creator))),
+                string::utf8(b"nft uri"),
+            );
         let burn_ref = generate_burn_ref(&constructor_ref);
         let nft_addr = object::address_from_constructor_ref(&constructor_ref);
         assert!(exists<Nft>(nft_addr), 0);
@@ -490,14 +495,15 @@ module minitia_std::nft {
         let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let constructor_ref = create(
-            creator,
-            collection_name,
-            string::utf8(b"nft description"),
-            token_id,
-            option::none(),
-            string::utf8(b"nft uri"),
-        );
+        let constructor_ref =
+            create(
+                creator,
+                collection_name,
+                string::utf8(b"nft description"),
+                token_id,
+                option::none(),
+                string::utf8(b"nft uri"),
+            );
         let burn_ref = generate_burn_ref(&constructor_ref);
         let nft_addr = object::address_from_constructor_ref(&constructor_ref);
         assert!(exists<Nft>(nft_addr), 0);

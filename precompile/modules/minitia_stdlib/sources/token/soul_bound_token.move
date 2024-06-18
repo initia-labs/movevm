@@ -101,22 +101,26 @@ module minitia_std::soul_bound_token {
     ): Object<SoulBoundTokenCollection> {
         let creator_addr = signer::address_of(creator);
         let royalty = royalty::create(royalty, creator_addr);
-        let constructor_ref = collection::create_fixed_collection(creator, description,
-            max_supply, name, option::some(royalty), uri,);
+        let constructor_ref =
+            collection::create_fixed_collection(creator, description, max_supply, name,
+                option::some(royalty), uri,);
 
         let object_signer = object::generate_signer(&constructor_ref);
-        let mutator_ref = if (mutable_description || mutable_uri) {
-            option::some(collection::generate_mutator_ref(&constructor_ref))
-        } else {
-            option::none()
-        };
+        let mutator_ref =
+            if (mutable_description || mutable_uri) {
+                option::some(collection::generate_mutator_ref(&constructor_ref))
+            } else {
+                option::none()
+            };
 
-        let royalty_mutator_ref = if (mutable_royalty) {
-            option::some(
-                royalty::generate_mutator_ref(object::generate_extend_ref(&constructor_ref)))
-        } else {
-            option::none()
-        };
+        let royalty_mutator_ref =
+            if (mutable_royalty) {
+                option::some(
+                    royalty::generate_mutator_ref(
+                        object::generate_extend_ref(&constructor_ref)))
+            } else {
+                option::none()
+            };
 
         let soul_bound_token_collection = SoulBoundTokenCollection {
             mutator_ref,
@@ -169,16 +173,17 @@ module minitia_std::soul_bound_token {
         property_values: vector<vector<u8>>,
         soul_bound_to: address,
     ): Object<SoulBoundToken> acquires SoulBoundTokenCollection {
-        let constructor_ref = mint_internal(
-            creator,
-            collection,
-            description,
-            name,
-            uri,
-            property_keys,
-            property_types,
-            property_values,
-        );
+        let constructor_ref =
+            mint_internal(
+                creator,
+                collection,
+                description,
+                name,
+                uri,
+                property_keys,
+                property_types,
+                property_values,
+            );
 
         let transfer_ref = object::generate_transfer_ref(&constructor_ref);
         let linear_transfer_ref = object::generate_linear_transfer_ref(&transfer_ref);
@@ -198,8 +203,8 @@ module minitia_std::soul_bound_token {
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
     ): ConstructorRef acquires SoulBoundTokenCollection {
-        let constructor_ref = nft::create(creator, collection, description, name,
-            option::none(), uri,);
+        let constructor_ref =
+            nft::create(creator, collection, description, name, option::none(), uri,);
         let s = object::generate_signer(&constructor_ref);
 
         let object_signer = object::generate_signer(&constructor_ref);
@@ -207,13 +212,14 @@ module minitia_std::soul_bound_token {
         let collection_obj = collection_object(creator, &collection);
         let collection = borrow_collection(collection_obj);
 
-        let mutator_ref = if (collection.mutable_nft_description
-            || collection.mutable_nft_name
-            || collection.mutable_nft_uri) {
-            option::some(nft::generate_mutator_ref(&constructor_ref))
-        } else {
-            option::none()
-        };
+        let mutator_ref =
+            if (collection.mutable_nft_description
+                || collection.mutable_nft_name
+                || collection.mutable_nft_uri) {
+                option::some(nft::generate_mutator_ref(&constructor_ref))
+            } else {
+                option::none()
+            };
 
         let soul_bound_token = SoulBoundToken {
             mutator_ref,
@@ -221,8 +227,8 @@ module minitia_std::soul_bound_token {
         };
         move_to(&object_signer, soul_bound_token);
 
-        let properties = property_map::prepare_input(property_keys, property_types,
-            property_values);
+        let properties =
+            property_map::prepare_input(property_keys, property_types, property_values);
         property_map::init(&s, properties);
 
         constructor_ref
@@ -344,8 +350,8 @@ module minitia_std::soul_bound_token {
 
     inline fun collection_object(creator: &signer, name: &String)
         : Object<SoulBoundTokenCollection> {
-        let collection_addr = collection::create_collection_address(
-            signer::address_of(creator), name);
+        let collection_addr =
+            collection::create_collection_address(signer::address_of(creator), name);
         object::address_to_object<SoulBoundTokenCollection>(collection_addr)
     }
 

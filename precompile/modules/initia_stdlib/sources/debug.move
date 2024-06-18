@@ -152,7 +152,8 @@ module initia_std::debug {
 
     #[test]
     fun test_print_struct() {
-        let obj = TestInner { val: 100, vec: vector[200u128, 400u128], msgs: vector[MSG_1, MSG_2], };
+        let obj =
+            TestInner { val: 100, vec: vector[200u128, 400u128], msgs: vector[MSG_1, MSG_2], };
 
         assert_equal(&obj,
             b"0x1::debug::TestInner {\n  val: 100,\n  vec: [ 200, 400 ],\n  msgs: [\n    0x616263646566,\n    0x313233343536\n  ]\n}");

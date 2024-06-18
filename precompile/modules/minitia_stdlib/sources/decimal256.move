@@ -206,15 +206,16 @@ module minitia_std::decimal256 {
         };
 
         // ignore fractional part longer than `FRACTIONAL_LENGTH`
-        let frac_part_val = if (dot_index == len) { 0 }
-        else {
-            let fractional_length = len - dot_index - 1;
-            if (fractional_length > FRACTIONAL_LENGTH) {
-                frac_part / pow(10, fractional_length - FRACTIONAL_LENGTH)
-            } else {
-                frac_part * pow(10, FRACTIONAL_LENGTH - fractional_length)
-            }
-        };
+        let frac_part_val =
+            if (dot_index == len) { 0 }
+            else {
+                let fractional_length = len - dot_index - 1;
+                if (fractional_length > FRACTIONAL_LENGTH) {
+                    frac_part / pow(10, fractional_length - FRACTIONAL_LENGTH)
+                } else {
+                    frac_part * pow(10, FRACTIONAL_LENGTH - fractional_length)
+                }
+            };
 
         new(int_part * DECIMAL_FRACTIONAL + frac_part_val)
     }
@@ -232,18 +233,19 @@ module minitia_std::decimal256 {
 
     #[test]
     fun test() {
-        assert!(from_string(&string::utf8(b"1234.5678")) == new(1234567800000000000000), 0);
+        assert!(from_string(&string::utf8(b"1234.5678"))
+            == new(1234567800000000000000), 0);
         assert!(
             from_string(
                 &string::utf8(
-                    b"115792089237316195423570985008687907853269984665640564039456")) == new(
-                115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL),
+                    b"115792089237316195423570985008687907853269984665640564039456"))
+            == new(115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL),
             0);
         assert!(
             from_string(
                 &string::utf8(
-                    b"115792089237316195423570985008687907853269984665640564039456.0")) == new(
-                115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL),
+                    b"115792089237316195423570985008687907853269984665640564039456.0"))
+            == new(115792089237316195423570985008687907853269984665640564039456 * DECIMAL_FRACTIONAL),
             0);
     }
 

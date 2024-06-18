@@ -45,15 +45,18 @@ module minitia_std::type_info {
 
         // vector
         assert!(type_name<vector<u8>>() == string::utf8(b"vector<u8>"), 6);
-        assert!(type_name<vector<vector<u8>>>() == string::utf8(b"vector<vector<u8>>"), 7);
-        assert!(type_name<vector<vector<TypeInfo>>>() == string::utf8(
-                b"vector<vector<0x1::type_info::TypeInfo>>"),
+        assert!(type_name<vector<vector<u8>>>()
+            == string::utf8(b"vector<vector<u8>>"), 7);
+        assert!(type_name<vector<vector<TypeInfo>>>()
+            == string::utf8(b"vector<vector<0x1::type_info::TypeInfo>>"),
             8);
 
         // struct
-        assert!(type_name<TypeInfo>() == string::utf8(b"0x1::type_info::TypeInfo"), 9);
+        assert!(type_name<TypeInfo>()
+            == string::utf8(b"0x1::type_info::TypeInfo"), 9);
         assert!(
-            type_name<Table<TypeInfo, Table<u8, vector<TypeInfo>>>>() == string::utf8(
+            type_name<Table<TypeInfo, Table<u8, vector<TypeInfo>>>>()
+            == string::utf8(
                 b"0x1::table::Table<0x1::type_info::TypeInfo, 0x1::table::Table<u8, vector<0x1::type_info::TypeInfo>>>"),
             10);
     }

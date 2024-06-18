@@ -90,8 +90,8 @@ module minitia_std::vip_score {
 
     fun check_deployer_permission(deployer: &signer) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        let found = simple_map::contains_key(&module_store.deployers,
-            &signer::address_of(deployer));
+        let found =
+            simple_map::contains_key(&module_store.deployers, &signer::address_of(deployer));
         assert!(found, error::invalid_argument(EUNAUTHORIZED));
     }
 

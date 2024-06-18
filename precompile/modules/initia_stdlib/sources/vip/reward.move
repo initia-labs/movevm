@@ -57,12 +57,13 @@ module initia_std::vip_reward {
     //
 
     fun generate_reward_store_seed<Vesting: copy + drop + store>(bridge_id: u64): vector<u8> {
-        let seed = if (type_info::type_name<Vesting>() == string::utf8(
-                b"0x1::vip_vesting::OperatorVesting")) {
-            vector[OPERATOR_REWARD_PREFIX]
-        } else {
-            vector[USER_REWARD_PREFIX]
-        };
+        let seed =
+            if (type_info::type_name<Vesting>()
+                == string::utf8(b"0x1::vip_vesting::OperatorVesting")) {
+                vector[OPERATOR_REWARD_PREFIX]
+            } else {
+                vector[USER_REWARD_PREFIX]
+            };
 
         vector::append(&mut seed, bcs::to_bytes(&bridge_id));
         return seed
@@ -90,8 +91,9 @@ module initia_std::vip_reward {
         let constructor_ref = object::create_named_object(chain, seed, false);
         let object = object::generate_signer(&constructor_ref);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
-        let reward_store = primary_fungible_store::ensure_primary_store_exists(
-            reward_store_addr, reward_metadata());
+        let reward_store =
+            primary_fungible_store::ensure_primary_store_exists(reward_store_addr,
+                reward_metadata());
 
         move_to(
             &object,
@@ -106,8 +108,9 @@ module initia_std::vip_reward {
         reward_store_addr: address, stage: u64, reward: u64
     ) acquires RewardStore {
         let reward_store = borrow_global_mut<RewardStore>(reward_store_addr);
-        let stage_reward = table::borrow_mut_with_default(&mut reward_store.reward_per_stage,
-            table_key::encode_u64(stage), 0);
+        let stage_reward =
+            table::borrow_mut_with_default(&mut reward_store.reward_per_stage,
+                table_key::encode_u64(stage), 0);
         *stage_reward = *stage_reward + reward;
     }
 
@@ -131,8 +134,9 @@ module initia_std::vip_reward {
     public fun get_stage_reward(reward_store_addr: address, stage: u64): u64 acquires RewardStore {
         let reward_store = borrow_global<RewardStore>(reward_store_addr);
 
-        let stage_reward = table::borrow_with_default(&reward_store.reward_per_stage,
-            table_key::encode_u64(stage), &0);
+        let stage_reward =
+            table::borrow_with_default(&reward_store.reward_per_stage,
+                table_key::encode_u64(stage), &0);
         *stage_reward
     }
 
