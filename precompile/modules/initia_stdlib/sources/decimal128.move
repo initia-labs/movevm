@@ -23,27 +23,31 @@ module initia_std::decimal128 {
     }
 
     public fun new_u64(val: u64): Decimal128 {
-        Decimal128 { val: (val as u128) }
+        Decimal128 {val: (val as u128)}
     }
 
     public fun one(): Decimal128 {
-        Decimal128 { val: DECIMAL_FRACTIONAL }
+        Decimal128 {val: DECIMAL_FRACTIONAL}
     }
 
     public fun zero(): Decimal128 {
-        Decimal128 { val: 0 }
+        Decimal128 {val: 0}
     }
 
     public fun from_ratio_u64(numerator: u64, denominator: u64): Decimal128 {
         assert!(denominator != 0, EDIV_WITH_ZERO);
 
-        new((numerator as u128) * DECIMAL_FRACTIONAL / (denominator as u128))
+        new(
+            (numerator as u128) * DECIMAL_FRACTIONAL / (denominator as u128)
+        )
     }
 
     public fun from_ratio(numerator: u128, denominator: u128): Decimal128 {
         assert!(denominator != 0, EDIV_WITH_ZERO);
 
-        new(numerator * DECIMAL_FRACTIONAL / denominator)
+        new(
+            numerator * DECIMAL_FRACTIONAL / denominator
+        )
     }
 
     public fun add(left: &Decimal128, right: &Decimal128): Decimal128 {
@@ -55,7 +59,9 @@ module initia_std::decimal128 {
     }
 
     public fun mul_u64(decimal: &Decimal128, val: u64): u64 {
-        (decimal.val * (val as u128) / DECIMAL_FRACTIONAL as u64)
+        (
+            decimal.val * (val as u128) / DECIMAL_FRACTIONAL as u64
+        )
     }
 
     public fun mul_u64_with_round_up(decimal: &Decimal128, val: u64): u64 {
@@ -144,11 +150,17 @@ module initia_std::decimal128 {
             if (s == 46) break;
 
             int_part = int_part * 10;
-            assert!(s >= 48 && s <= 57, error::invalid_argument(EFAILED_TO_DESERIALIZE));
+            assert!(
+                s >= 48 && s <= 57,
+                error::invalid_argument(EFAILED_TO_DESERIALIZE)
+            );
 
             let n = (s - 48 as u128);
             int_part = int_part + n;
-            assert!(int_part < MAX_INTEGER_PART, error::invalid_argument(EOUT_OF_RANGE));
+            assert!(
+                int_part < MAX_INTEGER_PART,
+                error::invalid_argument(EOUT_OF_RANGE)
+            );
             dot_index = dot_index + 1;
         };
 
@@ -157,26 +169,38 @@ module initia_std::decimal128 {
             cursor = cursor + 1;
 
             frac_part = frac_part * 10;
-            assert!(s >= 48 && s <= 57, error::invalid_argument(EFAILED_TO_DESERIALIZE));
+            assert!(
+                s >= 48 && s <= 57,
+                error::invalid_argument(EFAILED_TO_DESERIALIZE)
+            );
 
             let n = (s - 48 as u128);
             frac_part = frac_part + n;
-            assert!(frac_part < MAX_INTEGER_PART, error::invalid_argument(EOUT_OF_RANGE));
+            assert!(
+                frac_part < MAX_INTEGER_PART,
+                error::invalid_argument(EOUT_OF_RANGE)
+            );
         };
 
         // ignore fractional part longer than `FRACTIONAL_LENGTH`
-        let frac_part_val =
-            if (dot_index == len) { 0 }
-            else {
-                let fractional_length = len - dot_index - 1;
-                if (fractional_length > FRACTIONAL_LENGTH) {
-                    frac_part / pow(10, fractional_length - FRACTIONAL_LENGTH)
-                } else {
-                    frac_part * pow(10, FRACTIONAL_LENGTH - fractional_length)
-                }
-            };
+        let frac_part_val = if (dot_index == len) { 0 } else {
+            let fractional_length = len - dot_index - 1;
+            if (fractional_length > FRACTIONAL_LENGTH) {
+                frac_part / pow(
+                    10,
+                    fractional_length - FRACTIONAL_LENGTH
+                )
+            } else {
+                frac_part * pow(
+                    10,
+                    FRACTIONAL_LENGTH - fractional_length
+                )
+            }
+        };
 
-        new(int_part * DECIMAL_FRACTIONAL + frac_part_val)
+        new(
+            int_part * DECIMAL_FRACTIONAL + frac_part_val
+        )
     }
 
     fun pow(num: u128, pow_amount: u64): u128 {
@@ -192,108 +216,516 @@ module initia_std::decimal128 {
 
     #[test]
     fun test() {
-        assert!(from_string(&string::utf8(b"1234.5678"))
-            == new(1234567800000000000000), 0);
-        assert!(from_string(&string::utf8(b"340282366920938463462"))
-            == new(340282366920938463462 * DECIMAL_FRACTIONAL),
-            0);
-        assert!(from_string(&string::utf8(b"340282366920938463462.0"))
-            == new(340282366920938463462 * DECIMAL_FRACTIONAL),
-            0);
+        assert!(
+            from_string(&string::utf8(b"1234.5678")) == new(1234567800000000000000),
+            0
+        );
+        assert!(
+            from_string(
+                &string::utf8(b"340282366920938463462")
+            ) == new(
+                340282366920938463462 * DECIMAL_FRACTIONAL
+            ),
+            0
+        );
+        assert!(
+            from_string(
+                &string::utf8(b"340282366920938463462.0")
+            ) == new(
+                340282366920938463462 * DECIMAL_FRACTIONAL
+            ),
+            0
+        );
     }
 
     #[test]
     fun test_round_up() {
         // u64
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.0")), 2) == 200, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.1")), 2) == 200, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.2")), 2) == 200, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.3")), 2) == 201, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.4")), 2) == 201, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.5")), 2) == 201, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.6")), 2) == 201, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.7")), 2) == 201, 0);
-        assert!(mul_u64_with_round_up(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.0")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.1")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.2")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.3")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.4")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.5")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.6")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.7")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_round_up(
+                &from_string(&string::utf8(b"100.8")),
+                2
+            ) == 202,
+            0
+        );
 
         // u128
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.0")), 2) == 200, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.1")), 2) == 200, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.2")), 2) == 200, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.3")), 2) == 201, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.4")), 2) == 201, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.5")), 2) == 201, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.6")), 2) == 201, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.7")), 2) == 201, 0);
-        assert!(mul_u128_with_round_up(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.0")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.1")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.2")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.3")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.4")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.5")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.6")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.7")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_round_up(
+                &from_string(&string::utf8(b"100.8")),
+                2
+            ) == 202,
+            0
+        );
 
         // u64
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.0"))) == 200, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.1"))) == 200, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.2"))) == 200, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.3"))) == 200, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.4"))) == 200, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.5"))) == 201, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.6"))) == 201, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.7"))) == 201, 0);
-        assert!(round_up_u64(&from_string(&string::utf8(b"200.8"))) == 201, 0);
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.0"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.1"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.2"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.3"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.4"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.5"))
+            ) == 201,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.6"))
+            ) == 201,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.7"))
+            ) == 201,
+            0
+        );
+        assert!(
+            round_up_u64(
+                &from_string(&string::utf8(b"200.8"))
+            ) == 201,
+            0
+        );
 
         // u128
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.0"))) == 200, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.1"))) == 200, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.2"))) == 200, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.3"))) == 200, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.4"))) == 200, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.5"))) == 201, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.6"))) == 201, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.7"))) == 201, 0);
-        assert!(round_up_u128(&from_string(&string::utf8(b"200.8"))) == 201, 0);
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.0"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.1"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.2"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.3"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.4"))
+            ) == 200,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.5"))
+            ) == 201,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.6"))
+            ) == 201,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.7"))
+            ) == 201,
+            0
+        );
+        assert!(
+            round_up_u128(
+                &from_string(&string::utf8(b"200.8"))
+            ) == 201,
+            0
+        );
     }
 
     #[test]
     fun test_ceil() {
         // u64
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.0")), 2) == 200, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.1")), 2) == 201, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.2")), 2) == 201, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.3")), 2) == 201, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.4")), 2) == 201, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.5")), 2) == 201, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.6")), 2) == 202, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.7")), 2) == 202, 0);
-        assert!(mul_u64_with_ceil(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.0")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.1")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.2")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.3")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.4")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.5")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.6")),
+                2
+            ) == 202,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.7")),
+                2
+            ) == 202,
+            0
+        );
+        assert!(
+            mul_u64_with_ceil(
+                &from_string(&string::utf8(b"100.8")),
+                2
+            ) == 202,
+            0
+        );
 
         // u128
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.0")), 2) == 200, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.1")), 2) == 201, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.2")), 2) == 201, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.3")), 2) == 201, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.4")), 2) == 201, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.5")), 2) == 201, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.6")), 2) == 202, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.7")), 2) == 202, 0);
-        assert!(mul_u128_with_ceil(&from_string(&string::utf8(b"100.8")), 2) == 202, 0);
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.0")),
+                2
+            ) == 200,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.1")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.2")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.3")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.4")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.5")),
+                2
+            ) == 201,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.6")),
+                2
+            ) == 202,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.7")),
+                2
+            ) == 202,
+            0
+        );
+        assert!(
+            mul_u128_with_ceil(
+                &from_string(&string::utf8(b"100.8")),
+                2
+            ) == 202,
+            0
+        );
 
         // u64
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.0"))) == 200, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.1"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.2"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.3"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.4"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.5"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.6"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.7"))) == 201, 0);
-        assert!(ceil_u64(&from_string(&string::utf8(b"200.8"))) == 201, 0);
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.0"))
+            ) == 200,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.1"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.2"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.3"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.4"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.5"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.6"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.7"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u64(
+                &from_string(&string::utf8(b"200.8"))
+            ) == 201,
+            0
+        );
 
         // u128
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.0"))) == 200, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.1"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.2"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.3"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.4"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.5"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.6"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.7"))) == 201, 0);
-        assert!(ceil_u128(&from_string(&string::utf8(b"200.8"))) == 201, 0);
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.0"))
+            ) == 200,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.1"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.2"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.3"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.4"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.5"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.6"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.7"))
+            ) == 201,
+            0
+        );
+        assert!(
+            ceil_u128(
+                &from_string(&string::utf8(b"200.8"))
+            ) == 201,
+            0
+        );
     }
 
     #[test]
@@ -305,6 +737,8 @@ module initia_std::decimal128 {
     #[test]
     #[expected_failure(abort_code = 0x10002, location = Self)]
     fun failed_out_of_range() {
-        _ = from_string(&string::utf8(b"340282366920938463463.0"));
+        _ = from_string(
+            &string::utf8(b"340282366920938463463.0")
+        );
     }
 }

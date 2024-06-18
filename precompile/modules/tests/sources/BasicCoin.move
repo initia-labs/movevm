@@ -21,14 +21,22 @@ module std::BasicCoin {
     public entry fun mint<CoinType>(account: signer, value: u64) acquires Coin {
         let account_addr = signer::address_of(&account);
         if (!exists<Coin<CoinType>>(account_addr)) {
-            move_to(&account, Coin<CoinType> { value, test: true });
+            move_to(
+                &account,
+                Coin<CoinType> {value, test: true}
+            );
         } else {
             let coin = borrow_global_mut<Coin<CoinType>>(account_addr);
             coin.value = coin.value + value;
         };
 
         // emit event
-        event::emit(MintEvent { amount: value, coin_type: type_info::type_name<CoinType>(), });
+        event::emit(
+            MintEvent {
+                amount: value,
+                coin_type: type_info::type_name<CoinType>(),
+            }
+        );
     }
 
     #[view]
@@ -39,7 +47,7 @@ module std::BasicCoin {
 
     #[view]
     public fun number(): u64 {
-        123
+         123
     }
 
     #[view]

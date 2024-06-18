@@ -10,13 +10,26 @@ module initia_std::oracle {
 
     #[test_only]
     public fun set_price(
-        pair_id: &String, price: u256, updated_at: u64, decimals: u64
+        pair_id: &String,
+        price: u256,
+        updated_at: u64,
+        decimals: u64
     ) {
-        set_price_internal(*string::bytes(pair_id), price, updated_at, decimals)
+        set_price_internal(
+            *string::bytes(pair_id),
+            price,
+            updated_at,
+            decimals
+        )
     }
 
     #[test_only]
-    native fun set_price_internal(pair_id: vector<u8>, price: u256, updated_at: u64, decimals: u64);
+    native fun set_price_internal(
+        pair_id: vector<u8>,
+        price: u256,
+        updated_at: u64,
+        decimals: u64
+    );
 
     #[test]
     public fun test_get_price() {
@@ -32,8 +45,18 @@ module initia_std::oracle {
         let btc_decimals = 8;
         let eth_decimals = 18;
 
-        set_price(&btc_usd_pair_id, btc_price, btc_updated_at, btc_decimals);
-        set_price(&eth_usd_pair_id, eth_price, eth_updated_at, eth_decimals);
+        set_price(
+            &btc_usd_pair_id,
+            btc_price,
+            btc_updated_at,
+            btc_decimals
+        );
+        set_price(
+            &eth_usd_pair_id,
+            eth_price,
+            eth_updated_at,
+            eth_decimals
+        );
 
         let (price, updated_at, decimals) = get_price(btc_usd_pair_id);
         assert!(btc_price == price, 0);

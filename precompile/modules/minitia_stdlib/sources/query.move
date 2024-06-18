@@ -40,7 +40,12 @@ module minitia_std::query {
     public fun get_proposal(proposal_id: u64): (u64, String, String, String) {
         let obj = json::empty();
         let index = json::start_index();
-        json::set_object(&mut obj, index, option::none<String>(), 1);
+        json::set_object(
+            &mut obj,
+            index,
+            option::none<String>(),
+            1
+        );
         json::set_int_raw(
             &mut obj,
             json::get_next_index(&index, 0),
@@ -50,8 +55,10 @@ module minitia_std::query {
         );
 
         let req = json::stringify(&obj);
-        let response =
-            query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
+        let response = query_stargate(
+            b"/initia.gov.v1.Query/Proposal",
+            *string::bytes(&req)
+        );
         let res = json::parse(string::utf8(response));
         let index = json::get_next_index(&index, 0);
 
@@ -59,14 +66,27 @@ module minitia_std::query {
         let (_, data) = json::unpack_elem(json::borrow(&res, &cindex));
         let (_, id) = json::as_int(data);
 
-        let cindex = json::find(&res, &index, &string::utf8(b"title"));
+        let cindex = json::find(
+            &res,
+            &index,
+            &string::utf8(b"title")
+        );
         let (_, data) = json::unpack_elem(json::borrow(&res, &cindex));
         let title = json::as_string(data);
 
-        let cindex = json::find(&res, &index, &string::utf8(b"summary"));
+        let cindex = json::find(
+            &res,
+            &index,
+            &string::utf8(b"summary")
+        );
         let (_, data) = json::unpack_elem(json::borrow(&res, &cindex));
         let summary = json::as_string(data);
-        ((id as u64), title, summary, string::utf8(response))
+        (
+            (id as u64),
+            title,
+            summary,
+            string::utf8(response)
+        )
     }
 
     #[view]
@@ -74,12 +94,18 @@ module minitia_std::query {
         let obj = simple_json::empty();
         simple_json::set_object(&mut obj, option::none<String>());
         simple_json::increase_depth(&mut obj);
-        simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"proposal_id")), true,
-            (proposal_id as u256));
+        simple_json::set_int_raw(
+            &mut obj,
+            option::some(string::utf8(b"proposal_id")),
+            true,
+            (proposal_id as u256)
+        );
 
         let req = json::stringify(simple_json::to_json_object(&obj));
-        let res =
-            query_stargate(b"/initia.gov.v1.Query/Proposal", *string::bytes(&req));
+        let res = query_stargate(
+            b"/initia.gov.v1.Query/Proposal",
+            *string::bytes(&req)
+        );
         let res = simple_json::from_json_object(json::parse(string::utf8(res)));
         simple_json::increase_depth(&mut res);
         simple_json::increase_depth(&mut res);
@@ -92,14 +118,25 @@ module minitia_std::query {
         let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
         let status = json::as_string(data);
 
-        simple_json::find_and_set_index(&mut res, &string::utf8(b"submit_time"));
+        simple_json::find_and_set_index(
+            &mut res,
+            &string::utf8(b"submit_time")
+        );
         let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
         let submit_time = json::as_string(data);
 
-        simple_json::find_and_set_index(&mut res, &string::utf8(b"emergency"));
+        simple_json::find_and_set_index(
+            &mut res,
+            &string::utf8(b"emergency")
+        );
         let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
         let emergency = json::as_bool(data);
-        ((id as u64), status, submit_time, emergency)
+        (
+            (id as u64),
+            status,
+            submit_time,
+            emergency
+        )
     }
 
     /// query_custom examples are in initia_stdlib::address module
@@ -107,7 +144,11 @@ module minitia_std::query {
     native public fun query_stargate(path: vector<u8>, data: vector<u8>): vector<u8>;
 
     #[test_only]
-    native public fun set_query_response(path_or_name: vector<u8>, data: vector<u8>, response: vector<u8>);
+    native public fun set_query_response(
+        path_or_name: vector<u8>,
+        data: vector<u8>,
+        response: vector<u8>
+    );
 
     #[test]
     fun test_query_custom() {

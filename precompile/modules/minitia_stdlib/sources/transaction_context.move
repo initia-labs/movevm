@@ -21,14 +21,20 @@ module minitia_std::transaction_context {
         let count: u64 = 50;
         while (i < count) {
             i = i + 1;
-            vector::push_back(&mut addrs, generate_unique_address());
+            vector::push_back(
+                &mut addrs,
+                generate_unique_address()
+            );
         };
 
         i = 0;
         while (i < count - 1) {
             let j: u64 = i + 1;
             while (j < count) {
-                assert!(*vector::borrow(&addrs, i) != *vector::borrow(&addrs, j), 0);
+                assert!(
+                    *vector::borrow(&addrs, i) != *vector::borrow(&addrs, j),
+                    0
+                );
                 j = j + 1;
             };
             i = i + 1;

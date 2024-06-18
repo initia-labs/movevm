@@ -6,7 +6,7 @@ module initia_std::cosmos {
     use std::string::{Self, String};
     use std::object::Object;
     use std::fungible_asset::Metadata;
-    use std::collection::{Collection};
+    use std::collection::{ Collection };
 
     use initia_std::option;
     use initia_std::json;
@@ -22,21 +22,43 @@ module initia_std::cosmos {
         let obj = simple_json::empty();
         simple_json::set_object(&mut obj, option::none<String>());
         simple_json::increase_depth(&mut obj);
-        simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"proposal_id")), true,
-            (proposal_id as u256));
-        simple_json::set_string(&mut obj, option::some(string::utf8(b"voter")), voter);
-        simple_json::set_int_raw(&mut obj, option::some(string::utf8(b"option")), true,
-            (option as u256));
-        simple_json::set_string(&mut obj, option::some(string::utf8(b"metadata")), metadata);
-        simple_json::set_string(&mut obj, option::some(string::utf8(b"@type")),
-            string::utf8(b"/cosmos.gov.v1.MsgVote"));
+        simple_json::set_int_raw(
+            &mut obj,
+            option::some(string::utf8(b"proposal_id")),
+            true,
+            (proposal_id as u256)
+        );
+        simple_json::set_string(
+            &mut obj,
+            option::some(string::utf8(b"voter")),
+            voter
+        );
+        simple_json::set_int_raw(
+            &mut obj,
+            option::some(string::utf8(b"option")),
+            true,
+            (option as u256)
+        );
+        simple_json::set_string(
+            &mut obj,
+            option::some(string::utf8(b"metadata")),
+            metadata
+        );
+        simple_json::set_string(
+            &mut obj,
+            option::some(string::utf8(b"@type")),
+            string::utf8(b"/cosmos.gov.v1.MsgVote")
+        );
 
         let req = json::stringify(simple_json::to_json_object(&obj));
         stargate(sender, req);
     }
 
     public entry fun stargate(sender: &signer, data: String,) {
-        stargate_internal(signer::address_of(sender), *string::bytes(&data),)
+        stargate_internal(
+            signer::address_of(sender),
+            *string::bytes(&data),
+        )
     }
 
     public entry fun move_execute(
@@ -52,7 +74,7 @@ module initia_std::cosmos {
             module_address,
             *string::bytes(&module_name),
             *string::bytes(&function_name),
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
+            vector::map_ref(&type_args,|v|*string::bytes(v)),
             args,
             false,
         )
@@ -71,8 +93,8 @@ module initia_std::cosmos {
             module_address,
             *string::bytes(&module_name),
             *string::bytes(&function_name),
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
-            vector::map_ref(&args, |v| *string::bytes(v)),
+            vector::map_ref(&type_args,|v|*string::bytes(v)),
+            vector::map_ref(&args,|v|*string::bytes(v)),
             true,
         )
     }
@@ -86,7 +108,7 @@ module initia_std::cosmos {
         move_script_internal(
             signer::address_of(sender),
             code_bytes,
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
+            vector::map_ref(&type_args,|v|*string::bytes(v)),
             args,
             false,
         )
@@ -101,8 +123,8 @@ module initia_std::cosmos {
         move_script_internal(
             signer::address_of(sender),
             code_bytes,
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
-            vector::map_ref(&args, |v| *string::bytes(v)),
+            vector::map_ref(&type_args,|v|*string::bytes(v)),
+            vector::map_ref(&args,|v|*string::bytes(v)),
             true,
         )
     }
@@ -122,9 +144,15 @@ module initia_std::cosmos {
     }
 
     public entry fun fund_community_pool(
-        sender: &signer, metadata: Object<Metadata>, amount: u64,
+        sender: &signer,
+        metadata: Object<Metadata>,
+        amount: u64,
     ) {
-        fund_community_pool_internal(signer::address_of(sender), &metadata, amount,)
+        fund_community_pool_internal(
+            signer::address_of(sender),
+            &metadata,
+            amount,
+        )
     }
 
     /// ICS20 ibc transfer
@@ -173,7 +201,7 @@ module initia_std::cosmos {
             signer::address_of(sender),
             *string::bytes(&receiver),
             &collection,
-            vector::map_ref(&token_ids, |v| *string::bytes(v)),
+            vector::map_ref(&token_ids,|v|*string::bytes(v)),
             *string::bytes(&source_port),
             *string::bytes(&source_channel),
             revision_number,
@@ -230,10 +258,17 @@ module initia_std::cosmos {
     );
 
     native fun delegate_internal(
-        delegator: address, validator: vector<u8>, metadata: &Object<Metadata>, amount: u64,
+        delegator: address,
+        validator: vector<u8>,
+        metadata: &Object<Metadata>,
+        amount: u64,
     );
 
-    native fun fund_community_pool_internal(sender: address, metadata: &Object<Metadata>, amount: u64,);
+    native fun fund_community_pool_internal(
+        sender: address,
+        metadata: &Object<Metadata>,
+        amount: u64,
+    );
 
     native fun transfer_internal(
         sender: address,
