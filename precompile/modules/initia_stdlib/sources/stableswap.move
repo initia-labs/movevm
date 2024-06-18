@@ -237,6 +237,20 @@ module initia_std::stableswap {
         res
     }
 
+    #[view]
+    public fun spot_price(
+        pool_obj:Object<Pool>,
+        base_metadata: Object<Metadata>,
+        quote_metadata: Object<Metadata>,
+    ): Decimal128 acquires Pool {
+        let swap_amount = 1000000;
+        let (base_return_amount, _) = swap_simulation(pool_obj, quote_metadata, base_metadata, swap_amount, true);
+        let (quote_return_amount, _) = swap_simulation(pool_obj, base_metadata, quote_metadata, swap_amount, true);
+
+        
+        decimal128::from_ratio_u64(quote_return_amount + swap_amount, base_return_amount + swap_amount)
+    }
+
     fun init_module(chain: &signer) {
         move_to(chain, ModuleStore { pools: table::new(), pool_count: 0 })
     }
