@@ -30,7 +30,7 @@ jobs:
       - name: Install latest rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.77.1
           components: rustfmt, clippy
       - uses: actions/setup-go@v4
         with:
