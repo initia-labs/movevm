@@ -385,6 +385,17 @@ module initia_std::minitswap {
     }
 
     #[view]
+    public fun swap_simulation_given_out(
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
+        return_amount: u64,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let (return_amount, fee_amount) = safe_swap_simulation_given_out(offer_metadata, return_metadata, return_amount);
+        assert!(return_amount != (U64_MAX as u64), error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW));
+        (return_amount, fee_amount)
+    }
+
+    #[view]
     public fun swap_simulation_by_denom(
         offer_denom: String,
         return_denom: String,
@@ -1575,7 +1586,7 @@ module initia_std::minitswap {
         pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount - peg_keeper_return_amount;
         pool.virtual_init_balance = pool.virtual_init_balance + peg_keeper_offer_amount;
         pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + peg_keeper_return_amount;
-        pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance + peg_keeper_offer_amount;
+        pool.pegkeeper_owned_ibc_op_init_balance = pool.pegkeeper_owned_ibc_op_init_balance + peg_keeper_return_amount;
         pool.last_recovered_timestamp = timestamp;
 
         (peg_keeper_offer_amount, peg_keeper_return_amount)
@@ -1902,6 +1913,15 @@ module initia_std::minitswap {
         (return_pool_amount - y as u64)
     }
 
+    fun get_offer_amount(return_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, ann: u64): u64 {
+        let d = get_d0(pool_size, ann);
+        let return_pool_amount_after = return_pool_amount - return_amount;
+
+        let y = get_y(d, return_pool_amount_after, ann);
+    
+        (y - offer_pool_amount as u64)
+    }
+
     /// get counterparty's amount
     fun get_y(d: u64, x: u64, ann: u64): u64 {
         let d = (d as u256);
@@ -2082,6 +2102,103 @@ module initia_std::minitswap {
         return_amount = return_amount - fee_amount;
 
         (return_amount, fee_amount)
+    }
+
+    public fun safe_swap_simulation_given_out(
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
+        return_amount: u64,
+    ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let is_init_offered = is_init_metadata(offer_metadata);
+        let ibc_op_init_metadata = if(is_init_offered) {
+            return_metadata
+        } else {
+            offer_metadata
+        };
+
+        let virtual_pool_exists = virtual_pool_exists(ibc_op_init_metadata);
+
+        assert!(virtual_pool_exists, error::invalid_argument(EPOOL_NOT_FOUND));
+
+        let (init_pool_amount, ibc_op_init_pool_amount) = get_pool_amount(ibc_op_init_metadata, !is_init_offered);
+        let (module_store, pool) = borrow_all(ibc_op_init_metadata);
+        let (pool_size, ann) = (pool.pool_size, pool.ann);
+        let (offer_amount, fee_amount) = if (is_init_offered) {
+            // first assume there are no arb fee and calculate offer amount
+            // and then calculate arb fee and get actual return amount which is same with return_amount_before_swap_fee - swap_fee_amount - arb_fee_amount
+            // to make actual return amount to return amount, set return_amount_before_swap_fee = return_amount_before_swap_fee + return_diff
+            // where return_diff = target return amount - actual return amount
+            // and recalculate offer amount repeatly until return amount <= actual return amount
+            // note that actual return is always small or equal with target return amount
+
+            let denominator = decimal128::val(&decimal128::one());
+
+            // adjust fee. return amount before swap fee = return amount * 1 / (1 - f)
+            let return_amount_before_swap_fee = (mul_div_u128((return_amount as u128), denominator, (denominator - decimal128::val(&module_store.swap_fee_rate))) as u64);
+            if (ibc_op_init_pool_amount - return_amount_before_swap_fee < pool_size) {
+                return ((U64_MAX as u64), (U64_MAX as u64))
+            };
+
+            let swap_fee_amount = return_amount_before_swap_fee - return_amount;
+
+            let offer_amount = get_offer_amount(return_amount_before_swap_fee, init_pool_amount, ibc_op_init_pool_amount, pool_size, ann);
+
+            // calculate arb fee
+            let arb_profit = if (return_amount > offer_amount) {
+                return_amount - offer_amount
+            } else {
+                0
+            };
+            let arb_fee_amount = decimal128::mul_u64(&module_store.arb_fee_rate, arb_profit);
+
+            // actual return amount is return amount - arb fee
+            let actual_return_amount = return_amount - arb_fee_amount;
+            let return_diff = arb_fee_amount;
+
+            // retry while actual return amount is equal to return amount
+            let i = 0;
+            while (return_amount > actual_return_amount && i < 255) {
+                return_amount_before_swap_fee = return_amount_before_swap_fee + return_diff;
+
+                if (ibc_op_init_pool_amount - return_amount_before_swap_fee < pool_size) {
+                    return ((U64_MAX as u64), (U64_MAX as u64))
+                };
+
+                swap_fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount_before_swap_fee);
+
+                offer_amount = get_offer_amount(return_amount_before_swap_fee, init_pool_amount, ibc_op_init_pool_amount, pool_size, ann);
+
+                // calculate arb fee
+                arb_profit = if (return_amount > offer_amount) {
+                    return_amount_before_swap_fee - swap_fee_amount - offer_amount
+                } else {
+                    0
+                };
+                arb_fee_amount = decimal128::mul_u64(&module_store.arb_fee_rate, arb_profit);
+                actual_return_amount = return_amount_before_swap_fee - swap_fee_amount - arb_fee_amount;
+                return_diff = return_amount - actual_return_amount;
+                i = i + 1;
+            };
+
+
+            (offer_amount, swap_fee_amount + arb_fee_amount)
+        } else {
+            let denominator = decimal128::val(&decimal128::one());
+
+            // adjust fee. amount = amount * 1 / (1 - f)
+            let return_amount_ = (mul_div_u128((return_amount as u128), denominator, (denominator - decimal128::val(&module_store.swap_fee_rate))) as u64);
+            let fee_amount = return_amount_ - return_amount;
+
+            let offer_amount = get_offer_amount(return_amount_, ibc_op_init_pool_amount, init_pool_amount, pool_size, ann);
+
+            (offer_amount, fee_amount)
+        };
+
+        (offer_amount, fee_amount)
+    }
+
+    fun mul_div_u128(a: u128, b: u128, c: u128): u128 {
+        return ((a as u256) * (b as u256) / (c as u256) as u128)
     }
 
     #[test_only]
