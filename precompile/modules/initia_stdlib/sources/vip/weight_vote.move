@@ -13,7 +13,7 @@ module initia_std::vip_weight_vote {
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::event;
     use initia_std::primary_fungible_store;
-    use initia_std::object::{Self};
+    use initia_std::object::{ Self };
     use initia_std::table::{Self, Table};
     use initia_std::table_key;
 
@@ -1117,8 +1117,10 @@ module initia_std::vip_weight_vote {
     public fun get_total_tally(stage: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_key = table_key::encode_u64(stage);
-        assert!(table::contains(&module_store.proposals, stage_key),
-            error::not_found(ESTAGE_NOT_FOUND));
+        assert!(
+            table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND)
+        );
         let proposal = table::borrow(&module_store.proposals, stage_key);
         proposal.total_tally
     }
@@ -1127,19 +1129,33 @@ module initia_std::vip_weight_vote {
     public fun get_tally(stage: u64, bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_key = table_key::encode_u64(stage);
-        assert!(table::contains(&module_store.proposals, stage_key),
-            error::not_found(ESTAGE_NOT_FOUND));
+        assert!(
+            table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND)
+        );
         let proposal = table::borrow(&module_store.proposals, stage_key);
-        *table::borrow_with_default(&proposal.tally, table_key::encode_u64(bridge_id), &0)
+        *table::borrow_with_default(
+            &proposal.tally,
+            table_key::encode_u64(bridge_id),
+            &0
+        )
     }
 
     #[view]
     public fun get_challenge(challenge_id: u64): ChallengeResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let challenge_key = table_key::encode_u64(challenge_id);
-        assert!(table::contains(&module_store.challenges, challenge_key),
-            error::not_found(ECHALLENGE_NOT_FOUND));
-        let challenge = table::borrow(&module_store.challenges, challenge_key);
+        assert!(
+            table::contains(
+                &module_store.challenges,
+                challenge_key
+            ),
+            error::not_found(ECHALLENGE_NOT_FOUND)
+        );
+        let challenge = table::borrow(
+            &module_store.challenges,
+            challenge_key
+        );
 
         ChallengeResponse {
             title: challenge.title,
@@ -1165,8 +1181,10 @@ module initia_std::vip_weight_vote {
     public fun get_proposal(stage: u64): ProposalResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_key = table_key::encode_u64(stage);
-        assert!(table::contains(&module_store.proposals, stage_key),
-            error::not_found(ESTAGE_NOT_FOUND));
+        assert!(
+            table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND)
+        );
         let proposal = table::borrow(&module_store.proposals, stage_key);
 
         ProposalResponse {
@@ -1183,8 +1201,10 @@ module initia_std::vip_weight_vote {
     public fun get_weight_vote(stage: u64, user: address): WeightVoteResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_key = table_key::encode_u64(stage);
-        assert!(table::contains(&module_store.proposals, stage_key),
-            error::not_found(ESTAGE_NOT_FOUND));
+        assert!(
+            table::contains(&module_store.proposals, stage_key),
+            error::not_found(ESTAGE_NOT_FOUND)
+        );
         let proposal = table::borrow(&module_store.proposals, stage_key);
         let vote = table::borrow(&proposal.votes, user);
 
@@ -1426,7 +1446,10 @@ module initia_std::vip_weight_vote {
 
         let weight_vote = get_weight_vote(1, signer::address_of(u1));
         assert!(weight_vote.voting_power == 10, 4);
-        assert!(vector::length(&weight_vote.weights) == 2, 5);
+        assert!(
+            vector::length(&weight_vote.weights) == 2,
+            5
+        );
 
         set_block_info(100, 201);
         execute_proposal();
@@ -1537,12 +1560,27 @@ module initia_std::vip_weight_vote {
 
         let module_response = get_module_store();
         let vote = get_proposal(2);
-        assert!(module_response.stage_start_timestamp == 200, 2);
-        assert!(module_response.stage_end_timestamp == 300, 3);
+        assert!(
+            module_response.stage_start_timestamp == 200,
+            2
+        );
+        assert!(
+            module_response.stage_end_timestamp == 300,
+            3
+        );
         assert!(module_response.current_stage == 2, 4);
-        assert!(module_response.submitter == signer::address_of(u1), 5);
-        assert!(vote.merkle_root == get_merkle_root(tree), 6);
-        assert!(vote.api_uri == string::utf8(b"https://abc2.com"), 6);
+        assert!(
+            module_response.submitter == signer::address_of(u1),
+            5
+        );
+        assert!(
+            vote.merkle_root == get_merkle_root(tree),
+            6
+        );
+        assert!(
+            vote.api_uri == string::utf8(b"https://abc2.com"),
+            6
+        );
 
         set_block_info(100, 251);
 
@@ -1569,17 +1607,41 @@ module initia_std::vip_weight_vote {
 
         module_response = get_module_store();
         vote = get_proposal(2);
-        assert!(module_response.stage_start_timestamp == 300, 7);
-        assert!(module_response.stage_end_timestamp == 400, 8);
+        assert!(
+            module_response.stage_start_timestamp == 300,
+            7
+        );
+        assert!(
+            module_response.stage_end_timestamp == 400,
+            8
+        );
         assert!(module_response.current_stage == 2, 9);
-        assert!(module_response.submitter == signer::address_of(u2), 10);
-        assert!(vote.merkle_root == get_merkle_root(tree), 11);
-        assert!(vote.api_uri == string::utf8(b"https://abc3.com"), 12);
+        assert!(
+            module_response.submitter == signer::address_of(u2),
+            10
+        );
+        assert!(
+            vote.merkle_root == get_merkle_root(tree),
+            11
+        );
+        assert!(
+            vote.api_uri == string::utf8(b"https://abc3.com"),
+            12
+        );
 
         let challenge = get_challenge(2);
-        assert!(challenge.title == string::utf8(b"challenge"), 13);
-        assert!(challenge.summary == string::utf8(b"challenge"), 14);
-        assert!(challenge.api_uri == string::utf8(b"https://abc3.com"), 15);
+        assert!(
+            challenge.title == string::utf8(b"challenge"),
+            13
+        );
+        assert!(
+            challenge.summary == string::utf8(b"challenge"),
+            14
+        );
+        assert!(
+            challenge.api_uri == string::utf8(b"https://abc3.com"),
+            15
+        );
         assert!(challenge.stage == 2, 16);
         assert!(challenge.yes_tally == 20, 17);
         assert!(challenge.no_tally == 0, 18);
