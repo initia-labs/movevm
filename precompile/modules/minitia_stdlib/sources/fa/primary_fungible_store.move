@@ -275,12 +275,22 @@ module minitia_std::primary_fungible_store {
     ///
     /// This function is only callable by the chain.
     public(friend) entry fun sudo_transfer<T: key>(
-        sender: &signer, metadata: Object<T>, recipient: address, amount: u64,
+        sender: &signer,
+        metadata: Object<T>,
+        recipient: address,
+        amount: u64,
     ) acquires DeriveRefPod, ModuleStore {
-        let sender_store =
-            ensure_primary_store_exists(signer::address_of(sender), metadata);
+        let sender_store = ensure_primary_store_exists(
+            signer::address_of(sender),
+            metadata
+        );
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
-        fungible_asset::sudo_transfer(sender, sender_store, recipient_store, amount);
+        fungible_asset::sudo_transfer(
+            sender,
+            sender_store,
+            recipient_store,
+            amount
+        );
     }
 
     /// Withdraw `amount` of fungible asset from the given account's primary store.

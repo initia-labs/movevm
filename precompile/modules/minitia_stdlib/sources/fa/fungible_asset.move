@@ -449,12 +449,17 @@ module minitia_std::fungible_asset {
 
     /// Deposit `amount` of the fungible asset to `store`.
     public fun deposit<T: key>(store: Object<T>, fa: FungibleAsset) acquires FungibleStore {
-        assert!(!is_frozen(store), error::invalid_argument(ESTORE_IS_FROZEN));
+        assert!(
+            !is_frozen(store),
+            error::invalid_argument(ESTORE_IS_FROZEN)
+        );
 
         // cannot deposit to blocked account
         let store_addr = object::object_address(store);
-        assert!(!is_blocked_store_addr(store_addr),
-            error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT));
+        assert!(
+            !is_blocked_store_addr(store_addr),
+            error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT)
+        );
 
         deposit_internal(store, fa);
     }
@@ -587,13 +592,19 @@ module minitia_std::fungible_asset {
         ref: &TransferRef, store: Object<T>,
         fa: FungibleAsset
     ) acquires FungibleStore {
-        assert!(ref.metadata == fa.metadata,
-            error::invalid_argument(ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH));
+        assert!(
+            ref.metadata == fa.metadata,
+            error::invalid_argument(
+                ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH
+            )
+        );
 
         // cannot deposit to blocked account
         let store_addr = object::object_address(store);
-        assert!(!is_blocked_store_addr(store_addr),
-            error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT));
+        assert!(
+            !is_blocked_store_addr(store_addr),
+            error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT)
+        );
 
         deposit_internal(store, fa);
     }
@@ -614,7 +625,10 @@ module minitia_std::fungible_asset {
     ///
     /// This function is only callable by the chain.
     public(friend) fun sudo_transfer<T: key>(
-        sender: &signer, from: Object<T>, to: Object<T>, amount: u64,
+        sender: &signer,
+        from: Object<T>,
+        to: Object<T>,
+        amount: u64,
     ) acquires FungibleStore {
         let fa = withdraw(sender, from, amount);
         sudo_deposit(to, fa);
@@ -623,10 +637,11 @@ module minitia_std::fungible_asset {
     /// Deposit `amount` of the fungible asset to `store`.
     ///
     /// This function is only callable by the chain.
-    public(friend) fun sudo_deposit<T: key>(
-        store: Object<T>, fa: FungibleAsset
-    ) acquires FungibleStore {
-        assert!(!is_frozen(store), error::invalid_argument(ESTORE_IS_FROZEN));
+    public(friend) fun sudo_deposit<T: key>(store: Object<T>, fa: FungibleAsset) acquires FungibleStore {
+        assert!(
+            !is_frozen(store),
+            error::invalid_argument(ESTORE_IS_FROZEN)
+        );
 
         deposit_internal(store, fa);
     }
@@ -1028,7 +1043,13 @@ module minitia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(signer::address_of(module_acc), 10, 0, 3, false);
+        account::set_account_info(
+            signer::address_of(module_acc),
+            10,
+            0,
+            3,
+            false
+        );
 
         set_frozen_flag(
             &transfer_ref,
@@ -1044,7 +1065,13 @@ module minitia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(signer::address_of(module_acc), 10, 0, 3, false);
+        account::set_account_info(
+            signer::address_of(module_acc),
+            10,
+            0,
+            3,
+            false
+        );
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);
@@ -1058,7 +1085,13 @@ module minitia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(signer::address_of(module_acc), 10, 0, 3, false);
+        account::set_account_info(
+            signer::address_of(module_acc),
+            10,
+            0,
+            3,
+            false
+        );
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);
@@ -1068,12 +1101,21 @@ module minitia_std::fungible_asset {
 
     #[test(creator = @0xcafe, blocked_acc = @0x123)]
     #[expected_failure(abort_code = 0x10017, location = Self)]
-    fun test_deposit_blocked_account(creator: &signer, blocked_acc: &signer) acquires FungibleStore, Supply {
+    fun test_deposit_blocked_account(
+        creator: &signer,
+        blocked_acc: &signer
+    ) acquires FungibleStore, Supply {
         let (mint_ref, _transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);
-        account::set_account_info(signer::address_of(blocked_acc), 10, 0, 3, true);
+        account::set_account_info(
+            signer::address_of(blocked_acc),
+            10,
+            0,
+            3,
+            true
+        );
 
         let fa = mint(&mint_ref, 100);
         deposit(blocked_acc_store, fa);
@@ -1082,13 +1124,20 @@ module minitia_std::fungible_asset {
     #[test(creator = @0xcafe, blocked_acc = @0x123)]
     #[expected_failure(abort_code = 0x10017, location = Self)]
     fun test_deposit_blocked_account_with_ref(
-        creator: &signer, blocked_acc: &signer
+        creator: &signer,
+        blocked_acc: &signer
     ) acquires FungibleStore, Supply {
         let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);
-        account::set_account_info(signer::address_of(blocked_acc), 10, 0, 3, true);
+        account::set_account_info(
+            signer::address_of(blocked_acc),
+            10,
+            0,
+            3,
+            true
+        );
 
         let fa = mint(&mint_ref, 100);
         deposit_with_ref(&transfer_ref, blocked_acc_store, fa);
