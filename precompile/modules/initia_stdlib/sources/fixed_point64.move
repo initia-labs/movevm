@@ -57,9 +57,8 @@ module initia_std::fixed_point64 {
         aborts_if spec_multiply_u128(val, multiplier) > MAX_U128 with EMULTIPLICATION;
     }
 
-    spec fun spec_multiply_u128(val: num, multiplier: FixedPoint64): num {
-        (val * multiplier.value) >> 64
-    }
+    spec fun spec_multiply_u128(val: num, multiplier: FixedPoint64): num {(val * multiplier.value) >>
+            64}
 
     /// Divide a u128 integer by a fixed-point number, truncating any
     /// fractional part of the quotient. This will abort if the divisor
@@ -91,9 +90,7 @@ module initia_std::fixed_point64 {
         aborts_if spec_divide_u128(val, divisor) > MAX_U128 with EDIVISION;
     }
 
-    spec fun spec_divide_u128(val: num, divisor: FixedPoint64): num {
-        (val << 64) / divisor.value
-    }
+    spec fun spec_divide_u128(val: num, divisor: FixedPoint64): num {(val << 64) / divisor.value}
 
     /// Create a fixed-point value from a rational number specified by its
     /// numerator and denominator. Calling this function should be preferred
@@ -112,11 +109,17 @@ module initia_std::fixed_point64 {
         let scaled_numerator = (numerator as u256) << 64;
         assert!(denominator != 0, EDENOMINATOR);
         let quotient = scaled_numerator / (denominator as u256);
-        assert!(quotient != 0 || numerator == 0, ERATIO_OUT_OF_RANGE);
+        assert!(
+            quotient != 0 || numerator == 0,
+            ERATIO_OUT_OF_RANGE
+        );
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
-        assert!(quotient <= MAX_U128, ERATIO_OUT_OF_RANGE);
-        FixedPoint64 { value: (quotient as u128) }
+        assert!(
+            quotient <= MAX_U128,
+            ERATIO_OUT_OF_RANGE
+        );
+        FixedPoint64 {value: (quotient as u128)}
     }
 
     spec create_from_rational {
@@ -138,7 +141,9 @@ module initia_std::fixed_point64 {
     }
 
     spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint64 {
-        FixedPoint64 { value: (numerator << 128) / (denominator << 64) }
+        FixedPoint64 {
+            value: (numerator << 128) / (denominator << 64)
+        }
     }
 
     /// Create a fixedpoint value from a raw value.
@@ -165,9 +170,11 @@ module initia_std::fixed_point64 {
     }
 
     /// Returns the smaller of the two FixedPoint64 numbers.
-    public fun min(num1: FixedPoint64, num2: FixedPoint64): FixedPoint64 {
-        if (num1.value < num2.value) { num1 }
-        else { num2 }
+    public fun min(
+        num1: FixedPoint64,
+        num2: FixedPoint64
+    ): FixedPoint64 {
+        if (num1.value < num2.value) { num1 } else { num2 }
     }
 
     spec min {
@@ -176,15 +183,19 @@ module initia_std::fixed_point64 {
         ensures result == spec_min(num1, num2);
     }
 
-    spec fun spec_min(num1: FixedPoint64, num2: FixedPoint64): FixedPoint64 {
-        if (num1.value < num2.value) { num1 }
-        else { num2 }
+    spec fun spec_min(
+        num1: FixedPoint64,
+        num2: FixedPoint64
+    ): FixedPoint64 {
+        if (num1.value < num2.value) { num1 } else { num2 }
     }
 
     /// Returns the larger of the two FixedPoint64 numbers.
-    public fun max(num1: FixedPoint64, num2: FixedPoint64): FixedPoint64 {
-        if (num1.value > num2.value) { num1 }
-        else { num2 }
+    public fun max(
+        num1: FixedPoint64,
+        num2: FixedPoint64
+    ): FixedPoint64 {
+        if (num1.value > num2.value) { num1 } else { num2 }
     }
 
     spec max {
@@ -193,16 +204,21 @@ module initia_std::fixed_point64 {
         ensures result == spec_max(num1, num2);
     }
 
-    spec fun spec_max(num1: FixedPoint64, num2: FixedPoint64): FixedPoint64 {
-        if (num1.value > num2.value) { num1 }
-        else { num2 }
+    spec fun spec_max(
+        num1: FixedPoint64,
+        num2: FixedPoint64
+    ): FixedPoint64 {
+        if (num1.value > num2.value) { num1 } else { num2 }
     }
 
     /// Create a fixedpoint value from a u128 value.
     public fun create_from_u128(val: u128): FixedPoint64 {
         let value = (val as u256) << 64;
-        assert!(value <= MAX_U128, ERATIO_OUT_OF_RANGE);
-        FixedPoint64 { value: (value as u128) }
+        assert!(
+            value <= MAX_U128,
+            ERATIO_OUT_OF_RANGE
+        );
+        FixedPoint64 {value: (value as u128)}
     }
 
     spec create_from_u128 {
@@ -217,9 +233,7 @@ module initia_std::fixed_point64 {
         aborts_if scaled_value > MAX_U128;
     }
 
-    spec fun spec_create_from_u128(val: num): FixedPoint64 {
-        FixedPoint64 { value: val << 64 }
-    }
+    spec fun spec_create_from_u128(val: num): FixedPoint64 {FixedPoint64 {value: val << 64}}
 
     /// Returns the largest integer less than or equal to a given number.
     public fun floor(num: FixedPoint64): u128 {
@@ -234,11 +248,7 @@ module initia_std::fixed_point64 {
 
     spec fun spec_floor(val: FixedPoint64): u128 {
         let fractional = val.value % (1 << 64);
-        if (fractional == 0) {
-            val.value >> 64
-        } else {
-            (val.value - fractional) >> 64
-        }
+        if (fractional == 0) {val.value >> 64} else {(val.value - fractional) >> 64}
     }
 
     /// Rounds up the given FixedPoint64 to the next largest integer.
@@ -262,11 +272,7 @@ module initia_std::fixed_point64 {
     spec fun spec_ceil(val: FixedPoint64): u128 {
         let fractional = val.value % (1 << 64);
         let one = 1 << 64;
-        if (fractional == 0) {
-            val.value >> 64
-        } else {
-            (val.value - fractional + one) >> 64
-        }
+        if (fractional == 0) {val.value >> 64} else {(val.value - fractional + one) >> 64}
     }
 
     /// Returns the value of a FixedPoint64 to the nearest integer.
@@ -290,16 +296,14 @@ module initia_std::fixed_point64 {
         let fractional = val.value % (1 << 64);
         let boundary = (1 << 64) / 2;
         let one = 1 << 64;
-        if (fractional < boundary) {
-            (val.value - fractional) >> 64
-        } else {
-            (val.value - fractional + one) >> 64
+        if (fractional < boundary) {(val.value - fractional) >> 64} else {(val.value - fractional + one) >> 64
         }
     }
 
     // **************** SPECIFICATIONS ****************
 
-    spec module {} // switch documentation context to module level
+    spec module {
+    } // switch documentation context to module level
 
     spec module {
         pragma aborts_if_is_strict;

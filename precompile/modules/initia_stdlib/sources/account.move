@@ -46,7 +46,11 @@ module initia_std::account {
             || (account_type == ACCOUNT_TYPE_BASE && sequence == 0),
             error::already_exists(EACCOUNT_ALREADY_EXISTS),);
 
-        request_create_account(addr, account_number, ACCOUNT_TYPE_TABLE)
+        request_create_account(
+            addr,
+            account_number,
+            ACCOUNT_TYPE_TABLE
+        )
     }
 
     /// ObjectAccount is similar to CosmosSDK's ModuleAccount in concept,
@@ -55,8 +59,14 @@ module initia_std::account {
         let (found, account_number, sequence, account_type, _) = account_info(addr);
 
         // base account with sequence 0 is considered as not created.
-        if (!found || (account_type == ACCOUNT_TYPE_BASE && sequence == 0)) {
-            request_create_account(addr, account_number, ACCOUNT_TYPE_OBJECT)
+        if (!found || (
+                account_type == ACCOUNT_TYPE_BASE && sequence == 0
+            )) {
+            request_create_account(
+                addr,
+                account_number,
+                ACCOUNT_TYPE_OBJECT
+            )
         } else {
             // When an Object is deleted, the ObjectAccount in CosmosSDK is designed
             // not to be deleted in order to prevent unexpected issues. Therefore,
@@ -65,7 +75,9 @@ module initia_std::account {
             // Also object is doing its own already exists check.
             if (account_type == ACCOUNT_TYPE_OBJECT) { account_number }
             else {
-                abort(error::already_exists(EACCOUNT_ALREADY_EXISTS))
+                abort(
+                    error::already_exists(EACCOUNT_ALREADY_EXISTS)
+                )
             }
         }
     }
@@ -185,12 +197,12 @@ module initia_std::account {
     #[test]
     public fun test_create_account() {
         // base account
-        let bob =
-            create_address(
-                x"0000000000000000000000000000000000000000000000000000000000000b0b");
-        let carol =
-            create_address(
-                x"00000000000000000000000000000000000000000000000000000000000ca501");
+        let bob = create_address(
+            x"0000000000000000000000000000000000000000000000000000000000000b0b"
+        );
+        let carol = create_address(
+            x"00000000000000000000000000000000000000000000000000000000000ca501"
+        );
         assert!(!exists_at(bob), 0);
         assert!(!exists_at(carol), 1);
 
@@ -202,50 +214,74 @@ module initia_std::account {
         assert!(exists_at(bob), 4);
         assert!(exists_at(carol), 5);
 
-        assert!(bob_account_num + 1 == carol_account_num, 6);
-        assert!(bob_account_num == get_account_number(bob), 7);
-        assert!(carol_account_num == get_account_number(carol), 7);
+        assert!(
+            bob_account_num + 1 == carol_account_num,
+            6
+        );
+        assert!(
+            bob_account_num == get_account_number(bob),
+            7
+        );
+        assert!(
+            carol_account_num == get_account_number(carol),
+            7
+        );
 
         // object account
-        let dan =
-            create_address(
-                x"000000000000000000000000000000000000000000000000000000000000da17");
+        let dan = create_address(
+            x"000000000000000000000000000000000000000000000000000000000000da17"
+        );
         assert!(!exists_at(dan), 8);
         let dan_object_account_num = create_object_account(dan);
-        assert!(dan_object_account_num == get_account_number(dan), 9);
+        assert!(
+            dan_object_account_num == get_account_number(dan),
+            9
+        );
         assert!(is_object_account(dan), 10);
         assert!(exists_at(dan), 11);
 
         // table account
-        let erin =
-            create_address(
-                x"00000000000000000000000000000000000000000000000000000000000e5117");
+        let erin = create_address(
+            x"00000000000000000000000000000000000000000000000000000000000e5117"
+        );
         assert!(!exists_at(erin), 12);
         let erin_table_account_num = create_table_account(erin);
-        assert!(erin_table_account_num == get_account_number(erin), 13);
+        assert!(
+            erin_table_account_num == get_account_number(erin),
+            13
+        );
         assert!(is_table_account(erin), 14);
         assert!(exists_at(erin), 15);
     }
 
     #[test]
     public fun test_create_address() {
-        let bob =
-            create_address(
-                x"0000000000000000000000000000000000000000000000000000000000000b0b");
-        let carol =
-            create_address(
-                x"00000000000000000000000000000000000000000000000000000000000ca501");
-        assert!(bob
-            == @0x0000000000000000000000000000000000000000000000000000000000000b0b, 0);
-        assert!(carol
-            == @0x00000000000000000000000000000000000000000000000000000000000ca501, 1);
+        let bob = create_address(
+            x"0000000000000000000000000000000000000000000000000000000000000b0b"
+        );
+        let carol = create_address(
+            x"00000000000000000000000000000000000000000000000000000000000ca501"
+        );
+        assert!(
+            bob == @0x0000000000000000000000000000000000000000000000000000000000000b0b
+                ,
+            0
+        );
+        assert!(
+            carol == @0x00000000000000000000000000000000000000000000000000000000000ca501
+                ,
+            1
+        );
     }
 
     #[test(new_address = @0x42)]
     public fun test_create_signer(new_address: address) {
         let _new_account = create_signer(new_address);
         let authentication_key = bcs::to_bytes(&new_address);
-        assert!(vector::length(&authentication_key) == 32, 0);
+        assert!(
+            vector::length(&authentication_key) == 32,
+            0
+        );
     }
 
     #[test(new_address = @0x41, new_address2 = @0x42, new_address3 = @0x43, new_address4 = @0x44)]
@@ -256,28 +292,40 @@ module initia_std::account {
         new_address4: address,
     ) {
         let table_account_num = create_table_account(new_address);
-        assert!(table_account_num == get_account_number(new_address), 0);
+        assert!(
+            table_account_num == get_account_number(new_address),
+            0
+        );
         assert!(is_table_account(new_address), 1);
         assert!(exists_at(new_address), 2);
 
         // set base account with 0 sequence
         set_account_info(new_address2, 100, 0, ACCOUNT_TYPE_BASE, false);
         let table_account_num = create_table_account(new_address2);
-        assert!(table_account_num == get_account_number(new_address2), 0);
+        assert!(
+            table_account_num == get_account_number(new_address2),
+            0
+        );
         assert!(table_account_num == 100, 0);
         assert!(is_table_account(new_address2), 1);
         assert!(exists_at(new_address2), 2);
         assert!(!is_blocked(new_address2), 3);
 
         let object_account_num = create_object_account(new_address3);
-        assert!(object_account_num == get_account_number(new_address3), 3);
+        assert!(
+            object_account_num == get_account_number(new_address3),
+            3
+        );
         assert!(is_object_account(new_address3), 4);
         assert!(exists_at(new_address3), 5);
 
         // set base account with 0 sequence
         set_account_info(new_address4, 200, 0, ACCOUNT_TYPE_BASE, false);
         let object_account_num = create_object_account(new_address4);
-        assert!(object_account_num == get_account_number(new_address4), 0);
+        assert!(
+            object_account_num == get_account_number(new_address4),
+            0
+        );
         assert!(object_account_num == 200, 0);
         assert!(is_object_account(new_address4), 1);
         assert!(exists_at(new_address4), 2);
@@ -304,18 +352,14 @@ module initia_std::account {
 
     #[test(new_address = @0x42)]
     #[expected_failure(abort_code = 0x80064, location = Self)]
-    public fun test_create_table_account_already_exists(
-        new_address: address
-    ) {
+    public fun test_create_table_account_already_exists(new_address: address) {
         create_table_account(new_address);
         create_table_account(new_address);
     }
 
     #[test(new_address = @0x42)]
     #[expected_failure(abort_code = 0x80064, location = Self)]
-    public fun test_create_object_account_already_exists(
-        new_address: address
-    ) {
+    public fun test_create_object_account_already_exists(new_address: address) {
         create_table_account(new_address);
         create_object_account(new_address);
     }

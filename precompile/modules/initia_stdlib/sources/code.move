@@ -70,7 +70,13 @@ module initia_std::code {
     }
 
     fun init_module(chain: &signer) {
-        move_to(chain, ModuleStore { allowed_publishers: vector[], total_modules: 0, });
+        move_to(
+            chain,
+            ModuleStore {
+                allowed_publishers: vector[],
+                total_modules: 0,
+            }
+        );
     }
 
     // view functions
@@ -94,36 +100,59 @@ module initia_std::code {
         module_store.total_modules = module_store.total_modules + num_modules;
     }
 
-    fun assert_allowed(allowed_publishers: &vector<address>, addr: address) {
-        assert!(vector::is_empty(allowed_publishers) || vector::contains(allowed_publishers, &addr),
-            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),)
+    fun assert_allowed(
+        allowed_publishers: &vector<address>,
+        addr: address
+    ) {
+        assert!(
+            vector::is_empty(allowed_publishers) || vector::contains(
+                allowed_publishers, &addr
+            ),
+            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
+        )
     }
 
     public entry fun init_genesis(
-        chain: &signer, module_ids: vector<String>, allowed_publishers: vector<address>,
+        chain: &signer,
+        module_ids: vector<String>,
+        allowed_publishers: vector<address>,
     ) acquires ModuleStore {
-        assert!(signer::address_of(chain) == @initia_std,
-            error::permission_denied(EINVALID_CHAIN_OPERATOR));
+        assert!(
+            signer::address_of(chain) == @initia_std,
+            error::permission_denied(EINVALID_CHAIN_OPERATOR)
+        );
 
         let metadata_table = table::new<String, ModuleMetadata>();
         vector::for_each_ref(
             &module_ids,
             |module_id| {
-                table::add<String, ModuleMetadata>(&mut metadata_table, *module_id,
-                    ModuleMetadata { upgrade_policy: UPGRADE_POLICY_COMPATIBLE, });
-            });
+                table::add<String, ModuleMetadata>(
+                    &mut metadata_table,
+                    *module_id,
+                    ModuleMetadata {
+                        upgrade_policy: UPGRADE_POLICY_COMPATIBLE,
+                    }
+                );
+            }
+        );
 
-        move_to<MetadataStore>(chain, MetadataStore { metadata: metadata_table, });
+        move_to<MetadataStore>(
+            chain,
+            MetadataStore {metadata: metadata_table,}
+        );
 
         set_allowed_publishers(chain, allowed_publishers);
         increase_total_modules(vector::length(&module_ids));
     }
 
     public entry fun set_allowed_publishers(
-        chain: &signer, allowed_publishers: vector<address>
+        chain: &signer,
+        allowed_publishers: vector<address>
     ) acquires ModuleStore {
-        assert!(signer::address_of(chain) == @initia_std,
-            error::permission_denied(EINVALID_CHAIN_OPERATOR));
+        assert!(
+            signer::address_of(chain) == @initia_std,
+            error::permission_denied(EINVALID_CHAIN_OPERATOR)
+        );
         assert_allowed(&allowed_publishers, @initia_std);
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -139,29 +168,46 @@ module initia_std::code {
         upgrade_policy: u8,
     ) acquires ModuleStore, MetadataStore {
         // Disallow incompatible upgrade mode. Governance can decide later if this should be reconsidered.
-        assert!(vector::length(&code) == vector::length(&module_ids),
-            error::invalid_argument(EINVALID_ARGUMENTS));
+        assert!(
+            vector::length(&code) == vector::length(&module_ids),
+            error::invalid_argument(EINVALID_ARGUMENTS)
+        );
 
         // duplication check
         let module_ids_set = simple_map::create<String, bool>();
         vector::for_each_ref(
             &module_ids,
             |module_id| {
-                assert!(!simple_map::contains_key(&module_ids_set, module_id),
-                    error::invalid_argument(EDUPLICATE_MODULE_ID));
-                simple_map::add(&mut module_ids_set, *module_id, true);
-            });
+                assert!(
+                    !simple_map::contains_key(&module_ids_set, module_id),
+                    error::invalid_argument(EDUPLICATE_MODULE_ID)
+                );
+                simple_map::add(
+                    &mut module_ids_set,
+                    *module_id,
+                    true
+                );
+            }
+        );
 
         // Check whether arbitrary publish is allowed or not.
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        assert!(upgrade_policy == UPGRADE_POLICY_COMPATIBLE || upgrade_policy == UPGRADE_POLICY_IMMUTABLE,
-            error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED),);
+        assert!(
+            upgrade_policy == UPGRADE_POLICY_COMPATIBLE || upgrade_policy == UPGRADE_POLICY_IMMUTABLE,
+            error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED),
+        );
 
         let addr = signer::address_of(owner);
-        assert_allowed(&module_store.allowed_publishers, addr);
+        assert_allowed(
+            &module_store.allowed_publishers,
+            addr
+        );
 
         if (!exists<MetadataStore>(addr)) {
-            move_to<MetadataStore>(owner, MetadataStore { metadata: table::new(), });
+            move_to<MetadataStore>(
+                owner,
+                MetadataStore {metadata: table::new(),}
+            );
         };
 
         // Check upgradability
@@ -170,29 +216,54 @@ module initia_std::code {
             &module_ids,
             |module_id| {
                 if (table::contains<String, ModuleMetadata>(metadata_table, *module_id)) {
-                    let metadata =
-                        table::borrow_mut<String, ModuleMetadata>(metadata_table, *module_id);
-                    assert!(metadata.upgrade_policy < UPGRADE_POLICY_IMMUTABLE,
-                        error::invalid_argument(EUPGRADE_IMMUTABLE));
+                    let metadata = table::borrow_mut<String, ModuleMetadata>(
+                        metadata_table, *module_id
+                    );
                     assert!(
-                        can_change_upgrade_policy_to(metadata.upgrade_policy, upgrade_policy),
-                        error::invalid_argument(EUPGRADE_WEAKER_POLICY));
+                        metadata.upgrade_policy < UPGRADE_POLICY_IMMUTABLE,
+                        error::invalid_argument(EUPGRADE_IMMUTABLE)
+                    );
+                    assert!(
+                        can_change_upgrade_policy_to(
+                            metadata.upgrade_policy,
+                            upgrade_policy
+                        ),
+                        error::invalid_argument(EUPGRADE_WEAKER_POLICY)
+                    );
 
                     metadata.upgrade_policy = upgrade_policy;
                 } else {
-                    table::add<String, ModuleMetadata>(metadata_table, *module_id,
-                        ModuleMetadata { upgrade_policy, });
+                    table::add<String, ModuleMetadata>(
+                        metadata_table,
+                        *module_id,
+                        ModuleMetadata {upgrade_policy,}
+                    );
                 };
 
-                event::emit(ModulePublishedEvent { module_id: *module_id, upgrade_policy, });
-            });
+                event::emit(
+                    ModulePublishedEvent {
+                        module_id: *module_id,
+                        upgrade_policy,
+                    }
+                );
+            }
+        );
 
         // Request publish
         increase_total_modules(vector::length(&module_ids));
-        request_publish(addr, module_ids, code, upgrade_policy)
+        request_publish(
+            addr,
+            module_ids,
+            code,
+            upgrade_policy
+        )
     }
 
     /// Native function to initiate module loading
-    native fun request_publish(owner: address, expected_modules: vector<String>, code: vector<vector<u8>>,
-        policy: u8);
+    native fun request_publish(
+        owner: address,
+        expected_modules: vector<String>,
+        code: vector<vector<u8>>,
+        policy: u8
+    );
 }

@@ -58,9 +58,8 @@ module std::fixed_point32 {
         aborts_if spec_multiply_u64(val, multiplier) > MAX_U64 with EMULTIPLICATION;
     }
 
-    spec fun spec_multiply_u64(val: num, multiplier: FixedPoint32): num {
-        (val * multiplier.value) >> 32
-    }
+    spec fun spec_multiply_u64(val: num, multiplier: FixedPoint32): num {(val * multiplier.value) >>
+            32}
 
     /// Divide a u64 integer by a fixed-point number, truncating any
     /// fractional part of the quotient. This will abort if the divisor
@@ -92,9 +91,7 @@ module std::fixed_point32 {
         aborts_if spec_divide_u64(val, divisor) > MAX_U64 with EDIVISION;
     }
 
-    spec fun spec_divide_u64(val: num, divisor: FixedPoint32): num {
-        (val << 32) / divisor.value
-    }
+    spec fun spec_divide_u64(val: num, divisor: FixedPoint32): num {(val << 32) / divisor.value}
 
     /// Create a fixed-point value from a rational number specified by its
     /// numerator and denominator. Calling this function should be preferred
@@ -115,11 +112,17 @@ module std::fixed_point32 {
         let scaled_denominator = (denominator as u128) << 32;
         assert!(scaled_denominator != 0, EDENOMINATOR);
         let quotient = scaled_numerator / scaled_denominator;
-        assert!(quotient != 0 || numerator == 0, ERATIO_OUT_OF_RANGE);
+        assert!(
+            quotient != 0 || numerator == 0,
+            ERATIO_OUT_OF_RANGE
+        );
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
-        assert!(quotient <= MAX_U64, ERATIO_OUT_OF_RANGE);
-        FixedPoint32 { value: (quotient as u64) }
+        assert!(
+            quotient <= MAX_U64,
+            ERATIO_OUT_OF_RANGE
+        );
+        FixedPoint32 {value: (quotient as u64)}
     }
 
     spec create_from_rational {
@@ -140,7 +143,9 @@ module std::fixed_point32 {
     }
 
     spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
-        FixedPoint32 { value: (numerator << 64) / (denominator << 32) }
+        FixedPoint32 {
+            value: (numerator << 64) / (denominator << 32)
+        }
     }
 
     /// Create a fixedpoint value from a raw value.
@@ -167,9 +172,11 @@ module std::fixed_point32 {
     }
 
     /// Returns the smaller of the two FixedPoint32 numbers.
-    public fun min(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
-        if (num1.value < num2.value) { num1 }
-        else { num2 }
+    public fun min(
+        num1: FixedPoint32,
+        num2: FixedPoint32
+    ): FixedPoint32 {
+        if (num1.value < num2.value) { num1 } else { num2 }
     }
 
     spec min {
@@ -178,15 +185,19 @@ module std::fixed_point32 {
         ensures result == spec_min(num1, num2);
     }
 
-    spec fun spec_min(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
-        if (num1.value < num2.value) { num1 }
-        else { num2 }
+    spec fun spec_min(
+        num1: FixedPoint32,
+        num2: FixedPoint32
+    ): FixedPoint32 {
+        if (num1.value < num2.value) { num1 } else { num2 }
     }
 
     /// Returns the larger of the two FixedPoint32 numbers.
-    public fun max(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
-        if (num1.value > num2.value) { num1 }
-        else { num2 }
+    public fun max(
+        num1: FixedPoint32,
+        num2: FixedPoint32
+    ): FixedPoint32 {
+        if (num1.value > num2.value) { num1 } else { num2 }
     }
 
     spec max {
@@ -195,16 +206,18 @@ module std::fixed_point32 {
         ensures result == spec_max(num1, num2);
     }
 
-    spec fun spec_max(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
-        if (num1.value > num2.value) { num1 }
-        else { num2 }
+    spec fun spec_max(
+        num1: FixedPoint32,
+        num2: FixedPoint32
+    ): FixedPoint32 {
+        if (num1.value > num2.value) { num1 } else { num2 }
     }
 
     /// Create a fixedpoint value from a u64 value.
     public fun create_from_u64(val: u64): FixedPoint32 {
         let value = (val as u128) << 32;
         assert!(value <= MAX_U64, ERATIO_OUT_OF_RANGE);
-        FixedPoint32 { value: (value as u64) }
+        FixedPoint32 {value: (value as u64)}
     }
 
     spec create_from_u64 {
@@ -219,9 +232,7 @@ module std::fixed_point32 {
         aborts_if scaled_value > MAX_U64;
     }
 
-    spec fun spec_create_from_u64(val: num): FixedPoint32 {
-        FixedPoint32 { value: val << 32 }
-    }
+    spec fun spec_create_from_u64(val: num): FixedPoint32 {FixedPoint32 {value: val << 32}}
 
     /// Returns the largest integer less than or equal to a given number.
     public fun floor(num: FixedPoint32): u64 {
@@ -236,11 +247,7 @@ module std::fixed_point32 {
 
     spec fun spec_floor(val: FixedPoint32): u64 {
         let fractional = val.value % (1 << 32);
-        if (fractional == 0) {
-            val.value >> 32
-        } else {
-            (val.value - fractional) >> 32
-        }
+        if (fractional == 0) {val.value >> 32} else {(val.value - fractional) >> 32}
     }
 
     /// Rounds up the given FixedPoint32 to the next largest integer.
@@ -262,11 +269,7 @@ module std::fixed_point32 {
     spec fun spec_ceil(val: FixedPoint32): u64 {
         let fractional = val.value % (1 << 32);
         let one = 1 << 32;
-        if (fractional == 0) {
-            val.value >> 32
-        } else {
-            (val.value - fractional + one) >> 32
-        }
+        if (fractional == 0) {val.value >> 32} else {(val.value - fractional + one) >> 32}
     }
 
     /// Returns the value of a FixedPoint32 to the nearest integer.
@@ -290,16 +293,14 @@ module std::fixed_point32 {
         let fractional = val.value % (1 << 32);
         let boundary = (1 << 32) / 2;
         let one = 1 << 32;
-        if (fractional < boundary) {
-            (val.value - fractional) >> 32
-        } else {
-            (val.value - fractional + one) >> 32
+        if (fractional < boundary) {(val.value - fractional) >> 32} else {(val.value - fractional + one) >> 32
         }
     }
 
     // **************** SPECIFICATIONS ****************
 
-    spec module {} // switch documentation context to module level
+    spec module {
+    } // switch documentation context to module level
 
     spec module {
         pragma aborts_if_is_strict;
