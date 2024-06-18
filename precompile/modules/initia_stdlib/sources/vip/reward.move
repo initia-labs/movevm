@@ -18,6 +18,7 @@ module initia_std::vip_reward {
     use initia_std::fungible_asset;
     use initia_std::type_info;
 
+    friend initia_std::vip_weight_vote;
     friend initia_std::vip_vesting;
     friend initia_std::vip_zapping;
     friend initia_std::vip_vault;
