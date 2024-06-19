@@ -236,13 +236,12 @@ impl InitiaGasMeter {
                 self.balance = 0.into();
                 let gas_used: Gas = (self.gas_limit.checked_sub(balance).unwrap() + amount)
                     .to_unit_round_down_with_params(&self.gas_params.txn);
+                let gas_limit: Gas = self
+                    .gas_limit
+                    .to_unit_round_down_with_params(&self.gas_params.txn);
 
-                Err(
-                    PartialVMError::new(StatusCode::OUT_OF_GAS).with_message(format!(
-                        "gas_limit: {}, gas_used: {}",
-                        self.gas_limit, gas_used
-                    )),
-                )
+                Err(PartialVMError::new(StatusCode::OUT_OF_GAS)
+                    .with_message(format!("gas_limit: {}, gas_used: {}", gas_limit, gas_used)))
             }
         }
     }
