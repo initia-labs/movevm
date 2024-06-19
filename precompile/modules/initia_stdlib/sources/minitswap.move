@@ -1409,7 +1409,14 @@ module initia_std::minitswap {
 
             // peg keeper swap
             let (peg_keeper_offer_amount, peg_keeper_return_amount) = peg_keeper_swap(pool);
-            let init_arb_fee_amount = mul_div(depositor_return_amount, arb_fee_amount, arb_fee_amount + swap_fee_amount);
+
+            // to prevent div by zero
+            let init_arb_fee_amount = if (arb_fee_amount == 0) {
+                0 
+            } else {
+                mul_div(depositor_return_amount, arb_fee_amount, arb_fee_amount + swap_fee_amount)
+            };
+
             let init_swap_fee_amount = depositor_return_amount - init_arb_fee_amount;
 
             (peg_keeper_offer_amount, peg_keeper_return_amount, return_asset, init_swap_fee_amount, init_arb_fee_amount, swap_fee_amount, arb_fee_amount)
@@ -2117,8 +2124,8 @@ module initia_std::minitswap {
             let swap_fee_amount = decimal128::mul_u64(&module_store.swap_fee_rate, return_amount);
 
             // take arb fee
-            let arb_profit = if (return_amount > offer_amount) {
-                return_amount - offer_amount
+            let arb_profit = if (return_amount > offer_amount + swap_fee_amount) {
+                return_amount - swap_fee_amount - offer_amount
             } else {
                 0
             };
