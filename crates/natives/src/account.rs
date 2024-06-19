@@ -35,6 +35,7 @@ pub trait AccountAPI {
         u64,  /* account_number */
         u64,  /* sequence_number */
         u8,   /* account_type */
+        bool, /* is_blocked */
     )>;
 }
 
@@ -49,9 +50,10 @@ pub struct NativeAccountContext<'a> {
     test_accounts: BTreeMap<
         AccountAddress,
         (
-            u64, /* account_number */
-            u64, /* sequence */
-            u8,  /* account_type */
+            u64,  /* account_number */
+            u64,  /* sequence */
+            u8,   /* account_type */
+            bool, /* is_blocked */
         ),
     >,
 }
@@ -84,9 +86,10 @@ impl<'a> NativeAccountContext<'a> {
         account_number: u64,
         sequence: u64,
         account_type: u8,
+        is_blocked: bool,
     ) {
         self.test_accounts
-            .insert(addr, (account_number, sequence, account_type));
+            .insert(addr, (account_number, sequence, account_type, is_blocked));
     }
 }
 
@@ -115,19 +118,20 @@ fn native_get_account_info(
 
     let address = safely_pop_arg!(arguments, AccountAddress);
     let account_context = context.extensions().get::<NativeAccountContext>();
-    let (found, account_number, sequence, account_type) =
+    let (found, account_number, sequence, account_type, is_blocked) =
         if let Some(new_account) = account_context.new_accounts.get(&address) {
-            (true, new_account.0, 0, new_account.1)
+            (true, new_account.0, 0, new_account.1, false)
         } else {
             #[cfg(feature = "testing")]
-            if let Some((account_number, sequence, account_type)) =
+            if let Some((account_number, sequence, account_type, is_blocked)) =
                 account_context.test_accounts.get(&address)
             {
                 return Ok(smallvec![
                     Value::bool(true),
                     Value::u64(*account_number),
                     Value::u64(*sequence),
-                    Value::u8(*account_type)
+                    Value::u8(*account_type),
+                    Value::bool(*is_blocked),
                 ]);
             }
 
@@ -149,7 +153,8 @@ fn native_get_account_info(
         Value::bool(found),
         Value::u64(account_number),
         Value::u64(sequence),
-        Value::u8(account_type)
+        Value::u8(account_type),
+        Value::bool(is_blocked)
     ])
 }
 
@@ -270,7 +275,7 @@ pub fn make_all(
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
     natives.extend([
-        ("get_account_info", native_get_account_info as RawSafeNative),
+        ("account_info", native_get_account_info as RawSafeNative),
         ("request_create_account", native_create_account),
         ("create_address", native_create_address),
         ("create_signer", native_create_signer),
@@ -292,8 +297,9 @@ fn native_test_only_set_account_info(
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     debug_assert!(ty_args.is_empty());
-    debug_assert!(arguments.len() == 4);
+    debug_assert!(arguments.len() == 5);
 
+    let is_blocked = safely_pop_arg!(arguments, bool);
     let account_type = safely_pop_arg!(arguments, u8);
     let sequence = safely_pop_arg!(arguments, u64);
     let account_number = safely_pop_arg!(arguments, u64);
@@ -306,6 +312,7 @@ fn native_test_only_set_account_info(
         account_number,
         sequence,
         account_type,
+        is_blocked,
     );
 
     Ok(smallvec![])

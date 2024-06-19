@@ -192,6 +192,7 @@ typedef struct {
                               uint64_t*,
                               uint64_t*,
                               uint8_t*,
+                              bool*,
                               UnmanagedVector*);
   int32_t (*amount_to_share)(const api_t*,
                              U8SliceView,

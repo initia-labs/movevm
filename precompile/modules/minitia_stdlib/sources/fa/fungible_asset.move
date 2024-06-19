@@ -16,6 +16,8 @@ module minitia_std::fungible_asset {
     use std::string::{Self, String};
     use std::account;
 
+    friend minitia_std::primary_fungible_store;
+
     /// The transfer ref and the fungible asset do not match.
     const ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH: u64 = 2;
     /// Store is disabled from sending and receiving this fungible asset.
@@ -58,6 +60,8 @@ module minitia_std::fungible_asset {
     const ESUPPLY_NOT_FOUND: u64 = 21;
     /// Module account store cannot be manipulated.
     const ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE: u64 = 22;
+    /// Deposit to a blocked account is not allowed._
+    const ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT: u64 = 23;
 
     //
     // Constants
@@ -449,6 +453,14 @@ module minitia_std::fungible_asset {
             !is_frozen(store),
             error::invalid_argument(ESTORE_IS_FROZEN)
         );
+
+        // cannot deposit to blocked account
+        let store_addr = object::object_address(store);
+        assert!(
+            !is_blocked_store_addr(store_addr),
+            error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT)
+        );
+
         deposit_internal(store, fa);
     }
 
@@ -586,6 +598,14 @@ module minitia_std::fungible_asset {
                 ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH
             )
         );
+
+        // cannot deposit to blocked account
+        let store_addr = object::object_address(store);
+        assert!(
+            !is_blocked_store_addr(store_addr),
+            error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT)
+        );
+
         deposit_internal(store, fa);
     }
 
@@ -598,6 +618,32 @@ module minitia_std::fungible_asset {
     ) acquires FungibleStore {
         let fa = withdraw_with_ref(transfer_ref, from, amount);
         deposit_with_ref(transfer_ref, to, fa);
+    }
+
+    /// Transfer an `amount` of fungible asset from `from_store`, which should be owned by `sender`, to `receiver`.
+    /// Note: it does not move the underlying object.
+    ///
+    /// This function is only callable by the chain.
+    public(friend) fun sudo_transfer<T: key>(
+        sender: &signer,
+        from: Object<T>,
+        to: Object<T>,
+        amount: u64,
+    ) acquires FungibleStore {
+        let fa = withdraw(sender, from, amount);
+        sudo_deposit(to, fa);
+    }
+
+    /// Deposit `amount` of the fungible asset to `store`.
+    ///
+    /// This function is only callable by the chain.
+    public(friend) fun sudo_deposit<T: key>(store: Object<T>, fa: FungibleAsset) acquires FungibleStore {
+        assert!(
+            !is_frozen(store),
+            error::invalid_argument(ESTORE_IS_FROZEN)
+        );
+
+        deposit_internal(store, fa);
     }
 
     /// Create a fungible asset with zero amount.
@@ -736,7 +782,15 @@ module minitia_std::fungible_asset {
     fun is_module_account_store_addr(store_addr: address): bool {
         let fungible_store = object::address_to_object<FungibleStore>(store_addr);
         let owner_addr = object::owner(fungible_store);
-        account::exists_at(owner_addr) && account::is_module_account(owner_addr)
+        let (found, info) = account::get_account_info(owner_addr);
+        found && account::is_module_account_with_info(&info)
+    }
+
+    fun is_blocked_store_addr(store_addr: address): bool {
+        let fungible_store = object::address_to_object<FungibleStore>(store_addr);
+        let owner_addr = object::owner(fungible_store);
+        let (found, info) = account::get_account_info(owner_addr);
+        found && account::is_blocked_with_info(&info)
     }
 
     inline fun borrow_fungible_metadata<T: key>(metadata: Object<T>): &Metadata acquires Metadata {
@@ -993,7 +1047,8 @@ module minitia_std::fungible_asset {
             signer::address_of(module_acc),
             10,
             0,
-            3
+            3,
+            false
         );
 
         set_frozen_flag(
@@ -1014,7 +1069,8 @@ module minitia_std::fungible_asset {
             signer::address_of(module_acc),
             10,
             0,
-            3
+            3,
+            false
         );
 
         let fa = mint(&mint_ref, 100);
@@ -1033,12 +1089,57 @@ module minitia_std::fungible_asset {
             signer::address_of(module_acc),
             10,
             0,
-            3
+            3,
+            false
         );
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);
         let fa = withdraw_with_ref(&transfer_ref, module_acc_store, 30);
         deposit(module_acc_store, fa);
+    }
+
+    #[test(creator = @0xcafe, blocked_acc = @0x123)]
+    #[expected_failure(abort_code = 0x10017, location = Self)]
+    fun test_deposit_blocked_account(
+        creator: &signer,
+        blocked_acc: &signer
+    ) acquires FungibleStore, Supply {
+        let (mint_ref, _transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
+        let metadata = mint_ref.metadata;
+
+        let blocked_acc_store = create_test_store(blocked_acc, metadata);
+        account::set_account_info(
+            signer::address_of(blocked_acc),
+            10,
+            0,
+            3,
+            true
+        );
+
+        let fa = mint(&mint_ref, 100);
+        deposit(blocked_acc_store, fa);
+    }
+
+    #[test(creator = @0xcafe, blocked_acc = @0x123)]
+    #[expected_failure(abort_code = 0x10017, location = Self)]
+    fun test_deposit_blocked_account_with_ref(
+        creator: &signer,
+        blocked_acc: &signer
+    ) acquires FungibleStore, Supply {
+        let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
+        let metadata = mint_ref.metadata;
+
+        let blocked_acc_store = create_test_store(blocked_acc, metadata);
+        account::set_account_info(
+            signer::address_of(blocked_acc),
+            10,
+            0,
+            3,
+            true
+        );
+
+        let fa = mint(&mint_ref, 100);
+        deposit_with_ref(&transfer_ref, blocked_acc_store, fa);
     }
 }

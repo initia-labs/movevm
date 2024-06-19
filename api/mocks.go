@@ -118,7 +118,7 @@ func (m MockAPI) Query(request types.QueryRequest, gasBalance uint64) ([]byte, u
 	return m.QueryAPI.Query(request, gasBalance)
 }
 
-func (m MockAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8) {
+func (m MockAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8, bool) {
 	return m.AccountAPI.GetAccountInfo(addr)
 }
 
@@ -153,13 +153,13 @@ func (m *MockAccountAPI) SetAccountInfo(addr types.AccountAddress, accountNumber
 	m.accounts[addr.String()] = []uint64{accountNumber, sequence, uint64(accountType)}
 }
 
-func (m MockAccountAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8) {
+func (m MockAccountAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64, uint8, bool) {
 	info, found := m.accounts[addr.String()]
 	if found {
-		return found, info[0], info[1], uint8(info[2])
+		return found, info[0], info[1], uint8(info[2]), false
 	}
 
-	return false, 0, 0, 0
+	return false, 0, 0, 0, false
 }
 
 type ShareAmountRatio struct {
