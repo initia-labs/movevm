@@ -2452,6 +2452,7 @@ module initia_std::minitswap {
         );
 
         let (return_amount, _) = swap_simulation(ibc_op_init_1_metadata, init_metadata, 1000000);
+        assert!(return_amount == 992741, 0);
 
         let balance_before = coin::balance(chain_addr, init_metadata);
         swap(&chain, ibc_op_init_1_metadata, init_metadata, 1000000, option::none());

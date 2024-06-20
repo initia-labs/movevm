@@ -945,12 +945,16 @@ module initia_std::stableswap {
         assert!(coin::balance(chain_addr, metadata_lp) == 400000000, 1);
         assert!(coin::balance(chain_addr, metadata_a) == 800000000, 1);
         assert!(coin::balance(chain_addr, metadata_b) == 800000000, 1);
-        withdraw_liquidity_script(&chain, pool, 100000000, vector[option::none(), option::none()]);
-        assert!(coin::balance(chain_addr, metadata_lp) == 300000000, 2);
-        assert!(coin::balance(chain_addr, metadata_a) == 850000000, 2);
-        assert!(coin::balance(chain_addr, metadata_b) == 850000000, 2);
-        swap_script(&chain, pool, metadata_a, metadata_b, 1000000, option::none());
-        assert!(coin::balance(chain_addr, metadata_a) == 849000000, 3);
-        assert!(coin::balance(chain_addr, metadata_b) == 850999285, 3);
+        withdraw_liquidity_script(&chain, pool, 200000000, vector[option::none(), option::none()]);
+        assert!(coin::balance(chain_addr, metadata_lp) == 200000000, 2);
+        assert!(coin::balance(chain_addr, metadata_a) == 900000000, 2);
+        assert!(coin::balance(chain_addr, metadata_b) == 900000000, 2);
+
+        let offer_coin = coin::withdraw(&chain, metadata_a, 1000000);
+        let return_coin = swap(pool, offer_coin, metadata_b, option::none());
+        let return_amount = fungible_asset::amount(&return_coin);
+        assert!(return_amount == 999178, 3);
+
+        coin::deposit(chain_addr, return_coin)
     }
 }
