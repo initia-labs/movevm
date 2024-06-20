@@ -72,6 +72,18 @@ module initia_std::stableswap {
         fee_amount: u64,
     }
 
+    #[event]
+    struct UpdateSwapFeeEvent has drop, store {
+        liquidity_token: address,
+        swap_fee_rate: Decimal128,
+    }
+
+    #[event]
+    struct UpdateAnnEvent has drop, store {
+        liquidity_token: address,
+        ann: Ann,
+    }
+
     struct Ann has copy, drop, store {
         ann_before: u64,
         ann_after: u64,
@@ -292,6 +304,11 @@ module initia_std::stableswap {
         check_chain_permission(account);
         let pool = borrow_pool_mut(pool_obj);
         pool.swap_fee_rate = new_swap_fee_rate;
+
+        event::emit(UpdateSwapFeeEvent {
+            liquidity_token: object::object_address(pool_obj),
+            swap_fee_rate: new_swap_fee_rate,
+        })
     }
 
     public entry fun update_ann(account: &signer, pool_obj:Object<Pool>, ann_after: u64, timestamp_after: u64) acquires Pool {
@@ -302,6 +319,11 @@ module initia_std::stableswap {
         pool.ann.timestamp_before = timestamp;
         pool.ann.ann_after = ann_after;
         pool.ann.timestamp_after = timestamp_after;
+
+        event::emit(UpdateAnnEvent {
+            liquidity_token: object::object_address(pool_obj),
+            ann: pool.ann,
+        })
     }
 
     public entry fun provide_liquidity_script(

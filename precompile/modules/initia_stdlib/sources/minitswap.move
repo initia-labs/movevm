@@ -200,6 +200,7 @@ module initia_std::minitswap {
     struct ChangePoolSizeEvent has drop, store {
         ibc_op_init_metadata: Object<Metadata>,
         pool_size: u64,
+        depositor_owned_init_increase: u64,
     }
 
     #[event]
@@ -925,7 +926,7 @@ module initia_std::minitswap {
 
         assert!(decimal128::val(&module_store.max_change_rate) >= decimal128::val(&change_rate), error::invalid_argument(EMAX_CHANGE));
 
-        if (new_pool_size < pool.pool_size) {
+        let depositor_owned_init_increase = if (new_pool_size < pool.pool_size) {
             /*
                 Decrease size process
                 1. Change pool amount as ratio
@@ -955,6 +956,7 @@ module initia_std::minitswap {
             pool.virtual_init_balance = pool.virtual_init_balance + net_init_delta;
             pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + net_ibc_op_init_delta;
             pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance + net_ibc_op_init_delta;
+            0
         } else {
             /*
                 Increase size process
@@ -993,14 +995,17 @@ module initia_std::minitswap {
                 let remain = return_amount - pool.virtual_init_balance;
                 module_store.depositor_owned_init = module_store.depositor_owned_init + remain;
                 pool.virtual_init_balance = 0;
+                remain
             } else {
                 pool.virtual_init_balance = pool.virtual_init_balance - return_amount;
+                0
             }
         };
 
         event::emit(ChangePoolSizeEvent {
             ibc_op_init_metadata,
             pool_size: new_pool_size,
+            depositor_owned_init_increase,
         })
     }
 
@@ -1635,7 +1640,7 @@ module initia_std::minitswap {
 
     fun check_arb(module_store: &mut ModuleStore, pool: &mut VirtualPool, ibc_op_init_metadata: Object<Metadata>) {
         // check max arb batch
-        if (table::length(&pool.arb_batch_map) >= module_store.max_arb_batch) {
+        if (table::length(&pool.arb_batch_map) > module_store.max_arb_batch) {
             return
         };
 
