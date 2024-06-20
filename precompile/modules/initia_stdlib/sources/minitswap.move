@@ -2451,6 +2451,7 @@ module initia_std::minitswap {
             10000000
         );
 
+        // swap ibc op init to init
         let (return_amount, _) = swap_simulation(ibc_op_init_1_metadata, init_metadata, 1000000);
         assert!(return_amount == 992741, 0);
 
@@ -2459,18 +2460,15 @@ module initia_std::minitswap {
         let balance_after = coin::balance(chain_addr, init_metadata);
         assert!(balance_after - balance_before == return_amount, 0);
 
-        block::set_block_info(0, 101);
+        // swap init to ibc op init
+        let (return_amount, _) = swap_simulation(init_metadata, ibc_op_init_1_metadata, 500000);
+        assert!(return_amount == 504226, 0);
 
-        swap(&chain, ibc_op_init_1_metadata, init_metadata, 1000000, option::none());
+        let balance_before = coin::balance(chain_addr, ibc_op_init_1_metadata);
+        swap(&chain, init_metadata, ibc_op_init_1_metadata, 500000, option::none());
+        let balance_after = coin::balance(chain_addr, ibc_op_init_1_metadata);
+        assert!(balance_after - balance_before == return_amount, 0);
 
-        swap(&chain, ibc_op_init_1_metadata, init_metadata, 100000000, option::none());
-
-        block::set_block_info(0, 121);
-        swap(&chain, ibc_op_init_1_metadata, init_metadata, 100, option::none());
-
-        block::set_block_info(0, 141);
-        swap(&chain, ibc_op_init_1_metadata, init_metadata, 100, option::none());
-        swap(&chain, ibc_op_init_1_metadata, init_metadata, 10000, option::none());
         change_pool_size(&chain, ibc_op_init_1_metadata, 9000000);
     }
 }
