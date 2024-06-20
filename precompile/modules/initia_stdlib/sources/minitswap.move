@@ -256,6 +256,18 @@ module initia_std::minitswap {
     }
 
     #[view]
+    public fun swap_simulation_given_out(
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
+        return_amount: u64,
+    ): (u64, u64) acquires ModuleStore, VirtualPool, StableswapPoolStore {
+        let (offer_amount, fee_amount, _use_virtual_pool) 
+            = swap_simulation_given_out_internal(offer_metadata, return_metadata, return_amount);
+
+        (offer_amount, fee_amount)
+    }
+
+    #[view]
     public fun swap_simulation_by_denom(
         offer_denom: String,
         return_denom: String,
@@ -1010,7 +1022,7 @@ module initia_std::minitswap {
         let (stableswap_pool_return_amount, stableswap_pool_fee) = if (stableswap_pool_exists) {
             let stableswap_pool_store = borrow_global<StableswapPoolStore>(@initia_std);
             let pool = table::borrow(&stableswap_pool_store.pools, l2_init_metadata);
-            let (return_amount, fee_amount) = stableswap::swap_simulation(*pool, offer_metadata, return_metadata, offer_amount);
+            let (return_amount, fee_amount) = stableswap::swap_simulation(*pool, offer_metadata, return_metadata, offer_amount, true);
             (return_amount - fee_amount, fee_amount)
         } else {
             (0, 0)
@@ -1032,10 +1044,6 @@ module initia_std::minitswap {
                     );
                 };
 
-                if (l2_pool_amount >= pool.pool_size && l1_pool_amount <= pool.pool_size) {
-                    return_amount = 0
-                };
-
                 return_amount
             } else {
                 let return_amount = get_return_amount(offer_amount, l2_pool_amount, l1_pool_amount, pool.pool_size, pool.ann);
@@ -1054,6 +1062,82 @@ module initia_std::minitswap {
         } else {
             (virtual_pool_return_amount, virtual_pool_fee, true)
         }
+    }
+
+    // TODO: update to optimal swap
+    fun swap_simulation_given_out_internal(
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>,
+        return_amount: u64,
+    ): (u64, u64, bool) acquires ModuleStore, VirtualPool, StableswapPoolStore {
+        let is_l1_init_offered = is_l1_init_metadata(offer_metadata);
+        let l2_init_metadata = if(is_l1_init_offered) {
+            return_metadata
+        } else {
+            offer_metadata
+        };
+
+        let stableswap_pool_exists = stableswap_pool_exists(l2_init_metadata);
+        let virtual_pool_exists = virtual_pool_exists(l2_init_metadata);
+
+        assert!(stableswap_pool_exists || virtual_pool_exists, error::invalid_argument(EPOOL_NOT_FOUND));
+
+        let (stableswap_pool_offer_amount, stableswap_pool_fee) = if (stableswap_pool_exists) {
+            let stableswap_pool_store = borrow_global<StableswapPoolStore>(@initia_std);
+            let pool = table::borrow(&stableswap_pool_store.pools, l2_init_metadata);
+            let (offer_amount, fee_amount) = stableswap::swap_simulation(*pool, offer_metadata, return_metadata, return_amount, false);
+            (offer_amount, fee_amount)
+        } else {
+            (0, 0)
+        };
+
+        let (virtual_pool_offer_amount, virtual_pool_fee) = if (virtual_pool_exists) {
+            let (l1_pool_amount, l2_pool_amount) = get_pool_amount(l2_init_metadata, true);
+
+            let (module_store, pool) = borrow_all(l2_init_metadata);
+            let fee_amount = 0;
+            let return_amount = if (is_l1_init_offered) {
+                if (l2_pool_amount - return_amount < pool.pool_size) {
+                    (U64_MAX as u64)
+                } else {
+                    let offer_amount = get_offer_amount(return_amount, l1_pool_amount, l2_pool_amount, pool.pool_size, pool.ann);
+                    offer_amount
+                }
+            } else {
+                let denominator = decimal128::val(&decimal128::one());
+
+                // adjust fee. amount = amount * 1 / (1 - f)
+                let return_amount_ = (mul_div_u128((return_amount as u128), denominator, (denominator - decimal128::val(&module_store.swap_fee_rate))) as u64);
+                fee_amount = return_amount_ - return_amount;
+
+                let offer_amount = get_offer_amount(return_amount_, l2_pool_amount, l1_pool_amount, pool.pool_size, pool.ann);
+
+                offer_amount
+            };
+
+            (return_amount, fee_amount)
+        } else {
+            (0, 0)
+        };
+
+        if (stableswap_pool_offer_amount > virtual_pool_offer_amount) {
+            (stableswap_pool_offer_amount, stableswap_pool_fee, false)
+        } else {
+            (virtual_pool_offer_amount, virtual_pool_fee, true)
+        }
+    }
+
+    fun get_offer_amount(return_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, ann: u64): u64 {
+        let d = get_d0(pool_size, ann);
+        let return_pool_amount_after = return_pool_amount - return_amount;
+
+        let y = get_y(d, return_pool_amount_after, ann);
+    
+        (y - offer_pool_amount as u64)
+    }
+
+    fun mul_div_u128(a: u128, b: u128, c: u128): u128 {
+        return ((a as u256) * (b as u256) / (c as u256) as u128)
     }
 
     #[test_only]
@@ -1119,18 +1203,29 @@ module initia_std::minitswap {
             decimal128::from_ratio(2, 1),
         );
 
-        create_stableswap_pool(
-            &chain,
-            l2_1_metadata,
-            10000000,
-            10000000
-        );
+        // create_stableswap_pool(
+        //     &chain,
+        //     l2_1_metadata,
+        //     10000000,
+        //     10000000
+        // );
 
+        // swap ibc op init to init
         let (return_amount, _) = swap_simulation(l2_1_metadata, init_metadata, 1000000);
+        assert!(return_amount == 992741, 0);
 
         let balance_before = coin::balance(chain_addr, init_metadata);
         swap(&chain, l2_1_metadata, init_metadata, 1000000, option::none());
         let balance_after = coin::balance(chain_addr, init_metadata);
+        assert!(balance_after - balance_before == return_amount, 0);
+
+        // swap init to ibc op init
+        let (return_amount, _) = swap_simulation(init_metadata, l2_1_metadata, 500000);
+        assert!(return_amount == 504734, 0);
+
+        let balance_before = coin::balance(chain_addr, l2_1_metadata);
+        swap(&chain, init_metadata, l2_1_metadata, 500000, option::none());
+        let balance_after = coin::balance(chain_addr, l2_1_metadata);
         assert!(balance_after - balance_before == return_amount, 0);
 
         block::set_block_info(0, 101);
