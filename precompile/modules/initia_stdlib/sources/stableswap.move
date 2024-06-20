@@ -857,6 +857,7 @@ module initia_std::stableswap {
 
         if (!is_offer_amount) {
             let denominator = decimal128::val(&decimal128::one());
+            amount = amount + 1; // for revert sub 1 when get return amount
 
             // adjust fee. amount = amount * 1 / (1 - f)
             let return_amount = (mul_div_u128((amount as u128), denominator, (denominator - decimal128::val(&pool.swap_fee_rate))) as u64);
@@ -955,6 +956,6 @@ module initia_std::stableswap {
         let return_amount = fungible_asset::amount(&return_coin);
         assert!(return_amount == 999178, 3);
 
-        coin::deposit(chain_addr, return_coin)
+        coin::deposit(chain_addr, return_coin);
     }
 }
