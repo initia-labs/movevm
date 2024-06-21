@@ -278,6 +278,36 @@ module initia_std::minitswap {
         swap_simulation(offer_metadata, return_metadata, offer_amount)
     }
 
+    #[view]
+    public fun spot_price(
+        base_metadata: Object<Metadata>,
+        quote_metadata: Object<Metadata>,
+    ): Decimal128 acquires ModuleStore, VirtualPool {
+        let is_init_quote = is_l1_init_metadata(quote_metadata);
+        let ibc_op_init_metadata = if(is_init_quote) {
+            base_metadata
+        } else {
+            quote_metadata
+        };
+
+        let virtual_pool_exists = virtual_pool_exists(ibc_op_init_metadata);
+
+        assert!(virtual_pool_exists, error::invalid_argument(EPOOL_NOT_FOUND));
+
+        let (init_pool_amount, ibc_op_init_pool_amount) = get_pool_amount(ibc_op_init_metadata, true);
+        let (_, pool) = borrow_all(ibc_op_init_metadata);
+
+        let swap_amount = 1000000;
+        let ibc_op_init_return_amount = get_return_amount(swap_amount, init_pool_amount, ibc_op_init_pool_amount, pool.pool_size, pool.ann);
+        let init_return_amount = get_return_amount(swap_amount, ibc_op_init_pool_amount, init_pool_amount, pool.pool_size, pool.ann);
+
+        if (is_init_quote) {
+            decimal128::from_ratio_u64(init_return_amount + swap_amount, ibc_op_init_return_amount + swap_amount)
+        } else {
+            decimal128::from_ratio_u64(ibc_op_init_return_amount + swap_amount, init_return_amount + swap_amount)
+        }
+    }
+
     //
     // Admin functions
     //
