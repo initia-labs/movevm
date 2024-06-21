@@ -1188,6 +1188,11 @@ module initia_std::minitswap {
         return (burn_cap, freeze_cap, mint_cap)
     }
 
+    #[test_only]
+    public fun init_module_for_test(account: &signer) {
+        init_module(account);
+    }
+
     #[test(chain = @0x1)]
     fun end_to_end(
         chain: signer,
