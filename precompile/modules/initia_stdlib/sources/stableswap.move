@@ -166,7 +166,6 @@ module initia_std::stableswap {
             offer_metadata,
             return_metadata,
             offer_amount,
-            true
         );
 
         return_amount - fee_amount
@@ -180,12 +179,11 @@ module initia_std::stableswap {
         return_metadata: Object<Metadata>,
         return_amount: u64,
     ): u64 acquires Pool {
-        let (offer_amount, _) = swap_simulation(
+        let (offer_amount, _) = swap_simulation_reverse(
             pool_obj,
             offer_metadata,
             return_metadata,
             return_amount,
-            false
         );
 
         offer_amount
@@ -256,8 +254,8 @@ module initia_std::stableswap {
         quote_metadata: Object<Metadata>,
     ): Decimal128 acquires Pool {
         let swap_amount = 1000000;
-        let (base_return_amount, _) = swap_simulation(pool_obj, quote_metadata, base_metadata, swap_amount, true);
-        let (quote_return_amount, _) = swap_simulation(pool_obj, base_metadata, quote_metadata, swap_amount, true);
+        let (base_return_amount, _) = swap_simulation(pool_obj, quote_metadata, base_metadata, swap_amount);
+        let (quote_return_amount, _) = swap_simulation(pool_obj, base_metadata, quote_metadata, swap_amount);
 
         
         decimal128::from_ratio_u64(quote_return_amount + swap_amount, base_return_amount + swap_amount)
@@ -603,7 +601,7 @@ module initia_std::stableswap {
     public fun swap(pool_obj:Object<Pool>, offer_coin: FungibleAsset, return_coin_metadata: Object<Metadata>, min_return_amount: Option<u64>): FungibleAsset acquires Pool {
         let offer_coin_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_amount = fungible_asset::amount(&offer_coin);
-        let (return_amount, fee_amount) = swap_simulation(pool_obj, offer_coin_metadata, return_coin_metadata, offer_amount, true);
+        let (return_amount, fee_amount) = swap_simulation(pool_obj, offer_coin_metadata, return_coin_metadata, offer_amount);
         return_amount = return_amount - fee_amount;
 
         assert!(
@@ -826,8 +824,7 @@ module initia_std::stableswap {
         pool_obj:Object<Pool>,
         offer_coin_metadata: Object<Metadata>,
         return_coin_metadata: Object<Metadata>,
-        amount: u64,
-        is_offer_amount: bool,
+        offer_amount: u64,
     ): (u64, u64) acquires Pool {
         assert!(offer_coin_metadata != return_coin_metadata, error::invalid_argument(ESAME_COIN_TYPE));
         let pool = borrow_pool(pool_obj);
@@ -855,27 +852,59 @@ module initia_std::stableswap {
 
         assert!(offer_index != n && return_index != n, error::invalid_argument(ECOIN_TYPE));
 
-        if (!is_offer_amount) {
-            let denominator = decimal128::val(&decimal128::one());
-            amount = amount + 1; // for revert sub 1 when get return amount
+        
+        let y = get_y(offer_index, return_index, offer_amount, pool_amounts, ann, true);
 
-            // adjust fee. amount = amount * 1 / (1 - f)
-            let return_amount = (mul_div_u128((amount as u128), denominator, (denominator - decimal128::val(&pool.swap_fee_rate))) as u64);
+        let return_amount = *vector::borrow(&pool_amounts, return_index) - y - 1; // sub 1 just in case
+        let fee_amount = decimal128::mul_u64(&pool.swap_fee_rate, return_amount);
 
-            let fee_amount = return_amount - amount;
+        (return_amount, fee_amount)
+    }
 
-            let y = get_y(offer_index, return_index, return_amount, pool_amounts, ann, is_offer_amount);
-            let offer_amount = y - *vector::borrow(&pool_amounts, offer_index);
+    public fun swap_simulation_reverse(
+        pool_obj:Object<Pool>,
+        offer_coin_metadata: Object<Metadata>,
+        return_coin_metadata: Object<Metadata>,
+        return_amount: u64,
+    ): (u64, u64) acquires Pool {
+        assert!(offer_coin_metadata != return_coin_metadata, error::invalid_argument(ESAME_COIN_TYPE));
+        let pool = borrow_pool(pool_obj);
+        let pool_addr = object::object_address(pool_obj);
+        let n = vector::length(&pool.coin_metadata);
 
-            (offer_amount, fee_amount)
-        } else {
-            let y = get_y(offer_index, return_index, amount, pool_amounts, ann, is_offer_amount);
+        let ann = get_current_ann(&pool.ann);
+        let pool_amounts = get_pool_amounts(pool_addr, pool.coin_metadata);
+        let offer_index = n;
+        let return_index = n;
+        let i = 0;
+        while (i < n) {
+            let metadata = *vector::borrow(&pool.coin_metadata, i);
+            if (metadata == offer_coin_metadata){
+                offer_index = i
+            };
+            if (metadata == return_coin_metadata){
+                return_index = i
+            };
+            if (offer_index != n && return_index != n) {
+                break
+            };
+            i = i + 1;
+        };
 
-            let return_amount = *vector::borrow(&pool_amounts, return_index) - y - 1; // sub 1 just in case
-            let fee_amount = decimal128::mul_u64(&pool.swap_fee_rate, return_amount);
+        assert!(offer_index != n && return_index != n, error::invalid_argument(ECOIN_TYPE));
+ 
+        let denominator = decimal128::val(&decimal128::one());
+        return_amount = return_amount + 1; // for revert sub 1 when get return amount
 
-            (return_amount, fee_amount)
-        }
+        // adjust fee. amount = amount * 1 / (1 - f)
+        let return_amount = (mul_div_u128((return_amount as u128), denominator, (denominator - decimal128::val(&pool.swap_fee_rate))) as u64);
+
+        let fee_amount = return_amount - return_amount;
+
+        let y = get_y(offer_index, return_index, return_amount, pool_amounts, ann, false);
+        let offer_amount = y - *vector::borrow(&pool_amounts, offer_index);
+
+        (offer_amount, fee_amount)
     }
 
     fun mul_div_u64(a: u64, b: u64, c: u64): u64 {

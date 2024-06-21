@@ -1022,7 +1022,7 @@ module initia_std::minitswap {
         let (stableswap_pool_return_amount, stableswap_pool_fee) = if (stableswap_pool_exists) {
             let stableswap_pool_store = borrow_global<StableswapPoolStore>(@initia_std);
             let pool = table::borrow(&stableswap_pool_store.pools, l2_init_metadata);
-            let (return_amount, fee_amount) = stableswap::swap_simulation(*pool, offer_metadata, return_metadata, offer_amount, true);
+            let (return_amount, fee_amount) = stableswap::swap_simulation(*pool, offer_metadata, return_metadata, offer_amount);
             (return_amount - fee_amount, fee_amount)
         } else {
             (0, 0)
@@ -1085,7 +1085,7 @@ module initia_std::minitswap {
         let (stableswap_pool_offer_amount, stableswap_pool_fee) = if (stableswap_pool_exists) {
             let stableswap_pool_store = borrow_global<StableswapPoolStore>(@initia_std);
             let pool = table::borrow(&stableswap_pool_store.pools, l2_init_metadata);
-            let (offer_amount, fee_amount) = stableswap::swap_simulation(*pool, offer_metadata, return_metadata, return_amount, false);
+            let (offer_amount, fee_amount) = stableswap::swap_simulation_reverse(*pool, offer_metadata, return_metadata, return_amount);
             (offer_amount, fee_amount)
         } else {
             (0, 0)
