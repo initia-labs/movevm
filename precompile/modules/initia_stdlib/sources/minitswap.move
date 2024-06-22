@@ -897,6 +897,9 @@ module initia_std::minitswap {
     }
 
     fun get_return_amount(offer_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, ann: u64): u64 {
+        if (offer_amount == 0) {
+            return 0
+        };
         let d = get_d0(pool_size, ann);
         let offer_pool_amount_after = offer_pool_amount + offer_amount;
 
@@ -1162,6 +1165,9 @@ module initia_std::minitswap {
     }
 
     fun get_offer_amount(return_amount: u64, offer_pool_amount: u64, return_pool_amount: u64, pool_size: u64, ann: u64): u64 {
+        if (return_amount == 0) {
+            return 0
+        };
         let d = get_d0(pool_size, ann);
         let return_pool_amount_after = return_pool_amount - return_amount;
 
