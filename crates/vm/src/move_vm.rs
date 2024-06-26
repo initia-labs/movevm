@@ -85,7 +85,7 @@ pub struct MoveVM {
 
 impl Default for MoveVM {
     fn default() -> Self {
-        Self::new(1000, 100)
+        Self::new(1000 * 1024 * 1024, 100 * 1024 * 1024)
     }
 }
 
