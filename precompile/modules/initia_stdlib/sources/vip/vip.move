@@ -147,9 +147,6 @@ module initia_std::vip {
         title: string::String,
         summary: string::String,
         api_uri: string::String,
-
-        challenger: address,
-
         new_agent: address,
         merkle_root: vector<u8>,
         execution_time: u64,
@@ -169,6 +166,7 @@ module initia_std::vip {
         operator_vesting_period: u64,
         minimum_eligible_tvl: u64,
         maximum_tvl_ratio: Decimal256,
+        challenge_period: u64,
     }
 
     struct SnapshotResponse has drop {
@@ -198,7 +196,6 @@ module initia_std::vip {
     }
 
     struct ExecutedChallengeResponse has drop {
-        challenger: address,
         title: string::String,
         summary: string::String,
         new_api_uri: string::String,
@@ -245,7 +242,6 @@ module initia_std::vip {
         title: string::String,
         summary: string::String,
         api_uri: string::String,
-        challenger: address,
         new_agent: address,
         merkle_root: vector<u8>,
         execution_time: u64,
@@ -937,7 +933,6 @@ module initia_std::vip {
         summary: string::String,
         new_api_uri: string::String,
         new_agent: address,
-        challenger: address,
         new_merkle_root: vector<u8>,
     ) acquires ModuleStore {
         check_chain_permission(chain);
@@ -972,7 +967,6 @@ module initia_std::vip {
                 title,
                 summary,
                 api_uri: new_api_uri,
-                challenger,
                 new_agent,
                 merkle_root: new_merkle_root,
                 execution_time,
@@ -1002,7 +996,6 @@ module initia_std::vip {
                 title,
                 summary,
                 api_uri: new_api_uri,
-                challenger,
                 new_agent,
                 merkle_root: new_merkle_root,
                 execution_time,
@@ -1643,7 +1636,6 @@ module initia_std::vip {
             total_l2_score: snapshot.total_l2_score,
         }
     }
-
     #[view]
     public fun get_expected_reward(
         bridge_id: u64,
@@ -1736,7 +1728,6 @@ module initia_std::vip {
         let executed_challenge = table::borrow(&module_store.challenges, key);
 
         ExecutedChallengeResponse {
-            challenger: executed_challenge.challenger,
             title: executed_challenge.title,
             summary: executed_challenge.summary,
             new_api_uri: executed_challenge.api_uri,
@@ -1806,6 +1797,7 @@ module initia_std::vip {
             operator_vesting_period: module_store.operator_vesting_period,
             minimum_eligible_tvl: module_store.minimum_eligible_tvl,
             maximum_tvl_ratio: module_store.maximum_tvl_ratio,
+            challenge_period: module_store.challenge_period,
         }
     }
 
@@ -1946,6 +1938,8 @@ module initia_std::vip {
     const DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST: u64 = 10081;
 
     #[test_only]
+    const DEFAULT_NEW_CHALLENGE_PERIOD:u64 = 10000;
+    #[test_only]
     const DEFAULT_API_URI_FOR_TEST: vector<u8> = b"test";
 
     #[test_only]
@@ -1956,6 +1950,8 @@ module initia_std::vip {
 
     #[test_only]
     const STAGE_FOR_TEST:u64 = 1;
+
+    
     #[test_only]
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
@@ -2891,14 +2887,12 @@ module initia_std::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573,new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37, new_challenger = @0x1234c0ffee)]
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573,new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_execute_challenge(
         chain: &signer,
         operator: &signer,
         new_agent: address,
-        new_challenger: address,
     ) acquires ModuleStore {
-        let release_time = DEFAULT_CHALLENGE_PERIOD;
         let bridge_id = test_setup(
             chain,
             operator,
@@ -2907,9 +2901,7 @@ module initia_std::vip {
             1_000_000_000_000,
         );
         test_setup_scene1(chain, bridge_id, 0);
-
-
-        let (_, create_time) = block::get_block_info();
+        let (_,create_time) = block::get_block_info();
         let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let new_api_uri: string::String = string::utf8(NEW_API_URI_FOR_TEST);
@@ -2923,7 +2915,6 @@ module initia_std::vip {
             summary,
             new_api_uri,
             new_agent,
-            new_challenger,
             *simple_map::borrow(&new_merkle_root, &BRIDGE_ID_FOR_TEST),
         );
 
@@ -2931,7 +2922,7 @@ module initia_std::vip {
             create_time: expected_create_time,
             upsert_time: expected_upsert_time,
             merkle_root: expected_merkle_root,
-            total_l2_score: expected_total_score,
+            total_l2_score: _, 
         } = get_snapshot(BRIDGE_ID_FOR_TEST, STAGE_FOR_TEST);
 
         assert!(
@@ -2945,7 +2936,6 @@ module initia_std::vip {
         );
 
         let ExecutedChallengeResponse {
-            challenger: expected_challenger,
             title: expected_title,
             summary: expected_summary,
             new_api_uri: expected_new_api_uri,
@@ -2957,10 +2947,6 @@ module initia_std::vip {
             BRIDGE_ID_FOR_TEST
         );
 
-        assert!(
-            expected_challenger == new_challenger,
-            0
-        );
         assert!(expected_title == title, 0);
         assert!(expected_summary == summary, 0);
         assert!(
@@ -3038,12 +3024,11 @@ module initia_std::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
     fun failed_operator_claim_invalid_period(
         chain: &signer,
         operator: &signer,
-        receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
@@ -3053,22 +3038,18 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-
         test_setup_scene1(chain, bridge_id, 0);
 
         claim_operator_reward_script(operator, bridge_id, 1,);
 
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37, new_challenger = @0x1234c0ffee)]
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573,new_agent=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
     fun failed_execute_challenge(
         chain: &signer,
         operator: &signer,
-        receiver: &signer,
         new_agent: address,
-        new_challenger: address
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
@@ -3079,7 +3060,7 @@ module initia_std::vip {
         );
         test_setup_scene1(chain, bridge_id, 0);
         skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
-        let (_, create_time) = block::get_block_info();
+        
         let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let new_api_uri: string::String = string::utf8(NEW_API_URI_FOR_TEST);
@@ -3093,7 +3074,6 @@ module initia_std::vip {
             summary,
             new_api_uri,
             new_agent,
-            new_challenger,
             *simple_map::borrow(&new_merkle_root, &BRIDGE_ID_FOR_TEST),
         );
     }
@@ -4177,7 +4157,13 @@ module initia_std::vip {
             0
         );
     }
-
+     #[test(chain = @0x1, operator = @0x111)]
+    fun test_update_challenge_period(chain:&signer) acquires ModuleStore {
+        init_module_for_test(chain);
+        update_challenge_period(chain, DEFAULT_NEW_CHALLENGE_PERIOD);
+        assert!(get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,0)
+        
+    } 
     #[test(chain = @0x1, operator = @0x111)]
     fun test_update_snapshot(chain: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
