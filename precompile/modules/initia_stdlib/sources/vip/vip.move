@@ -141,11 +141,6 @@ module initia_std::vip {
         operator_reward_amount: u64
     }
 
-    struct Vote has store {
-        vote_option: bool,
-        voting_power: u64,
-    }
-
     struct ExecutedChallenge has store, drop {
         bridge_id: u64,
         stage: u64,
