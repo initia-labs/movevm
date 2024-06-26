@@ -3064,6 +3064,53 @@ module initia_std::vip {
 
     }
 
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_user_claim_valid_period(
+        chain: &signer,
+        operator: &signer,
+        receiver: &signer
+    ) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            1_000_000_000_000,
+        );
+
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+
+        test_setup_scene1(chain, bridge_id, 0);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+        claim_user_reward_script(
+            receiver,
+            bridge_id,
+            1,
+            *simple_map::borrow(&merkle_proof_map, &1),
+            *simple_map::borrow(&score_map, &1),
+        );
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun operator_claim_valid_period(chain: &signer, operator: &signer,) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            1_000_000_000_000,
+        );
+
+        test_setup_scene1(chain, bridge_id, 0);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+        claim_operator_reward_script(operator, bridge_id, 1,);
+
+    }
+
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
     fun failed_execute_challenge(
