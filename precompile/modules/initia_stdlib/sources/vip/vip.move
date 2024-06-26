@@ -955,15 +955,19 @@ module initia_std::vip {
             snapshot.create_time + module_store.challenge_period > execution_time,
             error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
         );
-        
+
         // make key of executed_challenge
-        let key = make_challenge_table_key(execution_time, challenge_stage, bridge_id);
+        let key = make_challenge_table_key(
+            execution_time,
+            challenge_stage,
+            bridge_id
+        );
         // add executed_challenge
         table::add(
             &mut module_store.challenges, key,
             ExecutedChallenge {
                 bridge_id,
-                stage:challenge_stage,
+                stage: challenge_stage,
                 title,
                 summary,
                 api_uri: new_api_uri,
@@ -985,14 +989,14 @@ module initia_std::vip {
                 create_time: snapshot.create_time,
                 upsert_time: execution_time,
                 merkle_root: new_merkle_root,
-                total_l2_score:snapshot.total_l2_score,
+                total_l2_score: snapshot.total_l2_score,
             }
         );
 
         event::emit(
             ExecuteChallengeEvent {
                 bridge_id,
-                stage:challenge_stage,
+                stage: challenge_stage,
                 title,
                 summary,
                 api_uri: new_api_uri,
@@ -1636,6 +1640,7 @@ module initia_std::vip {
             total_l2_score: snapshot.total_l2_score,
         }
     }
+
     #[view]
     public fun get_expected_reward(
         bridge_id: u64,
@@ -1938,7 +1943,7 @@ module initia_std::vip {
     const DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST: u64 = 10081;
 
     #[test_only]
-    const DEFAULT_NEW_CHALLENGE_PERIOD:u64 = 10000;
+    const DEFAULT_NEW_CHALLENGE_PERIOD: u64 = 10000;
     #[test_only]
     const DEFAULT_API_URI_FOR_TEST: vector<u8> = b"test";
 
@@ -1949,16 +1954,12 @@ module initia_std::vip {
     const BRIDGE_ID_FOR_TEST: u64 = 1;
 
     #[test_only]
-    const STAGE_FOR_TEST:u64 = 1;
+    const STAGE_FOR_TEST: u64 = 1;
 
-    
     #[test_only]
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
-        block::set_block_info(
-            height,
-            curr_time + period
-        );
+        block::set_block_info(height, curr_time + period);
     }
 
     #[test_only]
@@ -2479,8 +2480,7 @@ module initia_std::vip {
             score_map,
             total_score_map
         ) = merkle_root_and_proof_scene1();
-        
-    
+
         fund_reward_script(chain, 1, release_time, release_time);
         fund_reward_script(chain, 2, release_time, release_time);
         submit_snapshot(
@@ -2498,7 +2498,9 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &2),
         );
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2544,7 +2546,9 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_root_map, &3),
             *simple_map::borrow(&total_score_map, &3),
         );
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -2575,8 +2579,10 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &4),
         );
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
-        
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -2612,7 +2618,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2706,7 +2714,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2792,7 +2802,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2887,7 +2899,7 @@ module initia_std::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573,new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_execute_challenge(
         chain: &signer,
         operator: &signer,
@@ -2901,7 +2913,7 @@ module initia_std::vip {
             1_000_000_000_000,
         );
         test_setup_scene1(chain, bridge_id, 0);
-        let (_,create_time) = block::get_block_info();
+        let (_, create_time) = block::get_block_info();
         let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let new_api_uri: string::String = string::utf8(NEW_API_URI_FOR_TEST);
@@ -2915,14 +2927,17 @@ module initia_std::vip {
             summary,
             new_api_uri,
             new_agent,
-            *simple_map::borrow(&new_merkle_root, &BRIDGE_ID_FOR_TEST),
+            *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
         );
 
         let SnapshotResponse {
             create_time: expected_create_time,
             upsert_time: expected_upsert_time,
             merkle_root: expected_merkle_root,
-            total_l2_score: _, 
+            total_l2_score: _,
         } = get_snapshot(BRIDGE_ID_FOR_TEST, STAGE_FOR_TEST);
 
         assert!(
@@ -2931,7 +2946,10 @@ module initia_std::vip {
         );
         assert!(expected_upsert_time > create_time, 0);
         assert!(
-            expected_merkle_root == *simple_map::borrow(&new_merkle_root, &BRIDGE_ID_FOR_TEST),
+            expected_merkle_root == *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
             0
         );
 
@@ -2955,7 +2973,10 @@ module initia_std::vip {
         );
         assert!(expected_agent == new_agent, 0);
         assert!(
-            expected_new_merkle_root == *simple_map::borrow(&new_merkle_root, &BRIDGE_ID_FOR_TEST),
+            expected_new_merkle_root == *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
             0
         );
     }
@@ -2978,7 +2999,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3026,10 +3049,7 @@ module initia_std::vip {
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
-    fun failed_operator_claim_invalid_period(
-        chain: &signer,
-        operator: &signer,
-    ) acquires ModuleStore {
+    fun failed_operator_claim_invalid_period(chain: &signer, operator: &signer,) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             operator,
@@ -3044,7 +3064,7 @@ module initia_std::vip {
 
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573,new_agent=@0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
     fun failed_execute_challenge(
         chain: &signer,
@@ -3059,8 +3079,10 @@ module initia_std::vip {
             1_000_000_000_000,
         );
         test_setup_scene1(chain, bridge_id, 0);
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
-        
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let new_api_uri: string::String = string::utf8(NEW_API_URI_FOR_TEST);
@@ -3074,7 +3096,10 @@ module initia_std::vip {
             summary,
             new_api_uri,
             new_agent,
-            *simple_map::borrow(&new_merkle_root, &BRIDGE_ID_FOR_TEST),
+            *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
         );
     }
 
@@ -3110,7 +3135,9 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &1),
         );
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3138,7 +3165,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, _, _) = merkle_root_and_proof_scene2();
         test_setup_scene2(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         batch_claim_user_reward_script(
             receiver,
@@ -3193,7 +3222,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene2();
         test_setup_scene2(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3289,7 +3320,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3677,7 +3710,9 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &5), // skip 3,4 stage
         );
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3724,7 +3759,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3988,7 +4025,9 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &5),
         );
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -4157,13 +4196,18 @@ module initia_std::vip {
             0
         );
     }
-     #[test(chain = @0x1, operator = @0x111)]
-    fun test_update_challenge_period(chain:&signer) acquires ModuleStore {
+
+    #[test(chain = @0x1, operator = @0x111)]
+    fun test_update_challenge_period(chain: &signer) acquires ModuleStore {
         init_module_for_test(chain);
         update_challenge_period(chain, DEFAULT_NEW_CHALLENGE_PERIOD);
-        assert!(get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,0)
-        
-    } 
+        assert!(
+            get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,
+            0
+        )
+
+    }
+
     #[test(chain = @0x1, operator = @0x111)]
     fun test_update_snapshot(chain: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
@@ -4620,7 +4664,9 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
 
-        skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -4749,7 +4795,9 @@ module initia_std::vip {
                 *simple_map::borrow(&total_score_map, &idx),
             );
 
-            skip_period(DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST);
+            skip_period(
+                DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+            );
 
             claim_user_reward_script(
                 receiver,
