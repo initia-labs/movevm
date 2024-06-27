@@ -101,7 +101,7 @@ module initia_std::minitswap {
         trigger_fee: u64,
         /// The minimum time needed to trigger the arbitrage
         min_arb_profit: u64,
-        /// How much minimum pegkeeper ibc_opinit balance is needed to trigger the arb
+        /// How much minimum pegkeeper ibc_op_init balance is needed to trigger the arb
         ibc_timeout: u64,
         /// Maximum arb_batch size
         max_arb_batch: u64,
@@ -179,7 +179,7 @@ module initia_std::minitswap {
         // init amount that peg keeper swapped
         init_used: u64,
         // amount of ibc op init sent
-        ibc_opinit_sent: u64,
+        ibc_op_init_sent: u64,
         // triggering fee
         triggering_fee: u64,
     }
@@ -264,19 +264,31 @@ module initia_std::minitswap {
     #[event]
     /// Event emitted when arb initiated
     struct InitiateArbEvent has drop, store {
+        arb_index: u64,
         pool: Object<VirtualPool>,
         executed_time: u64,
         init_used: u64,
-        ibc_opinit_sent: u64,
+        ibc_op_init_sent: u64,
         triggering_fee: u64,
     }
 
     #[event]
     /// Event emitted when arb finalized
     struct FinalizeArbEvent has drop, store {
+        arb_index: u64,
         pool: Object<VirtualPool>,
         init_used: u64,
-        ibc_opinit_sent: u64,
+        ibc_op_init_sent: u64,
+        triggering_fee: u64,
+    }
+
+    #[event]
+    /// Event emitted when arb reverted
+    struct RevertArbEvent has drop, store {
+        arb_index: u64,
+        pool: Object<VirtualPool>,
+        init_used: u64,
+        ibc_op_init_sent: u64,
         triggering_fee: u64,
     }
 
@@ -486,7 +498,7 @@ module initia_std::minitswap {
             id,
             executed_time: arb_info.executed_time,
             init_used: arb_info.init_used,
-            ibc_opinit_sent: arb_info.ibc_opinit_sent,
+            ibc_op_init_sent: arb_info.ibc_op_init_sent,
             triggering_fee: arb_info.triggering_fee,
         }
     }
@@ -520,7 +532,7 @@ module initia_std::minitswap {
                 id,
                 executed_time: arb_info.executed_time,
                 init_used: arb_info.init_used,
-                ibc_opinit_sent: arb_info.ibc_opinit_sent,
+                ibc_op_init_sent: arb_info.ibc_op_init_sent,
                 triggering_fee: arb_info.triggering_fee,
             });
         };
@@ -705,12 +717,12 @@ module initia_std::minitswap {
         id: u64,
         executed_time: u64,
         init_used: u64,
-        ibc_opinit_sent: u64,
+        ibc_op_init_sent: u64,
         triggering_fee: u64,
     }
 
     public fun unpack_arb_response(res: ArbResponse): (u64, u64, u64, u64, u64) {
-        return (res.id, res.executed_time, res.init_used, res.ibc_opinit_sent, res.triggering_fee)
+        return (res.id, res.executed_time, res.init_used, res.ibc_op_init_sent, res.triggering_fee)
     }
 
     struct ModuleStoreResponse has drop {
@@ -1200,7 +1212,7 @@ module initia_std::minitswap {
             signer::address_of(&pool_signer),
             sequence,
             string::utf8(b"uinit"),
-            arb_info.ibc_opinit_sent,
+            arb_info.ibc_op_init_sent,
             version,
             state_root,
             storage_root,
@@ -1233,7 +1245,7 @@ module initia_std::minitswap {
 
         let pool_obj = table::remove(&mut module_store.global_arb_batch_map, table_key::encode_u64(arb_index));
         let pool = borrow_global_mut<VirtualPool>(object::object_address(pool_obj));
-        let ArbInfo { executed_time: _, init_used, ibc_opinit_sent, triggering_fee }
+        let ArbInfo { executed_time: _, init_used, ibc_op_init_sent, triggering_fee }
             = table::remove(&mut pool.arb_batch_map, table_key::encode_u64(arb_index));
 
         assert!(pool.active, error::invalid_state(EINACTIVE));
@@ -1241,13 +1253,13 @@ module initia_std::minitswap {
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
 
         // update pegkeeper owned balance
-        pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance - ibc_opinit_sent;
+        pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance - ibc_op_init_sent;
 
         // transfer trigger fee
         primary_fungible_store::transfer(&pool_signer, init_metadata(), executor, triggering_fee);
 
         // transfer leftover to module_addr
-        let leftover_amount = ibc_opinit_sent - triggering_fee;
+        let leftover_amount = ibc_op_init_sent - triggering_fee;
         primary_fungible_store::transfer(&pool_signer, init_metadata(), signer::address_of(module_signer), leftover_amount);
 
         // update depositor owned init
@@ -1256,9 +1268,10 @@ module initia_std::minitswap {
 
         // emit event
         event::emit(FinalizeArbEvent {
+            arb_index,
             pool: pool_obj,
             init_used,
-            ibc_opinit_sent,
+            ibc_op_init_sent,
             triggering_fee,
         });
     }
@@ -1489,10 +1502,21 @@ module initia_std::minitswap {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pool_obj = table::remove(&mut module_store.global_arb_batch_map, table_key::encode_u64(callback_id));
         let pool = borrow_global_mut<VirtualPool>(object::object_address(pool_obj));
-        let ArbInfo { executed_time: _, init_used, ibc_opinit_sent, triggering_fee: _ }
+        let ArbInfo { executed_time: _, init_used, ibc_op_init_sent, triggering_fee, }
             = table::remove(&mut pool.arb_batch_map, table_key::encode_u64(callback_id));
         pool.virtual_init_balance = pool.virtual_init_balance + init_used;
-        pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + ibc_opinit_sent;
+        pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance + ibc_op_init_sent;
+
+        event::emit<RevertArbEvent>(
+            RevertArbEvent {
+                arb_index: callback_id,
+                pool: pool_obj,
+                init_used,
+                ibc_op_init_sent, // always ibc op init
+                triggering_fee,
+            },
+        );
+
     }
 
     //
@@ -1679,7 +1703,7 @@ module initia_std::minitswap {
         let arb_info = ArbInfo {
             executed_time: timestamp,
             init_used: pool.virtual_init_balance,
-            ibc_opinit_sent: pool.virtual_ibc_op_init_balance,
+            ibc_op_init_sent: pool.virtual_ibc_op_init_balance,
             triggering_fee: module_store.trigger_fee,
         };
 
@@ -1688,16 +1712,17 @@ module initia_std::minitswap {
         pool.virtual_ibc_op_init_balance = 0;
 
         // send ibc message with hook
-        send_ibc_message(module_store, pool, arb_index, ibc_op_init_metadata, arb_info.ibc_opinit_sent);
+        send_ibc_message(module_store, pool, arb_index, ibc_op_init_metadata, arb_info.ibc_op_init_sent);
 
         // emit event
         let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
         let pool_obj = *option::borrow(&pools.virtual_pool);
         event::emit(InitiateArbEvent {
+            arb_index,
             pool: pool_obj,
             executed_time: arb_info.executed_time,
             init_used: arb_info.init_used,
-            ibc_opinit_sent: arb_info.ibc_opinit_sent,
+            ibc_op_init_sent: arb_info.ibc_op_init_sent,
             triggering_fee: arb_info.triggering_fee,
         });
 
@@ -2319,7 +2344,7 @@ module initia_std::minitswap {
         let pool = borrow_global<VirtualPool>(object::object_address(*pool_obj));
         let arb_info = table::borrow(&pool.arb_batch_map, table_key::encode_u64(arb_index));
 
-        assert!(amount == arb_info.ibc_opinit_sent, error::invalid_argument(EAMOUNT_MISMATCH));
+        assert!(amount == arb_info.ibc_op_init_sent, error::invalid_argument(EAMOUNT_MISMATCH));
 
         // mock finalize withdraw
         coin::mint_to(init_mint_cap, object::address_from_extend_ref(&pool.extend_ref), amount);
@@ -2408,7 +2433,7 @@ module initia_std::minitswap {
         let str = string::utf8(b"");
         let excutor_balance_before = coin::balance(@0x1, init_metadata);
 
-        finalize_arb_mock(&chain, 0, 1, 1, vector[], @0x1, 1, arb_info.ibc_opinit_sent, str, str, str, str, &initia_mint_cap);
+        finalize_arb_mock(&chain, 0, 1, 1, vector[], @0x1, 1, arb_info.ibc_op_init_sent, str, str, str, str, &initia_mint_cap);
 
         let excutor_balance_after = coin::balance(@0x1, init_metadata);
 
