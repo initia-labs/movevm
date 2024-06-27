@@ -33,7 +33,10 @@ module initia_std::account {
 
     public fun create_account(addr: address): u64 {
         let (found, _, _, _, _) = account_info(addr);
-        assert!(!found, error::already_exists(EACCOUNT_ALREADY_EXISTS));
+        assert!(
+            !found,
+            error::already_exists(EACCOUNT_ALREADY_EXISTS)
+        );
 
         request_create_account(addr, 0, ACCOUNT_TYPE_BASE)
     }
@@ -41,10 +44,19 @@ module initia_std::account {
     /// TableAccount is similar to CosmosSDK's ModuleAccount in concept,
     /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_table_account(addr: address): u64 {
-        let (found, account_number, sequence, account_type, _) = account_info(addr);
-        assert!(!found
-            || (account_type == ACCOUNT_TYPE_BASE && sequence == 0),
-            error::already_exists(EACCOUNT_ALREADY_EXISTS),);
+        let (
+            found,
+            account_number,
+            sequence,
+            account_type,
+            _
+        ) = account_info(addr);
+        assert!(
+            !found || (
+                account_type == ACCOUNT_TYPE_BASE && sequence == 0
+            ),
+            error::already_exists(EACCOUNT_ALREADY_EXISTS),
+        );
 
         request_create_account(
             addr,
@@ -56,7 +68,13 @@ module initia_std::account {
     /// ObjectAccount is similar to CosmosSDK's ModuleAccount in concept,
     /// as both cannot have a pubkey, there is no way to use the account externally.
     public(friend) fun create_object_account(addr: address): u64 {
-        let (found, account_number, sequence, account_type, _) = account_info(addr);
+        let (
+            found,
+            account_number,
+            sequence,
+            account_type,
+            _
+        ) = account_info(addr);
 
         // base account with sequence 0 is considered as not created.
         if (!found || (
@@ -97,7 +115,10 @@ module initia_std::account {
     #[view]
     public fun get_account_number(addr: address): u64 {
         let (found, account_number, _, _, _) = account_info(addr);
-        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+        assert!(
+            found,
+            error::not_found(EACCOUNT_NOT_FOUND)
+        );
 
         account_number
     }
@@ -105,7 +126,10 @@ module initia_std::account {
     #[view]
     public fun get_sequence_number(addr: address): u64 {
         let (found, _, sequence_number, _, _) = account_info(addr);
-        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+        assert!(
+            found,
+            error::not_found(EACCOUNT_NOT_FOUND)
+        );
 
         sequence_number
     }
@@ -113,7 +137,10 @@ module initia_std::account {
     #[view]
     public fun is_base_account(addr: address): bool {
         let (found, _, _, account_type, _) = account_info(addr);
-        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+        assert!(
+            found,
+            error::not_found(EACCOUNT_NOT_FOUND)
+        );
 
         account_type == ACCOUNT_TYPE_BASE
     }
@@ -121,7 +148,10 @@ module initia_std::account {
     #[view]
     public fun is_object_account(addr: address): bool {
         let (found, _, _, account_type, _) = account_info(addr);
-        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+        assert!(
+            found,
+            error::not_found(EACCOUNT_NOT_FOUND)
+        );
 
         account_type == ACCOUNT_TYPE_OBJECT
     }
@@ -129,7 +159,10 @@ module initia_std::account {
     #[view]
     public fun is_table_account(addr: address): bool {
         let (found, _, _, account_type, _) = account_info(addr);
-        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+        assert!(
+            found,
+            error::not_found(EACCOUNT_NOT_FOUND)
+        );
 
         account_type == ACCOUNT_TYPE_TABLE
     }
@@ -137,17 +170,33 @@ module initia_std::account {
     #[view]
     public fun is_module_account(addr: address): bool {
         let (found, _, _, account_type, _) = account_info(addr);
-        assert!(found, error::not_found(EACCOUNT_NOT_FOUND));
+        assert!(
+            found,
+            error::not_found(EACCOUNT_NOT_FOUND)
+        );
 
         account_type == ACCOUNT_TYPE_MODULE
     }
 
     #[view]
     public fun get_account_info(addr: address): (bool, AccountInfo) {
-        let (found, account_number, sequence_number, account_type, is_blocked) = account_info(
-            addr);
+        let (
+            found,
+            account_number,
+            sequence_number,
+            account_type,
+            is_blocked
+        ) = account_info(addr);
 
-        (found, AccountInfo { account_number, sequence_number, account_type, is_blocked })
+        (
+            found,
+            AccountInfo {
+                account_number,
+                sequence_number,
+                account_type,
+                is_blocked
+            }
+        )
     }
 
     public fun is_module_account_with_info(info: &AccountInfo): bool {
@@ -178,14 +227,22 @@ module initia_std::account {
         info.sequence_number
     }
 
-    native fun request_create_account(addr: address, account_number: u64, account_type: u8): u64;
+    native fun request_create_account(
+        addr: address,
+        account_number: u64,
+        account_type: u8
+    ): u64;
     native public fun account_info(addr: address): (bool /* found */, u64 /* account_number */, u64 /* sequence_number */, u8 /* account_type */, bool /* is_blocked */);
     native public(friend) fun create_address(bytes: vector<u8>): address;
     native public(friend) fun create_signer(addr: address): signer;
 
     #[test_only]
     native public fun set_account_info(
-        addr: address, account_number: u64, sequence: u64, account_type: u8, is_blocked: bool
+        addr: address,
+        account_number: u64,
+        sequence: u64,
+        account_type: u8,
+        is_blocked: bool
     );
 
     #[test_only]
@@ -300,7 +357,13 @@ module initia_std::account {
         assert!(exists_at(new_address), 2);
 
         // set base account with 0 sequence
-        set_account_info(new_address2, 100, 0, ACCOUNT_TYPE_BASE, false);
+        set_account_info(
+            new_address2,
+            100,
+            0,
+            ACCOUNT_TYPE_BASE,
+            false
+        );
         let table_account_num = create_table_account(new_address2);
         assert!(
             table_account_num == get_account_number(new_address2),
@@ -320,7 +383,13 @@ module initia_std::account {
         assert!(exists_at(new_address3), 5);
 
         // set base account with 0 sequence
-        set_account_info(new_address4, 200, 0, ACCOUNT_TYPE_BASE, false);
+        set_account_info(
+            new_address4,
+            200,
+            0,
+            ACCOUNT_TYPE_BASE,
+            false
+        );
         let object_account_num = create_object_account(new_address4);
         assert!(
             object_account_num == get_account_number(new_address4),
@@ -334,12 +403,25 @@ module initia_std::account {
 
     #[test(new_address = @0x42, new_address2 = @0x43)]
     public fun test_blocked_address(
-        new_address: address, new_address2: address
+        new_address: address,
+        new_address2: address
     ) {
-        set_account_info(new_address, 200, 0, ACCOUNT_TYPE_BASE, true);
+        set_account_info(
+            new_address,
+            200,
+            0,
+            ACCOUNT_TYPE_BASE,
+            true
+        );
         assert!(is_blocked(new_address), 1);
 
-        set_account_info(new_address2, 100, 0, ACCOUNT_TYPE_BASE, false);
+        set_account_info(
+            new_address2,
+            100,
+            0,
+            ACCOUNT_TYPE_BASE,
+            false
+        );
         assert!(!is_blocked(new_address2), 2);
     }
 

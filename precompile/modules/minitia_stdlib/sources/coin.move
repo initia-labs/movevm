@@ -58,8 +58,10 @@ module minitia_std::coin {
     //
 
     fun check_sudo(account: &signer) {
-        assert!(signer::address_of(account) == @minitia_std,
-            error::permission_denied(EUNAUTHORIZED));
+        assert!(
+            signer::address_of(account) == @minitia_std,
+            error::permission_denied(EUNAUTHORIZED)
+        );
     }
 
     public entry fun sudo_transfer(
@@ -74,7 +76,10 @@ module minitia_std::coin {
         primary_fungible_store::sudo_transfer(sender, metadata, recipient, amount)
     }
 
-    public(friend) fun sudo_deposit(account_addr: address, fa: FungibleAsset,) {
+    public(friend) fun sudo_deposit(
+        account_addr: address,
+        fa: FungibleAsset,
+    ) {
         primary_fungible_store::sudo_deposit(account_addr, fa)
     }
 
