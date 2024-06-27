@@ -85,12 +85,21 @@ pub struct MoveVM {
 
 impl Default for MoveVM {
     fn default() -> Self {
-        Self::new(1000 * 1024 * 1024, 100 * 1024 * 1024)
+        Self::new(500 * 1024 * 1024, 100 * 1024 * 1024)
     }
 }
 
 impl MoveVM {
-    pub fn new(module_cache_capacity: usize, script_cache_capacity: usize) -> Self {
+    pub fn new(mut module_cache_capacity: usize, mut script_cache_capacity: usize) -> Self {
+        // enforce minimum module cache capacity
+        if module_cache_capacity < 500 * 1024 * 1024 {
+            module_cache_capacity = 500 * 1024 * 1024;
+        }
+        // enforce minimum script cache capacity
+        if script_cache_capacity < 100 * 1024 * 1024 {
+            script_cache_capacity = 100 * 1024 * 1024;
+        }
+
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
         let runtime = VMRuntime::new(
