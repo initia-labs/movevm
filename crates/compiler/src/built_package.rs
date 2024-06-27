@@ -114,12 +114,7 @@ impl BuiltPackage {
 
         // If enabled generate docs.
         if generate_docs {
-            let docgen = if let Some(opts) = docgen_options {
-                opts
-            } else {
-                DocgenOptions::default()
-            };
-
+            let docgen = docgen_options.unwrap_or_default();
             let dep_paths = package
                 .deps_compiled_units
                 .iter()
