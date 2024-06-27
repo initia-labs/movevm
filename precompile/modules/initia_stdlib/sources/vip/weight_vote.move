@@ -1224,6 +1224,8 @@ module initia_std::vip_weight_vote {
     use initia_std::string;
 
     #[test_only]
+    const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
+    #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
         initialize(
             chain,
@@ -1253,6 +1255,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             1,
             @0x12,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
             decimal256::zero(),
@@ -1262,6 +1265,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             2,
             @0x12,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
             decimal256::zero(),

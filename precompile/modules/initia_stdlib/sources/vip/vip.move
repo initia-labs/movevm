@@ -71,7 +71,7 @@ module initia_std::vip {
     const DEFAULT_CHALLENGE_PERIOD: u64 = 10080; // 7 days
 
     struct ModuleStore has key {
-        // global current stage
+        // current stage
         stage: u64,
         // governance-defined vesting period in stage unit
         // the number of times vesting is divided
@@ -128,6 +128,7 @@ module initia_std::vip {
     struct Bridge has store, drop {
         bridge_addr: address,
         operator_addr: address,
+        vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
         operator_reward_store_addr: address,
         user_reward_store_addr: address,
@@ -190,6 +191,7 @@ module initia_std::vip {
     struct BridgeResponse has drop {
         bridge_addr: address,
         operator_addr: address,
+        vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
         user_reward_store_addr: address,
         operator_reward_store_addr: address,
@@ -251,7 +253,7 @@ module initia_std::vip {
     // Implementations
     //
 
-    fun init_module(chain: &signer,) {
+    fun init_module(chain: &signer) {
         move_to(
             chain,
             ModuleStore {
@@ -342,6 +344,24 @@ module initia_std::vip {
             sha3_256(score_data)
         };
         target_hash
+    }
+
+    fun make_challenge_table_key(
+        execution_time: u64,
+        stage: u64,
+        bridge_id: u64
+    ): vector<u8> {
+        // make key of executed_challenge
+        let encode: vector<u8> = bcs::to_bytes<u64>(&execution_time);
+        vector::append(
+            &mut encode,
+            bcs::to_bytes<u64>(&stage)
+        );
+        vector::append(
+            &mut encode,
+            bcs::to_bytes<u64>(&bridge_id)
+        );
+        let key = sha3_256(encode);key
     }
 
     fun assert_merkle_proofs(
@@ -907,24 +927,6 @@ module initia_std::vip {
         validate_vip_weights(module_store);
     }
 
-    fun make_challenge_table_key(
-        execution_time: u64,
-        stage: u64,
-        bridge_id: u64
-    ): vector<u8> {
-        // make key of executed_challenge
-        let encode: vector<u8> = bcs::to_bytes<u64>(&execution_time);
-        vector::append(
-            &mut encode,
-            bcs::to_bytes<u64>(&stage)
-        );
-        vector::append(
-            &mut encode,
-            bcs::to_bytes<u64>(&bridge_id)
-        );
-        let key = std::hash::sha3_256(encode);key
-    }
-
     public fun execute_challenge(
         chain: &signer,
         bridge_id: u64,
@@ -1018,6 +1020,7 @@ module initia_std::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
+        vip_l2_score_contract: string::String,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
         operator_commission_rate: Decimal256,
@@ -1059,6 +1062,7 @@ module initia_std::vip {
             Bridge {
                 bridge_addr: bridge_address,
                 operator_addr: operator,
+                vip_l2_score_contract,
                 vip_weight: decimal256::zero(),
                 user_reward_store_addr: vip_vesting::get_user_reward_store_address(bridge_id),
                 operator_reward_store_addr: vip_vesting::get_operator_reward_store_address(bridge_id),
@@ -1500,6 +1504,20 @@ module initia_std::vip {
         module_store.pool_split_ratio = pool_split_ratio;
     }
 
+    public entry fun update_l2_score_contract(
+        chain: &signer,
+        bridge_id: u64,
+        new_vip_l2_score_contract: string::String,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        let bridge = load_bridge_mut(
+            &mut module_store.bridges,
+            bridge_id
+        );
+        bridge.vip_l2_score_contract = new_vip_l2_score_contract;
+    }
+
     public entry fun zapping_script(
         account: &signer,
         bridge_id: u64,
@@ -1716,6 +1734,7 @@ module initia_std::vip {
         BridgeResponse {
             bridge_addr: bridge.bridge_addr,
             operator_addr: bridge.operator_addr,
+            vip_l2_score_contract: bridge.vip_l2_score_contract,
             vip_weight: bridge.vip_weight,
             user_reward_store_addr: bridge.user_reward_store_addr,
             operator_reward_store_addr: bridge.operator_reward_store_addr,
@@ -1957,6 +1976,9 @@ module initia_std::vip {
     const STAGE_FOR_TEST: u64 = 1;
 
     #[test_only]
+    const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
+
+    #[test_only]
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
         block::set_block_info(height, curr_time + period);
@@ -2012,6 +2034,7 @@ module initia_std::vip {
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
+        vip_l2_score_contract: string::String,
         mint_amount: u64,
         commission_max_rate: Decimal256,
         commission_max_change_rate: Decimal256,
@@ -2040,6 +2063,7 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
+            vip_l2_score_contract,
             commission_max_rate,
             commission_max_change_rate,
             commission_rate,
@@ -2054,6 +2078,7 @@ module initia_std::vip {
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
+        vip_l2_score_contract: string::String,
         mint_amount: u64,
     ): u64 acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
@@ -2067,6 +2092,7 @@ module initia_std::vip {
             operator,
             bridge_id,
             bridge_address,
+            vip_l2_score_contract,
             mint_amount,
             decimal256::from_string(
                 &string::utf8(
@@ -2431,6 +2457,7 @@ module initia_std::vip {
             signer::address_of(operator),
             1,
             @0x90,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -2470,6 +2497,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
         let release_time = 0;
@@ -2602,6 +2630,31 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_update_l2_score_contract(chain: &signer, operator: &signer) acquires ModuleStore{
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+
+        let new_vip_l2_score_contract = string::utf8(b"new_vip_l2_score_contract");
+        update_l2_score_contract(
+            chain,
+            bridge_id,
+            new_vip_l2_score_contract
+        );
+
+        let bridge_info = get_bridge_info(bridge_id);
+        assert!(
+            bridge_info.vip_l2_score_contract == new_vip_l2_score_contract,
+            0
+        );
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_get_last_claimed_stages(
         chain: &signer,
         operator: &signer,
@@ -2612,6 +2665,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2694,6 +2748,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2789,6 +2844,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2873,6 +2929,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2910,6 +2967,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
         test_setup_scene1(chain, bridge_id, 0);
@@ -2993,6 +3051,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3031,6 +3090,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3055,6 +3115,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3075,6 +3136,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3100,6 +3162,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3123,6 +3186,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
         test_setup_scene1(chain, bridge_id, 0);
@@ -3162,6 +3226,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3206,6 +3271,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3249,6 +3315,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3356,6 +3423,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3421,6 +3489,7 @@ module initia_std::vip {
             operator_addr,
             1,
             @0x90,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3441,6 +3510,7 @@ module initia_std::vip {
             operator_addr,
             2,
             @0x91,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3461,6 +3531,7 @@ module initia_std::vip {
             operator_addr,
             3,
             @0x92,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3649,6 +3720,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3670,6 +3742,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3718,6 +3791,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             @0x999,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3797,6 +3871,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3996,6 +4071,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -4262,6 +4338,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x1111,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
         let release_time = 1000;
@@ -4303,6 +4380,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x1111,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
         let release_time = 0;
@@ -4346,6 +4424,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -4367,6 +4446,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -4415,6 +4495,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -4436,6 +4517,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -4477,6 +4559,7 @@ module initia_std::vip {
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x1111,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
         let release_time = 0;
@@ -4515,6 +4598,7 @@ module initia_std::vip {
             operator2,
             bridge_id2,
             @0x1000,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
             decimal256::from_string(
                 &string::utf8(
@@ -4619,6 +4703,7 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
