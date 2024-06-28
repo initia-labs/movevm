@@ -43,8 +43,10 @@ module initia_std::managed_coin {
     //
 
     fun check_sudo(account: &signer) {
-        assert!(signer::address_of(account) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED));
+        assert!(
+            signer::address_of(account) == @initia_std,
+            error::permission_denied(EUNAUTHORIZED)
+        );
     }
 
     /// Create new metadata coins and deposit them into dst_addr's account.
@@ -57,10 +59,16 @@ module initia_std::managed_coin {
         check_sudo(account);
 
         let account_addr = signer::address_of(account);
-        assert!(object::is_owner(metadata, account_addr), error::not_found(EUNAUTHORIZED),);
+        assert!(
+            object::is_owner(metadata, account_addr),
+            error::not_found(EUNAUTHORIZED),
+        );
 
         let object_addr = object::object_address(metadata);
-        assert!(exists<Capabilities>(object_addr), error::not_found(ENO_CAPABILITIES),);
+        assert!(
+            exists<Capabilities>(object_addr),
+            error::not_found(ENO_CAPABILITIES),
+        );
 
         let capabilities = borrow_global<Capabilities>(object_addr);
         let fa = coin::mint(&capabilities.mint_cap, amount);

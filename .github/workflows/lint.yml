@@ -31,6 +31,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.77.1
+          override: true
           components: rustfmt, clippy
       - uses: actions/setup-go@v4
         with:
