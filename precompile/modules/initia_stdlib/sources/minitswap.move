@@ -112,6 +112,8 @@ module initia_std::minitswap {
     }
 
     struct VirtualPool has key {
+        /// IBC OP init metadata
+        ibc_op_init_metadata: Object<Metadata>,
         /// Extend reference
         extend_ref: ExtendRef,
         /// Z. Virtual pool size
@@ -571,6 +573,7 @@ module initia_std::minitswap {
         );
 
         return ArbResponse {
+            ibc_op_init_metadata: pool.ibc_op_init_metadata,
             id,
             executed_time: arb_info.executed_time,
             init_used: arb_info.init_used,
@@ -610,6 +613,7 @@ module initia_std::minitswap {
             vector::push_back(
                 &mut res,
                 ArbResponse {
+                    ibc_op_init_metadata: pool.ibc_op_init_metadata,
                     id,
                     executed_time: arb_info.executed_time,
                     init_used: arb_info.init_used,
@@ -845,6 +849,7 @@ module initia_std::minitswap {
     }
 
     struct ArbResponse has drop {
+        ibc_op_init_metadata: Object<Metadata>,
         id: u64,
         executed_time: u64,
         init_used: u64,
@@ -852,8 +857,9 @@ module initia_std::minitswap {
         triggering_fee: u64,
     }
 
-    public fun unpack_arb_response(res: ArbResponse): (u64, u64, u64, u64, u64) {
+    public fun unpack_arb_response(res: ArbResponse): (Object<Metadata>, u64, u64, u64, u64, u64) {
         return(
+            res.ibc_op_init_metadata,
             res.id,
             res.executed_time,
             res.init_used,
@@ -1063,6 +1069,7 @@ module initia_std::minitswap {
         move_to(
             &pool_signer,
             VirtualPool {
+                ibc_op_init_metadata,
                 extend_ref,
                 recover_velocity,
                 pool_size,
