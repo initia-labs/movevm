@@ -343,6 +343,13 @@ module initia_std::minitswap {
         ibc_op_init_metadata: Object<Metadata>,
         after_peg_keeper_swap: bool,
     ): (u64, u64) acquires ModuleStore, VirtualPool {
+        let virtual_pool_exists = virtual_pool_exists(ibc_op_init_metadata);
+
+        assert!(
+            virtual_pool_exists,
+            error::invalid_argument(EPOOL_NOT_FOUND)
+        );
+
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pools = table::borrow(
             &mut module_store.pools,
@@ -3185,6 +3192,8 @@ module initia_std::minitswap {
                     arb_profit
                 );
                 actual_return_amount = return_amount_before_swap_fee - swap_fee_amount - arb_fee_amount;
+                if (actual_return_amount >= return_amount) break;
+
                 return_diff = return_amount - actual_return_amount;
                 i = i + 1;
             };
