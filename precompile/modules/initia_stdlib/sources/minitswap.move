@@ -857,7 +857,15 @@ module initia_std::minitswap {
         triggering_fee: u64,
     }
 
-    public fun unpack_arb_response(res: ArbResponse): (Object<Metadata>, u64, u64, u64, u64, u64) {
+    public fun unpack_arb_response(res: ArbResponse)
+        : (
+        Object<Metadata>,
+        u64,
+        u64,
+        u64,
+        u64,
+        u64
+    ) {
         return(
             res.ibc_op_init_metadata,
             res.id,
@@ -2916,50 +2924,56 @@ module initia_std::minitswap {
         );
         let grad_val = decimal128::val(&grad);
 
-        // Increase the value if you want more accurate values, or decrease the value if you want less calculations.
-        let sim_size = 100000000u128;
-        let sim_size_val = sim_size * denominator;
+        let pool_size = (pool_size as u128);
+        let pool_size_val = pool_size * denominator;
 
         // Get first point
-        let d0 = get_d0((sim_size as u64), ann);
-        let x = 2 * sim_size_val / (grad_val + denominator); // x = 2z / (g + 1)
-        if (x == sim_size) { // fully_recovered_ratio = 0.5
-            return(pool_size, pool_size)
+        let d0 = get_d0((pool_size as u64), ann);
+        let x = (
+            2 * (pool_size_val as u256) / (
+                (grad_val as u256) + (denominator as u256)
+            ) as u128
+        ); // x = 2z / (g + 1)
+        if (x == (pool_size as u128)) { // fully_recovered_ratio = 0.5
+            return((pool_size as u64),(pool_size as u64))
         };
         let y = (get_y(d0,(x as u64), ann) as u128);
 
         let i = 0;
         let x_prev;
-        // get the cross point of y = grad * x and [(sim_size, sim_size), (x_prev), (y_prev)]
+        // get the cross point of y = grad * x and [(pool_size, pool_size), (x_prev, y_prev)]
         // the point is (temp_x, y), get x from y
         while (i <255) {
             x_prev = x;
+            // get cross point of y = g * x and y - y' = [(z - y') / (z - x')](x - x')
             // x = z * (x' - y') / (g * (x'- z) - (y' - z))
             // x = z * (y' - x') / (g * (z - x') + (y' - z))
-            let temp_x = sim_size * (y - x) * denominator / (
-                grad_val * (sim_size - x) + (y - sim_size) * denominator
+            let temp_x = (
+                (pool_size as u256) * (y - x as u256) * (denominator as u256) / (
+                    (grad_val as u256) * (pool_size - x as u256) + (y - pool_size as u256)
+                        * (denominator as u256)
+                ) as u128
             );
-            let y = decimal128::mul_u128(&grad, temp_x);
+
+            // get y from temp x
+            y = decimal128::mul_u128(&grad, temp_x);
+            // get x from y
             x = (get_y(d0,(y as u64), ann) as u128);
 
-            // when fully recovered rate is too close to 0.5 y can be same with sim_size
-            if (y == sim_size) break;
+            // when fully recovered rate is too close to 0.5 y can be same with pool_size
+            if (y == pool_size) break;
 
-            // when fully recovered rate is too close to 0.5 x can be slightly higher than sim_size
-            if (x > sim_size) {
-                x = sim_size;
+            // when fully recovered rate is too close to 0.5 x can be slightly higher than pool_size
+            if (x > pool_size) {
+                x = pool_size;
                 break
             };
 
-            if (x > x_prev) {if (x - x_prev <= 1) break} else {if (x_prev - x <= 1) break};
+            if (x >= x_prev) {if (x - x_prev <= 1) break} else {if (x_prev - x <= 1) break};
             i = i + 1;
         };
 
-        // scale up/down to real pool size
-        (
-            (x * (pool_size as u128) / sim_size as u64),
-            (y * (pool_size as u128) / sim_size as u64)
-        )
+        ((x as u64),(y as u64))
     }
 
     fun decimal128_safe_mul(a: &Decimal128, b: &Decimal128): Decimal128 {
