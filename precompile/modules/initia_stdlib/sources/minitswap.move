@@ -46,7 +46,7 @@ module initia_std::minitswap {
 
     const A_PRECISION: u256 = 100;
     const U64_MAX: u128 = 18_446_744_073_709_551_615;
-    const SYMBOL: vector<u8> = b"uomniinit";
+    const SYMBOL: vector<u8> = b"uoinit";
 
     // VM types
     const MOVE: u8 = 0;
