@@ -927,7 +927,7 @@ module initia_std::vip {
         validate_vip_weights(module_store);
     }
 
-    public fun execute_challenge(
+    public entry fun execute_challenge(
         chain: &signer,
         bridge_id: u64,
         challenge_stage: u64,
