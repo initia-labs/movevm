@@ -143,6 +143,7 @@ module initia_std::vip {
     }
 
     struct ExecutedChallenge has store, drop {
+        challenge_id: u64,
         bridge_id: u64,
         stage: u64,
         title: string::String,
@@ -159,8 +160,7 @@ module initia_std::vip {
 
     struct ModuleResponse has drop {
         stage: u64,
-        agent: address,
-        api_uri: string::String,
+        agent_data: AgentData,
         proportion: Decimal256,
         pool_split_ratio: Decimal256,
         user_vesting_period: u64,
@@ -239,6 +239,7 @@ module initia_std::vip {
 
     #[event]
     struct ExecuteChallengeEvent has drop, store {
+        challenge_id: u64,
         bridge_id: u64,
         stage: u64,
         title: string::String,
@@ -344,24 +345,6 @@ module initia_std::vip {
             sha3_256(score_data)
         };
         target_hash
-    }
-
-    fun make_challenge_table_key(
-        execution_time: u64,
-        stage: u64,
-        bridge_id: u64
-    ): vector<u8> {
-        // make key of executed_challenge
-        let encode: vector<u8> = bcs::to_bytes<u64>(&execution_time);
-        vector::append(
-            &mut encode,
-            bcs::to_bytes<u64>(&stage)
-        );
-        vector::append(
-            &mut encode,
-            bcs::to_bytes<u64>(&bridge_id)
-        );
-        let key = sha3_256(encode);key
     }
 
     fun assert_merkle_proofs(
@@ -931,6 +914,7 @@ module initia_std::vip {
         chain: &signer,
         bridge_id: u64,
         challenge_stage: u64,
+        challenge_id: u64,
         title: string::String,
         summary: string::String,
         new_api_uri: string::String,
@@ -959,15 +943,12 @@ module initia_std::vip {
         );
 
         // make key of executed_challenge
-        let key = make_challenge_table_key(
-            execution_time,
-            challenge_stage,
-            bridge_id
-        );
+        let key = table_key::encode_u64(challenge_id);
         // add executed_challenge
         table::add(
             &mut module_store.challenges, key,
             ExecutedChallenge {
+                challenge_id,
                 bridge_id,
                 stage: challenge_stage,
                 title,
@@ -997,6 +978,7 @@ module initia_std::vip {
 
         event::emit(
             ExecuteChallengeEvent {
+                challenge_id,
                 bridge_id,
                 stage: challenge_stage,
                 title,
@@ -1743,12 +1725,10 @@ module initia_std::vip {
 
     #[view]
     public fun get_executed_challenge(
-        execution_time: u64,
-        stage: u64,
-        bridge_id: u64
+        challenge_id: u64,
     ): ExecutedChallengeResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
-        let key = make_challenge_table_key(execution_time, stage, bridge_id);
+        let key = table_key::encode_u64(challenge_id);
         let executed_challenge = table::borrow(&module_store.challenges, key);
 
         ExecutedChallengeResponse {
@@ -1813,8 +1793,10 @@ module initia_std::vip {
 
         ModuleResponse {
             stage: module_store.stage,
-            agent: module_store.agent_data.agent,
-            api_uri: module_store.agent_data.api_uri,
+            agent_data: AgentData {
+                agent: module_store.agent_data.agent,
+                api_uri: module_store.agent_data.api_uri
+            },
             proportion: module_store.proportion,
             pool_split_ratio: module_store.pool_split_ratio,
             user_vesting_period: module_store.user_vesting_period,
@@ -1977,6 +1959,9 @@ module initia_std::vip {
 
     #[test_only]
     const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
+
+    #[test_only]
+    const CHALLENGE_ID_FOR_TEST: u64 = 1;
 
     #[test_only]
     fun skip_period(period: u64) {
@@ -2630,7 +2615,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_update_l2_score_contract(chain: &signer, operator: &signer) acquires ModuleStore{
+    fun test_update_l2_score_contract(chain: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             operator,
@@ -2955,7 +2940,7 @@ module initia_std::vip {
             0
         );
     }
-
+    
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_execute_challenge(
         chain: &signer,
@@ -2981,6 +2966,7 @@ module initia_std::vip {
             chain,
             BRIDGE_ID_FOR_TEST,
             STAGE_FOR_TEST,
+            CHALLENGE_ID_FOR_TEST,
             title,
             summary,
             new_api_uri,
@@ -3018,9 +3004,7 @@ module initia_std::vip {
             new_agent: expected_agent,
             new_merkle_root: expected_new_merkle_root,
         } = get_executed_challenge(
-            expected_upsert_time,
-            STAGE_FOR_TEST,
-            BRIDGE_ID_FOR_TEST
+            CHALLENGE_ID_FOR_TEST
         );
 
         assert!(expected_title == title, 0);
@@ -3203,6 +3187,7 @@ module initia_std::vip {
             chain,
             BRIDGE_ID_FOR_TEST,
             STAGE_FOR_TEST,
+            CHALLENGE_ID_FOR_TEST,
             title,
             summary,
             new_api_uri,
