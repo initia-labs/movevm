@@ -1516,6 +1516,35 @@ module initia_std::vip {
     }
 
     #[view]
+    public fun get_bridge_infos(): vector<BridgeResponse> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let iter = table::iter(
+            &module_store.bridges,
+            option::none(),
+            option::none(),
+            1
+        );
+
+        let bridge_infos = vector::empty<BridgeResponse>();
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
+            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            vector::push_back(
+                &mut bridge_infos,
+                BridgeResponse {
+                    bridge_addr: bridge.bridge_addr,
+                    operator_addr: bridge.operator_addr,
+                    vip_weight: bridge.vip_weight,
+                    user_reward_store_addr: bridge.user_reward_store_addr,
+                    operator_reward_store_addr: bridge.operator_reward_store_addr,
+                }
+            );
+        };
+
+        bridge_infos
+    }
+
+    #[view]
     public fun get_whitelisted_bridge_ids(): vector<u64> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let bridge_ids = vector::empty<u64>();

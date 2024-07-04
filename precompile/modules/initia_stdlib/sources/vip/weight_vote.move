@@ -1178,6 +1178,48 @@ module initia_std::vip_weight_vote {
     }
 
     #[view]
+    public fun get_challenge_by_stage(stage: u64): vector<ChallengeResponse> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let iter = table::iter(
+            &module_store.challenges,
+            option::none(),
+            option::none(),
+            1
+        );
+
+        let challenge_responses = vector::empty<ChallengeResponse>();
+        loop {
+            if (!table::prepare<vector<u8>, Challenge>(iter)) { break };
+            let (_, challenge) = table::next<vector<u8>, Challenge>(iter);
+            if (challenge.stage == stage) {
+                vector::push_back(
+                    &mut challenge_responses,
+                    ChallengeResponse {
+                        title: challenge.title,
+                        summary: challenge.summary,
+                        api_uri: challenge.api_uri,
+                        stage: challenge.stage,
+                        challenger: challenge.challenger,
+                        voting_power_stage: challenge.voting_power_stage,
+                        new_submitter: challenge.new_submitter,
+                        merkle_root: challenge.merkle_root,
+                        snapshot_height: challenge.snapshot_height,
+                        yes_tally: challenge.yes_tally,
+                        no_tally: challenge.no_tally,
+                        quorum: challenge.quorum,
+                        voting_end_time: challenge.voting_end_time,
+                        min_voting_end_time: challenge.min_voting_end_time,
+                        deposit_amount: challenge.deposit_amount,
+                        is_executed: challenge.is_executed,
+                    }
+                );
+            };
+        };
+
+        challenge_responses
+    }
+
+    #[view]
     public fun get_proposal(stage: u64): ProposalResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_key = table_key::encode_u64(stage);
