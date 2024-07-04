@@ -639,7 +639,7 @@ module initia_std::vip_weight_vote {
         // if user already voted, remove former vote
         if (table::contains(&challenge.votes, addr)) {
             let Vote {voting_power, vote_option} = table::remove(&mut challenge.votes, addr);
-            apply_challge_vote(
+            apply_challenge_vote(
                 challenge,
                 vote_option,
                 voting_power,
@@ -655,7 +655,7 @@ module initia_std::vip_weight_vote {
             Vote {voting_power, vote_option,}
         );
 
-        apply_challge_vote(
+        apply_challenge_vote(
             challenge,
             vote_option,
             voting_power,
@@ -945,7 +945,7 @@ module initia_std::vip_weight_vote {
         };
     }
 
-    fun apply_challge_vote(
+    fun apply_challenge_vote(
         challenge: &mut Challenge,
         vote_option: bool,
         voting_power: u64,
