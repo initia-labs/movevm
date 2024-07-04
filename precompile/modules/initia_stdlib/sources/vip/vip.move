@@ -64,6 +64,7 @@ module initia_std::vip {
     const DEFAULT_PROPORTION_RATIO: vector<u8> = b"0.5";
     const DEFAULT_USER_VESTING_PERIOD: u64 = 52; // 52 times
     const DEFAULT_OPERATOR_VESTING_PERIOD: u64 = 52;
+    const DEFAULT_STAGE_PERIOD: u64 = 604800; // 1 week
     const DEFAULT_MINIMUM_ELIGIBLE_TVL: u64 = 0;
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
@@ -74,6 +75,7 @@ module initia_std::vip {
         // current stage
         stage: u64,
         // governance-defined vesting period in stage unit
+        stage_period: u64,
         // the number of times vesting is divided
         user_vesting_period: u64,
         operator_vesting_period: u64,
@@ -107,6 +109,7 @@ module initia_std::vip {
     }
 
     struct StageData has store {
+        stage_period: u64,
         pool_split_ratio: Decimal256,
         total_operator_funded_reward: u64,
         total_user_funded_reward: u64,
@@ -160,6 +163,7 @@ module initia_std::vip {
 
     struct ModuleResponse has drop {
         stage: u64,
+        stage_period: u64,
         agent_data: AgentData,
         proportion: Decimal256,
         pool_split_ratio: Decimal256,
@@ -178,6 +182,7 @@ module initia_std::vip {
     }
 
     struct StageDataResponse has drop {
+        stage_period: u64,
         pool_split_ratio: Decimal256,
         total_operator_funded_reward: u64,
         total_user_funded_reward: u64,
@@ -220,6 +225,7 @@ module initia_std::vip {
     #[event]
     struct StageAdvanceEvent has drop, store {
         stage: u64,
+        stage_period: u64,
         pool_split_ratio: Decimal256,
         total_operator_funded_reward: u64,
         total_user_funded_reward: u64,
@@ -259,6 +265,7 @@ module initia_std::vip {
             chain,
             ModuleStore {
                 stage: DEFAULT_VIP_START_STAGE,
+                stage_period: DEFAULT_STAGE_PERIOD,
                 user_vesting_period: DEFAULT_USER_VESTING_PERIOD,
                 operator_vesting_period: DEFAULT_OPERATOR_VESTING_PERIOD,
                 challenge_period: DEFAULT_CHALLENGE_PERIOD,
@@ -1160,6 +1167,7 @@ module initia_std::vip {
             &mut module_store.stage_data,
             table_key::encode_u64(stage),
             StageData {
+                stage_period: module_store.stage_period,
                 pool_split_ratio: module_store.pool_split_ratio,
                 total_operator_funded_reward,
                 total_user_funded_reward,
@@ -1175,6 +1183,7 @@ module initia_std::vip {
         event::emit(
             StageAdvanceEvent {
                 stage,
+                stage_period: module_store.stage_period,
                 pool_split_ratio: module_store.pool_split_ratio,
                 total_operator_funded_reward,
                 total_user_funded_reward,
@@ -1424,6 +1433,19 @@ module initia_std::vip {
         bridge.vip_weight = weight;
 
         validate_vip_weights(module_store);
+    }
+
+    public entry fun update_stage_period(
+        chain: &signer,
+        stage_period: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        assert!(
+            stage_period > 0,
+            error::invalid_argument(EINVALID_VEST_PERIOD)
+        );
+        module_store.stage_period = stage_period;
     }
 
     public entry fun update_vesting_period(
@@ -1697,6 +1719,7 @@ module initia_std::vip {
         );
 
         StageDataResponse {
+            stage_period: stage_data.stage_period,
             pool_split_ratio: stage_data.pool_split_ratio,
             total_operator_funded_reward: stage_data.total_operator_funded_reward,
             total_user_funded_reward: stage_data.total_user_funded_reward,
@@ -1738,6 +1761,36 @@ module initia_std::vip {
             new_agent: executed_challenge.new_agent,
             new_merkle_root: executed_challenge.merkle_root,
         }
+    }
+
+    #[view]
+    public fun get_bridge_infos(): vector<BridgeResponse> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let iter = table::iter(
+            &module_store.bridges,
+            option::none(),
+            option::none(),
+            1
+        );
+
+        let bridge_infos = vector::empty<BridgeResponse>();
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
+            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            vector::push_back(
+                &mut bridge_infos,
+                BridgeResponse {
+                    bridge_addr: bridge.bridge_addr,
+                    operator_addr: bridge.operator_addr,
+                    vip_l2_score_contract: bridge.vip_l2_score_contract,
+                    vip_weight: bridge.vip_weight,
+                    user_reward_store_addr: bridge.user_reward_store_addr,
+                    operator_reward_store_addr: bridge.operator_reward_store_addr,
+                }
+            );
+        };
+
+        bridge_infos
     }
 
     #[view]
@@ -1793,6 +1846,7 @@ module initia_std::vip {
 
         ModuleResponse {
             stage: module_store.stage,
+            stage_period: module_store.stage_period,
             agent_data: AgentData {
                 agent: module_store.agent_data.agent,
                 api_uri: module_store.agent_data.api_uri
