@@ -79,7 +79,7 @@ module initia_std::vip {
         operator_vesting_period: u64,
         challenge_period: u64,
         // agent for snapshot taker and VIP reward funder
-        agentData: AgentData,
+        agent_data: AgentData,
         // governance-defined proportion to decrease overhead of keeping the L2 INIT balance.
         // a user only need to keep the `vesting.l2_score * proportion` amount of INIT token
         // to vest whole vesting rewards.
@@ -267,7 +267,7 @@ module initia_std::vip {
                 pool_split_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_POOL_SPLIT_RATIO)
                 ),
-                agentData: AgentData {
+                agent_data: AgentData {
                     agent: signer::address_of(chain),
                     api_uri: string::utf8(b""),
                 },
@@ -411,7 +411,7 @@ module initia_std::vip {
     fun check_agent_permission(agent: &signer) acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         assert!(
-            signer::address_of(agent) == module_store.agentData.agent,
+            signer::address_of(agent) == module_store.agent_data.agent,
             error::permission_denied(EUNAUTHORIZED)
         );
     }
@@ -979,7 +979,7 @@ module initia_std::vip {
             }
         );
         // replace agent
-        module_store.agentData = AgentData {
+        module_store.agent_data = AgentData {
             agent: new_agent,
             api_uri: new_api_uri,
         };
@@ -1094,7 +1094,7 @@ module initia_std::vip {
     ) acquires ModuleStore {
         check_agent_permission(old_agent);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.agentData = AgentData {
+        module_store.agent_data = AgentData {
             agent: new_agent,
             api_uri: new_api_uri,
         };
@@ -1107,7 +1107,7 @@ module initia_std::vip {
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.agentData = AgentData {
+        module_store.agent_data = AgentData {
             agent: new_agent,
             api_uri: new_api_uri,
         };
@@ -1813,8 +1813,8 @@ module initia_std::vip {
 
         ModuleResponse {
             stage: module_store.stage,
-            agent: module_store.agentData.agent,
-            api_uri: module_store.agentData.api_uri,
+            agent: module_store.agent_data.agent,
+            api_uri: module_store.agent_data.api_uri,
             proportion: module_store.proportion,
             pool_split_ratio: module_store.pool_split_ratio,
             user_vesting_period: module_store.user_vesting_period,
