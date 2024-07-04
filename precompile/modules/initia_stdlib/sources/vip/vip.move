@@ -72,7 +72,6 @@ module initia_std::vip {
         stage: u64,
         // governance-defined vesting period in stage unit
         stage_period: u64,
-        // governance-defined vesting period in stage unit
         // the number of times vesting is divided
         user_vesting_period: u64,
         operator_vesting_period: u64,
