@@ -856,16 +856,12 @@ module initia_std::stableswap {
         let n = vector::length(&pool.coin_metadata);
 
         // get return index
-        let return_index = n;
-        let i = 0;
-        while (i < n) {
-            let metadata = *vector::borrow(&pool.coin_metadata, i);
-            if (metadata == return_coin_metadata) {return_index = i};
-            if (return_index != n) { break };
-            i = i + 1;
-        };
+        let (found, return_index) = vector::index_of(
+            &pool.coin_metadata,
+            &return_coin_metadata
+        );
         assert!(
-            return_index != n,
+            found,
             error::invalid_argument(ECOIN_TYPE)
         );
 
@@ -1294,15 +1290,15 @@ module initia_std::stableswap {
         );
 
         let pool_amounts_before = get_pool_amounts(pool_addr, pool.coin_metadata);
-        let pool_amounts_after = get_pool_amounts(pool_addr, pool.coin_metadata);
+        let pool_amounts_after = copy pool_amounts_before;
         let d_before = get_d(pool_amounts_before, ann);
 
         // update pool amounts after withdraw
         let i = 0;
         while (i < n) {
-            let amount = vector::borrow_mut(&mut pool_amounts_after, i);
+            let pool_amount = vector::borrow_mut(&mut pool_amounts_after, i);
             let withdraw_amount = *vector::borrow(&coin_amounts, i);
-            *amount = *amount - withdraw_amount;
+            *pool_amount = *pool_amount - withdraw_amount;
             i = i + 1;
         };
 
@@ -1314,8 +1310,8 @@ module initia_std::stableswap {
         let i = 0;
         while (i < n) {
             let ideal_balance = mul_div_u64(
-                d_after_without_fee,
                 *vector::borrow(&pool_amounts_before, i),
+                d_after_without_fee,
                 d_before
             );
             let balance_after = vector::borrow_mut(&mut pool_amounts_after, i);
@@ -1331,8 +1327,8 @@ module initia_std::stableswap {
         let d_after = get_d(pool_amounts_after, ann);
         let liquidity_amount = (
             mul_div_u128(
-                (d_before - d_after as u128),
                 total_supply,
+                (d_before - d_after as u128),
                 (d_before as u128)
             ) as u64
         );
