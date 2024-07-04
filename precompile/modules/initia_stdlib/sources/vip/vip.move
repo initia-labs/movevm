@@ -1997,7 +1997,7 @@ module initia_std::vip {
     const DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST: u64 = 604801;
 
     #[test_only]
-    const DEFAULT_NEW_CHALLENGE_PERIOD: u64 = 10000;
+    const DEFAULT_NEW_CHALLENGE_PERIOD: u64 = 604800;
     #[test_only]
     const DEFAULT_API_URI_FOR_TEST: vector<u8> = b"test";
 
@@ -3273,7 +3273,7 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        let release_time = 100000;
+        let release_time = 700000;
         let (
             merkle_root_map,
             merkle_proof_map,
@@ -3282,6 +3282,8 @@ module initia_std::vip {
         ) = merkle_root_and_proof_scene1();
 
         fund_reward_script(chain, 1, release_time, release_time);
+
+        
         submit_snapshot(
             chain,
             bridge_id,
@@ -3289,7 +3291,7 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_root_map, &1),
             *simple_map::borrow(&total_score_map, &1),
         );
-
+        
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
