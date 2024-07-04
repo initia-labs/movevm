@@ -69,7 +69,7 @@ module initia_std::vip {
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 1;
-    const DEFAULT_CHALLENGE_PERIOD: u64 = 10080; // 7 days
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 604800; // 7 days
 
     struct ModuleStore has key {
         // current stage
@@ -149,12 +149,12 @@ module initia_std::vip {
         challenge_id: u64,
         bridge_id: u64,
         stage: u64,
+        new_l2_total_score:u64,
         title: string::String,
         summary: string::String,
         api_uri: string::String,
         new_agent: address,
         merkle_root: vector<u8>,
-        execution_time: u64,
     }
 
     //
@@ -252,8 +252,7 @@ module initia_std::vip {
         summary: string::String,
         api_uri: string::String,
         new_agent: address,
-        merkle_root: vector<u8>,
-        execution_time: u64,
+        merkle_root: vector<u8>
     }
 
     //
@@ -927,6 +926,7 @@ module initia_std::vip {
         new_api_uri: string::String,
         new_agent: address,
         new_merkle_root: vector<u8>,
+        new_l2_total_score: u64
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -958,12 +958,12 @@ module initia_std::vip {
                 challenge_id,
                 bridge_id,
                 stage: challenge_stage,
+                new_l2_total_score,
                 title,
                 summary,
                 api_uri: new_api_uri,
                 new_agent,
                 merkle_root: new_merkle_root,
-                execution_time,
             }
         );
         // replace agent
@@ -979,7 +979,7 @@ module initia_std::vip {
                 create_time: snapshot.create_time,
                 upsert_time: execution_time,
                 merkle_root: new_merkle_root,
-                total_l2_score: snapshot.total_l2_score,
+                total_l2_score: new_l2_total_score,
             }
         );
 
@@ -993,7 +993,6 @@ module initia_std::vip {
                 api_uri: new_api_uri,
                 new_agent,
                 merkle_root: new_merkle_root,
-                execution_time,
             }
         );
 
@@ -1995,7 +1994,7 @@ module initia_std::vip {
     const DEFAULT_REWARD_PER_STAGE_FOR_TEST: u64 = 100_000_000_000;
 
     #[test_only]
-    const DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST: u64 = 10081;
+    const DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST: u64 = 604801;
 
     #[test_only]
     const DEFAULT_NEW_CHALLENGE_PERIOD: u64 = 10000;
@@ -2016,6 +2015,9 @@ module initia_std::vip {
 
     #[test_only]
     const CHALLENGE_ID_FOR_TEST: u64 = 1;
+
+    #[test_only]
+    const NEW_L2_TOTAL_SCORE_FOR_TEST: u64 = 1000;
 
     #[test_only]
     fun skip_period(period: u64) {
@@ -3029,6 +3031,7 @@ module initia_std::vip {
                 &new_merkle_root,
                 &BRIDGE_ID_FOR_TEST
             ),
+            NEW_L2_TOTAL_SCORE_FOR_TEST
         );
 
         let SnapshotResponse {
@@ -3250,6 +3253,7 @@ module initia_std::vip {
                 &new_merkle_root,
                 &BRIDGE_ID_FOR_TEST
             ),
+            NEW_L2_TOTAL_SCORE_FOR_TEST
         );
     }
 
