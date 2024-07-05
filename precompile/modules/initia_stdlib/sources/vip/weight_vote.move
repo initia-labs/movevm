@@ -398,7 +398,7 @@ module initia_std::vip_weight_vote {
             }
         );
         assert!(
-            decimal128::val(&weight_sum) < decimal128::val(&decimal128::one()),
+            decimal128::val(&weight_sum) <= decimal128::val(&decimal128::one()),
             error::invalid_argument(EINVALID_PARAMETER)
         );
         let voting_power_used = decimal128::mul_u64(&weight_sum, max_voting_power);
@@ -1508,7 +1508,31 @@ module initia_std::vip_weight_vote {
             vector::length(&weight_vote.weights) == 2,
             5
         );
+        // update vote of u4
+        vote(
+            u4,
+            stage,
+            get_proofs(tree, 3),
+            40,
+            vector[1, 2],
+            vector[
+                decimal128::from_ratio(4, 5),
+                decimal128::from_ratio(1, 5)
+            ], // 32, 8 // user can vote with 
+        );
+        vote1 = get_tally(1, 1);
+        vote2 = get_tally(1, 2);
+        total_tally = get_total_tally(1);
+        assert!(vote1 == 54, 6);
+        assert!(vote2 == 40, 7);
+        assert!(total_tally == 94, 8);
 
+        let weight_vote = get_weight_vote(1, signer::address_of(u1));
+        assert!(weight_vote.voting_power == 10, 9);
+        assert!(
+            vector::length(&weight_vote.weights) == 2,
+            10
+        );
         set_block_info(100, 201);
         execute_proposal();
     }
