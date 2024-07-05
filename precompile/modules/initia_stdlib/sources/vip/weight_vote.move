@@ -382,7 +382,7 @@ module initia_std::vip_weight_vote {
         account: &signer,
         stage: u64,
         merkle_proofs: vector<vector<u8>>,
-        voting_power: u64,
+        max_voting_power: u64,
         bridge_ids: vector<u64>,
         weights: vector<Decimal128>,
     ) acquires ModuleStore {
@@ -390,6 +390,18 @@ module initia_std::vip_weight_vote {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
 
+        let weight_sum = decimal128::new(0);
+        vector::for_each_ref(
+            &weights,
+            |weight| {
+                weight_sum = decimal128::add(&weight_sum, weight);
+            }
+        );
+        assert!(
+            decimal128::lteOne(&weight_sum),
+            error::invalid_argument(EINVALID_PARAMETER)
+        );
+        let voting_power_used = decimal128::mul_u64(&weight_sum, max_voting_power);
         // check vote condition
         let stage_key = table_key::encode_u64(stage);
         assert!(
@@ -412,7 +424,7 @@ module initia_std::vip_weight_vote {
         };
 
         // verify merkle proof
-        let target_hash = voting_power_hash(stage, addr, voting_power);
+        let target_hash = voting_power_hash(stage, addr, max_voting_power);
         assert_merkle_proofs(
             merkle_proofs,
             proposal.merkle_root,
@@ -425,7 +437,7 @@ module initia_std::vip_weight_vote {
         // apply vote
         apply_vote(
             proposal,
-            voting_power,
+            voting_power_used,
             n_weights,
             false
         );
@@ -434,7 +446,7 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut proposal.votes,
             addr,
-            WeightVote {voting_power, weights: n_weights}
+            WeightVote {voting_power:voting_power_used, weights: n_weights}
         );
 
         // emit event
@@ -442,7 +454,7 @@ module initia_std::vip_weight_vote {
             VoteEvent {
                 account: addr,
                 stage,
-                voting_power,
+                voting_power: voting_power_used,
                 weights: n_weights,
             }
         )
