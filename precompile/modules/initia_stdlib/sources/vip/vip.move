@@ -1614,7 +1614,7 @@ module initia_std::vip {
         );
     }
 
-    public fun update_challenge_period(
+    entry public fun update_challenge_period(
         chain: &signer,
         challenge_period: u64,
     ) acquires ModuleStore {
