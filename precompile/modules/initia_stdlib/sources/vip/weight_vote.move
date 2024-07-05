@@ -1475,9 +1475,9 @@ module initia_std::vip_weight_vote {
             30,
             vector[1, 2],
             vector[
-                decimal128::from_ratio(3, 5),
+                decimal128::from_ratio(2, 5),
                 decimal128::from_ratio(2, 5)
-            ], // 18, 12
+            ], // 12, 12
         );
 
         vote(
@@ -1487,20 +1487,20 @@ module initia_std::vip_weight_vote {
             40,
             vector[1, 2],
             vector[
-                decimal128::from_ratio(4, 5),
+                decimal128::from_ratio(3, 5),
                 decimal128::from_ratio(1, 5)
-            ], // 32, 8
+            ], // 24, 8 // user can vote with 
         );
 
         let proposal = get_proposal(1);
-        assert!(proposal.total_tally == 100, 0);
+        assert!(proposal.total_tally == 86, 0);
 
         let vote1 = get_tally(1, 1);
         let vote2 = get_tally(1, 2);
         let total_tally = get_total_tally(1);
-        assert!(vote1 == 60, 1);
+        assert!(vote1 == 46, 1);
         assert!(vote2 == 40, 2);
-        assert!(total_tally == 100, 3);
+        assert!(total_tally == 86, 3);
 
         let weight_vote = get_weight_vote(1, signer::address_of(u1));
         assert!(weight_vote.voting_power == 10, 4);
@@ -1706,4 +1706,5 @@ module initia_std::vip_weight_vote {
         assert!(challenge.quorum == 9, 19);
         assert!(challenge.is_executed == true, 20);
     }
+
 }
