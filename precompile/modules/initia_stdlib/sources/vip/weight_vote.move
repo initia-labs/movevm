@@ -398,7 +398,7 @@ module initia_std::vip_weight_vote {
             }
         );
         assert!(
-            decimal128::lteOne(&weight_sum),
+            decimal128::val(&weight_sum) < decimal128::val(&decimal128::one()),
             error::invalid_argument(EINVALID_PARAMETER)
         );
         let voting_power_used = decimal128::mul_u64(&weight_sum, max_voting_power);

@@ -132,10 +132,6 @@ module initia_std::decimal128 {
         left.val == right.val
     }
 
-    public fun lteOne(decimal: &Decimal128): bool {
-        decimal.val <= DECIMAL_FRACTIONAL
-    }
-
     public fun from_string(num: &String): Decimal128 {
         let vec = string::bytes(num);
         let len = vector::length(vec);
