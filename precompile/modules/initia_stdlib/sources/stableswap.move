@@ -212,6 +212,54 @@ module initia_std::stableswap {
     }
 
     #[view]
+    public fun get_provide_simulation(
+        pool_obj: Object<Pool>,
+        coin_amounts: vector<u64>,
+    ): u64 acquires Pool {
+        let (liquidity_amount, _) = provide_simulation(pool_obj, coin_amounts);
+        liquidity_amount
+    }
+
+    #[view]
+    public fun get_imbalance_withdraw_simulation(
+        pool_obj: Object<Pool>,
+        coin_amounts: vector<u64>,
+    ): u64 acquires Pool {
+        let (liquidity_amount, _) = imbalance_withdraw_simulation(
+            pool_obj,
+            coin_amounts,
+            option::none()
+        );
+        liquidity_amount
+    }
+
+    #[view]
+    public fun get_single_asset_withdraw_simulation(
+        pool_obj: Object<Pool>,
+        return_coin_metadata: Object<Metadata>,
+        liquidity_amount: u64,
+    ): u64 acquires Pool {
+        let pool = borrow_pool(pool_obj);
+
+        // get return index
+        let (found, return_index) = vector::index_of(
+            &pool.coin_metadata,
+            &return_coin_metadata
+        );
+        assert!(
+            found,
+            error::invalid_argument(ECOIN_TYPE)
+        );
+
+        let (liquidity_amount, _) = single_asset_withdraw_simulation(
+            pool_obj,
+            liquidity_amount,
+            return_index
+        );
+        liquidity_amount
+    }
+
+    #[view]
     public fun get_pool(pool: Object<Pool>): PoolResponse acquires Pool {
         let (
             coin_metadata,
@@ -475,7 +523,7 @@ module initia_std::stableswap {
         coin_amounts: vector<u64>,
         max_liquidity: Option<u64>,
     ) acquires Pool {
-        let (liquidity_amount, fee_amounts) = calc_withdraw_imbalance(
+        let (liquidity_amount, fee_amounts) = imbalance_withdraw_simulation(
             pool_obj,
             coin_amounts,
             max_liquidity
@@ -668,80 +716,18 @@ module initia_std::stableswap {
         min_liquidity: Option<u64>
     ): FungibleAsset acquires Pool {
         let pool = borrow_pool(pool_obj);
-        let pool_addr = object::object_address(pool_obj);
+        // check before simaultion
         let n = check_coin_metadata(&pool.coin_metadata, &coins);
-        let ann = get_current_ann(&pool.ann);
-
-        let pool_amounts_before = get_pool_amounts(pool_addr, pool.coin_metadata);
-        let d_before = get_d(pool_amounts_before, ann);
-        let total_supply = option::extract(
-            &mut fungible_asset::supply(pool_obj)
-        );
         let amounts = get_amounts(&coins);
-
-        // pool amounts before adjust fee
-        let pool_amounts_after: vector<u64> = vector[];
-        let i = 0;
-        while (i < n) {
-            let pool_amount = *vector::borrow(&pool_amounts_before, i);
-            let offer_amount = *vector::borrow(&amounts, i);
-            if (total_supply == 0) {
-                assert!(
-                    offer_amount > 0,
-                    error::invalid_argument(EZERO_LIQUIDITY)
-                );
-            };
-            vector::push_back(
-                &mut pool_amounts_after,
-                pool_amount + offer_amount
-            );
-            i = i + 1;
-        };
-
-        let d_ideal = get_d(pool_amounts_after, ann);
-        let fee_amounts: vector<u64> = vector[];
-
-        // calc fees
-        let liquidity_amount = if (total_supply > 0) {
-            let provide_fee_rate = decimal128::new(
-                decimal128::val(&pool.swap_fee_rate) * (n as u128) / (4 * (n - 1) as u128)
-            );
-            i = 0;
-            while (i < n) {
-                let pool_amount_before = *vector::borrow(&pool_amounts_before, i);
-                let pool_amount_after = vector::borrow_mut(&mut pool_amounts_after, i);
-                let ideal_balance = mul_div_u64(
-                    d_ideal,
-                    pool_amount_before,
-                    d_before
-                );
-                let diff = if (ideal_balance > *pool_amount_after) {
-                    ideal_balance - *pool_amount_after
-                } else {
-                    *pool_amount_after - ideal_balance
-                };
-                let fee = decimal128::mul_u64(&provide_fee_rate, diff);
-                vector::push_back(&mut fee_amounts, fee);
-                *pool_amount_after = *pool_amount_after - fee;
-                i = i + 1;
-            };
-
-            let d_real = get_d(pool_amounts_after, ann);
-            (
-                mul_div_u128(
-                    total_supply,
-                    (d_real - d_before as u128),
-                    (d_before as u128)
-                ) as u64
-            )
-        } else { d_ideal };
+        let (liquidity_amount, fee_amounts) = provide_simulation(pool_obj, amounts);
 
         assert!(
             option::is_none(&min_liquidity) || *option::borrow(&min_liquidity) <= liquidity_amount,
             error::invalid_state(EMIN_LIQUIDITY),
         );
 
-        i = 0;
+        let pool_addr = object::object_address(pool_obj);
+        let i = 0;
         while (i < n) {
             let fa = vector::pop_back(&mut coins);
             primary_fungible_store::deposit(pool_addr, fa);
@@ -749,6 +735,7 @@ module initia_std::stableswap {
         };
         vector::destroy_empty(coins);
 
+        let pool = borrow_pool(pool_obj);
         let liquidity_token = coin::mint(&pool.mint_cap, liquidity_amount);
 
         event::emit<ProvideEvent>(
@@ -866,7 +853,7 @@ module initia_std::stableswap {
         );
 
         // calculate amount of returning asset
-        let (return_amount, fee) = calc_withdraw_one_coin(
+        let (return_amount, fee) = single_asset_withdraw_simulation(
             pool_obj,
             liquidity_amount,
             return_index
@@ -1194,7 +1181,7 @@ module initia_std::stableswap {
         (y as u64)
     }
 
-    fun calc_withdraw_one_coin(
+    public fun single_asset_withdraw_simulation(
         pool_obj: Object<Pool>,
         liquidity_amount: u64,
         return_index: u64,
@@ -1268,7 +1255,7 @@ module initia_std::stableswap {
         )
     }
 
-    fun calc_withdraw_imbalance(
+    public fun imbalance_withdraw_simulation(
         pool_obj: Object<Pool>,
         coin_amounts: vector<u64>,
         max_liquidity_amount: Option<u64>,
@@ -1365,6 +1352,81 @@ module initia_std::stableswap {
             amount,
             is_offer_amount,
         )
+    }
+
+    public fun provide_simulation(
+        pool_obj: Object<Pool>,
+        amounts: vector<u64>,
+    ): (u64, vector<u64>) acquires Pool {
+        let pool = borrow_pool(pool_obj);
+        let pool_addr = object::object_address(pool_obj);
+        let ann = get_current_ann(&pool.ann);
+
+        let pool_amounts_before = get_pool_amounts(pool_addr, pool.coin_metadata);
+        let d_before = get_d(pool_amounts_before, ann);
+        let total_supply = option::extract(
+            &mut fungible_asset::supply(pool_obj)
+        );
+        let n = vector::length(&amounts);
+
+        // pool amounts before adjust fee
+        let pool_amounts_after: vector<u64> = vector[];
+        let i = 0;
+        while (i < n) {
+            let pool_amount = *vector::borrow(&pool_amounts_before, i);
+            let offer_amount = *vector::borrow(&amounts, i);
+            if (total_supply == 0) {
+                assert!(
+                    offer_amount > 0,
+                    error::invalid_argument(EZERO_LIQUIDITY)
+                );
+            };
+            vector::push_back(
+                &mut pool_amounts_after,
+                pool_amount + offer_amount
+            );
+            i = i + 1;
+        };
+
+        let d_ideal = get_d(pool_amounts_after, ann);
+        let fee_amounts: vector<u64> = vector[];
+
+        // calc fees
+        let liquidity_amount = if (total_supply > 0) {
+            let provide_fee_rate = decimal128::new(
+                decimal128::val(&pool.swap_fee_rate) * (n as u128) / (4 * (n - 1) as u128)
+            );
+            i = 0;
+            while (i < n) {
+                let pool_amount_before = *vector::borrow(&pool_amounts_before, i);
+                let pool_amount_after = vector::borrow_mut(&mut pool_amounts_after, i);
+                let ideal_balance = mul_div_u64(
+                    d_ideal,
+                    pool_amount_before,
+                    d_before
+                );
+                let diff = if (ideal_balance > *pool_amount_after) {
+                    ideal_balance - *pool_amount_after
+                } else {
+                    *pool_amount_after - ideal_balance
+                };
+                let fee = decimal128::mul_u64(&provide_fee_rate, diff);
+                vector::push_back(&mut fee_amounts, fee);
+                *pool_amount_after = *pool_amount_after - fee;
+                i = i + 1;
+            };
+
+            let d_real = get_d(pool_amounts_after, ann);
+            (
+                mul_div_u128(
+                    total_supply,
+                    (d_real - d_before as u128),
+                    (d_before as u128)
+                ) as u64
+            )
+        } else { d_ideal };
+
+        (liquidity_amount, fee_amounts)
     }
 
     fun swap_simulation_with_given_amounts(

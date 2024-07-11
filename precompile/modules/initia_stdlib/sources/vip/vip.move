@@ -1253,10 +1253,7 @@ module initia_std::vip {
         validate_vip_weights(module_store);
     }
 
-    public entry fun update_stage_period(
-        chain: &signer,
-        stage_period: u64,
-    ) acquires ModuleStore {
+    public entry fun update_stage_period(chain: &signer, stage_period: u64,) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
