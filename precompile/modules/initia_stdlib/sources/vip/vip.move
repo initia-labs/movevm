@@ -946,7 +946,7 @@ module initia_std::vip {
         );
         assert!(
             snapshot.create_time + module_store.challenge_period > execution_time,
-            error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
+            error::permission_denied(EINVALID_CHALLENGE_PERIOD)
         );
 
         // make key of executed_challenge
@@ -1285,7 +1285,7 @@ module initia_std::vip {
         snapshot.total_l2_score = total_l2_score;
     }
 
-    fun check_claimiable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
+    fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
         let (_, curr_time) = block::get_block_info();
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_data = table::borrow(
@@ -1316,7 +1316,7 @@ module initia_std::vip {
             vip_vesting::register_operator_vesting_store(operator, bridge_id);
         };
         // check claim period
-        check_claimiable_period(bridge_id, stage);
+        check_claimable_period(bridge_id, stage);
 
         let vested_reward = claim_operator_reward(operator, bridge_id, stage,);
 
@@ -1340,7 +1340,7 @@ module initia_std::vip {
             vip_vesting::register_user_vesting_store(account, bridge_id);
         };
         // check claim period
-        check_claimiable_period(bridge_id, stage);
+        check_claimable_period(bridge_id, stage);
 
         let vested_reward = claim_user_reward(
             account,
