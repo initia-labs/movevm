@@ -3216,7 +3216,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x50017, location = Self)]
+    #[expected_failure(abort_code = 0x50018, location = Self)]
     fun failed_execute_challenge(
         chain: &signer,
         operator: &signer,
