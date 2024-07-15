@@ -449,7 +449,7 @@ module initia_std::vip {
 
         // check claim period
         check_claimable_period(bridge_id, stage);
-        
+
         let account_addr = signer::address_of(account);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let (_, block_time) = block::get_block_info();
@@ -1345,8 +1345,6 @@ module initia_std::vip {
             )) {
             vip_vesting::register_user_vesting_store(account, bridge_id);
         };
-        // check claim period
-        check_claimable_period(bridge_id, stage);
 
         let vested_reward = claim_user_reward(
             account,
