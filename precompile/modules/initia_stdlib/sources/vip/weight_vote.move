@@ -382,7 +382,7 @@ module initia_std::vip_weight_vote {
         account: &signer,
         stage: u64,
         merkle_proofs: vector<vector<u8>>,
-        voting_power: u64,
+        max_voting_power: u64,
         bridge_ids: vector<u64>,
         weights: vector<Decimal128>,
     ) acquires ModuleStore {
@@ -390,6 +390,18 @@ module initia_std::vip_weight_vote {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
 
+        let weight_sum = decimal128::new(0);
+        vector::for_each_ref(
+            &weights,
+            |weight| {
+                weight_sum = decimal128::add(&weight_sum, weight);
+            }
+        );
+        assert!(
+            decimal128::val(&weight_sum) <= decimal128::val(&decimal128::one()),
+            error::invalid_argument(EINVALID_PARAMETER)
+        );
+        let voting_power_used = decimal128::mul_u64(&weight_sum, max_voting_power);
         // check vote condition
         let stage_key = table_key::encode_u64(stage);
         assert!(
@@ -412,7 +424,7 @@ module initia_std::vip_weight_vote {
         };
 
         // verify merkle proof
-        let target_hash = voting_power_hash(stage, addr, voting_power);
+        let target_hash = voting_power_hash(stage, addr, max_voting_power);
         assert_merkle_proofs(
             merkle_proofs,
             proposal.merkle_root,
@@ -425,7 +437,7 @@ module initia_std::vip_weight_vote {
         // apply vote
         apply_vote(
             proposal,
-            voting_power,
+            voting_power_used,
             n_weights,
             false
         );
@@ -434,7 +446,7 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut proposal.votes,
             addr,
-            WeightVote {voting_power, weights: n_weights}
+            WeightVote {voting_power:voting_power_used, weights: n_weights}
         );
 
         // emit event
@@ -442,7 +454,7 @@ module initia_std::vip_weight_vote {
             VoteEvent {
                 account: addr,
                 stage,
-                voting_power,
+                voting_power: voting_power_used,
                 weights: n_weights,
             }
         )
@@ -1266,6 +1278,8 @@ module initia_std::vip_weight_vote {
     use initia_std::string;
 
     #[test_only]
+    const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
+    #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
         initialize(
             chain,
@@ -1295,6 +1309,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             1,
             @0x12,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
             decimal256::zero(),
@@ -1304,6 +1319,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             2,
             @0x12,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
             decimal256::zero(),
@@ -1459,9 +1475,9 @@ module initia_std::vip_weight_vote {
             30,
             vector[1, 2],
             vector[
-                decimal128::from_ratio(3, 5),
+                decimal128::from_ratio(2, 5),
                 decimal128::from_ratio(2, 5)
-            ], // 18, 12
+            ], // 12, 12
         );
 
         vote(
@@ -1471,20 +1487,20 @@ module initia_std::vip_weight_vote {
             40,
             vector[1, 2],
             vector[
-                decimal128::from_ratio(4, 5),
+                decimal128::from_ratio(3, 5),
                 decimal128::from_ratio(1, 5)
-            ], // 32, 8
+            ], // 24, 8 // user can vote with 
         );
 
         let proposal = get_proposal(1);
-        assert!(proposal.total_tally == 100, 0);
+        assert!(proposal.total_tally == 86, 0);
 
         let vote1 = get_tally(1, 1);
         let vote2 = get_tally(1, 2);
         let total_tally = get_total_tally(1);
-        assert!(vote1 == 60, 1);
+        assert!(vote1 == 46, 1);
         assert!(vote2 == 40, 2);
-        assert!(total_tally == 100, 3);
+        assert!(total_tally == 86, 3);
 
         let weight_vote = get_weight_vote(1, signer::address_of(u1));
         assert!(weight_vote.voting_power == 10, 4);
@@ -1492,7 +1508,31 @@ module initia_std::vip_weight_vote {
             vector::length(&weight_vote.weights) == 2,
             5
         );
+        // update vote of u4
+        vote(
+            u4,
+            stage,
+            get_proofs(tree, 3),
+            40,
+            vector[1, 2],
+            vector[
+                decimal128::from_ratio(4, 5),
+                decimal128::from_ratio(1, 5)
+            ], // 32, 8 // user can vote with 
+        );
+        vote1 = get_tally(1, 1);
+        vote2 = get_tally(1, 2);
+        total_tally = get_total_tally(1);
+        assert!(vote1 == 54, 6);
+        assert!(vote2 == 40, 7);
+        assert!(total_tally == 94, 8);
 
+        let weight_vote = get_weight_vote(1, signer::address_of(u1));
+        assert!(weight_vote.voting_power == 10, 9);
+        assert!(
+            vector::length(&weight_vote.weights) == 2,
+            10
+        );
         set_block_info(100, 201);
         execute_proposal();
     }
@@ -1690,4 +1730,5 @@ module initia_std::vip_weight_vote {
         assert!(challenge.quorum == 9, 19);
         assert!(challenge.is_executed == true, 20);
     }
+
 }

@@ -51,6 +51,9 @@ module initia_std::vip {
     const EALREADY_RELEASED: u64 = 20;
     const EINVALID_WEIGHT: u64 = 21;
     const EINVALID_STAGE_ORDER: u64 = 22;
+    const EINVALID_CLAIMABLE_PERIOD: u64 = 23;
+    const EINVALID_CHALLENGE_PERIOD: u64 = 24;
+    const EINVALID_CHALLENGE_STAGE: u64 = 25;
     //
     //  Constants
     //
@@ -66,17 +69,19 @@ module initia_std::vip {
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 1;
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 604800; // 7 days
 
     struct ModuleStore has key {
-        // global stage
+        // current stage
         stage: u64,
         // governance-defined vesting period in stage unit
         stage_period: u64,
         // the number of times vesting is divided
         user_vesting_period: u64,
         operator_vesting_period: u64,
+        challenge_period: u64,
         // agent for snapshot taker and VIP reward funder
-        agent: address,
+        agent_data: AgentData,
         // governance-defined proportion to decrease overhead of keeping the L2 INIT balance.
         // a user only need to keep the `vesting.l2_score * proportion` amount of INIT token
         // to vest whole vesting rewards.
@@ -94,6 +99,13 @@ module initia_std::vip {
         stage_data: table::Table<vector<u8> /* stage */, StageData>,
         // a set of bridge info
         bridges: table::Table<vector<u8> /* bridge id */, Bridge>,
+
+        challenges: table::Table<vector<u8>, ExecutedChallenge>,
+    }
+
+    struct AgentData has store, drop {
+        agent: address,
+        api_uri: string::String,
     }
 
     struct StageData has store {
@@ -109,7 +121,9 @@ module initia_std::vip {
         snapshots: table::Table<vector<u8> /* bridge id */, Snapshot>
     }
 
-    struct Snapshot has store {
+    struct Snapshot has store, drop {
+        create_time: u64,
+        upsert_time: u64,
         merkle_root: vector<u8>,
         total_l2_score: u64
     }
@@ -117,9 +131,10 @@ module initia_std::vip {
     struct Bridge has store, drop {
         bridge_addr: address,
         operator_addr: address,
+        vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
         operator_reward_store_addr: address,
-        user_reward_store_addr: address
+        user_reward_store_addr: address,
     }
 
     struct RewardDistribution has drop, store {
@@ -130,6 +145,18 @@ module initia_std::vip {
         operator_reward_amount: u64
     }
 
+    struct ExecutedChallenge has store, drop {
+        challenge_id: u64,
+        bridge_id: u64,
+        stage: u64,
+        new_l2_total_score:u64,
+        title: string::String,
+        summary: string::String,
+        api_uri: string::String,
+        new_agent: address,
+        merkle_root: vector<u8>,
+    }
+
     //
     // Responses
     //
@@ -137,16 +164,19 @@ module initia_std::vip {
     struct ModuleResponse has drop {
         stage: u64,
         stage_period: u64,
-        agent: address,
+        agent_data: AgentData,
         proportion: Decimal256,
         pool_split_ratio: Decimal256,
         user_vesting_period: u64,
         operator_vesting_period: u64,
         minimum_eligible_tvl: u64,
         maximum_tvl_ratio: Decimal256,
+        challenge_period: u64,
     }
 
     struct SnapshotResponse has drop {
+        create_time: u64,
+        upsert_time: u64,
         merkle_root: vector<u8>,
         total_l2_score: u64
     }
@@ -166,9 +196,18 @@ module initia_std::vip {
     struct BridgeResponse has drop {
         bridge_addr: address,
         operator_addr: address,
+        vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
         user_reward_store_addr: address,
         operator_reward_store_addr: address,
+    }
+
+    struct ExecutedChallengeResponse has drop {
+        title: string::String,
+        summary: string::String,
+        new_api_uri: string::String,
+        new_agent: address,
+        new_merkle_root: vector<u8>,
     }
 
     //
@@ -204,6 +243,18 @@ module initia_std::vip {
         operator_vesting_release_time: u64,
     }
 
+    #[event]
+    struct ExecuteChallengeEvent has drop, store {
+        challenge_id: u64,
+        bridge_id: u64,
+        stage: u64,
+        title: string::String,
+        summary: string::String,
+        api_uri: string::String,
+        new_agent: address,
+        merkle_root: vector<u8>
+    }
+
     //
     // Implementations
     //
@@ -216,13 +267,17 @@ module initia_std::vip {
                 stage_period: DEFAULT_STAGE_PERIOD,
                 user_vesting_period: DEFAULT_USER_VESTING_PERIOD,
                 operator_vesting_period: DEFAULT_OPERATOR_VESTING_PERIOD,
+                challenge_period: DEFAULT_CHALLENGE_PERIOD,
                 proportion: decimal256::from_string(
                     &string::utf8(DEFAULT_PROPORTION_RATIO)
                 ),
                 pool_split_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_POOL_SPLIT_RATIO)
                 ),
-                agent: signer::address_of(chain),
+                agent_data: AgentData {
+                    agent: signer::address_of(chain),
+                    api_uri: string::utf8(b""),
+                },
                 maximum_tvl_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_MAXIMUM_TVL_RATIO)
                 ),
@@ -232,6 +287,7 @@ module initia_std::vip {
                 ),
                 stage_data: table::new<vector<u8>, StageData>(),
                 bridges: table::new<vector<u8>, Bridge>(),
+                challenges: table::new<vector<u8>, ExecutedChallenge>(),
             }
         );
     }
@@ -344,7 +400,7 @@ module initia_std::vip {
     fun check_agent_permission(agent: &signer) acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         assert!(
-            signer::address_of(agent) == module_store.agent,
+            signer::address_of(agent) == module_store.agent_data.agent,
             error::permission_denied(EUNAUTHORIZED)
         );
     }
@@ -383,13 +439,17 @@ module initia_std::vip {
         )
     }
 
-    fun claim_user_reward(
+    public fun claim_user_reward(
         account: &signer,
         bridge_id: u64,
         stage: u64,
         merkle_proofs: vector<vector<u8>>,
         l2_score: u64,
     ): FungibleAsset acquires ModuleStore {
+
+        // check claim period
+        check_claimable_period(bridge_id, stage);
+
         let account_addr = signer::address_of(account);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let (_, block_time) = block::get_block_info();
@@ -773,11 +833,14 @@ module initia_std::vip {
         }
     }
 
-    fun claim_operator_reward(
+    public fun claim_operator_reward(
         operator: &signer,
         bridge_id: u64,
         stage: u64,
     ): FungibleAsset acquires ModuleStore {
+        // check claim period
+        check_claimable_period(bridge_id, stage);
+
         let operator_addr = signer::address_of(operator);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let (_, block_time) = block::get_block_info();
@@ -860,6 +923,88 @@ module initia_std::vip {
         validate_vip_weights(module_store);
     }
 
+    public entry fun execute_challenge(
+        chain: &signer,
+        bridge_id: u64,
+        challenge_stage: u64,
+        challenge_id: u64,
+        title: string::String,
+        summary: string::String,
+        new_api_uri: string::String,
+        new_agent: address,
+        new_merkle_root: vector<u8>,
+        new_l2_total_score: u64
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        assert!(
+            module_store.stage > challenge_stage,
+            error::permission_denied(EINVALID_CHALLENGE_STAGE)
+        );
+        let (_, execution_time) = block::get_block_info();
+        //check challenge period
+        let stage_data = table::borrow_mut(
+            &mut module_store.stage_data,
+            table_key::encode_u64(challenge_stage)
+        );
+        let snapshot = table::borrow(
+            &stage_data.snapshots,
+            table_key::encode_u64(bridge_id)
+        );
+        assert!(
+            snapshot.create_time + module_store.challenge_period > execution_time,
+            error::permission_denied(EINVALID_CHALLENGE_PERIOD)
+        );
+
+        // make key of executed_challenge
+        let key = table_key::encode_u64(challenge_id);
+        // add executed_challenge
+        table::add(
+            &mut module_store.challenges, key,
+            ExecutedChallenge {
+                challenge_id,
+                bridge_id,
+                stage: challenge_stage,
+                new_l2_total_score,
+                title,
+                summary,
+                api_uri: new_api_uri,
+                new_agent,
+                merkle_root: new_merkle_root,
+            }
+        );
+        // replace agent
+        module_store.agent_data = AgentData {
+            agent: new_agent,
+            api_uri: new_api_uri,
+        };
+        // upsert snapshot data
+        table::upsert(
+            &mut stage_data.snapshots,
+            table_key::encode_u64(bridge_id),
+            Snapshot {
+                create_time: snapshot.create_time,
+                upsert_time: execution_time,
+                merkle_root: new_merkle_root,
+                total_l2_score: new_l2_total_score,
+            }
+        );
+
+        event::emit(
+            ExecuteChallengeEvent {
+                challenge_id,
+                bridge_id,
+                stage: challenge_stage,
+                title,
+                summary,
+                api_uri: new_api_uri,
+                new_agent,
+                merkle_root: new_merkle_root,
+            }
+        );
+
+    }
+
     //
     // Entry Functions
     //
@@ -870,6 +1015,7 @@ module initia_std::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
+        vip_l2_score_contract: string::String,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
         operator_commission_rate: Decimal256,
@@ -911,6 +1057,7 @@ module initia_std::vip {
             Bridge {
                 bridge_addr: bridge_address,
                 operator_addr: operator,
+                vip_l2_score_contract,
                 vip_weight: decimal256::zero(),
                 user_reward_store_addr: vip_vesting::get_user_reward_store_address(bridge_id),
                 operator_reward_store_addr: vip_vesting::get_operator_reward_store_address(bridge_id),
@@ -938,16 +1085,27 @@ module initia_std::vip {
     public entry fun update_agent(
         old_agent: &signer,
         new_agent: address,
+        new_api_uri: string::String
     ) acquires ModuleStore {
         check_agent_permission(old_agent);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.agent = new_agent;
+        module_store.agent_data = AgentData {
+            agent: new_agent,
+            api_uri: new_api_uri,
+        };
     }
 
-    public entry fun update_agent_by_chain(chain: &signer, new_agent: address,) acquires ModuleStore {
+    public entry fun update_agent_by_chain(
+        chain: &signer,
+        new_agent: address,
+        new_api_uri: string::String
+    ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.agent = new_agent;
+        module_store.agent_data = AgentData {
+            agent: new_agent,
+            api_uri: new_api_uri,
+        };
     }
 
     public entry fun update_release_time(
@@ -1074,10 +1232,17 @@ module initia_std::vip {
             ),
             error::already_exists(ESNAPSHOT_ALREADY_EXISTS)
         );
+
+        let (_, create_time) = block::get_block_info();
         table::add(
             &mut stage_data.snapshots,
             table_key::encode_u64(bridge_id),
-            Snapshot {merkle_root, total_l2_score,},
+            Snapshot {
+                create_time,
+                upsert_time: create_time,
+                merkle_root,
+                total_l2_score
+            }
         );
     }
 
@@ -1127,6 +1292,25 @@ module initia_std::vip {
         snapshot.total_l2_score = total_l2_score;
     }
 
+    fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
+
+        let (_, curr_time) = block::get_block_info();
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let stage_data = table::borrow(
+            &module_store.stage_data,
+            table_key::encode_u64(stage)
+        );
+        let snapshot_create_time = table::borrow(
+            &stage_data.snapshots,
+            table_key::encode_u64(bridge_id)
+        ).create_time;
+
+        assert!(
+            curr_time > snapshot_create_time + module_store.challenge_period,
+            error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
+        );
+    }
+
     public entry fun claim_operator_reward_script(
         operator: &signer,
         bridge_id: u64,
@@ -1139,6 +1323,7 @@ module initia_std::vip {
             )) {
             vip_vesting::register_operator_vesting_store(operator, bridge_id);
         };
+
         let vested_reward = claim_operator_reward(operator, bridge_id, stage,);
 
         coin::deposit(
@@ -1323,6 +1508,20 @@ module initia_std::vip {
         module_store.pool_split_ratio = pool_split_ratio;
     }
 
+    public entry fun update_l2_score_contract(
+        chain: &signer,
+        bridge_id: u64,
+        new_vip_l2_score_contract: string::String,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        let bridge = load_bridge_mut(
+            &mut module_store.bridges,
+            bridge_id
+        );
+        bridge.vip_l2_score_contract = new_vip_l2_score_contract;
+    }
+
     public entry fun zapping_script(
         account: &signer,
         bridge_id: u64,
@@ -1416,6 +1615,15 @@ module initia_std::vip {
         );
     }
 
+    entry public fun update_challenge_period(
+        chain: &signer,
+        challenge_period: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        module_store.challenge_period = challenge_period;
+    }
+
     //
     // View Functions
     //
@@ -1448,6 +1656,8 @@ module initia_std::vip {
         );
 
         SnapshotResponse {
+            create_time: snapshot.create_time,
+            upsert_time: snapshot.upsert_time,
             merkle_root: snapshot.merkle_root,
             total_l2_score: snapshot.total_l2_score,
         }
@@ -1529,9 +1739,27 @@ module initia_std::vip {
         BridgeResponse {
             bridge_addr: bridge.bridge_addr,
             operator_addr: bridge.operator_addr,
+            vip_l2_score_contract: bridge.vip_l2_score_contract,
             vip_weight: bridge.vip_weight,
             user_reward_store_addr: bridge.user_reward_store_addr,
             operator_reward_store_addr: bridge.operator_reward_store_addr,
+        }
+    }
+
+    #[view]
+    public fun get_executed_challenge(
+        challenge_id: u64,
+    ): ExecutedChallengeResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let key = table_key::encode_u64(challenge_id);
+        let executed_challenge = table::borrow(&module_store.challenges, key);
+
+        ExecutedChallengeResponse {
+            title: executed_challenge.title,
+            summary: executed_challenge.summary,
+            new_api_uri: executed_challenge.api_uri,
+            new_agent: executed_challenge.new_agent,
+            new_merkle_root: executed_challenge.merkle_root,
         }
     }
 
@@ -1554,6 +1782,7 @@ module initia_std::vip {
                 BridgeResponse {
                     bridge_addr: bridge.bridge_addr,
                     operator_addr: bridge.operator_addr,
+                    vip_l2_score_contract: bridge.vip_l2_score_contract,
                     vip_weight: bridge.vip_weight,
                     user_reward_store_addr: bridge.user_reward_store_addr,
                     operator_reward_store_addr: bridge.operator_reward_store_addr,
@@ -1618,13 +1847,17 @@ module initia_std::vip {
         ModuleResponse {
             stage: module_store.stage,
             stage_period: module_store.stage_period,
-            agent: module_store.agent,
+            agent_data: AgentData {
+                agent: module_store.agent_data.agent,
+                api_uri: module_store.agent_data.api_uri
+            },
             proportion: module_store.proportion,
             pool_split_ratio: module_store.pool_split_ratio,
             user_vesting_period: module_store.user_vesting_period,
             operator_vesting_period: module_store.operator_vesting_period,
             minimum_eligible_tvl: module_store.minimum_eligible_tvl,
             maximum_tvl_ratio: module_store.maximum_tvl_ratio,
+            challenge_period: module_store.challenge_period,
         }
     }
 
@@ -1708,7 +1941,6 @@ module initia_std::vip {
         )
     }
 
-    //
     // Test Functions
     //
 
@@ -1763,13 +1995,50 @@ module initia_std::vip {
     const DEFAULT_REWARD_PER_STAGE_FOR_TEST: u64 = 100_000_000_000;
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
+    const DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST: u64 = 604801;
+
+    #[test_only]
+    const DEFAULT_NEW_CHALLENGE_PERIOD: u64 = 604800;
+    #[test_only]
+    const DEFAULT_API_URI_FOR_TEST: vector<u8> = b"test";
+
+    #[test_only]
+    const NEW_API_URI_FOR_TEST: vector<u8> = b"new";
+
+    #[test_only]
+    const BRIDGE_ID_FOR_TEST: u64 = 1;
+
+    #[test_only]
+    const STAGE_FOR_TEST: u64 = 1;
+
+    #[test_only]
+    const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
+
+    #[test_only]
+    const CHALLENGE_ID_FOR_TEST: u64 = 1;
+
+    #[test_only]
+    const NEW_L2_TOTAL_SCORE_FOR_TEST: u64 = 1000;
+
+    #[test_only]
+    fun skip_period(period: u64) {
+        let (height, curr_time) = block::get_block_info();
+        block::set_block_info(height, curr_time + period);
+    }
+
+    #[test_only]
+    public fun init_module_for_test(chain: &signer) acquires ModuleStore {
         vip_vault::init_module_for_test(chain);
         vip_vault::update_reward_per_stage(
             chain,
             DEFAULT_REWARD_PER_STAGE_FOR_TEST
         );
         init_module(chain);
+        update_agent_by_chain(
+            chain,
+            signer::address_of(chain),
+            string::utf8(DEFAULT_API_URI_FOR_TEST)
+        );
     }
 
     #[test_only]
@@ -1807,6 +2076,7 @@ module initia_std::vip {
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
+        vip_l2_score_contract: string::String,
         mint_amount: u64,
         commission_max_rate: Decimal256,
         commission_max_change_rate: Decimal256,
@@ -1835,6 +2105,7 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
+            vip_l2_score_contract,
             commission_max_rate,
             commission_max_change_rate,
             commission_rate,
@@ -1849,6 +2120,7 @@ module initia_std::vip {
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
+        vip_l2_score_contract: string::String,
         mint_amount: u64,
     ): u64 acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
@@ -1862,6 +2134,7 @@ module initia_std::vip {
             operator,
             bridge_id,
             bridge_address,
+            vip_l2_score_contract,
             mint_amount,
             decimal256::from_string(
                 &string::utf8(
@@ -2226,6 +2499,7 @@ module initia_std::vip {
             signer::address_of(operator),
             1,
             @0x90,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -2263,8 +2537,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
         let release_time = 0;
@@ -2292,6 +2567,11 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_root_map, &2),
             *simple_map::borrow(&total_score_map, &2),
         );
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -2336,6 +2616,9 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_root_map, &3),
             *simple_map::borrow(&total_score_map, &3),
         );
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -2365,6 +2648,11 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_root_map, &4),
             *simple_map::borrow(&total_score_map, &4),
         );
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -2384,6 +2672,31 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_update_l2_score_contract(chain: &signer, operator: &signer) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+
+        let new_vip_l2_score_contract = string::utf8(b"new_vip_l2_score_contract");
+        update_l2_score_contract(
+            chain,
+            bridge_id,
+            new_vip_l2_score_contract
+        );
+
+        let bridge_info = get_bridge_info(bridge_id);
+        assert!(
+            bridge_info.vip_l2_score_contract == new_vip_l2_score_contract,
+            0
+        );
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_get_last_claimed_stages(
         chain: &signer,
         operator: &signer,
@@ -2392,13 +2705,18 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2470,8 +2788,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2491,6 +2810,10 @@ module initia_std::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2561,8 +2884,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2575,6 +2899,10 @@ module initia_std::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2641,8 +2969,9 @@ module initia_std::vip {
         test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2668,6 +2997,89 @@ module initia_std::vip {
             0
         );
     }
+    
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_execute_challenge(
+        chain: &signer,
+        operator: &signer,
+        new_agent: address,
+    ) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+        test_setup_scene1(chain, bridge_id, 0);
+        let (_, create_time) = block::get_block_info();
+        let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
+        let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
+        let new_api_uri: string::String = string::utf8(NEW_API_URI_FOR_TEST);
+        let (new_merkle_root, _, _, _) = merkle_root_and_proof_scene2();
+        skip_period(10);
+        execute_challenge(
+            chain,
+            BRIDGE_ID_FOR_TEST,
+            STAGE_FOR_TEST,
+            CHALLENGE_ID_FOR_TEST,
+            title,
+            summary,
+            new_api_uri,
+            new_agent,
+            *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
+            NEW_L2_TOTAL_SCORE_FOR_TEST
+        );
+
+        let SnapshotResponse {
+            create_time: expected_create_time,
+            upsert_time: expected_upsert_time,
+            merkle_root: expected_merkle_root,
+            total_l2_score: _,
+        } = get_snapshot(BRIDGE_ID_FOR_TEST, STAGE_FOR_TEST);
+
+        assert!(
+            create_time == expected_create_time,
+            0
+        );
+        assert!(expected_upsert_time > create_time, 0);
+        assert!(
+            expected_merkle_root == *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
+            0
+        );
+
+        let ExecutedChallengeResponse {
+            title: expected_title,
+            summary: expected_summary,
+            new_api_uri: expected_new_api_uri,
+            new_agent: expected_agent,
+            new_merkle_root: expected_new_merkle_root,
+        } = get_executed_challenge(
+            CHALLENGE_ID_FOR_TEST
+        );
+
+        assert!(expected_title == title, 0);
+        assert!(expected_summary == summary, 0);
+        assert!(
+            expected_new_api_uri == new_api_uri,
+            0
+        );
+        assert!(expected_agent == new_agent, 0);
+        assert!(
+            expected_new_merkle_root == *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
+            0
+        );
+    }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x10006, location = initia_std::vip_vesting)]
@@ -2679,13 +3091,18 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2704,6 +3121,144 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[expected_failure(abort_code = 0x50017, location = Self)]
+    fun failed_user_claim_invalid_period(
+        chain: &signer,
+        operator: &signer,
+        receiver: &signer
+    ) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+
+        test_setup_scene1(chain, bridge_id, 0);
+
+        claim_user_reward_script(
+            receiver,
+            bridge_id,
+            1,
+            *simple_map::borrow(&merkle_proof_map, &1),
+            *simple_map::borrow(&score_map, &1),
+        );
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    #[expected_failure(abort_code = 0x50017, location = Self)]
+    fun failed_operator_claim_invalid_period(chain: &signer, operator: &signer,) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+
+        test_setup_scene1(chain, bridge_id, 0);
+
+        claim_operator_reward_script(operator, bridge_id, 1,);
+
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_user_claim_valid_period(
+        chain: &signer,
+        operator: &signer,
+        receiver: &signer
+    ) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+
+        let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
+
+        test_setup_scene1(chain, bridge_id, 0);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+        claim_user_reward_script(
+            receiver,
+            bridge_id,
+            1,
+            *simple_map::borrow(&merkle_proof_map, &1),
+            *simple_map::borrow(&score_map, &1),
+        );
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun operator_claim_valid_period(chain: &signer, operator: &signer,) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+
+        test_setup_scene1(chain, bridge_id, 0);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+        claim_operator_reward_script(operator, bridge_id, 1,);
+
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[expected_failure(abort_code = 0x50018, location = Self)]
+    fun failed_execute_challenge(
+        chain: &signer,
+        operator: &signer,
+        new_agent: address,
+    ) acquires ModuleStore {
+        let bridge_id = test_setup(
+            chain,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+        test_setup_scene1(chain, bridge_id, 0);
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
+        let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
+        let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
+        let new_api_uri: string::String = string::utf8(NEW_API_URI_FOR_TEST);
+        let (new_merkle_root, _, _, _) = merkle_root_and_proof_scene2();
+
+        execute_challenge(
+            chain,
+            BRIDGE_ID_FOR_TEST,
+            STAGE_FOR_TEST,
+            CHALLENGE_ID_FOR_TEST,
+            title,
+            summary,
+            new_api_uri,
+            new_agent,
+            *simple_map::borrow(
+                &new_merkle_root,
+                &BRIDGE_ID_FOR_TEST
+            ),
+            NEW_L2_TOTAL_SCORE_FOR_TEST
+        );
+    }
+
+    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0xD000F, location = Self)]
     fun failed_vesting_in_progress(
         chain: &signer,
@@ -2713,12 +3268,13 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
-        let release_time = 100;
+        let release_time = 700000;
         let (
             merkle_root_map,
             merkle_proof_map,
@@ -2727,6 +3283,8 @@ module initia_std::vip {
         ) = merkle_root_and_proof_scene1();
 
         fund_reward_script(chain, 1, release_time, release_time);
+
+        
         submit_snapshot(
             chain,
             bridge_id,
@@ -2734,6 +3292,11 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_root_map, &1),
             *simple_map::borrow(&total_score_map, &1),
         );
+        
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -2752,13 +3315,18 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
         let (_, merkle_proof_map, _, _) = merkle_root_and_proof_scene2();
         test_setup_scene2(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         batch_claim_user_reward_script(
             receiver,
@@ -2791,8 +3359,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2812,6 +3381,10 @@ module initia_std::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene2();
         test_setup_scene2(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2894,8 +3467,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -2906,6 +3480,10 @@ module initia_std::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -2957,6 +3535,7 @@ module initia_std::vip {
             operator_addr,
             1,
             @0x90,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -2977,6 +3556,7 @@ module initia_std::vip {
             operator_addr,
             2,
             @0x91,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -2997,6 +3577,7 @@ module initia_std::vip {
             operator_addr,
             3,
             @0x92,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3185,6 +3766,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3206,6 +3788,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3228,7 +3811,11 @@ module initia_std::vip {
             total_score_map
         ) = merkle_root_and_proof_scene1();
 
-        update_agent(chain, signer::address_of(agent));
+        update_agent(
+            chain,
+            signer::address_of(agent),
+            string::utf8(b"")
+        );
         update_vip_weights(
             chain,
             vector[1, 2],
@@ -3250,6 +3837,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             @0x999,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3289,6 +3877,10 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &5), // skip 3,4 stage
         );
 
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         claim_user_reward_script(
             receiver,
             bridge_id1,
@@ -3323,8 +3915,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3333,6 +3926,10 @@ module initia_std::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
 
         claim_user_reward_script(
             receiver,
@@ -3518,8 +4115,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
 
@@ -3540,7 +4138,11 @@ module initia_std::vip {
             total_score_map
         ) = merkle_root_and_proof_scene1();
 
-        update_agent(chain, signer::address_of(agent));
+        update_agent(
+            chain,
+            signer::address_of(agent),
+            string::utf8(b"")
+        );
 
         fund_reward_script(agent, 1, release_time, release_time);
 
@@ -3590,6 +4192,10 @@ module initia_std::vip {
             5,
             *simple_map::borrow(&merkle_root_map, &5),
             *simple_map::borrow(&total_score_map, &5),
+        );
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
         claim_user_reward_script(
@@ -3761,12 +4367,24 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x111)]
+    fun test_update_challenge_period(chain: &signer) acquires ModuleStore {
+        init_module_for_test(chain);
+        update_challenge_period(chain, DEFAULT_NEW_CHALLENGE_PERIOD);
+        assert!(
+            get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,
+            0
+        )
+
+    }
+
+    #[test(chain = @0x1, operator = @0x111)]
     fun test_update_snapshot(chain: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x1111,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
         let release_time = 1000;
@@ -3806,8 +4424,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x1111,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
         let release_time = 0;
@@ -3851,6 +4470,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3872,6 +4492,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3920,6 +4541,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3941,6 +4563,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -3980,8 +4603,9 @@ module initia_std::vip {
         let bridge_id = test_setup(
             chain,
             operator,
-            1,
+            BRIDGE_ID_FOR_TEST,
             @0x1111,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
         let release_time = 0;
@@ -4020,6 +4644,7 @@ module initia_std::vip {
             operator2,
             bridge_id2,
             @0x1000,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
             decimal256::from_string(
                 &string::utf8(
@@ -4124,6 +4749,7 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
                     DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
@@ -4215,6 +4841,11 @@ module initia_std::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id, 0);
+
+        skip_period(
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+        );
+
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -4340,6 +4971,10 @@ module initia_std::vip {
                 idx,
                 *simple_map::borrow(&merkle_root_map, &idx),
                 *simple_map::borrow(&total_score_map, &idx),
+            );
+
+            skip_period(
+                DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
             );
 
             claim_user_reward_script(

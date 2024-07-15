@@ -636,6 +636,19 @@ module initia_std::vip_zapping {
         delegation_info
     }
 
+    #[view]
+    public fun get_delegation_infos(zids: vector<u64>): vector<DelegationInfo> acquires ModuleStore {
+        let delegation_infos = vector[];
+        vector::enumerate_ref(
+            &zids,
+            |_i, zid| {
+                let delegation_info = get_delegation_info(*zid);
+                vector::push_back(&mut delegation_infos, delegation_info);
+            }
+        );
+        delegation_infos
+    }
+
     //
     // Test Functions
     //
