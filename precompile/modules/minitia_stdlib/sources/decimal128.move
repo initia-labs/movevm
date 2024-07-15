@@ -37,13 +37,13 @@ module minitia_std::decimal128 {
     public fun from_ratio_u64(numerator: u64, denominator: u64): Decimal128 {
         assert!(denominator != 0, EDIV_WITH_ZERO);
 
-        new((numerator as u128) * DECIMAL_FRACTIONAL / (denominator as u128))
+        new(((numerator as u256) * (DECIMAL_FRACTIONAL as u256) / (denominator as u256) as u128))
     }
 
     public fun from_ratio(numerator: u128, denominator: u128): Decimal128 {
         assert!(denominator != 0, EDIV_WITH_ZERO);
 
-        new(numerator * DECIMAL_FRACTIONAL / denominator)
+        new(((numerator as u256) * (DECIMAL_FRACTIONAL as u256) / (denominator as u256) as u128))
     }
 
     public fun add(left: &Decimal128, right: &Decimal128): Decimal128 {
@@ -55,15 +55,15 @@ module minitia_std::decimal128 {
     }
 
     public fun mul_u64(decimal: &Decimal128, val: u64): u64 {
-        (decimal.val * (val as u128) / DECIMAL_FRACTIONAL as u64)
+        ( (decimal.val as u256) * (val as u256) / (DECIMAL_FRACTIONAL as u256) as u64)
     }
 
-     public fun mul_u128(decimal: &Decimal128, val: u128): u128 {
-        decimal.val * val / DECIMAL_FRACTIONAL
+    public fun mul_u128(decimal: &Decimal128, val: u128): u128 {
+        ((decimal.val as u256) * (val as u256) / (DECIMAL_FRACTIONAL as u256) as u128)
     }
 
     public fun mul(a: &Decimal128, b: &Decimal128): Decimal128 {
-        new(a.val * b.val / DECIMAL_FRACTIONAL)
+        new(((a.val as u256) * (b.val as u256) / (DECIMAL_FRACTIONAL as u256) as u128))
     }
 
     public fun div_u64(decimal: &Decimal128, val: u64): Decimal128 {
@@ -146,6 +146,13 @@ module minitia_std::decimal128 {
         );
         assert!(
             from_string(&string::utf8(b"340282366920938463462.0")) == new(340282366920938463462 * DECIMAL_FRACTIONAL),
+            0
+        );
+        
+        let max_a = from_ratio(10000, 1);
+        let result = mul(&max_a, &from_ratio(34028236692093, 1));
+        assert!(
+            result == from_ratio(340282366920930000, 1),
             0
         );
     }
