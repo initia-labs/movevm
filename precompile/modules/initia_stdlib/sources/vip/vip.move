@@ -22,6 +22,7 @@ module initia_std::vip {
     use initia_std::vip_vesting;
     use initia_std::vip_reward;
     use initia_std::vip_vault;
+    use initia_std::vip_tvl;
 
     friend initia_std::vip_weight_vote;
 
@@ -699,7 +700,7 @@ module initia_std::vip {
         let split_amount = decimal256::mul_u64(&share_ratio, total_reward_amount);
         split_amount
     }
-
+    // fund reward to distribute to operators and users and distribute previous stage rewards
     fun fund_reward(
         module_store: &mut ModuleStore,
         stage: u64,
@@ -786,12 +787,10 @@ module initia_std::vip {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
-
-            let bridge_balance = primary_fungible_store::balance(
-                bridge.bridge_addr,
-                vip_reward::reward_metadata()
+            let bridge_balance = vip_tvl::calculate_ema_tvl(
+                module_store.stage,
+                bridge_id
             );
-
             let effective_bridge_balance = if (bridge_balance > max_effective_balance) { max_effective_balance }
             else if (bridge_balance < module_store.minimum_eligible_tvl) {
                  0
@@ -923,6 +922,11 @@ module initia_std::vip {
         validate_vip_weights(module_store);
     }
 
+    
+
+    //
+    // Entry Functions
+    //
     public entry fun execute_challenge(
         chain: &signer,
         bridge_id: u64,
@@ -1004,11 +1008,6 @@ module initia_std::vip {
         );
 
     }
-
-    //
-    // Entry Functions
-    //
-
     // register L2 by gov
     public entry fun register(
         chain: &signer,
@@ -1140,6 +1139,32 @@ module initia_std::vip {
         );
     }
 
+    public entry fun add_snapshot(
+        agent: &signer,
+    ) {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let bridges = &module_store.bridges;
+        let current_stage = module_store.stage;
+        
+        let iter = table::iter(
+            bridges,
+            option::none(),
+            option::none(),
+            1
+        );
+        loop {
+            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
+            let bridge_id = table_key::decode_u64(bridge_id_vec);
+
+            let bridge_balance = primary_fungible_store::balance(
+                bridge.bridge_addr,
+                vip_reward::reward_metadata()
+            );
+            let bridge_id = table_key::decode_u64(bridge_id_vec);
+            vip_tvl::add_snapshot(current_stage,bridge_id,bridge_balance);
+        };
+    }
     public entry fun fund_reward_script(
         agent: &signer,
         stage: u64,
