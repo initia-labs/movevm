@@ -25,7 +25,7 @@ module initia_std::vip_tvl {
         tvl: u64,
     }
 
-    public entry fun initialize(chain: &signer,epoch_interval: u64, settle_times_per_epoch: u64) {
+    fun init_module(chain: &signer) {
         check_chain_permission(chain);
         move_to(
             chain,ModuleStore {
@@ -66,7 +66,7 @@ module initia_std::vip_tvl {
         );
     }
 
-    public fun calculate_ema_tvl(epoch:u64,bridge_id:u64):u64 {
+    public fun calculate_ema_tvl(epoch:u64,bridge_id:u64) :u64 acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         if (!table::contains(&module_store.ema_tvl,table_key::encode_u64(epoch)))  {
             assert!(false,error::not_found(EINVALID_EPOCH));
@@ -92,7 +92,7 @@ module initia_std::vip_tvl {
         decimal128::round_up_u64(&ema_tvl)
     }
     #[view]
-    public fun get_ema_tvl(epoch: u64, bridge_id: u64):u64 {
+    public fun get_ema_tvl(epoch: u64, bridge_id: u64):u64 acquires ModuleStore {
         calculate_ema_tvl(epoch,bridge_id)
     }
 }

@@ -785,7 +785,7 @@ module initia_std::vip {
         );
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
+            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             let bridge_balance = vip_tvl::calculate_ema_tvl(
                 module_store.stage,
@@ -1138,10 +1138,11 @@ module initia_std::vip {
             }
         );
     }
-
-    public entry fun add_snapshot(
+    // add tvl snapshot of all bridges on this stage(epoch)
+    public entry fun add_tvl_snapshot(
         agent: &signer,
-    ) {
+    )acquires ModuleStore {
+        check_agent_permission(agent);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let bridges = &module_store.bridges;
         let current_stage = module_store.stage;
@@ -1161,7 +1162,6 @@ module initia_std::vip {
                 bridge.bridge_addr,
                 vip_reward::reward_metadata()
             );
-            let bridge_id = table_key::decode_u64(bridge_id_vec);
             vip_tvl::add_snapshot(current_stage,bridge_id,bridge_balance);
         };
     }
