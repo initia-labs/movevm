@@ -111,12 +111,7 @@ module minitia_std::vip_score {
 
         let score = table::borrow_mut_with_default(&mut scores.score, addr, 0);
 
-        if (*score > amount) {
-            scores.total_score = scores.total_score - (*score - amount);
-        } else {
-            scores.total_score = scores.total_score + (amount - *score);
-        };
-
+        scores.total_score = scores.total_score - *score + amount;
         *score = amount;
 
         event::emit(
@@ -129,22 +124,6 @@ module minitia_std::vip_score {
         )
     }
 
-    fun check_scorable_stage(stage: u64): bool acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-
-        assert!(
-            table::contains(&module_store.scores, stage),
-            error::invalid_argument(EINVALID_STAGE)
-        );
-
-        let scores = table::borrow_mut(&mut module_store.scores, stage);
-        assert!(
-            !scores.is_finalized,
-            error::invalid_argument(EFINALIED_STAGE)
-        );
-
-        true
-    }
     //
     // View functions
     //
@@ -172,7 +151,7 @@ module minitia_std::vip_score {
     //
     // Public functions
     //
-
+    // Check deployer permission and create a stage score table if not exists.
     public fun prepare_stage(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
@@ -325,7 +304,7 @@ module minitia_std::vip_score {
             vector::length(&addrs) == vector::length(&update_scores),
             error::invalid_argument(ENOT_MATCH_LENGTH)
         );
-
+        // permission check is performed in prepare_stage
         prepare_stage(deployer, stage);
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
@@ -575,6 +554,27 @@ module minitia_std::vip_score {
         };
         update_score_script(
             deployer,
+            stage,
+            addrs,
+            scores
+        )
+    }
+
+    #[test(chain = @0x1, non_deployer = @0x3)]
+    #[expected_failure(abort_code = 0x10001, location = Self)]
+    fun failed_update_score_script(chain:&signer,non_deployer:&signer) acquires ModuleStore{
+        init_module_for_test(chain);
+        let stage = 1;
+        let scores = vector::empty<u64>();
+        let addrs = vector::empty<address>();
+        let idx = 0;
+        while (idx < 50000) {
+            vector::push_back(&mut scores, 100);
+            vector::push_back(&mut addrs, @0x123);
+            idx = idx + 1;
+        };
+        update_score_script(
+            non_deployer,
             stage,
             addrs,
             scores

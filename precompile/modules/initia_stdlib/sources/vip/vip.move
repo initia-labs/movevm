@@ -439,13 +439,17 @@ module initia_std::vip {
         )
     }
 
-    fun claim_user_reward(
+    public fun claim_user_reward(
         account: &signer,
         bridge_id: u64,
         stage: u64,
         merkle_proofs: vector<vector<u8>>,
         l2_score: u64,
     ): FungibleAsset acquires ModuleStore {
+
+        // check claim period
+        check_claimable_period(bridge_id, stage);
+        
         let account_addr = signer::address_of(account);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let (_, block_time) = block::get_block_info();
@@ -829,11 +833,14 @@ module initia_std::vip {
         }
     }
 
-    fun claim_operator_reward(
+    public fun claim_operator_reward(
         operator: &signer,
         bridge_id: u64,
         stage: u64,
     ): FungibleAsset acquires ModuleStore {
+        // check claim period
+        check_claimable_period(bridge_id, stage);
+
         let operator_addr = signer::address_of(operator);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let (_, block_time) = block::get_block_info();
@@ -1286,6 +1293,7 @@ module initia_std::vip {
     }
 
     fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
+
         let (_, curr_time) = block::get_block_info();
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let stage_data = table::borrow(
@@ -1315,8 +1323,6 @@ module initia_std::vip {
             )) {
             vip_vesting::register_operator_vesting_store(operator, bridge_id);
         };
-        // check claim period
-        check_claimable_period(bridge_id, stage);
 
         let vested_reward = claim_operator_reward(operator, bridge_id, stage,);
 
