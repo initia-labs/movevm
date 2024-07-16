@@ -481,10 +481,10 @@ module initia_std::stableswap {
         while (i < n) {
             let metadata = *vector::borrow(&pool.coin_metadata, i);
             let amount = *vector::borrow(&coin_amounts, i);
-            vector::push_back(
-                &mut coins,
+            let coin = if (amount == 0) {fungible_asset::zero(metadata)} else {
                 primary_fungible_store::withdraw(account, metadata, amount)
-            );
+            };
+            vector::push_back(&mut coins, coin);
             i = i + 1;
         };
 
