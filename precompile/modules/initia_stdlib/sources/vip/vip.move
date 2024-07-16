@@ -22,7 +22,7 @@ module initia_std::vip {
     use initia_std::vip_vesting;
     use initia_std::vip_reward;
     use initia_std::vip_vault;
-    use initia_std::vip_tvl;
+    use initia_std::vip_tvl_manager;
 
     friend initia_std::vip_weight_vote;
 
@@ -700,7 +700,7 @@ module initia_std::vip {
         let split_amount = decimal256::mul_u64(&share_ratio, total_reward_amount);
         split_amount
     }
-    // fund reward to distribute to operators and users and distribute previous stage rewards
+    // fund reward to distribute to operators and users and distribute previous stage(epoch) rewards
     fun fund_reward(
         module_store: &mut ModuleStore,
         stage: u64,
@@ -745,8 +745,14 @@ module initia_std::vip {
         )
     }
 
-    fun bridge_total_balance(module_store: &ModuleStore,): u64 {
+    // calculate balance share and return total balance
+    fun calculate_balance_share(
+        module_store: &ModuleStore,
+        balance_shares: &mut SimpleMap<u64, Decimal256>
+    ): u64 {
+        let bridge_balances : SimpleMap<u64, u64> = simple_map::create();
         let total_balance = 0;
+        
 
         let iter = table::iter(
             &module_store.bridges,
@@ -754,53 +760,47 @@ module initia_std::vip {
             option::none(),
             1
         );
+        // calculate total balance and bridge balance
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
-            let bridge_balance = primary_fungible_store::balance(
-                bridge.bridge_addr,
-                vip_reward::reward_metadata()
+            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(iter);
+            // bridge balance from tvl manager
+            let bridge_balance = vip_tvl_manager::calculate_average_tvl(
+                table_key::encode_u64(module_store.stage),
+                bridge_id_vec
             );
             total_balance = total_balance + bridge_balance;
+            simple_map::add(&mut bridge_balances,table_key::decode_u64(bridge_id_vec),bridge_balance);
         };
 
-        (total_balance)
-    }
-
-    fun calculate_balance_share(
-        module_store: &ModuleStore,
-        balance_shares: &mut SimpleMap<u64, Decimal256>
-    ): u64 {
-        let total_balance = bridge_total_balance(module_store);
         let max_effective_balance = decimal256::mul_u64(
             &module_store.maximum_tvl_ratio,
             total_balance
         );
 
-        let iter = table::iter(
+        iter = table::iter(
             &module_store.bridges,
             option::none(),
             option::none(),
             1
         );
+        // calculate balance share
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(iter);
-            let bridge_id = table_key::decode_u64(bridge_id_vec);
-            let bridge_balance = vip_tvl::calculate_ema_tvl(
-                module_store.stage,
-                bridge_id
-            );
-            let effective_bridge_balance = if (bridge_balance > max_effective_balance) { max_effective_balance }
-            else if (bridge_balance < module_store.minimum_eligible_tvl) {
-                 0
-            } else { bridge_balance };
+            let bridge_balance = simple_map::borrow(&bridge_balances, &table_key::decode_u64(bridge_id_vec));
 
+
+            let effective_bridge_balance = if (*bridge_balance > max_effective_balance) { max_effective_balance }
+            else if (*bridge_balance < module_store.minimum_eligible_tvl) {
+                 0
+            } else { *bridge_balance };
+        
             let share = decimal256::from_ratio_u64(
                 effective_bridge_balance,
                 total_balance
             );
-            simple_map::add(balance_shares, bridge_id, share);
+            simple_map::add(balance_shares, table_key::decode_u64(bridge_id_vec), share);
         };
 
         (total_balance)
@@ -1141,12 +1141,15 @@ module initia_std::vip {
     // add tvl snapshot of all bridges on this stage(epoch)
     public entry fun add_tvl_snapshot(
         agent: &signer,
-    )acquires ModuleStore {
+    ) acquires ModuleStore {
         check_agent_permission(agent);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        add_tvl_snapshot_internal(module_store);
+    }
+
+    fun add_tvl_snapshot_internal(module_store: &ModuleStore) {
         let bridges = &module_store.bridges;
         let current_stage = module_store.stage;
-        
         let iter = table::iter(
             bridges,
             option::none(),
@@ -1162,8 +1165,9 @@ module initia_std::vip {
                 bridge.bridge_addr,
                 vip_reward::reward_metadata()
             );
-            vip_tvl::add_snapshot(current_stage,bridge_id,bridge_balance);
+            vip_tvl_manager::add_snapshot(current_stage,bridge_id,bridge_balance);
         };
+        
     }
     public entry fun fund_reward_script(
         agent: &signer,
@@ -1185,6 +1189,8 @@ module initia_std::vip {
             stage == module_store.stage,
             error::invalid_argument(EINVALID_FUND_STAGE)
         );
+        // add tvl snapshot for this stage before fund reward to final snapshot
+        add_tvl_snapshot_internal(module_store);
 
         let total_reward = vip_vault::claim(stage);
         let (
@@ -1227,6 +1233,9 @@ module initia_std::vip {
         );
 
         module_store.stage = stage + 1;
+
+        add_tvl_snapshot_internal(module_store);
+
     }
 
     public entry fun submit_snapshot(
@@ -1699,7 +1708,6 @@ module initia_std::vip {
 
         let total_balance = calculate_balance_share(module_store, &mut balance_shares);
         calculate_weight_share(module_store, &mut weight_shares);
-
         assert!(
             fund_reward_amount > 0,
             error::invalid_argument(EINVALID_TOTAL_REWARD)
@@ -1720,7 +1728,6 @@ module initia_std::vip {
         let weight_pool_reward_amount = decimal256::mul_u64(
             &weight_ratio, fund_reward_amount
         );
-
         let balance_split_amount = split_reward_with_share_internal(
             &balance_shares,
             bridge_id,
@@ -1731,7 +1738,6 @@ module initia_std::vip {
             bridge_id,
             weight_pool_reward_amount
         );
-
         balance_split_amount + weight_split_amount
     }
 
@@ -2149,6 +2155,7 @@ module initia_std::vip {
         mint_amount: u64,
     ): u64 acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
@@ -3524,6 +3531,7 @@ module initia_std::vip {
             *simple_map::borrow(&merkle_proof_map, &3),
             *simple_map::borrow(&score_map, &3),
         );
+
         assert!(
             coin::balance(
                 signer::address_of(receiver),
@@ -3539,6 +3547,7 @@ module initia_std::vip {
     fun test_fund_reward_script(chain: &signer, operator: &signer,) acquires ModuleStore {
         let mint_amount = 100_000_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(chain);
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
         init_module_for_test(chain);
 
@@ -3623,13 +3632,12 @@ module initia_std::vip {
             whitelisted_bridge_ids == vector[1, 2, 3],
             0
         );
-
         update_pool_split_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.7"))
         );
+        add_tvl_snapshot(chain);
         fund_reward_script(chain, 1, release_time, release_time);
-
         assert!(
             get_expected_reward(
                 1,
@@ -3679,7 +3687,7 @@ module initia_std::vip {
             ),
             0
         );
-
+        add_tvl_snapshot(chain);
         fund_reward_script(chain, 2, release_time, release_time);
         assert!(
             vip_reward::balance(
@@ -3710,8 +3718,8 @@ module initia_std::vip {
             2,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
+        add_tvl_snapshot(chain);
         fund_reward_script(chain, 3, release_time, release_time);
-
         assert!(
             vip_reward::balance(
                 vip_vesting::get_operator_reward_store_address(1)
@@ -3747,6 +3755,7 @@ module initia_std::vip {
         receiver: &signer
     ) acquires ModuleStore, TestCapability {
         primary_fungible_store::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
@@ -3977,7 +3986,7 @@ module initia_std::vip {
             2,
             *simple_map::borrow(&merkle_proof_map, &2),
             *simple_map::borrow(&score_map, &2),
-        );
+        ); 
         assert!(
             coin::balance(
                 signer::address_of(receiver),
@@ -4727,6 +4736,7 @@ module initia_std::vip {
         staking::init_module_for_test(chain);
         primary_fungible_store::init_module_for_test(chain);
         vip_zapping::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(chain);
         init_module_for_test(chain);
 
         let (_burn_cap, _freeze_cap, mint_cap, _) = initialize_coin(

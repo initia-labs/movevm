@@ -97,10 +97,12 @@ module initia_std::decimal128 {
     }
 
     public fun div_u64(decimal: &Decimal128, val: u64): Decimal128 {
+        assert!(val != 0, EDIV_WITH_ZERO);
         new(decimal.val / (val as u128))
     }
 
     public fun div(decimal: &Decimal128, val: u128): Decimal128 {
+        assert!(val != 0, EDIV_WITH_ZERO);
         new(decimal.val / val)
     }
 
