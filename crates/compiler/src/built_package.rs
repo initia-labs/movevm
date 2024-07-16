@@ -85,7 +85,7 @@ impl BuiltPackage {
         let (mut package, model_opt) =
             new_config.compile_package_no_exit(&package_path, &mut stderr())?;
 
-        // Run extended checks as well derive runtime metadata
+        // Run extended checks as well as derive runtime metadata
         let model = &model_opt.expect("move model");
         let runtime_metadata = extended_checks::run_extended_checks(model);
         if model.diag_count(Severity::Warning) > 0 {
