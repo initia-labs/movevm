@@ -299,6 +299,10 @@ module initia_std::primary_fungible_store {
         metadata: Object<T>,
         amount: u64
     ): FungibleAsset {
+        if (amount == 0) {
+            return fungible_asset::zero(metadata)
+        };
+
         let store = primary_store(signer::address_of(owner), metadata);
         fungible_asset::withdraw(owner, store, amount)
     }
