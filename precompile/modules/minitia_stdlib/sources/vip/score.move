@@ -69,6 +69,11 @@ module minitia_std::vip_score {
         total_score: u64
     }
 
+    #[event]
+    struct FinalizedScoreEvent has drop, store {
+        stage: u64
+    }
+
     //
     // Implementation
     //
@@ -291,6 +296,9 @@ module minitia_std::vip_score {
             error::invalid_argument(EFINALIED_STAGE)
         );
         scores.is_finalized = true;
+
+        event::emit(FinalizedScoreEvent {stage})
+           
     }
 
     public entry fun update_score_script(
