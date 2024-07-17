@@ -128,14 +128,17 @@ module initia_std::decimal256 {
     }
 
     public fun div_u64(decimal: &Decimal256, val: u64): Decimal256 {
+        assert!(val != 0, EDIV_WITH_ZERO);
         new(decimal.val / (val as u256))
     }
 
     public fun div_u128(decimal: &Decimal256, val: u128): Decimal256 {
+        assert!(val != 0, EDIV_WITH_ZERO);
         new(decimal.val / (val as u256))
     }
 
     public fun div(decimal: &Decimal256, val: u256): Decimal256 {
+        assert!(val != 0, EDIV_WITH_ZERO);
         new(decimal.val / val)
     }
 
