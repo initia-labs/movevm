@@ -446,7 +446,10 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut proposal.votes,
             addr,
-            WeightVote {voting_power:voting_power_used, weights: n_weights}
+            WeightVote {
+                voting_power: voting_power_used,
+                weights: n_weights
+            }
         );
 
         // emit event
@@ -721,7 +724,7 @@ module initia_std::vip_weight_vote {
             2
         );
         assert!(
-            table::prepare<vector<u8>, Proposal>(&mut iter),
+             table::prepare<vector<u8>, Proposal>(&mut iter),
             error::not_found(ESTAGE_NOT_FOUND)
         );
         let (epoch_key, proposal) = table::next<vector<u8>, Proposal>(&mut iter);
@@ -733,15 +736,13 @@ module initia_std::vip_weight_vote {
                 error::not_found(ESTAGE_NOT_FOUND)
             );
             (epoch_key, _) = table::next<vector<u8>, Proposal>(&mut iter);
-            
         };
-        let last_finalized_proposal_id = table_key::decode_u64(epoch_key);
 
+        let last_finalized_proposal_id = table_key::decode_u64(epoch_key);
         let last_finalized_proposal = table::borrow(
             &module_store.proposals,
             epoch_key
             );
-
         (
             last_finalized_proposal_id,
             last_finalized_proposal
@@ -1288,6 +1289,7 @@ module initia_std::vip_weight_vote {
     const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
     #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
+        let init_stage = 1;
         initialize(
             chain,
             100,
@@ -1316,6 +1318,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             1,
             @0x12,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
@@ -1326,6 +1329,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             2,
             @0x12,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
@@ -1496,7 +1500,7 @@ module initia_std::vip_weight_vote {
             vector[
                 decimal128::from_ratio(3, 5),
                 decimal128::from_ratio(1, 5)
-            ], // 24, 8 // user can vote with 
+            ], // 24, 8 // user can vote with
         );
 
         let proposal = get_proposal(1);
@@ -1525,7 +1529,7 @@ module initia_std::vip_weight_vote {
             vector[
                 decimal128::from_ratio(4, 5),
                 decimal128::from_ratio(1, 5)
-            ], // 32, 8 // user can vote with 
+            ], // 32, 8 // user can vote with
         );
         vote1 = get_tally(1, 1);
         vote2 = get_tally(1, 2);
