@@ -1,6 +1,6 @@
 # Cross Compilation Scripts
 
-As this library is targetting go developers, we cannot assume a properly set up
+As this library is targeting go developers, we cannot assume a properly set up
 rust environment on their system. Further, when importing this library, there is no
 clean way to add a `libmovevm.{so,dll,dylib}`. It needs to be committed with the
 tagged (go) release in order to be easily usable.

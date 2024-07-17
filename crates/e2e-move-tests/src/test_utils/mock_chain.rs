@@ -133,7 +133,7 @@ impl<'r> TableView for MockTableState<'r> {
         let bounds = range_bounds(&start, &end);
 
         // BTreeMap.range panics if range is start > end.
-        // However, this cases represent just empty range and we treat it as such.
+        // However, these cases represent just empty range and we treat it as such.
         match (bounds.start_bound(), bounds.end_bound()) {
             (Bound::Included(start), Bound::Excluded(end)) if start > end => {
                 let iterator_id = self.iterators.len();

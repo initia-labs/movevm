@@ -211,7 +211,7 @@ impl<'a> ExtendedChecker<'a> {
         for ref struct_ in module.get_structs() {
             if self.has_attribute_iter(struct_.get_attributes().iter(), EVENT_STRUCT_ATTRIBUTE) {
                 let module_id = self.get_runtime_module_id(module);
-                // Remember the runtime info that this is a event struct.
+                // Remember the runtime info that this is an event struct.
                 self.output
                     .entry(module_id)
                     .or_default()
