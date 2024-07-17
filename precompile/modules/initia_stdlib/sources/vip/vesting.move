@@ -130,7 +130,7 @@ module initia_std::vip_vesting {
         vested_reward_amount: u64,
         vesting_changes: vector<VestingChange>,
     }
-
+    
     //
     // Responses
     //
