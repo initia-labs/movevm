@@ -483,7 +483,7 @@ module initia_std::stableswap {
             let amount = *vector::borrow(&coin_amounts, i);
             vector::push_back(
                 &mut coins,
-                primary_fungible_store::withdraw(account, metadata, amount)
+                primary_fungible_store::withdraw(account, metadata, amount),
             );
             i = i + 1;
         };
