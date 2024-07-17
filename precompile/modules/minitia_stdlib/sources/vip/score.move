@@ -66,7 +66,7 @@ module minitia_std::vip_score {
 
     #[event]
     struct UpdateScoreEvent has drop, store {
-        addr: address,
+        account: address,
         stage: u64,
         score: u64,
         total_score: u64
@@ -114,7 +114,7 @@ module minitia_std::vip_score {
 
     fun update_score_internal(
         scores: &mut Scores,
-        addr: address,
+        account: address,
         stage: u64,
         amount: u64
     ) {
@@ -126,7 +126,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                addr: addr,
+                account: addr,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -198,7 +198,7 @@ module minitia_std::vip_score {
     /// Increase a score of an account.
     public fun increase_score(
         deployer: &signer,
-        addr: address,
+        account: address,
         stage: u64,
         amount: u64
     ) acquires ModuleStore {
@@ -224,7 +224,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                addr: addr,
+                account: addr,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -235,7 +235,7 @@ module minitia_std::vip_score {
     /// Decrease a score of an account.
     public fun decrease_score(
         deployer: &signer,
-        addr: address,
+        account: address,
         stage: u64,
         amount: u64
     ) acquires ModuleStore {
@@ -264,7 +264,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                addr: addr,
+                account: addr,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -274,7 +274,7 @@ module minitia_std::vip_score {
 
     public fun update_score(
         deployer: &signer,
-        addr: address,
+        account: address,
         stage: u64,
         amount: u64
     ) acquires ModuleStore {
