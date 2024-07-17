@@ -87,7 +87,13 @@ impl ModuleBundle {
         let mut order = vec![];
         let mut order_set = BTreeSet::new();
         for id in map.keys() {
-            sort_by_deps(&map, &mut order, &mut order_set, &mut BTreeSet::new(), id.clone())?;
+            sort_by_deps(
+                &map,
+                &mut order,
+                &mut order_set,
+                &mut BTreeSet::new(),
+                id.clone(),
+            )?;
         }
 
         let mut codes = vec![];

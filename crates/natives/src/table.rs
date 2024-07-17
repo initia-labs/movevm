@@ -683,9 +683,10 @@ fn native_next_box(
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut iterators = table_context.iterators.borrow_mut();
     let iterator = iterators.get_mut(iterator_id).unwrap();
-    let (key, value) = iterator.next.take().ok_or_else(|| {
-        partial_extension_error("next_box called without prepare_box")
-    })?;
+    let (key, value) = iterator
+        .next
+        .take()
+        .ok_or_else(|| partial_extension_error("next_box called without prepare_box"))?;
 
     iterator.next = None;
 
