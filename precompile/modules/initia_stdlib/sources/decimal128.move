@@ -67,33 +67,47 @@ module initia_std::decimal128 {
     public fun mul_u64_with_round_up(decimal: &Decimal128, val: u64): u64 {
         let val = (decimal.val as u256) * (val as u256);
         let val = val + (DECIMAL_FRACTIONAL as u256) / 2;
-        (val / (DECIMAL_FRACTIONAL as u256) as u64)
+        (
+            val / (DECIMAL_FRACTIONAL as u256) as u64
+        )
     }
 
     public fun mul_u64_with_ceil(decimal: &Decimal128, val: u64): u64 {
         let val = (decimal.val as u256) * (val as u256);
         let val = val + (DECIMAL_FRACTIONAL as u256) - 1;
-        (val / (DECIMAL_FRACTIONAL as u256) as u64)
+        (
+            val / (DECIMAL_FRACTIONAL as u256) as u64
+        )
     }
 
     public fun mul_u128(decimal: &Decimal128, val: u128): u128 {
-        ((decimal.val as u256) * (val as u256) / (DECIMAL_FRACTIONAL as u256) as u128)
+        (
+            (decimal.val as u256) * (val as u256) / (DECIMAL_FRACTIONAL as u256) as u128
+        )
     }
 
     public fun mul_u128_with_round_up(decimal: &Decimal128, val: u128): u128 {
         let val = (decimal.val as u256) * (val as u256);
         let val = val + (DECIMAL_FRACTIONAL as u256) / 2;
-        (val / (DECIMAL_FRACTIONAL as u256) as u128)
+        (
+            val / (DECIMAL_FRACTIONAL as u256) as u128
+        )
     }
 
     public fun mul_u128_with_ceil(decimal: &Decimal128, val: u128): u128 {
         let val = (decimal.val as u256) * (val as u256);
         let val = val + (DECIMAL_FRACTIONAL as u256) - 1;
-        (val / (DECIMAL_FRACTIONAL as u256) as u128)
+        (
+            val / (DECIMAL_FRACTIONAL as u256) as u128
+        )
     }
 
     public fun mul(a: &Decimal128, b: &Decimal128): Decimal128 {
-        new(((a.val as u256) * (b.val as u256) / (DECIMAL_FRACTIONAL as u256) as u128))
+        new(
+            (
+                (a.val as u256) * (b.val as u256) / (DECIMAL_FRACTIONAL as u256) as u128
+            )
+        )
     }
 
     public fun div_u64(decimal: &Decimal128, val: u64): Decimal128 {
@@ -240,7 +254,10 @@ module initia_std::decimal128 {
         );
 
         let max_a = from_ratio(10000, 1);
-        let result = mul(&max_a, &from_ratio(34028236692093, 1));
+        let result = mul(
+            &max_a,
+            &from_ratio(34028236692093, 1)
+        );
         assert!(
             result == from_ratio(340282366920930000, 1),
             0

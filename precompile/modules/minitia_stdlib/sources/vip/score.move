@@ -107,6 +107,7 @@ module minitia_std::vip_score {
             error::invalid_argument(EUNAUTHORIZED)
         );
     }
+
     fun update_score_internal(
         scores: &mut Scores,
         addr: address,
@@ -195,7 +196,7 @@ module minitia_std::vip_score {
             !scores.is_finalized,
             error::invalid_argument(EFINALIED_STAGE)
         );
-        
+
         let score = table::borrow_mut_with_default(&mut scores.score, addr, 0);
 
         *score = *score + amount;
@@ -250,7 +251,7 @@ module minitia_std::vip_score {
             }
         )
     }
-    
+
     public fun update_score(
         deployer: &signer,
         addr: address,
@@ -275,7 +276,7 @@ module minitia_std::vip_score {
             !scores.is_finalized,
             error::invalid_argument(EFINALIED_STAGE)
         );
-        
+
         update_score_internal(scores, addr, stage, amount);
     }
 
@@ -297,8 +298,8 @@ module minitia_std::vip_score {
         );
         scores.is_finalized = true;
 
-        event::emit(FinalizedScoreEvent {stage})
-           
+        event::emit(FinalizedScoreEvent { stage })
+
     }
 
     public entry fun update_score_script(
@@ -542,50 +543,36 @@ module minitia_std::vip_score {
         assert!(get_total_score(2) == 300, 14);
     }
 
-
     #[test(chain = @0x1, deployer = @0x2)]
-    fun test_update_score_script(chain:&signer,deployer: &signer) acquires ModuleStore{
+    fun test_update_score_script(chain: &signer, deployer: &signer) acquires ModuleStore {
 
         init_module_for_test(chain);
         let stage = 1;
-        add_deployer_script(
-            chain,
-            signer::address_of(deployer)
-        );
+        add_deployer_script(chain, signer::address_of(deployer));
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();
         let idx = 0;
-        while (idx < 50000) {
+        while (idx <50000) {
             vector::push_back(&mut scores, 100);
             vector::push_back(&mut addrs, @0x123);
             idx = idx + 1;
         };
-        update_score_script(
-            deployer,
-            stage,
-            addrs,
-            scores
-        )
+        update_score_script(deployer, stage, addrs, scores)
     }
 
     #[test(chain = @0x1, non_deployer = @0x3)]
     #[expected_failure(abort_code = 0x10001, location = Self)]
-    fun failed_update_score_script(chain:&signer,non_deployer:&signer) acquires ModuleStore{
+    fun failed_update_score_script(chain: &signer, non_deployer: &signer) acquires ModuleStore {
         init_module_for_test(chain);
         let stage = 1;
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();
         let idx = 0;
-        while (idx < 50000) {
+        while (idx <50000) {
             vector::push_back(&mut scores, 100);
             vector::push_back(&mut addrs, @0x123);
             idx = idx + 1;
         };
-        update_score_script(
-            non_deployer,
-            stage,
-            addrs,
-            scores
-        )
+        update_score_script(non_deployer, stage, addrs, scores)
     }
 }

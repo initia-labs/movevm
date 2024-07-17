@@ -446,7 +446,10 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut proposal.votes,
             addr,
-            WeightVote {voting_power:voting_power_used, weights: n_weights}
+            WeightVote {
+                voting_power: voting_power_used,
+                weights: n_weights
+            }
         );
 
         // emit event
@@ -1489,7 +1492,7 @@ module initia_std::vip_weight_vote {
             vector[
                 decimal128::from_ratio(3, 5),
                 decimal128::from_ratio(1, 5)
-            ], // 24, 8 // user can vote with 
+            ], // 24, 8 // user can vote with
         );
 
         let proposal = get_proposal(1);
@@ -1518,7 +1521,7 @@ module initia_std::vip_weight_vote {
             vector[
                 decimal128::from_ratio(4, 5),
                 decimal128::from_ratio(1, 5)
-            ], // 32, 8 // user can vote with 
+            ], // 32, 8 // user can vote with
         );
         vote1 = get_tally(1, 1);
         vote2 = get_tally(1, 2);
