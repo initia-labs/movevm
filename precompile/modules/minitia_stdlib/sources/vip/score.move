@@ -9,7 +9,7 @@ module minitia_std::vip_score {
     use minitia_std::simple_map::{Self, SimpleMap};
 
     struct ModuleStore has key {
-        // TODO MAINNET: add init_stage to start scoring
+        init_stage: u64,
         deployers: SimpleMap<address, bool>,
         scores: table::Table<u64 /* stage */, Scores>,
     }
@@ -85,12 +85,18 @@ module minitia_std::vip_score {
         move_to(
             chain,
             ModuleStore {
+                init_stage: 1,
                 deployers: simple_map::create<address, bool>(),
                 scores: table::new<u64, Scores>(),
             }
         );
     }
-    //TODO: add function to initialzie the init stage
+
+    entry public fun set_init_stage(chain: &signer, stage: u64) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        module_store.init_stage = stage;
+    }
 
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
@@ -134,16 +140,13 @@ module minitia_std::vip_score {
         )
     }
 
-    fun check_previous_stage_finalized(
-        scores: &ModuleStore,
-        stage: u64
-    ) {
+    fun check_previous_stage_finalized(scores: &ModuleStore, stage: u64) {
         // stage 0 is always finalized because it is the first stage.
-        if (stage == 1) {
-            return
-        };
+        if (stage == 1) { return };
         assert!(
-            table::contains(&scores.scores, stage - 1) && table::borrow(&scores.scores,stage - 1).is_finalized,
+            table::contains(&scores.scores, stage - 1) && table::borrow(
+                &scores.scores, stage - 1
+            ).is_finalized,
             error::invalid_argument(EPREVIOUS_STAGE_NOT_FINALIZED)
         );
 
@@ -278,7 +281,7 @@ module minitia_std::vip_score {
         stage: u64,
         amount: u64
     ) acquires ModuleStore {
-        
+
         check_deployer_permission(deployer);
         assert!(
             amount >= 0,
@@ -604,7 +607,9 @@ module minitia_std::vip_score {
 
     #[test(chain = @0x1, deployer = @0x2)]
     #[expected_failure(abort_code = 0x10009, location = Self)]
-    fun failed_update_score_script_by_skip_finalize_previous_stage(chain: &signer, deployer: &signer) acquires ModuleStore {
+    fun failed_update_score_script_by_skip_finalize_previous_stage(
+        chain: &signer, deployer: &signer
+    ) acquires ModuleStore {
         init_module_for_test(chain);
         let init_stage = 1;
         let scores = vector::empty<u64>();
@@ -612,7 +617,7 @@ module minitia_std::vip_score {
         add_deployer_script(chain, signer::address_of(deployer));
         vector::push_back(&mut scores, 100);
         vector::push_back(&mut addrs, @0x123);
-        
+
         update_score_script(deployer, init_stage, addrs, scores);
 
         let next_stage = 2;

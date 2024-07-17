@@ -415,14 +415,17 @@ module initia_std::vip {
         imut_module_store: &ModuleStore,
         bridge_id: u64,
         stage: u64,
-    ){
+    ) {
         // if current stage is init stage of bridge, then skip this check
-        let init_stage = load_bridge(&imut_module_store.bridges, bridge_id).init_stage;
+        let init_stage = load_bridge(
+            &imut_module_store.bridges,
+            bridge_id
+        ).init_stage;
         if (stage != init_stage) {
             let prev_stage_data = table::borrow(
-            &imut_module_store.stage_data,
-            table_key::encode_u64(stage - 1)
-        ); 
+                &imut_module_store.stage_data,
+                table_key::encode_u64(stage - 1)
+            );
             assert!(
                 table::contains(
                     &prev_stage_data.snapshots,
@@ -432,6 +435,7 @@ module initia_std::vip {
             );
         };
     }
+
     fun load_bridge(
         bridges: &table::Table<vector<u8>, Bridge>,
         bridge_id: u64
@@ -1299,13 +1303,12 @@ module initia_std::vip {
         );
 
         // check previous stage snapshot is exist for preventing skipping stage
-        check_previous_stage_snapshot(module_store,bridge_id, stage);
+        check_previous_stage_snapshot(module_store, bridge_id, stage);
 
         let stage_data = table::borrow_mut(
             &mut module_store.stage_data,
             table_key::encode_u64(stage)
         );
-        
 
         assert!(
             !table::contains(
@@ -1705,7 +1708,6 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         module_store.challenge_period = challenge_period;
     }
-
 
     //
     // View Functions
@@ -3986,7 +3988,6 @@ module initia_std::vip {
             *simple_map::borrow(&total_score_map, &5),
         );
 
-
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
@@ -4678,7 +4679,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
-            init_stage,            
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
