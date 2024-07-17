@@ -119,14 +119,14 @@ module minitia_std::vip_score {
         amount: u64
     ) {
 
-        let score = table::borrow_mut_with_default(&mut scores.score, addr, 0);
+        let score = table::borrow_mut_with_default(&mut scores.score, account, 0);
 
         scores.total_score = scores.total_score - *score + amount;
         *score = amount;
 
         event::emit(
             UpdateScoreEvent {
-                account: addr,
+                account: account,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -155,13 +155,13 @@ module minitia_std::vip_score {
     //
 
     #[view]
-    public fun get_score(addr: address, stage: u64): u64 acquires ModuleStore {
+    public fun get_score(account: address, stage: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@minitia_std);
         if (!table::contains(&module_store.scores, stage)) {
             return 0
         };
         let scores = table::borrow(&module_store.scores, stage);
-        *table::borrow_with_default(&scores.score, addr, &0)
+        *table::borrow_with_default(&scores.score, account, &0)
     }
 
     #[view]
@@ -217,14 +217,14 @@ module minitia_std::vip_score {
             error::invalid_argument(EFINALIED_STAGE)
         );
 
-        let score = table::borrow_mut_with_default(&mut scores.score, addr, 0);
+        let score = table::borrow_mut_with_default(&mut scores.score, account, 0);
 
         *score = *score + amount;
         scores.total_score = scores.total_score + amount;
 
         event::emit(
             UpdateScoreEvent {
-                account: addr,
+                account: account,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -254,7 +254,7 @@ module minitia_std::vip_score {
             error::invalid_argument(EFINALIED_STAGE)
         );
 
-        let score = table::borrow_mut(&mut scores.score, addr);
+        let score = table::borrow_mut(&mut scores.score, account);
         assert!(
             *score >= amount,
             error::invalid_argument(EINSUFFICIENT_SCORE)
@@ -264,7 +264,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                account: addr,
+                account: account,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -298,7 +298,7 @@ module minitia_std::vip_score {
             error::invalid_argument(EFINALIED_STAGE)
         );
 
-        update_score_internal(scores, addr, stage, amount);
+        update_score_internal(scores, account, stage, amount);
     }
 
     //
