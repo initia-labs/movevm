@@ -130,20 +130,6 @@ module initia_std::vip_vesting {
         vested_reward_amount: u64,
         vesting_changes: vector<VestingChange>,
     }
-    
-    //
-    // Responses
-    //
-
-    struct UserVestingResponse has drop {
-        stage: u64,
-        initial_reward: u64,
-        remaining_reward: u64,
-        start_stage: u64,
-        end_stage: u64,
-        l2_score: u64,
-        minimum_score: u64,
-    }
 
     //
     // Implementations
@@ -873,31 +859,6 @@ module initia_std::vip_vesting {
     }
 
     #[view]
-    public fun get_user_vestings(
-        account_addr: address,
-        bridge_id: u64,
-        stages: vector<u64>,
-    ): vector<UserVestingResponse> acquires VestingStore {
-        let vestings = vector[];
-        vector::enumerate_ref(
-            &stages,
-            |_i, stage| {
-                let vesting = get_vesting<UserVesting>(account_addr, bridge_id, *stage);
-                vector::push_back(&mut vestings, UserVestingResponse {
-                    stage: *stage,
-                    initial_reward: vesting.initial_reward,
-                    remaining_reward: vesting.remaining_reward,
-                    start_stage: vesting.start_stage,
-                    end_stage: vesting.end_stage,
-                    l2_score: vesting.l2_score,
-                    minimum_score: vesting.minimum_score,
-                });
-            }
-        );
-
-        vestings
-    }
-    #[view]
     public fun get_user_vesting_finalized(
         account_addr: address,
         bridge_id: u64,
@@ -906,32 +867,6 @@ module initia_std::vip_vesting {
         get_vesting_finalized<UserVesting>(account_addr, bridge_id, stage)
     }
 
-    #[view]
-    public fun get_user_vestings_finalized(
-        account_addr: address,
-        bridge_id: u64,
-        stages: vector<u64>,
-    ): vector<UserVestingResponse> acquires VestingStore {
-        let vestings = vector[];
-        vector::enumerate_ref(
-            &stages,
-            |_i, stage| {
-                let vesting = get_vesting_finalized<UserVesting>(account_addr, bridge_id, *stage);
-                vector::push_back(&mut vestings, UserVestingResponse {
-                    stage: *stage,
-                    initial_reward: vesting.initial_reward,
-                    remaining_reward: vesting.remaining_reward,
-                    start_stage: vesting.start_stage,
-                    end_stage: vesting.end_stage,
-                    l2_score: vesting.l2_score,
-                    minimum_score: vesting.minimum_score,
-                });
-            }
-        );
-
-        vestings
-    }
-    
     #[view]
     public fun get_user_locked_reward(
         account_addr: address,
