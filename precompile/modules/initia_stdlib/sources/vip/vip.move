@@ -195,6 +195,7 @@ module initia_std::vip {
     }
 
     struct BridgeResponse has drop {
+        bridge_id: u64,
         bridge_addr: address,
         operator_addr: address,
         vip_l2_score_contract: string::String,
@@ -1768,6 +1769,7 @@ module initia_std::vip {
         let bridge = load_bridge(&module_store.bridges, bridge_id);
 
         BridgeResponse {
+            bridge_id: bridge_id,
             bridge_addr: bridge.bridge_addr,
             operator_addr: bridge.operator_addr,
             vip_l2_score_contract: bridge.vip_l2_score_contract,
@@ -1807,10 +1809,11 @@ module initia_std::vip {
         let bridge_infos = vector::empty<BridgeResponse>();
         loop {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
             vector::push_back(
                 &mut bridge_infos,
                 BridgeResponse {
+                    bridge_id: table_key::decode_u64(bridge_id_vec),
                     bridge_addr: bridge.bridge_addr,
                     operator_addr: bridge.operator_addr,
                     vip_l2_score_contract: bridge.vip_l2_score_contract,
