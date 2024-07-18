@@ -55,6 +55,7 @@ module initia_std::vip {
     const EINVALID_CLAIMABLE_PERIOD: u64 = 23;
     const EINVALID_CHALLENGE_PERIOD: u64 = 24;
     const EINVALID_CHALLENGE_STAGE: u64 = 25;
+    const EPREV_STAGE_SNAPSHOT_NOT_FOUND: u64 = 26;
     //
     //  Constants
     //
@@ -130,6 +131,7 @@ module initia_std::vip {
     }
 
     struct Bridge has store, drop {
+        init_stage: u64, // stage to start scoring and distribution reward
         bridge_addr: address,
         operator_addr: address,
         vip_l2_score_contract: string::String,
@@ -195,6 +197,7 @@ module initia_std::vip {
     }
 
     struct BridgeResponse has drop {
+        init_stage: u64,
         bridge_id: u64,
         bridge_addr: address,
         operator_addr: address,
@@ -405,6 +408,32 @@ module initia_std::vip {
             signer::address_of(agent) == module_store.agent_data.agent,
             error::permission_denied(EUNAUTHORIZED)
         );
+    }
+
+    // check previous stage snapshot is exist for preventing skipping stage
+    fun check_previous_stage_snapshot(
+        imut_module_store: &ModuleStore,
+        bridge_id: u64,
+        stage: u64,
+    ) {
+        // if current stage is init stage of bridge, then skip this check
+        let init_stage = load_bridge(
+            &imut_module_store.bridges,
+            bridge_id
+        ).init_stage;
+        if (stage != init_stage) {
+            let prev_stage_data = table::borrow(
+                &imut_module_store.stage_data,
+                table_key::encode_u64(stage - 1)
+            );
+            assert!(
+                table::contains(
+                    &prev_stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                ),
+                error::not_found(EPREV_STAGE_SNAPSHOT_NOT_FOUND)
+            );
+        };
     }
 
     fun load_bridge(
@@ -1024,6 +1053,7 @@ module initia_std::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
+        init_stage: u64,
         vip_l2_score_contract: string::String,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
@@ -1064,6 +1094,7 @@ module initia_std::vip {
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id),
             Bridge {
+                init_stage: init_stage,
                 bridge_addr: bridge_address,
                 operator_addr: operator,
                 vip_l2_score_contract,
@@ -1262,6 +1293,7 @@ module initia_std::vip {
     ) acquires ModuleStore {
         check_agent_permission(agent);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
         assert!(
             table::contains(
                 &module_store.stage_data,
@@ -1269,6 +1301,10 @@ module initia_std::vip {
             ),
             error::not_found(ESTAGE_DATA_NOT_FOUND)
         );
+
+        // check previous stage snapshot is exist for preventing skipping stage
+        check_previous_stage_snapshot(module_store, bridge_id, stage);
+
         let stage_data = table::borrow_mut(
             &mut module_store.stage_data,
             table_key::encode_u64(stage)
@@ -1783,6 +1819,7 @@ module initia_std::vip {
         let bridge = load_bridge(&module_store.bridges, bridge_id);
 
         BridgeResponse {
+            init_stage: bridge.init_stage,
             bridge_id: bridge_id,
             bridge_addr: bridge.bridge_addr,
             operator_addr: bridge.operator_addr,
@@ -1825,6 +1862,7 @@ module initia_std::vip {
             vector::push_back(
                 &mut bridge_infos,
                 BridgeResponse {
+                    init_stage: bridge.init_stage,
                     bridge_id: table_key::decode_u64(bridge_id_vec),
                     bridge_addr: bridge.bridge_addr,
                     operator_addr: bridge.operator_addr,
@@ -2122,6 +2160,7 @@ module initia_std::vip {
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
+        init_stage: u64,
         vip_l2_score_contract: string::String,
         mint_amount: u64,
         commission_max_rate: Decimal256,
@@ -2151,6 +2190,7 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
+            init_stage,
             vip_l2_score_contract,
             commission_max_rate,
             commission_max_change_rate,
@@ -2181,6 +2221,7 @@ module initia_std::vip {
             operator,
             bridge_id,
             bridge_address,
+            1,
             vip_l2_score_contract,
             mint_amount,
             decimal256::from_string(
@@ -2529,6 +2570,7 @@ module initia_std::vip {
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     fun test_update_vip_weight(chain: &signer, operator: &signer,) acquires ModuleStore {
+        let init_stage = 1;
         let mint_amount = 1_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
@@ -2546,6 +2588,7 @@ module initia_std::vip {
             signer::address_of(operator),
             1,
             @0x90,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3557,6 +3600,7 @@ module initia_std::vip {
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     fun test_fund_reward_script(chain: &signer, operator: &signer,) acquires ModuleStore {
+        let init_stage = 1;
         let mint_amount = 100_000_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
         vip_tvl_manager::init_module_for_test(chain);
@@ -3581,6 +3625,7 @@ module initia_std::vip {
             operator_addr,
             1,
             @0x90,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3602,6 +3647,7 @@ module initia_std::vip {
             operator_addr,
             2,
             @0x91,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3623,6 +3669,7 @@ module initia_std::vip {
             operator_addr,
             3,
             @0x92,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3766,6 +3813,7 @@ module initia_std::vip {
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore, TestCapability {
+        let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         vip_tvl_manager::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
@@ -3812,6 +3860,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3834,6 +3883,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3883,6 +3933,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             @0x999,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3918,9 +3969,23 @@ module initia_std::vip {
         submit_snapshot(
             agent,
             bridge_id1,
+            3,
+            *simple_map::borrow(&merkle_root_map, &3),
+            *simple_map::borrow(&total_score_map, &3),
+        );
+        submit_snapshot(
+            agent,
+            bridge_id1,
+            4,
+            *simple_map::borrow(&merkle_root_map, &4),
+            *simple_map::borrow(&total_score_map, &4),
+        );
+        submit_snapshot(
+            agent,
+            bridge_id1,
             5,
             *simple_map::borrow(&merkle_root_map, &5),
-            *simple_map::borrow(&total_score_map, &5), // skip 3,4 stage
+            *simple_map::borrow(&total_score_map, &5),
         );
 
         skip_period(
@@ -4496,6 +4561,7 @@ module initia_std::vip {
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x10015, location = Self)]
     fun failed_update_vip_weights(chain: &signer, operator: &signer) acquires ModuleStore {
+        let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
@@ -4516,6 +4582,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4538,6 +4605,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4567,6 +4635,7 @@ module initia_std::vip {
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x10015, location = Self)]
     fun failed_update_vip_weight(chain: &signer, operator: &signer) acquires ModuleStore {
+        let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
@@ -4587,6 +4656,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4609,6 +4679,7 @@ module initia_std::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4690,6 +4761,7 @@ module initia_std::vip {
             operator2,
             bridge_id2,
             @0x1000,
+            3,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
             decimal256::from_string(
@@ -4744,6 +4816,7 @@ module initia_std::vip {
         Object<Metadata>,
         string::String
     ) acquires ModuleStore {
+        let init_stage = 1;
         dex::init_module_for_test(chain);
         staking::init_module_for_test(chain);
         primary_fungible_store::init_module_for_test(chain);
@@ -4796,6 +4869,7 @@ module initia_std::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(

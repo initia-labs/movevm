@@ -350,7 +350,7 @@ module initia_std::vip_weight_vote {
 
     // weight vote
 
-    public entry fun submit_merkle_root(
+    public entry fun submit_snapshot(
         submitter: &signer,
         merkle_root: vector<u8>,
         api_uri: String,
@@ -369,7 +369,7 @@ module initia_std::vip_weight_vote {
         );
 
         let voting_end_time = calculate_voting_end_time(timestamp, module_store);
-        submit_merkle_root_internal(
+        submit_snapshot_internal(
             module_store,
             merkle_root,
             api_uri,
@@ -862,7 +862,7 @@ module initia_std::vip_weight_vote {
         // update submitter and submit merkle root
         module_store.submitter = new_submitter;
         let voting_end_time = timestamp + module_store.voting_period;
-        submit_merkle_root_internal(
+        submit_snapshot_internal(
             module_store,
             merkle_root,
             api_uri,
@@ -874,7 +874,7 @@ module initia_std::vip_weight_vote {
 
     // weight vote
 
-    fun submit_merkle_root_internal(
+    fun submit_snapshot_internal(
         module_store: &mut ModuleStore,
         merkle_root: vector<u8>,
         api_uri: String,
@@ -1284,6 +1284,7 @@ module initia_std::vip_weight_vote {
     const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
     #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
+        let init_stage = 1;
         initialize(
             chain,
             100,
@@ -1312,6 +1313,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             1,
             @0x12,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
@@ -1322,6 +1324,7 @@ module initia_std::vip_weight_vote {
             @0x2,
             2,
             @0x12,
+            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::zero(),
             decimal256::zero(),
@@ -1441,7 +1444,7 @@ module initia_std::vip_weight_vote {
         let tree = create_merkle_tree(epoch, addresses, voting_powers);
         let merkle_root = get_merkle_root(tree);
 
-        submit_merkle_root(
+        submit_snapshot(
             submitter,
             merkle_root,
             string::utf8(b"https://abc.com"),
@@ -1573,7 +1576,7 @@ module initia_std::vip_weight_vote {
         let voting_powers = vector[10, 20, 30, 40];
         let tree = create_merkle_tree(epoch, addresses, voting_powers);
         let merkle_root = get_merkle_root(tree);
-        submit_merkle_root(
+        submit_snapshot(
             submitter,
             merkle_root,
             string::utf8(b"https://abc.com"),
