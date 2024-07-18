@@ -152,7 +152,6 @@ pub fn clear_error() {
 
 pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) {
     if let Some(error_msg) = error_msg {
-
         let msg: Vec<u8> = err.to_string().into();
         *error_msg = UnmanagedVector::new(Some(msg));
     } else {
