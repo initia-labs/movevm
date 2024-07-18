@@ -476,7 +476,7 @@ module initia_std::vip {
         stage: u64,
         merkle_proofs: vector<vector<u8>>,
         l2_score: u64,
-    ): FungibleAsset acquires ModuleStore {
+    ): (FungibleAsset,u64) acquires ModuleStore {
 
         // check claim period
         check_claimable_period(bridge_id, stage);
@@ -519,7 +519,7 @@ module initia_std::vip {
             target_hash,
         );
 
-        let vested_reward = vip_vesting::claim_user_reward(
+        let (vested_reward ,penalty_reward)= vip_vesting::claim_user_reward(
             account_addr,
             bridge_id,
             stage,
@@ -529,7 +529,7 @@ module initia_std::vip {
             stage_data.proportion,
         );
 
-        vested_reward
+        (vested_reward,penalty_reward)
     }
 
     fun zapping(
@@ -795,7 +795,7 @@ module initia_std::vip {
             if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
             let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(iter);
             // bridge balance from tvl manager
-            let bridge_balance = vip_tvl_manager::calculate_average_tvl(
+            let bridge_balance = vip_tvl_manager::get_average_tvl(
                 table_key::encode_u64(module_store.stage),
                 bridge_id_vec
             );
@@ -871,12 +871,12 @@ module initia_std::vip {
             simple_map::add(weight_shares, bridge_id, weight);
         }
     }
-
+    // retunr claim operator reward and remaining(by rounding math issue on finalized stage)
     public fun claim_operator_reward(
         operator: &signer,
         bridge_id: u64,
         stage: u64,
-    ): FungibleAsset acquires ModuleStore {
+    ): (FungibleAsset) acquires ModuleStore {
         // check claim period
         check_claimable_period(bridge_id, stage);
 
@@ -901,14 +901,14 @@ module initia_std::vip {
             error::unavailable(EVESTING_IN_PROGRESS)
         );
 
-        let vested_reward = vip_vesting::claim_operator_reward(
+        let (vested_reward) = vip_vesting::claim_operator_reward(
             operator_addr,
             bridge_id,
             stage,
             stage + stage_data.operator_vesting_period,
         );
 
-        vested_reward
+        (vested_reward)
     }
 
     fun validate_vip_weights(module_store: &ModuleStore) {
@@ -1403,6 +1403,7 @@ module initia_std::vip {
     ) acquires ModuleStore {
         if (
             !vip_vesting::is_operator_vesting_store_registered(
+
                 signer::address_of(operator),
                 bridge_id
             )) {
@@ -1431,19 +1432,22 @@ module initia_std::vip {
             vip_vesting::register_user_vesting_store(account, bridge_id);
         };
 
-        let vested_reward = claim_user_reward(
+        let (vested_reward,penalty_amount) = claim_user_reward(
             account,
             bridge_id,
             stage,
             merkle_proofs,
             l2_score,
         );
-
         coin::deposit(
             signer::address_of(account),
             vested_reward
         );
-    }
+
+        if (penalty_amount > 0) {
+            vip_vault::penalty(account,penalty_amount);
+        }
+    }   
 
     public entry fun batch_claim_operator_reward_script(
         operator: &signer,
