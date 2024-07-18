@@ -12,7 +12,7 @@ Requires **Rust 1.77+ and Go 1.22+.**
 
 The Rust implementation of the VM is compiled to a library called libmovevm. This is then linked to the Go code when the final binary is built. For that reason not all systems supported by Go are supported by this project.
 
-Linux (tested on CentOS7 and Alpine) and macOS is supported.
+Linux (tested on CentOS7 and Alpine) and macOS are supported.
 
 ### Builds of libmovevm
 
