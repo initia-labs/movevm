@@ -27,10 +27,10 @@ module initia_std::vip_weight_vote {
     const EMODULE_STORE_ALREADY_EXISTS: u64 = 1;
     const EINVALID_MERKLE_PROOFS: u64 = 2;
     const EINVALID_PROOF_LENGTH: u64 = 3;
-    const ESTAGE_NOT_FOUND: u64 = 4;
+    const ECYCLE_NOT_FOUND: u64 = 4;
     const EVECTOR_LENGTH: u64 = 5;
     const EVOTING_END: u64 = 6;
-    const ESTAGE_NOT_END: u64 = 7;
+    const ECYCLE_NOT_END: u64 = 7;
     const EUNAUTHORIZED: u64 = 8;
     const ECANNOT_CREATE_CHALLENGE_PROPOSAL: u64 = 9;
     const EVOTE_NOT_FOUND: u64 = 10;
@@ -365,7 +365,7 @@ module initia_std::vip_weight_vote {
         );
         assert!(
             module_store.cycle_end_timestamp < timestamp,
-            error::invalid_state(ESTAGE_NOT_END)
+            error::invalid_state(ECYCLE_NOT_END)
         );
 
         let voting_end_time = calculate_voting_end_time(timestamp, module_store);
@@ -406,7 +406,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ESTAGE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND)
         );
         let proposal = table::borrow_mut(
             &mut module_store.proposals,
@@ -725,7 +725,7 @@ module initia_std::vip_weight_vote {
         );
         assert!(
              table::prepare<vector<u8>, Proposal>(&mut iter),
-            error::not_found(ESTAGE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND)
         );
         let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(&mut iter);
 
@@ -733,7 +733,7 @@ module initia_std::vip_weight_vote {
         if (proposal.voting_end_time > timestamp) {
             assert!(
                 table::prepare<vector<u8>, Proposal>(&mut iter),
-                error::not_found(ESTAGE_NOT_FOUND)
+                error::not_found(ECYCLE_NOT_FOUND)
             );
             (cycle_key, _) = table::next<vector<u8>, Proposal>(&mut iter);
         };
@@ -1139,7 +1139,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ESTAGE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND)
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
         proposal.total_tally
@@ -1151,7 +1151,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ESTAGE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND)
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
         *table::borrow_with_default(
@@ -1245,7 +1245,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ESTAGE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND)
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
 
@@ -1265,7 +1265,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ESTAGE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND)
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
         let vote = table::borrow(&proposal.votes, user);
