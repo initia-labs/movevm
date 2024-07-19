@@ -140,7 +140,10 @@ module minitia_std::vip_score {
         )
     }
 
-    fun check_previous_stage_finalized(module_store: &ModuleStore, stage: u64) {
+    fun check_previous_stage_finalized(
+        module_store: &ModuleStore,
+        stage: u64
+    ) {
         // init stage is always finalized because it is the first stage.
         let init_stage = module_store.init_stage;
         if (stage == init_stage) { return };

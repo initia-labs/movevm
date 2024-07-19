@@ -1,7 +1,6 @@
 module initia_std::vip_vault {
     use std::error;
     use std::signer;
-    use std::event;
     use initia_std::object::{Self, ExtendRef};
     use initia_std::fungible_asset::FungibleAsset;
     use initia_std::primary_fungible_store;
@@ -9,7 +8,7 @@ module initia_std::vip_vault {
     use initia_std::vip_reward;
 
     friend initia_std::vip;
-
+    friend initia_std::vip_vesting;
     //
     // Errors
     //
@@ -37,11 +36,7 @@ module initia_std::vip_vault {
         vault_store_addr: address,
     }
 
-    #[event]
-    struct Penalty has drop , store {
-        offender: address, 
-        amount: u64,
-    }
+
     //
     // Implementations
     //
@@ -106,25 +101,6 @@ module initia_std::vip_vault {
             vault_store,
             module_store.reward_per_stage
         )
-    }
-    public(friend) fun penalty(offender: &signer, penalty_amount:u64) acquires ModuleStore {
-        let vault_store_addr = get_vault_store_address();
-        assert!(
-            penalty_amount > 0,
-            error::invalid_argument(EINVALID_AMOUNT)
-        );
-        primary_fungible_store::transfer(
-            offender,
-            vip_reward::reward_metadata(),
-            vault_store_addr,
-            penalty_amount
-        );
-        event::emit(
-            Penalty {
-                offender: signer::address_of(offender),
-                amount: penalty_amount,
-            }
-        );
     }
 
     //

@@ -724,7 +724,7 @@ module initia_std::vip_weight_vote {
             2
         );
         assert!(
-             table::prepare<vector<u8>, Proposal>(iter),
+            table::prepare<vector<u8>, Proposal>(iter),
             error::not_found(ECYCLE_NOT_FOUND)
         );
         let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(iter);
@@ -739,10 +739,7 @@ module initia_std::vip_weight_vote {
         };
 
         let last_finalized_proposal_id = table_key::decode_u64(cycle_key);
-        let last_finalized_proposal = table::borrow(
-            &module_store.proposals,
-            cycle_key
-            );
+        let last_finalized_proposal = table::borrow(&module_store.proposals, cycle_key);
         (
             last_finalized_proposal_id,
             last_finalized_proposal
