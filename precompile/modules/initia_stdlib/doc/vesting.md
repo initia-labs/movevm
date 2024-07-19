@@ -5,66 +5,67 @@
 
 
 
--  [Resource `VestingStore`](#0x1_vip_vesting_VestingStore)
--  [Struct `UserVesting`](#0x1_vip_vesting_UserVesting)
--  [Struct `OperatorVesting`](#0x1_vip_vesting_OperatorVesting)
--  [Struct `VestingChange`](#0x1_vip_vesting_VestingChange)
--  [Struct `UserVestingCreateEvent`](#0x1_vip_vesting_UserVestingCreateEvent)
--  [Struct `OperatorVestingCreateEvent`](#0x1_vip_vesting_OperatorVestingCreateEvent)
--  [Struct `UserVestingFinalizedEvent`](#0x1_vip_vesting_UserVestingFinalizedEvent)
--  [Struct `OperatorVestingFinalizedEvent`](#0x1_vip_vesting_OperatorVestingFinalizedEvent)
--  [Struct `UserVestingClaimEvent`](#0x1_vip_vesting_UserVestingClaimEvent)
--  [Struct `OperatorVestingClaimEvent`](#0x1_vip_vesting_OperatorVestingClaimEvent)
--  [Constants](#@Constants_0)
--  [Function `register_vesting_store`](#0x1_vip_vesting_register_vesting_store)
--  [Function `generate_vesting_store_seed`](#0x1_vip_vesting_generate_vesting_store_seed)
--  [Function `add_vesting`](#0x1_vip_vesting_add_vesting)
--  [Function `finalize_vesting`](#0x1_vip_vesting_finalize_vesting)
--  [Function `create_vesting_store_address`](#0x1_vip_vesting_create_vesting_store_address)
--  [Function `get_vesting_store_address`](#0x1_vip_vesting_get_vesting_store_address)
--  [Function `calculate_operator_vest`](#0x1_vip_vesting_calculate_operator_vest)
--  [Function `calculate_user_vest`](#0x1_vip_vesting_calculate_user_vest)
--  [Function `get_vesting`](#0x1_vip_vesting_get_vesting)
--  [Function `get_vesting_finalized`](#0x1_vip_vesting_get_vesting_finalized)
--  [Function `get_last_claimed_stage`](#0x1_vip_vesting_get_last_claimed_stage)
--  [Function `vest_user_reward`](#0x1_vip_vesting_vest_user_reward)
--  [Function `vest_operator_reward`](#0x1_vip_vesting_vest_operator_reward)
--  [Function `claim_previous_operator_vestings`](#0x1_vip_vesting_claim_previous_operator_vestings)
--  [Function `claim_previous_user_vestings`](#0x1_vip_vesting_claim_previous_user_vestings)
--  [Function `add_user_vesting`](#0x1_vip_vesting_add_user_vesting)
--  [Function `add_operator_vesting`](#0x1_vip_vesting_add_operator_vesting)
--  [Function `register_user_vesting_store`](#0x1_vip_vesting_register_user_vesting_store)
--  [Function `register_operator_vesting_store`](#0x1_vip_vesting_register_operator_vesting_store)
--  [Function `is_user_vesting_store_registered`](#0x1_vip_vesting_is_user_vesting_store_registered)
--  [Function `is_operator_vesting_store_registered`](#0x1_vip_vesting_is_operator_vesting_store_registered)
--  [Function `is_user_reward_store_registered`](#0x1_vip_vesting_is_user_reward_store_registered)
--  [Function `is_operator_reward_store_registered`](#0x1_vip_vesting_is_operator_reward_store_registered)
--  [Function `register_user_reward_store`](#0x1_vip_vesting_register_user_reward_store)
--  [Function `register_operator_reward_store`](#0x1_vip_vesting_register_operator_reward_store)
--  [Function `supply_reward_on_user`](#0x1_vip_vesting_supply_reward_on_user)
--  [Function `supply_reward_on_operator`](#0x1_vip_vesting_supply_reward_on_operator)
--  [Function `claim_user_reward`](#0x1_vip_vesting_claim_user_reward)
--  [Function `claim_operator_reward`](#0x1_vip_vesting_claim_operator_reward)
--  [Function `zapping_vesting`](#0x1_vip_vesting_zapping_vesting)
--  [Function `get_user_reward_store_address`](#0x1_vip_vesting_get_user_reward_store_address)
--  [Function `get_user_last_claimed_stage`](#0x1_vip_vesting_get_user_last_claimed_stage)
--  [Function `get_user_claimed_stages`](#0x1_vip_vesting_get_user_claimed_stages)
--  [Function `get_user_vesting`](#0x1_vip_vesting_get_user_vesting)
--  [Function `get_user_vesting_finalized`](#0x1_vip_vesting_get_user_vesting_finalized)
--  [Function `get_user_locked_reward`](#0x1_vip_vesting_get_user_locked_reward)
--  [Function `get_user_unlocked_reward`](#0x1_vip_vesting_get_user_unlocked_reward)
--  [Function `get_user_vesting_initial_reward`](#0x1_vip_vesting_get_user_vesting_initial_reward)
--  [Function `get_user_vesting_remaining_reward`](#0x1_vip_vesting_get_user_vesting_remaining_reward)
--  [Function `get_user_vesting_minimum_score`](#0x1_vip_vesting_get_user_vesting_minimum_score)
--  [Function `get_operator_reward_store_address`](#0x1_vip_vesting_get_operator_reward_store_address)
--  [Function `get_operator_last_claimed_stage`](#0x1_vip_vesting_get_operator_last_claimed_stage)
--  [Function `get_operator_claimed_stages`](#0x1_vip_vesting_get_operator_claimed_stages)
--  [Function `get_operator_vesting`](#0x1_vip_vesting_get_operator_vesting)
--  [Function `get_operator_vesting_finalized`](#0x1_vip_vesting_get_operator_vesting_finalized)
--  [Function `get_operator_locked_reward`](#0x1_vip_vesting_get_operator_locked_reward)
--  [Function `get_operator_unlocked_reward`](#0x1_vip_vesting_get_operator_unlocked_reward)
--  [Function `get_operator_vesting_initial_reward`](#0x1_vip_vesting_get_operator_vesting_initial_reward)
--  [Function `get_operator_vesting_remaining_reward`](#0x1_vip_vesting_get_operator_vesting_remaining_reward)
+- [Module `0x1::vip_vesting`](#module-0x1vip_vesting)
+  - [Resource `VestingStore`](#resource-vestingstore)
+  - [Struct `UserVesting`](#struct-uservesting)
+  - [Struct `OperatorVesting`](#struct-operatorvesting)
+  - [Struct `VestingChange`](#struct-vestingchange)
+  - [Struct `UserVestingCreateEvent`](#struct-uservestingcreateevent)
+  - [Struct `OperatorVestingCreateEvent`](#struct-operatorvestingcreateevent)
+  - [Struct `UserVestingFinalizedEvent`](#struct-uservestingfinalizedevent)
+  - [Struct `OperatorVestingFinalizedEvent`](#struct-operatorvestingfinalizedevent)
+  - [Struct `UserVestingClaimEvent`](#struct-uservestingclaimevent)
+  - [Struct `OperatorVestingClaimEvent`](#struct-operatorvestingclaimevent)
+  - [Constants](#constants)
+  - [Function `register_vesting_store`](#function-register_vesting_store)
+  - [Function `generate_vesting_store_seed`](#function-generate_vesting_store_seed)
+  - [Function `add_vesting`](#function-add_vesting)
+  - [Function `finalize_vesting`](#function-finalize_vesting)
+  - [Function `create_vesting_store_address`](#function-create_vesting_store_address)
+  - [Function `get_vesting_store_address`](#function-get_vesting_store_address)
+  - [Function `calculate_operator_vest`](#function-calculate_operator_vest)
+  - [Function `calculate_user_vest`](#function-calculate_user_vest)
+  - [Function `get_vesting`](#function-get_vesting)
+  - [Function `get_vesting_finalized`](#function-get_vesting_finalized)
+  - [Function `get_last_claimed_stage`](#function-get_last_claimed_stage)
+  - [Function `vest_user_reward`](#function-vest_user_reward)
+  - [Function `vest_operator_reward`](#function-vest_operator_reward)
+  - [Function `claim_previous_operator_vestings`](#function-claim_previous_operator_vestings)
+  - [Function `claim_previous_user_vestings`](#function-claim_previous_user_vestings)
+  - [Function `add_user_vesting`](#function-add_user_vesting)
+  - [Function `add_operator_vesting`](#function-add_operator_vesting)
+  - [Function `register_user_vesting_store`](#function-register_user_vesting_store)
+  - [Function `register_operator_vesting_store`](#function-register_operator_vesting_store)
+  - [Function `is_user_vesting_store_registered`](#function-is_user_vesting_store_registered)
+  - [Function `is_operator_vesting_store_registered`](#function-is_operator_vesting_store_registered)
+  - [Function `is_user_reward_store_registered`](#function-is_user_reward_store_registered)
+  - [Function `is_operator_reward_store_registered`](#function-is_operator_reward_store_registered)
+  - [Function `register_user_reward_store`](#function-register_user_reward_store)
+  - [Function `register_operator_reward_store`](#function-register_operator_reward_store)
+  - [Function `supply_reward_on_user`](#function-supply_reward_on_user)
+  - [Function `supply_reward_on_operator`](#function-supply_reward_on_operator)
+  - [Function `claim_user_reward`](#function-claim_user_reward)
+  - [Function `claim_operator_reward`](#function-claim_operator_reward)
+  - [Function `zapping_vesting`](#function-zapping_vesting)
+  - [Function `get_user_reward_store_address`](#function-get_user_reward_store_address)
+  - [Function `get_user_last_claimed_stage`](#function-get_user_last_claimed_stage)
+  - [Function `get_user_claimed_stages`](#function-get_user_claimed_stages)
+  - [Function `get_user_vesting`](#function-get_user_vesting)
+  - [Function `get_user_vesting_finalized`](#function-get_user_vesting_finalized)
+  - [Function `get_user_locked_reward`](#function-get_user_locked_reward)
+  - [Function `get_user_unlocked_reward`](#function-get_user_unlocked_reward)
+  - [Function `get_user_vesting_initial_reward`](#function-get_user_vesting_initial_reward)
+  - [Function `get_user_vesting_remaining_reward`](#function-get_user_vesting_remaining_reward)
+  - [Function `get_user_vesting_minimum_score`](#function-get_user_vesting_minimum_score)
+  - [Function `get_operator_reward_store_address`](#function-get_operator_reward_store_address)
+  - [Function `get_operator_last_claimed_stage`](#function-get_operator_last_claimed_stage)
+  - [Function `get_operator_claimed_stages`](#function-get_operator_claimed_stages)
+  - [Function `get_operator_vesting`](#function-get_operator_vesting)
+  - [Function `get_operator_vesting_finalized`](#function-get_operator_vesting_finalized)
+  - [Function `get_operator_locked_reward`](#function-get_operator_locked_reward)
+  - [Function `get_operator_unlocked_reward`](#function-get_operator_unlocked_reward)
+  - [Function `get_operator_vesting_initial_reward`](#function-get_operator_vesting_initial_reward)
+  - [Function `get_operator_vesting_remaining_reward`](#function-get_operator_vesting_remaining_reward)
 
 
 <pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs">0x1::bcs</a>;
@@ -1272,7 +1273,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="vesting.md#0x1_vip_vesting_add_user_vesting">add_user_vesting</a>(account_addr: <b>address</b>, bridge_id: u64, start_stage: u64, end_stage: u64, l2_score: u64, total_l2_score: u64, proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>): u64
+<pre><code><b>fun</b> <a href="vesting.md#0x1_vip_vesting_add_user_vesting">add_user_vesting</a>(account_addr: <b>address</b>, bridge_id: u64, start_stage: u64, end_stage: u64, l2_score: u64, total_l2_score: u64, min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>): u64
 </code></pre>
 
 
@@ -1288,13 +1289,13 @@
     end_stage: u64,
     l2_score: u64,
     total_l2_score: u64,
-    proportion: Decimal256,
+    min_score_rate: Decimal256,
 ): u64 <b>acquires</b> <a href="vesting.md#0x1_vip_vesting_VestingStore">VestingStore</a> {
     <b>let</b> reward_store_addr = <a href="vesting.md#0x1_vip_vesting_get_user_reward_store_address">get_user_reward_store_address</a>(bridge_id);
     <b>let</b> stage_reward = <a href="reward.md#0x1_vip_reward_get_stage_reward">vip_reward::get_stage_reward</a>(reward_store_addr, start_stage);
     <b>let</b> score_ratio = <a href="decimal256.md#0x1_decimal256_from_ratio_u64">decimal256::from_ratio_u64</a>(l2_score, total_l2_score);
     <b>let</b> vesting_reward_amount = <a href="decimal256.md#0x1_decimal256_mul_u64">decimal256::mul_u64</a>(&score_ratio, stage_reward);
-    <b>let</b> minimum_score = <a href="decimal256.md#0x1_decimal256_mul_u64">decimal256::mul_u64</a>(&proportion, l2_score);
+    <b>let</b> minimum_score = <a href="decimal256.md#0x1_decimal256_mul_u64">decimal256::mul_u64</a>(&min_score_rate, l2_score);
 
     <a href="vesting.md#0x1_vip_vesting_add_vesting">add_vesting</a>&lt;<a href="vesting.md#0x1_vip_vesting_UserVesting">UserVesting</a>&gt;(account_addr, bridge_id, start_stage, <a href="vesting.md#0x1_vip_vesting_UserVesting">UserVesting</a>{
         initial_reward: vesting_reward_amount,
@@ -1650,7 +1651,7 @@
 
 
 
-<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="vesting.md#0x1_vip_vesting_claim_user_reward">claim_user_reward</a>(account_addr: <b>address</b>, bridge_id: u64, start_stage: u64, end_stage: u64, l2_score: u64, total_l2_score: u64, proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>): <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="vesting.md#0x1_vip_vesting_claim_user_reward">claim_user_reward</a>(account_addr: <b>address</b>, bridge_id: u64, start_stage: u64, end_stage: u64, l2_score: u64, total_l2_score: u64, min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>): <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>
 </code></pre>
 
 
@@ -1666,7 +1667,7 @@
     end_stage: u64,
     l2_score: u64,
     total_l2_score: u64,
-    proportion: Decimal256,
+    min_score_rate: Decimal256,
 ): FungibleAsset <b>acquires</b> <a href="vesting.md#0x1_vip_vesting_VestingStore">VestingStore</a>{
     <b>let</b> (vested_reward, vesting_changes) = <a href="vesting.md#0x1_vip_vesting_claim_previous_user_vestings">claim_previous_user_vestings</a>(
         account_addr,
@@ -1687,7 +1688,7 @@
             end_stage,
             l2_score,
             total_l2_score,
-            proportion
+            min_score_rate
         );
     };
 

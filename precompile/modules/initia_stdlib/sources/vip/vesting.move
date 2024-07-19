@@ -551,13 +551,13 @@ module initia_std::vip_vesting {
         end_stage: u64,
         l2_score: u64,
         total_l2_score: u64,
-        proportion: Decimal256,
+        min_score_rate: Decimal256,
     ): u64 acquires VestingStore {
         let reward_store_addr = get_user_reward_store_address(bridge_id);
         let stage_reward = vip_reward::get_stage_reward(reward_store_addr, start_stage);
         let score_ratio = decimal256::from_ratio_u64(l2_score, total_l2_score);
         let vesting_reward_amount = decimal256::mul_u64(&score_ratio, stage_reward);
-        let minimum_score = decimal256::mul_u64(&proportion, l2_score);
+        let minimum_score = decimal256::mul_u64(&min_score_rate, l2_score);
 
         add_vesting<UserVesting>(
             account_addr,
@@ -701,7 +701,7 @@ module initia_std::vip_vesting {
         end_stage: u64,
         l2_score: u64,
         total_l2_score: u64,
-        proportion: Decimal256,
+        min_score_rate: Decimal256,
     ): (FungibleAsset,u64) acquires VestingStore {
         let (vested_reward,penalty_reward, vesting_changes) = claim_previous_user_vestings(
             account_addr,
@@ -721,7 +721,7 @@ module initia_std::vip_vesting {
                 end_stage,
                 l2_score,
                 total_l2_score,
-                proportion,
+                min_score_rate,
             );
         };
 

@@ -37,7 +37,7 @@ module initia_std::vip {
     const EUNAUTHORIZED: u64 = 5;
     const EINVALID_MIN_ELIGIBLE_TVL: u64 = 6;
     const EINVALID_MAX_TVL: u64 = 7;
-    const EINVALID_PROPORTION: u64 = 8;
+    const EINVALID_MIN_SCORE_RATIO: u64 = 8;
     const EINVALID_TOTAL_SHARE: u64 = 9;
     const EALREADY_FUNDED: u64 = 10;
     const EINVALID_FUND_STAGE: u64 = 11;
@@ -63,7 +63,7 @@ module initia_std::vip {
     const PROOF_LENGTH: u64 = 32;
     const REWARD_SYMBOL: vector<u8> = b"uinit";
     const DEFAULT_POOL_SPLIT_RATIO: vector<u8> = b"0.4";
-    const DEFAULT_PROPORTION_RATIO: vector<u8> = b"0.5";
+    const DEFAULT_MIN_SCORE_RATIO: vector<u8> = b"0.5";
     const DEFAULT_USER_VESTING_PERIOD: u64 = 52; // 52 times
     const DEFAULT_OPERATOR_VESTING_PERIOD: u64 = 52;
     const DEFAULT_STAGE_PERIOD: u64 = 604800; // 1 week
@@ -84,10 +84,10 @@ module initia_std::vip {
         challenge_period: u64,
         // agent for snapshot taker and VIP reward funder
         agent_data: AgentData,
-        // governance-defined proportion to decrease overhead of keeping the L2 INIT balance.
-        // a user only need to keep the `vesting.l2_score * proportion` amount of INIT token
+        // governance-defined min_score_ratio to decrease overhead of keeping the L2 INIT balance.
+        // a user only need to keep the `vesting.l2_score * min_score_ratio` amount of INIT token
         // to vest whole vesting rewards.
-        proportion: Decimal256,
+        min_score_ratio: Decimal256,
         // if pool_split_ratio is 0.4,
         // balance pool takes 0.4 and weight pool takes 0.6
         pool_split_ratio: Decimal256,
@@ -119,7 +119,7 @@ module initia_std::vip {
         operator_vesting_period: u64,
         user_vesting_release_time: u64,
         operator_vesting_release_time: u64,
-        proportion: Decimal256,
+        min_score_ratio: Decimal256,
         snapshots: table::Table<vector<u8> /* bridge id */, Snapshot>
     }
 
@@ -168,7 +168,7 @@ module initia_std::vip {
         stage: u64,
         stage_period: u64,
         agent_data: AgentData,
-        proportion: Decimal256,
+        min_score_ratio: Decimal256,
         pool_split_ratio: Decimal256,
         user_vesting_period: u64,
         operator_vesting_period: u64,
@@ -193,7 +193,7 @@ module initia_std::vip {
         operator_vesting_period: u64,
         user_vesting_release_time: u64,
         operator_vesting_release_time: u64,
-        proportion: Decimal256,
+        min_score_ratio: Decimal256,
     }
 
     struct BridgeResponse has drop {
@@ -238,7 +238,7 @@ module initia_std::vip {
         operator_vesting_period: u64,
         user_vesting_release_time: u64,
         operator_vesting_release_time: u64,
-        proportion: Decimal256,
+        min_score_ratio: Decimal256,
     }
 
     #[event]
@@ -273,8 +273,8 @@ module initia_std::vip {
                 user_vesting_period: DEFAULT_USER_VESTING_PERIOD,
                 operator_vesting_period: DEFAULT_OPERATOR_VESTING_PERIOD,
                 challenge_period: DEFAULT_CHALLENGE_PERIOD,
-                proportion: decimal256::from_string(
-                    &string::utf8(DEFAULT_PROPORTION_RATIO)
+                min_score_ratio: decimal256::from_string(
+                    &string::utf8(DEFAULT_MIN_SCORE_RATIO)
                 ),
                 pool_split_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_POOL_SPLIT_RATIO)
@@ -526,7 +526,7 @@ module initia_std::vip {
             stage + stage_data.user_vesting_period,
             l2_score,
             snapshot.total_l2_score,
-            stage_data.proportion,
+            stage_data.min_score_ratio,
         );
 
         (vested_reward,penalty_reward)
@@ -1257,7 +1257,7 @@ module initia_std::vip {
                 operator_vesting_period: module_store.operator_vesting_period,
                 user_vesting_release_time: user_vesting_release_time,
                 operator_vesting_release_time: operator_vesting_release_time,
-                proportion: module_store.proportion,
+                min_score_ratio: module_store.min_score_ratio,
                 snapshots: table::new<vector<u8>, Snapshot>(),
             },
         );
@@ -1273,7 +1273,7 @@ module initia_std::vip {
                 operator_vesting_period: module_store.operator_vesting_period,
                 user_vesting_release_time,
                 operator_vesting_release_time,
-                proportion: module_store.proportion,
+                min_score_ratio: module_store.min_score_ratio,
             }
         );
 
@@ -1574,13 +1574,13 @@ module initia_std::vip {
         module_store.maximum_tvl_ratio = maximum_tvl_ratio;
     }
 
-    public entry fun update_proportion(
+    public entry fun update_min_score_ratio(
         chain: &signer,
-        proportion: Decimal256,
+        min_score_ratio: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        module_store.proportion = proportion;
+        module_store.min_score_ratio = min_score_ratio;
     }
 
     public entry fun update_pool_split_ratio(
@@ -1591,7 +1591,7 @@ module initia_std::vip {
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
             decimal256::val(&pool_split_ratio) <= decimal256::val(&decimal256::one()),
-            error::invalid_argument(EINVALID_PROPORTION)
+            error::invalid_argument(EINVALID_MIN_SCORE_RATIO)
         );
 
         module_store.pool_split_ratio = pool_split_ratio;
@@ -1813,7 +1813,7 @@ module initia_std::vip {
             operator_vesting_period: stage_data.operator_vesting_period,
             user_vesting_release_time: stage_data.user_vesting_release_time,
             operator_vesting_release_time: stage_data.operator_vesting_release_time,
-            proportion: stage_data.proportion,
+            min_score_ratio: stage_data.min_score_ratio,
         }
     }
 
@@ -1939,7 +1939,7 @@ module initia_std::vip {
                 agent: module_store.agent_data.agent,
                 api_uri: module_store.agent_data.api_uri
             },
-            proportion: module_store.proportion,
+            min_score_ratio: module_store.min_score_ratio,
             pool_split_ratio: module_store.pool_split_ratio,
             user_vesting_period: module_store.user_vesting_period,
             operator_vesting_period: module_store.operator_vesting_period,
@@ -2059,7 +2059,7 @@ module initia_std::vip {
     const DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST: vector<u8> = b"1";
 
     #[test_only]
-    const DEFAULT_PROPORTION_RATIO_FOR_TEST: vector<u8> = b"1";
+    const DEFAULT_MIN_SCORE_RATIO_FOR_TEST: vector<u8> = b"1";
 
     #[test_only]
     const DEFAULT_COMMISSION_MAX_RATE_FOR_TEST: vector<u8> = b"0.5";
@@ -2244,10 +2244,10 @@ module initia_std::vip {
             &mint_cap,
         );
 
-        update_proportion(
+        update_min_score_ratio(
             chain,
             decimal256::from_string(
-                &string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST)
+                &string::utf8(DEFAULT_MIN_SCORE_RATIO_FOR_TEST)
             ),
         );
 
@@ -2623,7 +2623,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_update_proportion(
+    fun test_update_min_score_ratio(
         chain: &signer,
         operator: &signer,
         receiver: &signer
@@ -2697,7 +2697,7 @@ module initia_std::vip {
             2
         );
 
-        update_proportion(
+        update_min_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"10"))
         );
@@ -2729,7 +2729,7 @@ module initia_std::vip {
             3
         );
 
-        update_proportion(
+        update_min_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
@@ -3460,7 +3460,7 @@ module initia_std::vip {
         let total_reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST;
         let reward_per_stage = total_reward_per_stage;
 
-        update_proportion(
+        update_min_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.3"))
         );
@@ -4140,8 +4140,8 @@ module initia_std::vip {
             6
         );
 
-        let proportion = decimal256::from_string(
-            &string::utf8(DEFAULT_PROPORTION_RATIO_FOR_TEST)
+        let min_score_ratio = decimal256::from_string(
+            &string::utf8(DEFAULT_MIN_SCORE_RATIO_FOR_TEST)
         );
         let (claimable_list, _) = batch_simulate_user_claim_reward(
             vector[
@@ -4150,11 +4150,11 @@ module initia_std::vip {
             ],
             vector[
                 decimal256::mul_u64(
-                    &proportion,
+                    &min_score_ratio,
                     *simple_map::borrow(&score_map, &1)
                 ),
                 decimal256::mul_u64(
-                    &proportion,
+                    &min_score_ratio,
                     *simple_map::borrow(&score_map, &2)
                 ),
             ],
@@ -4236,7 +4236,7 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        update_proportion(
+        update_min_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.5"))
         );

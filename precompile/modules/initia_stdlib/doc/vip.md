@@ -5,63 +5,64 @@
 
 
 
--  [Resource `ModuleStore`](#0x1_vip_ModuleStore)
--  [Struct `StageData`](#0x1_vip_StageData)
--  [Struct `Snapshot`](#0x1_vip_Snapshot)
--  [Struct `Bridge`](#0x1_vip_Bridge)
--  [Struct `RewardDistribution`](#0x1_vip_RewardDistribution)
--  [Struct `ModuleResponse`](#0x1_vip_ModuleResponse)
--  [Struct `SnapshotResponse`](#0x1_vip_SnapshotResponse)
--  [Struct `StageDataResponse`](#0x1_vip_StageDataResponse)
--  [Struct `BridgeResponse`](#0x1_vip_BridgeResponse)
--  [Struct `FundEvent`](#0x1_vip_FundEvent)
--  [Struct `StageAdvanceEvent`](#0x1_vip_StageAdvanceEvent)
--  [Constants](#@Constants_0)
--  [Function `init_module`](#0x1_vip_init_module)
--  [Function `bytes_cmp`](#0x1_vip_bytes_cmp)
--  [Function `score_hash`](#0x1_vip_score_hash)
--  [Function `assert_merkle_proofs`](#0x1_vip_assert_merkle_proofs)
--  [Function `check_chain_permission`](#0x1_vip_check_chain_permission)
--  [Function `check_agent_permission`](#0x1_vip_check_agent_permission)
--  [Function `load_bridge`](#0x1_vip_load_bridge)
--  [Function `load_bridge_mut`](#0x1_vip_load_bridge_mut)
--  [Function `claim_user_reward`](#0x1_vip_claim_user_reward)
--  [Function `zapping`](#0x1_vip_zapping)
--  [Function `extract_commission`](#0x1_vip_extract_commission)
--  [Function `split_reward`](#0x1_vip_split_reward)
--  [Function `split_reward_with_share`](#0x1_vip_split_reward_with_share)
--  [Function `split_reward_with_share_internal`](#0x1_vip_split_reward_with_share_internal)
--  [Function `fund_reward`](#0x1_vip_fund_reward)
--  [Function `calculate_balance_share`](#0x1_vip_calculate_balance_share)
--  [Function `calculate_weight_share`](#0x1_vip_calculate_weight_share)
--  [Function `claim_operator_reward`](#0x1_vip_claim_operator_reward)
--  [Function `register`](#0x1_vip_register)
--  [Function `deregister`](#0x1_vip_deregister)
--  [Function `update_agent`](#0x1_vip_update_agent)
--  [Function `fund_reward_script`](#0x1_vip_fund_reward_script)
--  [Function `submit_snapshot`](#0x1_vip_submit_snapshot)
--  [Function `update_snapshot`](#0x1_vip_update_snapshot)
--  [Function `claim_operator_reward_script`](#0x1_vip_claim_operator_reward_script)
--  [Function `claim_user_reward_script`](#0x1_vip_claim_user_reward_script)
--  [Function `batch_claim_operator_reward_script`](#0x1_vip_batch_claim_operator_reward_script)
--  [Function `batch_claim_user_reward_script`](#0x1_vip_batch_claim_user_reward_script)
--  [Function `update_vip_weight`](#0x1_vip_update_vip_weight)
--  [Function `update_vesting_period`](#0x1_vip_update_vesting_period)
--  [Function `update_minimum_tvl`](#0x1_vip_update_minimum_tvl)
--  [Function `update_maximum_tvl`](#0x1_vip_update_maximum_tvl)
--  [Function `update_proportion`](#0x1_vip_update_proportion)
--  [Function `update_pool_split_ratio`](#0x1_vip_update_pool_split_ratio)
--  [Function `zapping_script`](#0x1_vip_zapping_script)
--  [Function `batch_zapping_script`](#0x1_vip_batch_zapping_script)
--  [Function `update_operator_commission`](#0x1_vip_update_operator_commission)
--  [Function `get_snapshot`](#0x1_vip_get_snapshot)
--  [Function `get_expected_reward`](#0x1_vip_get_expected_reward)
--  [Function `get_stage_data`](#0x1_vip_get_stage_data)
--  [Function `get_bridge_info`](#0x1_vip_get_bridge_info)
--  [Function `get_next_stage`](#0x1_vip_get_next_stage)
--  [Function `get_module_store`](#0x1_vip_get_module_store)
--  [Function `batch_simulate_user_claim_reward`](#0x1_vip_batch_simulate_user_claim_reward)
--  [Function `simulate_user_claim_reward`](#0x1_vip_simulate_user_claim_reward)
+- [Module `0x1::vip`](#module-0x1vip)
+  - [Resource `ModuleStore`](#resource-modulestore)
+  - [Struct `StageData`](#struct-stagedata)
+  - [Struct `Snapshot`](#struct-snapshot)
+  - [Struct `Bridge`](#struct-bridge)
+  - [Struct `RewardDistribution`](#struct-rewarddistribution)
+  - [Struct `ModuleResponse`](#struct-moduleresponse)
+  - [Struct `SnapshotResponse`](#struct-snapshotresponse)
+  - [Struct `StageDataResponse`](#struct-stagedataresponse)
+  - [Struct `BridgeResponse`](#struct-bridgeresponse)
+  - [Struct `FundEvent`](#struct-fundevent)
+  - [Struct `StageAdvanceEvent`](#struct-stageadvanceevent)
+  - [Constants](#constants)
+  - [Function `init_module`](#function-init_module)
+  - [Function `bytes_cmp`](#function-bytes_cmp)
+  - [Function `score_hash`](#function-score_hash)
+  - [Function `assert_merkle_proofs`](#function-assert_merkle_proofs)
+  - [Function `check_chain_permission`](#function-check_chain_permission)
+  - [Function `check_agent_permission`](#function-check_agent_permission)
+  - [Function `load_bridge`](#function-load_bridge)
+  - [Function `load_bridge_mut`](#function-load_bridge_mut)
+  - [Function `claim_user_reward`](#function-claim_user_reward)
+  - [Function `zapping`](#function-zapping)
+  - [Function `extract_commission`](#function-extract_commission)
+  - [Function `split_reward`](#function-split_reward)
+  - [Function `split_reward_with_share`](#function-split_reward_with_share)
+  - [Function `split_reward_with_share_internal`](#function-split_reward_with_share_internal)
+  - [Function `fund_reward`](#function-fund_reward)
+  - [Function `calculate_balance_share`](#function-calculate_balance_share)
+  - [Function `calculate_weight_share`](#function-calculate_weight_share)
+  - [Function `claim_operator_reward`](#function-claim_operator_reward)
+  - [Function `register`](#function-register)
+  - [Function `deregister`](#function-deregister)
+  - [Function `update_agent`](#function-update_agent)
+  - [Function `fund_reward_script`](#function-fund_reward_script)
+  - [Function `submit_snapshot`](#function-submit_snapshot)
+  - [Function `update_snapshot`](#function-update_snapshot)
+  - [Function `claim_operator_reward_script`](#function-claim_operator_reward_script)
+  - [Function `claim_user_reward_script`](#function-claim_user_reward_script)
+  - [Function `batch_claim_operator_reward_script`](#function-batch_claim_operator_reward_script)
+  - [Function `batch_claim_user_reward_script`](#function-batch_claim_user_reward_script)
+  - [Function `update_vip_weight`](#function-update_vip_weight)
+  - [Function `update_vesting_period`](#function-update_vesting_period)
+  - [Function `update_minimum_tvl`](#function-update_minimum_tvl)
+  - [Function `update_maximum_tvl`](#function-update_maximum_tvl)
+  - [Function `update_min_score_rate`](#function-update_min_score_rate)
+  - [Function `update_pool_split_ratio`](#function-update_pool_split_ratio)
+  - [Function `zapping_script`](#function-zapping_script)
+  - [Function `batch_zapping_script`](#function-batch_zapping_script)
+  - [Function `update_operator_commission`](#function-update_operator_commission)
+  - [Function `get_snapshot`](#function-get_snapshot)
+  - [Function `get_expected_reward`](#function-get_expected_reward)
+  - [Function `get_stage_data`](#function-get_stage_data)
+  - [Function `get_bridge_info`](#function-get_bridge_info)
+  - [Function `get_next_stage`](#function-get_next_stage)
+  - [Function `get_module_store`](#function-get_module_store)
+  - [Function `batch_simulate_user_claim_reward`](#function-batch_simulate_user_claim_reward)
+  - [Function `simulate_user_claim_reward`](#function-simulate_user_claim_reward)
 
 
 <pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs">0x1::bcs</a>;
@@ -131,7 +132,7 @@
 
 </dd>
 <dt>
-<code>proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
+<code>min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
 </dt>
 <dd>
 
@@ -230,7 +231,7 @@
 
 </dd>
 <dt>
-<code>proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
+<code>min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
 </dt>
 <dd>
 
@@ -410,7 +411,7 @@
 
 </dd>
 <dt>
-<code>proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
+<code>min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
 </dt>
 <dd>
 
@@ -542,7 +543,7 @@
 
 </dd>
 <dt>
-<code>proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
+<code>min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
 </dt>
 <dd>
 
@@ -715,7 +716,7 @@
 
 </dd>
 <dt>
-<code>proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
+<code>min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a></code>
 </dt>
 <dd>
 
@@ -784,11 +785,11 @@
 
 
 
-<a id="0x1_vip_DEFAULT_PROPORTION_RATIO"></a>
+<a id="0x1_vip_DEFAULT_MIN_SCORE_RATIO"></a>
 
 
 
-<pre><code><b>const</b> <a href="vip.md#0x1_vip_DEFAULT_PROPORTION_RATIO">DEFAULT_PROPORTION_RATIO</a>: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; = [48, 46, 53];
+<pre><code><b>const</b> <a href="vip.md#0x1_vip_DEFAULT_MIN_SCORE_RATIO">DEFAULT_MIN_SCORE_RATIO</a>: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; = [48, 46, 53];
 </code></pre>
 
 
@@ -901,11 +902,11 @@
 
 
 
-<a id="0x1_vip_EINVALID_PROPORTION"></a>
+<a id="0x1_vip_EINVALID_MIN_SCORE"></a>
 
 
 
-<pre><code><b>const</b> <a href="vip.md#0x1_vip_EINVALID_PROPORTION">EINVALID_PROPORTION</a>: u64 = 8;
+<pre><code><b>const</b> <a href="vip.md#0x1_vip_EINVALID_MIN_SCORE">EINVALID_MIN_SCORE</a>: u64 = 8;
 </code></pre>
 
 
@@ -1011,7 +1012,7 @@
         stage: <a href="vip.md#0x1_vip_DEFAULT_VIP_START_STAGE">DEFAULT_VIP_START_STAGE</a>,
         user_vesting_period: <a href="vip.md#0x1_vip_DEFAULT_USER_VESTING_PERIOD">DEFAULT_USER_VESTING_PERIOD</a>,
         operator_vesting_period: <a href="vip.md#0x1_vip_DEFAULT_OPERATOR_VESTING_PERIOD">DEFAULT_OPERATOR_VESTING_PERIOD</a>,
-        proportion: <a href="decimal256.md#0x1_decimal256_from_string">decimal256::from_string</a>(&<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(<a href="vip.md#0x1_vip_DEFAULT_PROPORTION_RATIO">DEFAULT_PROPORTION_RATIO</a>)),
+        min_score_rate: <a href="decimal256.md#0x1_decimal256_from_string">decimal256::from_string</a>(&<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(<a href="vip.md#0x1_vip_DEFAULT_MIN_SCORE_RATIO">DEFAULT_MIN_SCORE_RATIO</a>)),
         pool_split_ratio: <a href="decimal256.md#0x1_decimal256_from_string">decimal256::from_string</a>(&<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(<a href="vip.md#0x1_vip_DEFAULT_POOL_SPLIT_RATIO">DEFAULT_POOL_SPLIT_RATIO</a>)),
         agent: <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain),
         maximum_tvl: <a href="vip.md#0x1_vip_DEFAULT_MAXIMUM_TVL">DEFAULT_MAXIMUM_TVL</a>,
@@ -1310,7 +1311,7 @@
         stage + stage_data.user_vesting_period,
         l2_score,
         snapshot.total_l2_score,
-        stage_data.proportion
+        stage_data.min_score_rate
     );
 
     vested_reward
@@ -1951,7 +1952,7 @@
         operator_vesting_period: module_store.operator_vesting_period,
         user_vesting_release_time: user_vesting_release_time,
         operator_vesting_release_time: operator_vesting_release_time,
-        proportion: module_store.proportion,
+        min_score_rate: module_store.min_score_rate,
         snapshots: <a href="table.md#0x1_table_new">table::new</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, <a href="vip.md#0x1_vip_Snapshot">Snapshot</a>&gt;(),
     });
 
@@ -1965,7 +1966,7 @@
             operator_vesting_period: module_store.operator_vesting_period,
             user_vesting_release_time,
             operator_vesting_release_time,
-            proportion: module_store.proportion,
+            min_score_rate: module_store.min_score_rate,
         }
     );
 
@@ -2335,13 +2336,13 @@
 
 </details>
 
-<a id="0x1_vip_update_proportion"></a>
+<a id="0x1_vip_update_min_score_rate"></a>
 
-## Function `update_proportion`
+## Function `update_min_score_rate`
 
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="vip.md#0x1_vip_update_proportion">update_proportion</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, proportion: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>)
+<pre><code><b>public</b> entry <b>fun</b> <a href="vip.md#0x1_vip_update_min_score_rate">update_min_score_rate</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, min_score_rate: <a href="decimal256.md#0x1_decimal256_Decimal256">decimal256::Decimal256</a>)
 </code></pre>
 
 
@@ -2350,18 +2351,18 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="vip.md#0x1_vip_update_proportion">update_proportion</a>(
+<pre><code><b>public</b> entry <b>fun</b> <a href="vip.md#0x1_vip_update_min_score_rate">update_min_score_rate</a>(
     chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
-    proportion: Decimal256,
+    min_score_rate: Decimal256,
 ) <b>acquires</b> <a href="vip.md#0x1_vip_ModuleStore">ModuleStore</a> {
     <a href="vip.md#0x1_vip_check_chain_permission">check_chain_permission</a>(chain);
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="vip.md#0x1_vip_ModuleStore">ModuleStore</a>&gt;(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain));
     <b>assert</b>!(
-        <a href="decimal256.md#0x1_decimal256_val">decimal256::val</a>(&proportion) &gt;= <a href="decimal256.md#0x1_decimal256_val">decimal256::val</a>(&<a href="decimal256.md#0x1_decimal256_zero">decimal256::zero</a>()),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="vip.md#0x1_vip_EINVALID_PROPORTION">EINVALID_PROPORTION</a>)
+        <a href="decimal256.md#0x1_decimal256_val">decimal256::val</a>(&min_score_rate) &gt;= <a href="decimal256.md#0x1_decimal256_val">decimal256::val</a>(&<a href="decimal256.md#0x1_decimal256_zero">decimal256::zero</a>()),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="vip.md#0x1_vip_EINVALID_MIN_SCORE">EINVALID_MIN_SCORE</a>)
     );
 
-    module_store.proportion = proportion;
+    module_store.min_score_rate = min_score_rate;
 }
 </code></pre>
 
@@ -2392,7 +2393,7 @@
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="vip.md#0x1_vip_ModuleStore">ModuleStore</a>&gt;(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain));
     <b>assert</b>!(
         <a href="decimal256.md#0x1_decimal256_val">decimal256::val</a>(&pool_split_ratio) &lt;= <a href="decimal256.md#0x1_decimal256_val">decimal256::val</a>(&<a href="decimal256.md#0x1_decimal256_one">decimal256::one</a>()),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="vip.md#0x1_vip_EINVALID_PROPORTION">EINVALID_PROPORTION</a>)
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="vip.md#0x1_vip_EINVALID_MIN_SCORE">EINVALID_MIN_SCORE</a>)
     );
 
     module_store.pool_split_ratio = pool_split_ratio;
@@ -2636,7 +2637,7 @@
         operator_vesting_period: stage_data.operator_vesting_period,
         user_vesting_release_time: stage_data.user_vesting_release_time,
         operator_vesting_release_time: stage_data.operator_vesting_release_time,
-        proportion: stage_data.proportion,
+        min_score_rate: stage_data.min_score_rate,
     }
 }
 </code></pre>
@@ -2740,7 +2741,7 @@
     <a href="vip.md#0x1_vip_ModuleResponse">ModuleResponse</a> {
         stage: module_store.stage,
         agent: module_store.agent,
-        proportion: module_store.proportion,
+        min_score_rate: module_store.min_score_rate,
         pool_split_ratio: module_store.pool_split_ratio,
         user_vesting_period: module_store.user_vesting_period,
         operator_vesting_period: module_store.operator_vesting_period,
