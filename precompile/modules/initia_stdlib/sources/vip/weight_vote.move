@@ -121,7 +121,7 @@ module initia_std::vip_weight_vote {
 
         cycle: u64,
         challenger: address,
-        voting_power_cycle: u64,
+        voting_power_cycle:u64,
 
         new_submitter: address,
         merkle_root: vector<u8>,
@@ -222,14 +222,21 @@ module initia_std::vip_weight_vote {
 
     #[event]
     struct CreateChallengeEvent has drop, store {
-        challenger: address,
-        challenge_id: u64,
         title: String,
         summary: String,
+        api_uri: String,
+
+        cycle: u64,
+        challenger: address,
+
         new_submitter: address,
         merkle_root: vector<u8>,
-        api_uri: String,
         snapshot_height: u64,
+
+        quorum: u64,
+        voting_end_time: u64,
+        min_voting_end_time: u64,
+        deposit_amount: u64,
     }
 
     #[event]
@@ -543,7 +550,6 @@ module initia_std::vip_weight_vote {
         );
 
         // set challenge configs
-        let voting_power_cycle = cycle;
         let voting_end_time = timestamp + module_store.voting_period;
         let min_voting_end_time = timestamp + module_store.min_voting_period;
         let quorum = decimal128::mul_u64(
@@ -569,11 +575,11 @@ module initia_std::vip_weight_vote {
 
         let challenge = Challenge {
             challenger,
-            voting_power_cycle,
             title,
             summary,
             cycle: cycle_to_challenge,
             new_submitter: challenger,
+            voting_power_cycle: cycle,
             merkle_root,
             api_uri,
             snapshot_height,
@@ -600,14 +606,18 @@ module initia_std::vip_weight_vote {
         // emit event
         event::emit(
             CreateChallengeEvent {
-                challenger,
-                challenge_id,
-                title,
-                summary,
+                title:title,
+                summary:summary,
+                api_uri:api_uri,
+                cycle: cycle_to_challenge,
+                challenger: challenger,
                 new_submitter: challenger,
-                merkle_root,
-                api_uri,
-                snapshot_height,
+                merkle_root: merkle_root,
+                snapshot_height: snapshot_height,
+                quorum: quorum,
+                voting_end_time: voting_end_time,
+                min_voting_end_time: min_voting_end_time,
+                deposit_amount: module_store.challenge_deposit_amount,
             }
         )
     }
@@ -738,10 +748,10 @@ module initia_std::vip_weight_vote {
             (cycle_key, _) = table::next<vector<u8>, Proposal>(iter);
         };
 
-        let last_finalized_proposal_id = table_key::decode_u64(cycle_key);
+        let last_finalized_proposal_cycle = table_key::decode_u64(cycle_key);
         let last_finalized_proposal = table::borrow(&module_store.proposals, cycle_key);
         (
-            last_finalized_proposal_id,
+            last_finalized_proposal_cycle,
             last_finalized_proposal
         )
     }

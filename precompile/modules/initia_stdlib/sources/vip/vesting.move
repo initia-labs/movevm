@@ -116,7 +116,14 @@ module initia_std::vip_vesting {
         stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
-        vesting_changes: vector<VestingChange>,
+
+    }
+
+    #[event]
+    struct VestingChangedEvent has drop, store {
+        vesting_start_stage: u64,
+        initial_reward: u64,
+        remaining_reward: u64,
     }
 
     #[event]
@@ -363,8 +370,8 @@ module initia_std::vip_vesting {
                 );
                 // round up the remaining reward to the penalty reward
                 if (value.remaining_reward > 0) {
-                    penalty_reward = penalty_reward + value.remaining_reward;
                     vested_reward = vested_reward + value.remaining_reward;
+                    value.remaining_reward = 0;
                 };
                 vector::push_back(
                     &mut finalized_vestings,
@@ -377,7 +384,7 @@ module initia_std::vip_vesting {
 
             vested_reward = vested_reward + vest_amount;
             penalty_reward = penalty_reward + vest_max_amount - vest_amount;
-            value.remaining_reward = value.remaining_reward - vest_amount;
+            value.remaining_reward = value.remaining_reward - vest_max_amount;
 
             vector::push_back(
                 &mut vesting_changes,
@@ -536,7 +543,6 @@ module initia_std::vip_vesting {
         l2_score: u64,
     ): (
         FungibleAsset,
-        vector<VestingChange>
     ) acquires VestingStore {
         assert!(
             get_last_claimed_stage<UserVesting>(account_addr, bridge_id) < stage,
@@ -563,7 +569,6 @@ module initia_std::vip_vesting {
         if(penalty_amount > 0 ){
             vip_reward::penalty<UserVesting>(
                 bridge_id,
-                account_addr,
                 penalty_amount,
                 vip_vault::get_vault_store_address()
             );
@@ -579,7 +584,6 @@ module initia_std::vip_vesting {
 
         (
             vested_reward,
-            vesting_changes
         )
     }
 
@@ -744,7 +748,6 @@ module initia_std::vip_vesting {
     ): FungibleAsset acquires VestingStore {
         let (
             vested_reward,
-            vesting_changes
         ) = claim_previous_user_vestings(
             account_addr,
             bridge_id,
@@ -774,7 +777,6 @@ module initia_std::vip_vesting {
                 stage: start_stage,
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
-                vesting_changes,
             }
         );
 

@@ -138,10 +138,11 @@ module initia_std::vip_tvl_manager {
     // get the average tvl of the bridge at the stage from accumulated snapshots
     #[view]
     public fun get_average_tvl(
-        stage_key: vector<u8>,
-        bridge_id_key: vector<u8>
+        stage: u64,
+        bridge_id: u64,
     ): u64 acquires ModuleStore {
-
+        let stage_key = table_key::encode_u64(stage);
+        let bridge_id_key = table_key::encode_u64(bridge_id);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         if (!table::contains(
                 &module_store.average_tvl,
@@ -249,8 +250,8 @@ module initia_std::vip_tvl_manager {
         );
 
         let average_tvl = get_average_tvl(
-            table_key::encode_u64(DEFAULT_EPOCH_FOR_TEST),
-            table_key::encode_u64(DEFAULT_BRIDE_ID_FOR_TEST)
+            DEFAULT_EPOCH_FOR_TEST,
+            DEFAULT_BRIDE_ID_FOR_TEST
         );
         assert!(average_tvl == balance, 0);
     }
@@ -279,8 +280,8 @@ module initia_std::vip_tvl_manager {
             balance3
         );
         let average_tvl = get_average_tvl(
-            table_key::encode_u64(DEFAULT_EPOCH_FOR_TEST),
-            table_key::encode_u64(DEFAULT_BRIDE_ID_FOR_TEST)
+            DEFAULT_EPOCH_FOR_TEST,
+            DEFAULT_BRIDE_ID_FOR_TEST
         );
         assert!(average_tvl == 2_000_000_000_000, 0);
     }

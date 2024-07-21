@@ -23,6 +23,8 @@ module initia_std::vip_reward {
     friend initia_std::vip_vault;
     friend initia_std::vip;
 
+
+
     //
     // Errors
     //
@@ -146,10 +148,9 @@ module initia_std::vip_reward {
 
     public(friend) fun penalty<Vesting: copy + drop + store>(
         bridge_id: u64,
-        offender: address,
         penalty_amount: u64,
         vault_store_addr: address
-    ){
+    ) acquires RewardStore {
         let reward_store_addr = get_reward_store_address<Vesting>(bridge_id);
         let reward_store = borrow_global<RewardStore>(reward_store_addr);
         let reward_signer = object::generate_signer_for_extending(&reward_store.extend_ref);
