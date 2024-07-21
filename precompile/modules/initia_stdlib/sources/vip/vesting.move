@@ -67,6 +67,7 @@ module initia_std::vip_vesting {
 
     struct VestingChange has drop, store {
         vesting_start_stage: u64,
+        calculate_stage: u64, /*stage calculating remaing reward and vested reward*/
         initial_reward: u64,
         remaining_reward: u64,
     }
@@ -122,6 +123,7 @@ module initia_std::vip_vesting {
     #[event]
     struct VestingChangedEvent has drop, store {
         vesting_start_stage: u64,
+        calculate_stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
     }
@@ -369,7 +371,7 @@ module initia_std::vip_vesting {
                         stage: value.start_stage,
                     }
                 );
-                // round up the remaining reward to the penalty reward
+                // give the remaining reward to vest reward
                 if (value.remaining_reward > 0) {
                     vested_reward = vested_reward + value.remaining_reward;
                     value.remaining_reward = 0;
@@ -391,6 +393,7 @@ module initia_std::vip_vesting {
                 &mut vesting_changes,
                 VestingChange {
                     vesting_start_stage: value.start_stage,
+                    calculate_stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
@@ -399,6 +402,7 @@ module initia_std::vip_vesting {
             event::emit(
                 VestingChangedEvent {
                     vesting_start_stage: value.start_stage,
+                    calculate_stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
@@ -429,7 +433,7 @@ module initia_std::vip_vesting {
             }
         );
 
-        (vested_reward, penalty_reward,)
+        (vested_reward, penalty_reward)
     }
 
     fun vest_operator_reward(
@@ -485,6 +489,7 @@ module initia_std::vip_vesting {
                 &mut vesting_changes,
                 VestingChange {
                     vesting_start_stage: value.start_stage,
+                    calculate_stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
@@ -546,7 +551,7 @@ module initia_std::vip_vesting {
         bridge_id: u64,
         stage: u64,
         l2_score: u64,
-    ): (FungibleAsset,) acquires VestingStore {
+    ): FungibleAsset acquires VestingStore {
         assert!(
             get_last_claimed_stage<UserVesting>(account_addr, bridge_id) < stage,
             error::invalid_argument(ESTAGE_ALREADY_CLAIMED)
@@ -776,7 +781,7 @@ module initia_std::vip_vesting {
         total_l2_score: u64,
         min_score_rate: Decimal256,
     ): FungibleAsset acquires VestingStore {
-        let (vested_reward,) = claim_previous_user_vestings(
+        let vested_reward = claim_previous_user_vestings(
             account_addr,
             bridge_id,
             start_stage,
@@ -786,7 +791,7 @@ module initia_std::vip_vesting {
         let vesting_reward_amount = 0;
 
         // if l2_score is less than 0, do not create new position
-        if (l2_score >= 0) {
+        if (l2_score > 0) {
             vesting_reward_amount = add_user_vesting(
                 account_addr,
                 bridge_id,
@@ -854,6 +859,7 @@ module initia_std::vip_vesting {
             account_addr, bridge_id
         );
         let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        // force claim_vesting
         assert!(
             table::contains(
                 &vesting_store.vestings,

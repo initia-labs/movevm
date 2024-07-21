@@ -56,6 +56,8 @@ module initia_std::vip {
     const EINVALID_CHALLENGE_PERIOD: u64 = 24;
     const EINVALID_CHALLENGE_STAGE: u64 = 25;
     const EPREV_STAGE_SNAPSHOT_NOT_FOUND: u64 = 26;
+    const EALREADY_FINALIZED_OR_ZAPPED : u64 = 27;
+    const ECLAIMABLE_REWARD_EXIST :u64 = 28;
     //
     //  Constants
     //
@@ -488,8 +490,6 @@ module initia_std::vip {
 
         // check claim period
         check_claimable_period(bridge_id, stage);
-
-        // check previous vesting position is claimed
 
         let account_addr = signer::address_of(account);
         let module_store = borrow_global<ModuleStore>(@initia_std);
@@ -1691,7 +1691,22 @@ module initia_std::vip {
         zapping_amount: u64,
         stakelisted_amount: u64,
         stakelisted_metadata: Object<Metadata>,
-    ) {
+    ) acquires ModuleStore {
+        let account_addr = signer::address_of(account);
+        // check if it is already finalized(zapped), make error
+        assert!(
+            vip_vesting::is_user_vesting_position_finalized(account_addr,bridge_id,stage),
+            error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED)
+        );
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let curr_stage = module_store.stage;
+        // check the last claimed stage !== current stage
+        // it means there can be claimable reward not to be zapped
+        assert!(
+            vip_vesting::get_user_last_claimed_stage(account_addr,bridge_id) == curr_stage,
+            error::not_implemented(ECLAIMABLE_REWARD_EXIST)
+        );
+        
         zapping(
             account,
             bridge_id,
@@ -3752,7 +3767,7 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(b"0.7"))
         );
         add_tvl_snapshot(chain);
-        fund_reward_script(chain, 1);
+        fund_reward_script(chain);
         assert!(
             get_expected_reward(
                 1,
@@ -3803,7 +3818,7 @@ module initia_std::vip {
             0
         );
         add_tvl_snapshot(chain);
-        fund_reward_script(chain, 2);
+        fund_reward_script(chain);
         assert!(
             vip_reward::balance(
                 vip_vesting::get_operator_reward_store_address(1)
@@ -3834,7 +3849,7 @@ module initia_std::vip {
             decimal256::from_string(&string::utf8(b"0.5"))
         );
         add_tvl_snapshot(chain);
-        fund_reward_script(chain, 3);
+        fund_reward_script(chain);
         assert!(
             vip_reward::balance(
                 vip_vesting::get_operator_reward_store_address(1)
@@ -3976,13 +3991,13 @@ module initia_std::vip {
                 decimal256::from_string(&string::utf8(b"0.5"))
             ],
         );
-        fund_reward_script(agent, 1);
-        fund_reward_script(agent, 2);
+        fund_reward_script(agent);
+        fund_reward_script(agent);
 
         deregister(chain, bridge_id1);
 
-        fund_reward_script(agent, 3);
-        fund_reward_script(agent, 4);
+        fund_reward_script(agent);
+        fund_reward_script(agent);
 
         register(
             chain,
@@ -4006,7 +4021,7 @@ module initia_std::vip {
             ),
         );
 
-        fund_reward_script(agent, 5);
+        fund_reward_script(agent);
 
         submit_snapshot(
             agent,
@@ -4311,19 +4326,19 @@ module initia_std::vip {
             string::utf8(b"")
         );
 
-        fund_reward_script(agent, 1);
+        fund_reward_script(agent);
 
         vip_vault::update_reward_per_stage(chain, total_reward_per_stage / 2);
-        fund_reward_script(agent, 2);
+        fund_reward_script(agent);
 
         vip_vault::update_reward_per_stage(chain, total_reward_per_stage);
-        fund_reward_script(agent, 3);
+        fund_reward_script(agent);
 
         // set commission from stage 4
         let commission_rate = decimal256::from_string(&string::utf8(b"0.03"));
         update_operator_commission(operator, bridge_id, commission_rate);
-        fund_reward_script(agent, 4);
-        fund_reward_script(agent, 5);
+        fund_reward_script(agent);
+        fund_reward_script(agent);
 
         submit_snapshot(
             agent,
@@ -4555,7 +4570,7 @@ module initia_std::vip {
             10000000000000000,
         );
         let release_time = 1000;
-        fund_reward_script(chain, 1);
+        fund_reward_script(chain);
         submit_snapshot(
             chain,
             bridge_id,
@@ -4597,7 +4612,7 @@ module initia_std::vip {
             10000000000000000,
         );
         let release_time = 0;
-        fund_reward_script(chain, 1);
+        fund_reward_script(chain);
         submit_snapshot(
             chain,
             bridge_id,
@@ -4786,7 +4801,7 @@ module initia_std::vip {
         assert!(get_next_stage(bridge_id) == 1, 2);
 
         // increase stage
-        fund_reward_script(chain, 1);
+        fund_reward_script(chain);
         submit_snapshot(
             chain,
             bridge_id,
@@ -4799,7 +4814,7 @@ module initia_std::vip {
         assert!(get_module_store().stage == 2, 3);
 
         // increase stage
-        fund_reward_script(chain, 2);
+        fund_reward_script(chain);
         submit_snapshot(
             chain,
             bridge_id,
@@ -4838,7 +4853,7 @@ module initia_std::vip {
         assert!(get_next_stage(bridge_id2) == 3, 4);
 
         // increase stage
-        fund_reward_script(chain, 3);
+        fund_reward_script(chain);
         submit_snapshot(
             chain,
             bridge_id,
@@ -5136,7 +5151,7 @@ module initia_std::vip {
         ) = merkle_root_and_proof_scene1();
 
         while (idx <= vesting_period) {
-            fund_reward_script(chain, idx);
+            fund_reward_script(chain);
             submit_snapshot(
                 chain,
                 bridge_id,
