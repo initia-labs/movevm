@@ -23,15 +23,13 @@ module initia_std::vip_reward {
     friend initia_std::vip_vault;
     friend initia_std::vip;
 
-
-
     //
     // Errors
     //
 
     const EREWARD_STORE_ALREADY_EXISTS: u64 = 1;
     const EREWARD_STORE_NOT_FOUND: u64 = 2;
-    const EPENALTY_AMOUNT: u64 =3;
+    const EPENALTY_AMOUNT: u64 = 3;
 
     //
     //  Constants
@@ -166,6 +164,7 @@ module initia_std::vip_reward {
             penalty_amount
         );
     }
+
     //
     // View Functions
     //

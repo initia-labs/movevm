@@ -137,10 +137,7 @@ module initia_std::vip_tvl_manager {
 
     // get the average tvl of the bridge at the stage from accumulated snapshots
     #[view]
-    public fun get_average_tvl(
-        stage: u64,
-        bridge_id: u64,
-    ): u64 acquires ModuleStore {
+    public fun get_average_tvl(stage: u64, bridge_id: u64,): u64 acquires ModuleStore {
         let stage_key = table_key::encode_u64(stage);
         let bridge_id_key = table_key::encode_u64(bridge_id);
         let module_store = borrow_global<ModuleStore>(@initia_std);

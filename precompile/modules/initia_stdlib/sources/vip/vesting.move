@@ -141,6 +141,7 @@ module initia_std::vip_vesting {
         offender: address,
         amount: u64,
     }
+
     //
     // Implementations
     //
@@ -396,11 +397,12 @@ module initia_std::vip_vesting {
             );
 
             event::emit(
-                VestingChangedEvent{
+                VestingChangedEvent {
                     vesting_start_stage: value.start_stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
-            });
+                }
+            );
         };
 
         // cleanup finalized vestings
@@ -427,10 +429,7 @@ module initia_std::vip_vesting {
             }
         );
 
-        (
-            vested_reward,
-            penalty_reward,
-        )
+        (vested_reward, penalty_reward,)
     }
 
     fun vest_operator_reward(
@@ -547,49 +546,38 @@ module initia_std::vip_vesting {
         bridge_id: u64,
         stage: u64,
         l2_score: u64,
-    ): (
-        FungibleAsset,
-    ) acquires VestingStore {
+    ): (FungibleAsset,) acquires VestingStore {
         assert!(
             get_last_claimed_stage<UserVesting>(account_addr, bridge_id) < stage,
             error::invalid_argument(ESTAGE_ALREADY_CLAIMED)
         );
 
         // vest previous vesting rewards until the stage
-        let (
-            vest_amount,
-            penalty_amount,
-        ) = vest_user_reward(
+        let (vest_amount, penalty_amount,) = vest_user_reward(
             account_addr,
             bridge_id,
             stage,
             l2_score,
         );
         let reward_store_addr = get_user_reward_store_address(bridge_id);
-        let vested_reward = vip_reward::withdraw(
-            reward_store_addr,
-            vest_amount
-        );
+        let vested_reward = vip_reward::withdraw(reward_store_addr, vest_amount);
 
-        if(penalty_amount > 0 ){
+        if (penalty_amount > 0) {
             vip_reward::penalty<UserVesting>(
                 bridge_id,
                 penalty_amount,
                 vip_vault::get_vault_store_address()
             );
 
-
             event::emit(
-                PenaltyEvent{
-                    offender:account_addr,
+                PenaltyEvent {
+                    offender: account_addr,
                     amount: penalty_amount
                 }
             )
         };
 
-        (
-            vested_reward,
-        )
+        (vested_reward,)
     }
 
     fun add_user_vesting(
@@ -702,6 +690,43 @@ module initia_std::vip_vesting {
         vip_reward::is_reward_store_registered<OperatorVesting>(bridge_id)
     }
 
+    public fun is_user_vesting_position_finalized(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64,
+    ): bool acquires VestingStore {
+        let vesting_store_addr = get_vesting_store_address<UserVesting>(
+            account_addr, bridge_id
+        );
+        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+
+        table::contains(
+            &mut vesting_store.vestings_finalized,
+            table_key::encode_u64(stage)
+        )
+
+    }
+
+    public fun is_operator_vesting_position_finalized(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64,
+    ): bool acquires VestingStore {
+
+        let vesting_store_addr = get_vesting_store_address<OperatorVesting>(
+            account_addr, bridge_id
+        );
+        let vesting_store = borrow_global_mut<VestingStore<OperatorVesting>>(
+            vesting_store_addr
+        );
+
+        table::contains(
+            &mut vesting_store.vestings_finalized,
+            table_key::encode_u64(stage)
+        )
+
+    }
+
     //
     // Friends Functions
     //
@@ -751,9 +776,7 @@ module initia_std::vip_vesting {
         total_l2_score: u64,
         min_score_rate: Decimal256,
     ): FungibleAsset acquires VestingStore {
-        let (
-            vested_reward,
-        ) = claim_previous_user_vestings(
+        let (vested_reward,) = claim_previous_user_vestings(
             account_addr,
             bridge_id,
             start_stage,

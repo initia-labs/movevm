@@ -121,7 +121,7 @@ module initia_std::vip_weight_vote {
 
         cycle: u64,
         challenger: address,
-        voting_power_cycle:u64,
+        voting_power_cycle: u64,
 
         new_submitter: address,
         merkle_root: vector<u8>,
@@ -469,7 +469,8 @@ module initia_std::vip_weight_vote {
             }
         )
     }
-    // it will be executed by agent; but there is no permission to execute proposal 
+
+    // it will be executed by agent; but there is no permission to execute proposal
     public entry fun execute_proposal() acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
@@ -606,9 +607,9 @@ module initia_std::vip_weight_vote {
         // emit event
         event::emit(
             CreateChallengeEvent {
-                title:title,
-                summary:summary,
-                api_uri:api_uri,
+                title: title,
+                summary: summary,
+                api_uri: api_uri,
                 cycle: cycle_to_challenge,
                 challenger: challenger,
                 new_submitter: challenger,
@@ -697,7 +698,8 @@ module initia_std::vip_weight_vote {
             }
         )
     }
-    // it will be executed by agent; but there is no permission to execute proposal 
+
+    // it will be executed by agent; but there is no permission to execute proposal
     public entry fun execute_challenge(challenge_id: u64,) acquires ModuleStore {
         // execute challenge and get result
         let success = execute_challenge_internal(challenge_id);

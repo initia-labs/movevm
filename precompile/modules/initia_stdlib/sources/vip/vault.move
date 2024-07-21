@@ -36,7 +36,6 @@ module initia_std::vip_vault {
         vault_store_addr: address,
     }
 
-
     //
     // Implementations
     //
