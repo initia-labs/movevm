@@ -339,7 +339,7 @@ module initia_std::vip_vesting {
         bridge_id: u64,
         stage: u64,
         l2_score: u64,
-    ): (u64, u64, vector<VestingChange>) acquires VestingStore {
+    ): (u64, u64) acquires VestingStore {
         let vested_reward = 0u64;
         let penalty_reward = 0u64;
         let finalized_vestings = vector::empty<u64>();
@@ -394,6 +394,13 @@ module initia_std::vip_vesting {
                     remaining_reward: value.remaining_reward,
                 }
             );
+
+            event::emit(
+                VestingChangedEvent{
+                    vesting_start_stage: value.start_stage,
+                    initial_reward: value.initial_reward,
+                    remaining_reward: value.remaining_reward,
+            });
         };
 
         // cleanup finalized vestings
@@ -423,7 +430,6 @@ module initia_std::vip_vesting {
         (
             vested_reward,
             penalty_reward,
-            vesting_changes
         )
     }
 
@@ -553,7 +559,6 @@ module initia_std::vip_vesting {
         let (
             vest_amount,
             penalty_amount,
-            vesting_changes
         ) = vest_user_reward(
             account_addr,
             bridge_id,

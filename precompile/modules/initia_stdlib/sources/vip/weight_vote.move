@@ -469,7 +469,7 @@ module initia_std::vip_weight_vote {
             }
         )
     }
-
+    // it will be executed by agent; but there is no permission to execute proposal 
     public entry fun execute_proposal() acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
@@ -697,7 +697,7 @@ module initia_std::vip_weight_vote {
             }
         )
     }
-
+    // it will be executed by agent; but there is no permission to execute proposal 
     public entry fun execute_challenge(challenge_id: u64,) acquires ModuleStore {
         // execute challenge and get result
         let success = execute_challenge_internal(challenge_id);
