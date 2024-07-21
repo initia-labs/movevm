@@ -1970,7 +1970,7 @@ module initia_std::vip {
         };
         bridge_ids
     }
-
+    // get the next stage of taking snapshot and submit
     #[view]
     public fun get_next_stage(bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
@@ -1981,6 +1981,7 @@ module initia_std::vip {
             option::none(),
             2
         );
+        let init_stage = table::borrow( &module_store.bridges,table_key::encode_u64(bridge_id)).init_stage;
         loop {
             if (!table::prepare<vector<u8>, StageData>(iter)) { break };
 
@@ -1989,7 +1990,13 @@ module initia_std::vip {
                     &value.snapshots,
                     table_key::encode_u64(bridge_id)
                 )) {
-                return table_key::decode_u64(key) + 1
+
+                let next_stage = table_key::decode_u64(key) + 1;
+                if(next_stage > init_stage){
+                    return next_stage
+                } else {
+                    return init_stage
+                }
             };
         };
 
