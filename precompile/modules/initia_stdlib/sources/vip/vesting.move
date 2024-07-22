@@ -122,6 +122,8 @@ module initia_std::vip_vesting {
 
     #[event]
     struct VestingChangedEvent has drop, store {
+        account: address,
+        bridge_id: u64,
         vesting_start_stage: u64,
         calculate_stage: u64,
         initial_reward: u64,
@@ -405,6 +407,8 @@ module initia_std::vip_vesting {
             };
             event::emit(
                 VestingChangedEvent {
+                    account: account_addr,
+                    bridge_id: bridge_id,
                     vesting_start_stage: value.start_stage,
                     calculate_stage: stage,
                     initial_reward: value.initial_reward,

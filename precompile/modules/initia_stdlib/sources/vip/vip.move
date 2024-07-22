@@ -150,6 +150,7 @@ module initia_std::vip {
     }
 
     struct ExecutedChallenge has store, drop {
+
         challenge_id: u64,
         bridge_id: u64,
         stage: u64,
@@ -225,6 +226,7 @@ module initia_std::vip {
 
     #[event]
     struct RewardDistributionEvent has drop, store {
+        stage:u64,
         bridge_id: u64,
         user_reward_store_addr: address,
         operator_reward_store_addr: address,
@@ -672,6 +674,7 @@ module initia_std::vip {
 
             event::emit(
                 RewardDistributionEvent {
+                    stage,
                     bridge_id,
                     user_reward_store_addr: bridge.user_reward_store_addr,
                     operator_reward_store_addr: bridge.operator_reward_store_addr,
