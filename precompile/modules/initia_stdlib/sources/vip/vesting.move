@@ -209,6 +209,7 @@ module initia_std::vip_vesting {
             table_key::encode_u64(stage),
             true
         );
+        
         table::add(
             &mut vesting_store.vestings,
             table_key::encode_u64(stage),
@@ -360,9 +361,31 @@ module initia_std::vip_vesting {
             if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
 
             let (_, value) = table::next_mut<vector<u8>, UserVesting>(iter);
+            // handle vesting positions that have changed to zapping positions
+            if (value.remaining_reward == 0) {
+                event::emit(
+                    UserVestingFinalizedEvent {
+                        account: account_addr,
+                        bridge_id,
+                        stage: value.start_stage,
+                    }
+                );
+                vector::push_back(
+                    &mut finalized_vestings,
+                    value.start_stage
+                );
+                continue
+            };
+        
+            let (vest_max_amount, vest_amount) = calculate_user_vest(value, l2_score);
 
-            // move vesting if end stage is over or the left reward is empty
-            if (stage > value.end_stage || value.remaining_reward == 0) {
+            vested_reward = vested_reward + vest_amount;
+            penalty_reward = penalty_reward + vest_max_amount - vest_amount;
+            value.remaining_reward = value.remaining_reward - vest_max_amount;
+
+            
+            // move vesting if end stage is 
+            if (stage >= value.end_stage ) {
                 event::emit(
                     UserVestingFinalizedEvent {
                         account: account_addr,
@@ -379,15 +402,7 @@ module initia_std::vip_vesting {
                     &mut finalized_vestings,
                     value.start_stage
                 );
-                continue
             };
-
-            let (vest_max_amount, vest_amount) = calculate_user_vest(value, l2_score);
-
-            vested_reward = vested_reward + vest_amount;
-            penalty_reward = penalty_reward + vest_max_amount - vest_amount;
-            value.remaining_reward = value.remaining_reward - vest_max_amount;
-
             event::emit(
                 VestingChangedEvent {
                     vesting_start_stage: value.start_stage,
@@ -778,7 +793,7 @@ module initia_std::vip_vesting {
         );
 
         let vesting_reward_amount = 0;
-
+        
         // if l2_score is less than 0, do not create new position
         if (l2_score > 0) {
             vesting_reward_amount = add_user_vesting(
@@ -1002,6 +1017,15 @@ module initia_std::vip_vesting {
         vesting.initial_reward
     }
 
+    #[view]
+    public fun get_user_vesting_finalized_initial_reward(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires VestingStore {
+        let vesting = get_vesting_finalized<UserVesting>(account_addr, bridge_id, stage);
+        vesting.initial_reward
+    }
     #[view]
     public fun get_user_vesting_remaining_reward(
         account_addr: address,

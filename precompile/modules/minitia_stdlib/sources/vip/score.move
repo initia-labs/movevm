@@ -50,6 +50,9 @@ module minitia_std::vip_score {
 
     // The previous stage is not finalized.
     const EPREVIOUS_STAGE_NOT_FINALIZED: u64 = 9;
+
+    //
+    const ESCORE_LENGTH : u64 = 10;
     //
     // Events
     //
@@ -336,7 +339,7 @@ module minitia_std::vip_score {
         addrs: vector<address>,
         update_scores: vector<u64>
     ) acquires ModuleStore {
-
+        assert!(vector::length(&update_scores) != 0,error::invalid_argument(ESCORE_LENGTH));
         assert!(
             vector::length(&addrs) == vector::length(&update_scores),
             error::invalid_argument(ENOT_MATCH_LENGTH)
