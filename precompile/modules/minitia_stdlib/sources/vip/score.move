@@ -484,7 +484,7 @@ module minitia_std::vip_score {
     }
 
     #[test(chain = @0x1, deployer = @0x2)]
-    #[expected_failure(abort_code = 0x10006, location = Self)]
+    #[expected_failure(abort_code = 0x1000A, location = Self)]
     fun failed_not_match_length(chain: &signer, deployer: &signer) acquires ModuleStore {
         init_module_for_test(chain);
         add_deployer_script(chain, signer::address_of(deployer));
