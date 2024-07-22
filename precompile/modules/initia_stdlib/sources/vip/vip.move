@@ -56,8 +56,8 @@ module initia_std::vip {
     const EINVALID_CHALLENGE_PERIOD: u64 = 24;
     const EINVALID_CHALLENGE_STAGE: u64 = 25;
     const EPREV_STAGE_SNAPSHOT_NOT_FOUND: u64 = 26;
-    const EALREADY_FINALIZED_OR_ZAPPED : u64 = 27;
-    const ECLAIMABLE_REWARD_CAN_BE_EXIST :u64 = 28;
+    const EALREADY_FINALIZED_OR_ZAPPED: u64 = 27;
+    const ECLAIMABLE_REWARD_CAN_BE_EXIST: u64 = 28;
     //
     //  Constants
     //
@@ -82,15 +82,15 @@ module initia_std::vip {
         // the number of times vesting is divided
         vesting_period: u64,
         // initial time of vesting; first release time of stage 1 fund
-        release_initial_time: u64,
+        initial_release_time: u64,
         // interval time of vesting
         challenge_period: u64,
         // agent for snapshot taker and VIP reward funder
         agent_data: AgentData,
-        // governance-defined min_score_ratio to decrease overhead of keeping the L2 INIT balance.
-        // a user only need to keep the `vesting.l2_score * min_score_ratio` amount of INIT token
+        // governance-defined minimum_score_ratio to decrease overhead of keeping the L2 INIT balance.
+        // a user only need to keep the `vesting.l2_score * minimum_score_ratio` amount of INIT token
         // to vest whole vesting rewards.
-        min_score_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
         // if pool_split_ratio is 0.4,
         // balance pool takes 0.4 and weight pool takes 0.6
         pool_split_ratio: Decimal256,
@@ -121,7 +121,7 @@ module initia_std::vip {
         total_user_funded_reward: u64,
         vesting_period: u64,
         vesting_release_start_time: u64,
-        min_score_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
         snapshots: table::Table<vector<u8> /* bridge id */, Snapshot>
     }
 
@@ -170,7 +170,7 @@ module initia_std::vip {
         stage: u64,
         stage_interval: u64,
         agent_data: AgentData,
-        min_score_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
         pool_split_ratio: Decimal256,
         vesting_period: u64,
         minimum_eligible_tvl: u64,
@@ -192,7 +192,7 @@ module initia_std::vip {
         total_user_funded_reward: u64,
         vesting_release_start_time: u64,
         vesting_period: u64,
-        min_score_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
     }
 
     struct BridgeResponse has drop {
@@ -243,7 +243,7 @@ module initia_std::vip {
         total_user_funded_reward: u64,
         vesting_release_start_time: u64,
         vesting_period: u64,
-        min_score_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
     }
 
     #[event]
@@ -282,9 +282,9 @@ module initia_std::vip {
                 stage: DEFAULT_VIP_START_STAGE,
                 stage_interval: DEFAULT_STAGE_INTERVAL,
                 vesting_period: DEFAULT_VESTING_PERIOD,
-                release_initial_time: 0,
+                initial_release_time: 0,
                 challenge_period: DEFAULT_CHALLENGE_PERIOD,
-                min_score_ratio: decimal256::from_string(
+                minimum_score_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_MIN_SCORE_RATIO)
                 ),
                 pool_split_ratio: decimal256::from_string(
@@ -488,7 +488,6 @@ module initia_std::vip {
         merkle_proofs: vector<vector<u8>>,
         l2_score: u64,
     ): (FungibleAsset) acquires ModuleStore {
-
         // check claim period
         check_claimable_period(bridge_id, stage);
 
@@ -537,7 +536,7 @@ module initia_std::vip {
             stage + stage_data.vesting_period,
             l2_score,
             snapshot.total_l2_score,
-            stage_data.min_score_ratio,
+            stage_data.minimum_score_ratio,
         );
 
         (vested_reward)
@@ -605,8 +604,6 @@ module initia_std::vip {
         balance_pool_reward: FungibleAsset,
         weight_pool_reward: FungibleAsset,
     ): (u64, u64) {
-        let reward_distributions = vector::empty<RewardDistribution>();
-
         let initial_balance_pool_reward_amount = fungible_asset::amount(
             &balance_pool_reward
         );
@@ -673,17 +670,6 @@ module initia_std::vip {
             );
             total_user_funded_reward = total_user_funded_reward + fungible_asset::amount(
                 &user_reward_sum
-            );
-
-            vector::push_back(
-                &mut reward_distributions,
-                RewardDistribution {
-                    bridge_id,
-                    user_reward_store_addr: bridge.user_reward_store_addr,
-                    operator_reward_store_addr: bridge.operator_reward_store_addr,
-                    user_reward_amount: fungible_asset::amount(&user_reward_sum),
-                    operator_reward_amount: fungible_asset::amount(&commission_sum)
-                }
             );
 
             event::emit(
@@ -1146,11 +1132,11 @@ module initia_std::vip {
 
     public entry fun update_vesting_initial_time_and_interval(
         chain: &signer,
-        release_initial_time: u64,
+        initial_release_time: u64,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.release_initial_time = release_initial_time;
+        module_store.initial_release_time = initial_release_time;
     }
 
     public entry fun update_agent(
@@ -1179,15 +1165,13 @@ module initia_std::vip {
         };
     }
 
-    public entry fun update_release_initial_time(
+    public entry fun update_initial_release_time(
         chain: &signer,
-        new_release_initial_time: u64,
+        initial_release_time: u64,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.release_initial_time = new_release_initial_time;
-
+        module_store.initial_release_time = initial_release_time;
     }
 
     public entry fun update_release_start_time(
@@ -1254,10 +1238,10 @@ module initia_std::vip {
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let fund_stage = module_store.stage;
-        let release_initial_time = module_store.release_initial_time;
+        let initial_release_time = module_store.initial_release_time;
         // set the vesting release initial time before execute fund reward scripts
         assert!(
-            release_initial_time != 0,
+            initial_release_time != 0,
             error::unavailable(ENONE_VESTING_INITIAL_TIME)
         );
         let stage_interval = module_store.stage_interval;
@@ -1289,14 +1273,14 @@ module initia_std::vip {
         );
 
         // calculate vesting release start time on the specific stage
-        // vesting_release_start_time = release_initial_time + stage_interval * (floor((fund_time - release_initial_time) / stage_interval) + 1)
-        let vesting_release_start_time = if (fund_time > release_initial_time) {
+        // vesting_release_start_time = initial_release_time + stage_interval * (floor((fund_time - initial_release_time) / stage_interval) + 1)
+        let vesting_release_start_time = if (fund_time > initial_release_time) {
             (
-                release_initial_time + stage_interval * (
-                    1 + (fund_time - release_initial_time) / stage_interval
+                initial_release_time + stage_interval * (
+                    1 + (fund_time - initial_release_time) / stage_interval
                 )
             )
-        } else { release_initial_time };
+        } else { initial_release_time };
         // set stage data
         table::add(
             &mut module_store.stage_data,
@@ -1309,7 +1293,7 @@ module initia_std::vip {
                 total_user_funded_reward,
                 vesting_period: module_store.vesting_period,
                 vesting_release_start_time: vesting_release_start_time,
-                min_score_ratio: module_store.min_score_ratio,
+                minimum_score_ratio: module_store.minimum_score_ratio,
                 snapshots: table::new<vector<u8>, Snapshot>(),
             },
         );
@@ -1323,7 +1307,7 @@ module initia_std::vip {
                 total_user_funded_reward,
                 vesting_period: module_store.vesting_period,
                 vesting_release_start_time,
-                min_score_ratio: module_store.min_score_ratio,
+                minimum_score_ratio: module_store.minimum_score_ratio,
             }
         );
 
@@ -1515,7 +1499,7 @@ module initia_std::vip {
         let prev_stage = first_stage - 1;
         // hypothesis: for a finalized vesting position, all its previous stages must also be finalized.
         // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
-        if(prev_stage > 0) {
+        if (prev_stage > 0) {
             assert!(
                 vip_vesting::is_operator_vesting_position_finalized(
                     account_addr, bridge_id, prev_stage
@@ -1557,12 +1541,12 @@ module initia_std::vip {
         let prev_stage = first_stage - 1;
         // hypothesis: for a finalized vesting position, all its previous stages must also be finalized.
         // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
-        if(prev_stage > 0) {
+        if (prev_stage > 0) {
             assert!(
-            vip_vesting::is_user_vesting_position_finalized(
-                account_addr, bridge_id, prev_stage
-            ),
-            error::invalid_argument(EINVALID_BATCH_ARGUMENT)
+                vip_vesting::is_user_vesting_position_finalized(
+                    account_addr, bridge_id, prev_stage
+                ),
+                error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
 
@@ -1652,13 +1636,13 @@ module initia_std::vip {
         module_store.maximum_tvl_ratio = maximum_tvl_ratio;
     }
 
-    public entry fun update_min_score_ratio(
+    public entry fun update_minimum_score_ratio(
         chain: &signer,
-        min_score_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        module_store.min_score_ratio = min_score_ratio;
+        module_store.minimum_score_ratio = minimum_score_ratio;
     }
 
     public entry fun update_pool_split_ratio(
@@ -1703,20 +1687,22 @@ module initia_std::vip {
         let account_addr = signer::address_of(account);
         // check if it is already finalized(zapped), make error
         assert!(
-            !vip_vesting::is_user_vesting_position_finalized(account_addr,bridge_id,stage),
+            !vip_vesting::is_user_vesting_position_finalized(account_addr, bridge_id, stage),
             error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED)
         );
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let curr_stage = module_store.stage;
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
-        initia_std::debug::print(&vip_vesting::get_user_claimed_stages(account_addr,bridge_id));
+        initia_std::debug::print(
+            &vip_vesting::get_user_claimed_stages(account_addr, bridge_id)
+        );
         initia_std::debug::print(&curr_stage);
         assert!(
-            vip_vesting::get_user_last_claimed_stage(account_addr,bridge_id) == curr_stage,
+            vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id) == curr_stage,
             error::not_implemented(ECLAIMABLE_REWARD_CAN_BE_EXIST)
         );
-        
+
         zapping(
             account,
             bridge_id,
@@ -1906,7 +1892,7 @@ module initia_std::vip {
             total_user_funded_reward: stage_data.total_user_funded_reward,
             vesting_period: stage_data.vesting_period,
             vesting_release_start_time: stage_data.vesting_release_start_time,
-            min_score_ratio: stage_data.min_score_ratio,
+            minimum_score_ratio: stage_data.minimum_score_ratio,
         }
     }
 
@@ -1995,6 +1981,7 @@ module initia_std::vip {
         };
         bridge_ids
     }
+
     // get the next stage of taking snapshot and submit
     #[view]
     public fun get_next_stage(bridge_id: u64): u64 acquires ModuleStore {
@@ -2006,7 +1993,10 @@ module initia_std::vip {
             option::none(),
             2
         );
-        let init_stage = table::borrow( &module_store.bridges,table_key::encode_u64(bridge_id)).init_stage;
+        let init_stage = table::borrow(
+            &module_store.bridges,
+            table_key::encode_u64(bridge_id)
+        ).init_stage;
         loop {
             if (!table::prepare<vector<u8>, StageData>(iter)) { break };
 
@@ -2017,11 +2007,7 @@ module initia_std::vip {
                 )) {
 
                 let next_stage = table_key::decode_u64(key) + 1;
-                if(next_stage > init_stage){
-                    return next_stage
-                } else {
-                    return init_stage
-                }
+                if (next_stage > init_stage) {return next_stage} else {return init_stage}
             };
         };
 
@@ -2039,7 +2025,7 @@ module initia_std::vip {
                 agent: module_store.agent_data.agent,
                 api_uri: module_store.agent_data.api_uri
             },
-            min_score_ratio: module_store.min_score_ratio,
+            minimum_score_ratio: module_store.minimum_score_ratio,
             pool_split_ratio: module_store.pool_split_ratio,
             vesting_period: module_store.vesting_period,
             minimum_eligible_tvl: module_store.minimum_eligible_tvl,
@@ -2318,7 +2304,7 @@ module initia_std::vip {
             chain, string::utf8(b"uinit")
         );
         init_module_for_test(chain);
-        update_release_initial_time(chain,10);
+        update_initial_release_time(chain, 10);
         test_register_bridge(
             chain,
             operator,
@@ -2343,7 +2329,7 @@ module initia_std::vip {
             &mint_cap,
         );
 
-        update_min_score_ratio(
+        update_minimum_score_ratio(
             chain,
             decimal256::from_string(
                 &string::utf8(DEFAULT_MIN_SCORE_RATIO_FOR_TEST)
@@ -2598,11 +2584,8 @@ module initia_std::vip {
     }
 
     #[test_only]
-    public fun test_setup_scene1(
-        agent: &signer,
-        bridge_id: u64,
-    ) acquires ModuleStore {
-        
+    public fun test_setup_scene1(agent: &signer, bridge_id: u64,) acquires ModuleStore {
+
         let idx = 1;
         let (
             merkle_root_map,
@@ -2631,10 +2614,7 @@ module initia_std::vip {
     }
 
     #[test_only]
-    public fun test_setup_scene2(
-        agent: &signer,
-        bridge_id: u64,
-    ) acquires ModuleStore {
+    public fun test_setup_scene2(agent: &signer, bridge_id: u64,) acquires ModuleStore {
         let idx = 1;
         let (
             merkle_root_map,
@@ -2713,7 +2693,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_update_min_score_ratio(
+    fun test_update_minimum_score_ratio(
         chain: &signer,
         operator: &signer,
         receiver: &signer
@@ -2787,7 +2767,7 @@ module initia_std::vip {
             2
         );
 
-        update_min_score_ratio(
+        update_minimum_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"10"))
         );
@@ -2819,7 +2799,7 @@ module initia_std::vip {
             3
         );
 
-        update_min_score_ratio(
+        update_minimum_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
@@ -3271,7 +3251,7 @@ module initia_std::vip {
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
-        
+
         skip_period(1);
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
         test_setup_scene1(chain, bridge_id);
@@ -3315,7 +3295,7 @@ module initia_std::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
 
         test_setup_scene1(chain, bridge_id);
-        // try claim user reward scriptl;without skipping challenge period 
+        // try claim user reward scriptl;without skipping challenge period
         claim_user_reward_script(
             receiver,
             bridge_id,
@@ -3338,7 +3318,7 @@ module initia_std::vip {
         );
 
         test_setup_scene1(chain, bridge_id);
-        // try claim operator reward scriptl;without skipping challenge period 
+        // try claim operator reward scriptl;without skipping challenge period
         claim_operator_reward_script(operator, bridge_id, 10);
 
     }
@@ -3408,7 +3388,7 @@ module initia_std::vip {
             1_000_000_000_000,
         );
         test_setup_scene1(chain, bridge_id);
-        update_release_initial_time(chain,1);
+        update_initial_release_time(chain, 1);
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
@@ -3456,7 +3436,10 @@ module initia_std::vip {
             score_map,
             total_score_map
         ) = merkle_root_and_proof_scene1();
-        update_release_initial_time(chain,DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST+10);
+        update_initial_release_time(
+            chain,
+            DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST + 10
+        );
         fund_reward_script(chain);
 
         submit_snapshot(
@@ -3543,7 +3526,7 @@ module initia_std::vip {
         let total_reward_per_stage = DEFAULT_REWARD_PER_STAGE_FOR_TEST;
         let reward_per_stage = total_reward_per_stage;
 
-        update_min_score_ratio(
+        update_minimum_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.3"))
         );
@@ -3616,14 +3599,11 @@ module initia_std::vip {
 
         // score_ratio = l2_score > minimum_score ? 1 : l2_score / minimum_score
         assert!(
-            reward_by_6_stage == max_reward_per_claim 
-            + (
+            reward_by_6_stage == max_reward_per_claim + (
                 max_reward_per_claim + max_reward_per_claim
-            ) 
-            + (
+            ) + (
                 max_reward_per_claim + max_reward_per_claim
-            ) 
-            ,
+            ),
             1
         );
     }
@@ -3689,7 +3669,7 @@ module initia_std::vip {
         vip_tvl_manager::init_module_for_test(chain);
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
         init_module_for_test(chain);
-        update_release_initial_time(chain,10);
+        update_initial_release_time(chain, 10);
         coin::mint_to(
             &mint_cap,
             signer::address_of(chain),
@@ -3873,7 +3853,7 @@ module initia_std::vip {
             ) / 2,
             0
         );
-        
+
         assert!(
             vip_reward::balance(
                 vip_vesting::get_operator_reward_store_address(2)
@@ -3906,7 +3886,7 @@ module initia_std::vip {
             chain, string::utf8(b"uinit")
         );
         init_module_for_test(chain);
-        update_release_initial_time(chain,10);
+        update_initial_release_time(chain, 10);
         move_to(
             chain,
             TestCapability {burn_cap, freeze_cap, mint_cap,}
@@ -4224,7 +4204,7 @@ module initia_std::vip {
             6
         );
 
-        let min_score_ratio = decimal256::from_string(
+        let minimum_score_ratio = decimal256::from_string(
             &string::utf8(DEFAULT_MIN_SCORE_RATIO_FOR_TEST)
         );
         let (claimable_list, _) = batch_simulate_user_claim_reward(
@@ -4234,11 +4214,11 @@ module initia_std::vip {
             ],
             vector[
                 decimal256::mul_u64(
-                    &min_score_ratio,
+                    &minimum_score_ratio,
                     *simple_map::borrow(&score_map, &1)
                 ),
                 decimal256::mul_u64(
-                    &min_score_ratio,
+                    &minimum_score_ratio,
                     *simple_map::borrow(&score_map, &2)
                 ),
             ],
@@ -4320,7 +4300,7 @@ module initia_std::vip {
             1_000_000_000_000,
         );
 
-        update_min_score_ratio(
+        update_minimum_score_ratio(
             chain,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
@@ -4887,9 +4867,9 @@ module initia_std::vip {
         );
         assert!(get_next_stage(bridge_id) == 4, 5);
         assert!(get_next_stage(bridge_id2) == 4, 6);
-        
+
         //deregister bridge and re-register bridge on different stage
-        deregister(chain,bridge_id2);
+        deregister(chain, bridge_id2);
         test_register_bridge(
             chain,
             operator2,
@@ -4915,6 +4895,7 @@ module initia_std::vip {
         );
         assert!(get_next_stage(bridge_id2) == 50, 7);
     }
+
     #[test_only]
     public fun test_setup_for_zapping(
         chain: &signer,
@@ -4937,7 +4918,7 @@ module initia_std::vip {
         vip_zapping::init_module_for_test(chain);
         vip_tvl_manager::init_module_for_test(chain);
         init_module_for_test(chain);
-        update_release_initial_time(chain,10);
+        update_initial_release_time(chain, 10);
         let (_burn_cap, _freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
@@ -5080,9 +5061,8 @@ module initia_std::vip {
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
-        // TODO: should do batch claim before claim user reward 
+        // TODO: should do batch claim before claim user reward
         batch_claim_user_reward_script(
-            
         );
 
         let stage = 1;
@@ -5098,7 +5078,7 @@ module initia_std::vip {
             bridge_id,
             stage
         );
-        
+
         // zap vesting in stage 1
         zapping_script(
             receiver,

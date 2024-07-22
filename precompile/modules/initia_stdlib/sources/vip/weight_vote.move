@@ -225,14 +225,11 @@ module initia_std::vip_weight_vote {
         title: String,
         summary: String,
         api_uri: String,
-
         cycle: u64,
         challenger: address,
-
         new_submitter: address,
         merkle_root: vector<u8>,
         snapshot_height: u64,
-
         quorum: u64,
         voting_end_time: u64,
         min_voting_end_time: u64,

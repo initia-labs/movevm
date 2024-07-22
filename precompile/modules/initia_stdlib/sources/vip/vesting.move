@@ -346,7 +346,6 @@ module initia_std::vip_vesting {
         let vested_reward = 0u64;
         let penalty_reward = 0u64;
         let finalized_vestings = vector::empty<u64>();
-        let vesting_changes = vector::empty<VestingChange>();
         let vesting_store_addr = get_vesting_store_address<UserVesting>(
             account_addr, bridge_id
         );
@@ -388,16 +387,6 @@ module initia_std::vip_vesting {
             vested_reward = vested_reward + vest_amount;
             penalty_reward = penalty_reward + vest_max_amount - vest_amount;
             value.remaining_reward = value.remaining_reward - vest_max_amount;
-
-            vector::push_back(
-                &mut vesting_changes,
-                VestingChange {
-                    vesting_start_stage: value.start_stage,
-                    calculate_stage: stage,
-                    initial_reward: value.initial_reward,
-                    remaining_reward: value.remaining_reward,
-                }
-            );
 
             event::emit(
                 VestingChangedEvent {
