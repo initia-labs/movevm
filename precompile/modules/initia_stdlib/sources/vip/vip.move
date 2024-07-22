@@ -77,8 +77,10 @@ module initia_std::vip {
     struct ModuleStore has key {
         // current stage
         stage: u64,
-        // stage start time; stage end time = stage start time + stage interval
+        // stage start time
         stage_start_time: u64,
+        // stage end time
+        stage_end_time: u64,
         // governance-defined vesting period in stage unit
         stage_interval: u64,
         // the number of times vesting is divided
@@ -114,8 +116,8 @@ module initia_std::vip {
     }
 
     struct StageData has store {
-        fund_time: u64,
-        stage_interval: u64,
+        stage_start_time: u64,
+        stage_end_time: u64,
         pool_split_ratio: Decimal256,
         total_operator_funded_reward: u64,
         total_user_funded_reward: u64,
@@ -186,7 +188,8 @@ module initia_std::vip {
     }
 
     struct StageDataResponse has drop {
-        stage_interval: u64,
+        stage_start_time: u64,
+        stage_end_time: u64,
         pool_split_ratio: Decimal256,
         total_operator_funded_reward: u64,
         total_user_funded_reward: u64,
@@ -237,7 +240,8 @@ module initia_std::vip {
     #[event]
     struct StageAdvanceEvent has drop, store {
         stage: u64,
-        stage_interval: u64,
+        stage_start_time: u64,
+        stage_end_time: u64,
         pool_split_ratio: Decimal256,
         total_operator_funded_reward: u64,
         total_user_funded_reward: u64,
@@ -280,6 +284,7 @@ module initia_std::vip {
             ModuleStore {
                 stage: DEFAULT_VIP_START_STAGE,
                 stage_start_time: 0,
+                stage_end_time: 0,
                 stage_interval: DEFAULT_STAGE_INTERVAL,
                 vesting_period: DEFAULT_VESTING_PERIOD,
                 challenge_period: DEFAULT_CHALLENGE_PERIOD,
@@ -312,6 +317,7 @@ module initia_std::vip {
         assert!(stage_start_time > block_time, error::invalid_argument(EINITIAILIZE));
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.stage_start_time = stage_start_time;
+        module_store.stage_end_time = stage_start_time;
     }
     // Compare bytes and return a following result number:
     // 0: equal
@@ -1201,21 +1207,17 @@ module initia_std::vip {
         add_tvl_snapshot_internal(module_store);
         let fund_stage = module_store.stage;
         let stage_start_time = module_store.stage_start_time;
-    
+        let stage_end_time = module_store.stage_end_time;
         assert!(
             stage_start_time != 0,
             error::unavailable(EINITIAILIZE)
         );
         let stage_interval = module_store.stage_interval;
-        let stage_end_time =  if(fund_stage > 1) {
-            stage_start_time + stage_interval
-        } else {
-            stage_start_time
-        };
         assert!(stage_end_time <= fund_time,error::invalid_state(ETOO_EARLY_FUND));
         
         // update stage start_time
         module_store.stage_start_time = stage_end_time;
+        module_store.stage_end_time = stage_end_time + stage_interval;
         let total_reward = vip_vault::claim(fund_stage);
         let (
             total_operator_funded_reward,
@@ -1230,8 +1232,8 @@ module initia_std::vip {
             &mut module_store.stage_data,
             table_key::encode_u64(fund_stage),
             StageData {
-                fund_time: fund_time,
-                stage_interval: module_store.stage_interval,
+                stage_start_time: module_store.stage_start_time,
+                stage_end_time: module_store.stage_end_time,
                 pool_split_ratio: module_store.pool_split_ratio,
                 total_operator_funded_reward,
                 total_user_funded_reward,
@@ -1244,7 +1246,8 @@ module initia_std::vip {
         event::emit(
             StageAdvanceEvent {
                 stage: fund_stage,
-                stage_interval: module_store.stage_interval,
+                stage_start_time: module_store.stage_start_time,
+                stage_end_time: module_store.stage_end_time,
                 pool_split_ratio: module_store.pool_split_ratio,
                 total_operator_funded_reward,
                 total_user_funded_reward,
@@ -1813,7 +1816,8 @@ module initia_std::vip {
         );
 
         StageDataResponse {
-            stage_interval: stage_data.stage_interval,
+            stage_start_time: stage_data.stage_start_time,
+            stage_end_time: stage_data.stage_end_time,
             pool_split_ratio: stage_data.pool_split_ratio,
             total_operator_funded_reward: stage_data.total_operator_funded_reward,
             total_user_funded_reward: stage_data.total_user_funded_reward,
