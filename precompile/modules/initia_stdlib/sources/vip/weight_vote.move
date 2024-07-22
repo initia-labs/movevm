@@ -214,7 +214,7 @@ module initia_std::vip_weight_vote {
     }
 
     #[event]
-    struct ExecuteEvent has drop, store {
+    struct ExecuteProposalEvent has drop, store {
         cycle: u64,
         bridge_ids: vector<u64>,
         weights: vector<Decimal256>,
@@ -222,6 +222,7 @@ module initia_std::vip_weight_vote {
 
     #[event]
     struct CreateChallengeEvent has drop, store {
+        challenge_id:u64,
         title: String,
         summary: String,
         api_uri: String,
@@ -511,7 +512,7 @@ module initia_std::vip_weight_vote {
 
         // emit event
         event::emit(
-            ExecuteEvent {
+            ExecuteProposalEvent {
                 cycle: module_store.current_cycle,
                 bridge_ids,
                 weights,
@@ -604,6 +605,7 @@ module initia_std::vip_weight_vote {
         // emit event
         event::emit(
             CreateChallengeEvent {
+                challenge_id: challenge_id,
                 title: title,
                 summary: summary,
                 api_uri: api_uri,
