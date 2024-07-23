@@ -17,7 +17,6 @@ module initia_std::vip_reward {
     use initia_std::bcs;
     use initia_std::fungible_asset;
     use initia_std::type_info;
-
     friend initia_std::vip_weight_vote;
     friend initia_std::vip_vesting;
     friend initia_std::vip_zapping;
@@ -30,6 +29,7 @@ module initia_std::vip_reward {
 
     const EREWARD_STORE_ALREADY_EXISTS: u64 = 1;
     const EREWARD_STORE_NOT_FOUND: u64 = 2;
+    const EPENALTY_AMOUNT: u64 = 3;
 
     //
     //  Constants
@@ -142,6 +142,27 @@ module initia_std::vip_reward {
             reward_store.reward_store,
             amount
         )
+    }
+
+    public(friend) fun penalty<Vesting: copy + drop + store>(
+        bridge_id: u64,
+        penalty_amount: u64,
+        vault_store_addr: address
+    ) acquires RewardStore {
+        let reward_store_addr = get_reward_store_address<Vesting>(bridge_id);
+        let reward_store = borrow_global<RewardStore>(reward_store_addr);
+        let reward_signer = object::generate_signer_for_extending(&reward_store.extend_ref);
+        assert!(
+            penalty_amount > 0,
+            error::invalid_argument(EPENALTY_AMOUNT)
+        );
+
+        primary_fungible_store::transfer(
+            &reward_signer,
+            reward_metadata(),
+            vault_store_addr,
+            penalty_amount
+        );
     }
 
     //

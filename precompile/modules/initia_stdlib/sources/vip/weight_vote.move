@@ -56,7 +56,7 @@ module initia_std::vip_weight_vote {
         current_cycle: u64,
         // current cycle start timestamp
         cycle_start_timestamp: u64,
-        // current cycle start timestamp
+        // current cycle end timestamp
         cycle_end_timestamp: u64,
         // change bridge weights proposals
         proposals: Table<vector<u8> /* cycle */, Proposal>,
@@ -214,7 +214,7 @@ module initia_std::vip_weight_vote {
     }
 
     #[event]
-    struct ExecuteEvent has drop, store {
+    struct ExecuteProposalEvent has drop, store {
         cycle: u64,
         bridge_ids: vector<u64>,
         weights: vector<Decimal256>,
@@ -222,14 +222,19 @@ module initia_std::vip_weight_vote {
 
     #[event]
     struct CreateChallengeEvent has drop, store {
-        challenger: address,
         challenge_id: u64,
         title: String,
         summary: String,
+        api_uri: String,
+        cycle: u64,
+        challenger: address,
         new_submitter: address,
         merkle_root: vector<u8>,
-        api_uri: String,
         snapshot_height: u64,
+        quorum: u64,
+        voting_end_time: u64,
+        min_voting_end_time: u64,
+        deposit_amount: u64,
     }
 
     #[event]
@@ -463,6 +468,7 @@ module initia_std::vip_weight_vote {
         )
     }
 
+    // it will be executed by agent; but there is no permission to execute proposal
     public entry fun execute_proposal() acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, timestamp) = get_block_info();
@@ -506,7 +512,7 @@ module initia_std::vip_weight_vote {
 
         // emit event
         event::emit(
-            ExecuteEvent {
+            ExecuteProposalEvent {
                 cycle: module_store.current_cycle,
                 bridge_ids,
                 weights,
@@ -543,7 +549,6 @@ module initia_std::vip_weight_vote {
         );
 
         // set challenge configs
-        let voting_power_cycle = cycle;
         let voting_end_time = timestamp + module_store.voting_period;
         let min_voting_end_time = timestamp + module_store.min_voting_period;
         let quorum = decimal128::mul_u64(
@@ -569,11 +574,11 @@ module initia_std::vip_weight_vote {
 
         let challenge = Challenge {
             challenger,
-            voting_power_cycle,
             title,
             summary,
             cycle: cycle_to_challenge,
             new_submitter: challenger,
+            voting_power_cycle: cycle,
             merkle_root,
             api_uri,
             snapshot_height,
@@ -600,14 +605,19 @@ module initia_std::vip_weight_vote {
         // emit event
         event::emit(
             CreateChallengeEvent {
-                challenger,
-                challenge_id,
-                title,
-                summary,
+                challenge_id: challenge_id,
+                title: title,
+                summary: summary,
+                api_uri: api_uri,
+                cycle: cycle_to_challenge,
+                challenger: challenger,
                 new_submitter: challenger,
-                merkle_root,
-                api_uri,
-                snapshot_height,
+                merkle_root: merkle_root,
+                snapshot_height: snapshot_height,
+                quorum: quorum,
+                voting_end_time: voting_end_time,
+                min_voting_end_time: min_voting_end_time,
+                deposit_amount: module_store.challenge_deposit_amount,
             }
         )
     }
@@ -688,6 +698,7 @@ module initia_std::vip_weight_vote {
         )
     }
 
+    // it will be executed by agent; but there is no permission to execute proposal
     public entry fun execute_challenge(challenge_id: u64,) acquires ModuleStore {
         // execute challenge and get result
         let success = execute_challenge_internal(challenge_id);
@@ -707,8 +718,8 @@ module initia_std::vip_weight_vote {
             option::none(),
             2
         );
-        if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { 1 } else {
-            let (challenge_id, _) = table::next<vector<u8>, Challenge>(&mut iter);
+        if (!table::prepare<vector<u8>, Challenge>(iter)) { 1 } else {
+            let (challenge_id, _) = table::next<vector<u8>, Challenge>(iter);
             table_key::decode_u64(challenge_id) + 1
         }
     }
@@ -724,27 +735,24 @@ module initia_std::vip_weight_vote {
             2
         );
         assert!(
-             table::prepare<vector<u8>, Proposal>(&mut iter),
+            table::prepare<vector<u8>, Proposal>(iter),
             error::not_found(ECYCLE_NOT_FOUND)
         );
-        let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(&mut iter);
+        let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(iter);
 
         // if last proposal is in progress, use former proposal
         if (proposal.voting_end_time > timestamp) {
             assert!(
-                table::prepare<vector<u8>, Proposal>(&mut iter),
+                table::prepare<vector<u8>, Proposal>(iter),
                 error::not_found(ECYCLE_NOT_FOUND)
             );
-            (cycle_key, _) = table::next<vector<u8>, Proposal>(&mut iter);
+            (cycle_key, _) = table::next<vector<u8>, Proposal>(iter);
         };
 
-        let last_finalized_proposal_id = table_key::decode_u64(cycle_key);
-        let last_finalized_proposal = table::borrow(
-            &module_store.proposals,
-            cycle_key
-            );
+        let last_finalized_proposal_cycle = table_key::decode_u64(cycle_key);
+        let last_finalized_proposal = table::borrow(&module_store.proposals, cycle_key);
         (
-            last_finalized_proposal_id,
+            last_finalized_proposal_cycle,
             last_finalized_proposal
         )
     }
@@ -1209,8 +1217,8 @@ module initia_std::vip_weight_vote {
 
         let challenge_responses = vector::empty<ChallengeResponse>();
         loop {
-            if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { break };
-            let (_, challenge) = table::next<vector<u8>, Challenge>(&mut iter);
+            if (!table::prepare<vector<u8>, Challenge>(iter)) { break };
+            let (_, challenge) = table::next<vector<u8>, Challenge>(iter);
             if (challenge.cycle == cycle) {
                 vector::push_back(
                     &mut challenge_responses,
@@ -1286,7 +1294,16 @@ module initia_std::vip_weight_vote {
     use initia_std::string;
 
     #[test_only]
+    use initia_std::block;
+    #[test_only]
     const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
+
+    #[test_only]
+    fun skip_period(period: u64) {
+        let (height, curr_time) = block::get_block_info();
+        block::set_block_info(height, curr_time + period);
+    }
+
     #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
         let init_stage = 1;
@@ -1544,7 +1561,7 @@ module initia_std::vip_weight_vote {
             vector::length(&weight_vote.weights) == 2,
             10
         );
-        set_block_info(100, 201);
+        skip_period(60);
         execute_proposal();
     }
 
@@ -1587,7 +1604,6 @@ module initia_std::vip_weight_vote {
             string::utf8(b"https://abc.com"),
             100
         );
-
         // votes
         vote(
             u1,
@@ -1614,21 +1630,11 @@ module initia_std::vip_weight_vote {
         );
 
         // execute
-        set_block_info(100, 161);
+        skip_period(60); // skip voting period(60)
         execute_proposal();
 
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        assert!(
-            module_store.cycle_start_timestamp == 100,
-            0
-        );
-        assert!(
-            module_store.cycle_end_timestamp == 200,
-            1
-        );
-
         // after grace period
-        set_block_info(100, 211);
+        skip_period(50); // skip voting period(50)
 
         // create challenge
         let voting_powers = vector[15, 25, 35, 45];
@@ -1646,33 +1652,26 @@ module initia_std::vip_weight_vote {
         vote_challenge(u1, 1, true);
 
         // after min_voting_period
-        set_block_info(100, 212);
+        skip_period(1);
 
         // execute challenge
         execute_challenge(1);
 
         let module_response = get_module_store();
         let vote = get_proposal(2);
+
+        assert!(module_response.current_cycle == 2, 1);
         assert!(
-            module_response.cycle_start_timestamp == 200,
+            module_response.submitter == signer::address_of(u1),
             2
         );
         assert!(
-            module_response.cycle_end_timestamp == 300,
-            3
-        );
-        assert!(module_response.current_cycle == 2, 4);
-        assert!(
-            module_response.submitter == signer::address_of(u1),
-            5
-        );
-        assert!(
             vote.merkle_root == get_merkle_root(tree),
-            6
+            3
         );
         assert!(
             vote.api_uri == string::utf8(b"https://abc2.com"),
-            6
+            4
         );
 
         set_block_info(100, 251);
@@ -1700,46 +1699,39 @@ module initia_std::vip_weight_vote {
 
         module_response = get_module_store();
         vote = get_proposal(2);
-        assert!(
-            module_response.cycle_start_timestamp == 300,
-            7
-        );
-        assert!(
-            module_response.cycle_end_timestamp == 400,
-            8
-        );
-        assert!(module_response.current_cycle == 2, 9);
+
+        assert!(module_response.current_cycle == 2, 5);
         assert!(
             module_response.submitter == signer::address_of(u2),
-            10
+            6
         );
         assert!(
             vote.merkle_root == get_merkle_root(tree),
-            11
+            7
         );
         assert!(
             vote.api_uri == string::utf8(b"https://abc3.com"),
-            12
+            8
         );
 
         let challenge = get_challenge(2);
         assert!(
             challenge.title == string::utf8(b"challenge"),
-            13
+            9
         );
         assert!(
             challenge.summary == string::utf8(b"challenge"),
-            14
+            10
         );
         assert!(
             challenge.api_uri == string::utf8(b"https://abc3.com"),
-            15
+            11
         );
-        assert!(challenge.cycle == 2, 16);
-        assert!(challenge.yes_tally == 20, 17);
-        assert!(challenge.no_tally == 0, 18);
-        assert!(challenge.quorum == 9, 19);
-        assert!(challenge.is_executed == true, 20);
+        assert!(challenge.cycle == 2, 12);
+        assert!(challenge.yes_tally == 20, 13);
+        assert!(challenge.no_tally == 0, 14);
+        assert!(challenge.quorum == 9, 15);
+        assert!(challenge.is_executed == true, 16);
     }
 
 }

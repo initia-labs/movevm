@@ -1,7 +1,6 @@
 module initia_std::vip_vault {
     use std::error;
     use std::signer;
-
     use initia_std::object::{Self, ExtendRef};
     use initia_std::fungible_asset::FungibleAsset;
     use initia_std::primary_fungible_store;
@@ -9,7 +8,7 @@ module initia_std::vip_vault {
     use initia_std::vip_reward;
 
     friend initia_std::vip;
-
+    friend initia_std::vip_vesting;
     //
     // Errors
     //
