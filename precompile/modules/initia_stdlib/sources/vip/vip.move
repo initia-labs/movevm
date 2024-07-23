@@ -631,9 +631,9 @@ module initia_std::vip {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
 
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             let balance_reward = split_reward_with_share(
                 balance_shares,
@@ -811,8 +811,8 @@ module initia_std::vip {
         );
         // calculate total balance and bridge balance
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(&mut iter);
             // bridge balance from tvl manager
             let bridge_balance = vip_tvl_manager::get_average_tvl(
                 module_store.stage,
@@ -839,8 +839,8 @@ module initia_std::vip {
         );
         // calculate balance share
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_balance = simple_map::borrow(
                 &bridge_balances,
                 &table_key::decode_u64(bridge_id_vec)
@@ -876,8 +876,8 @@ module initia_std::vip {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
 
             let weight = if (
@@ -936,8 +936,8 @@ module initia_std::vip {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (_, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
         };
 
@@ -1181,8 +1181,8 @@ module initia_std::vip {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
 
             let bridge_balance = primary_fungible_store::balance(
@@ -1884,8 +1884,8 @@ module initia_std::vip {
 
         let bridge_infos = vector::empty<BridgeResponse>();
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             vector::push_back(
                 &mut bridge_infos,
                 BridgeResponse {
@@ -1916,8 +1916,8 @@ module initia_std::vip {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, Bridge>(iter)) { break };
-            let (key, _) = table::next<vector<u8>, Bridge>(iter);
+            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
+            let (key, _) = table::next<vector<u8>, Bridge>(&mut iter);
             vector::push_back(
                 &mut bridge_ids,
                 table_key::decode_u64(key)

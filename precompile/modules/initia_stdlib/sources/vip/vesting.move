@@ -333,10 +333,10 @@ module initia_std::vip_vesting {
             option::none(),
             2
         );
-        if (!table::prepare<vector<u8>, bool>(iter)) {
+        if (!table::prepare<vector<u8>, bool>(&mut iter)) {
             return 0
         };
-        let (key, _) = table::next<vector<u8>, bool>(iter);
+        let (key, _) = table::next<vector<u8>, bool>(&mut iter);
         table_key::decode_u64(key)
     }
 
@@ -360,9 +360,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
+            if (!table::prepare_mut<vector<u8>, UserVesting>(&mut iter)) { break };
 
-            let (start_stage_vec, value) = table::next_mut<vector<u8>, UserVesting>(iter);
+            let (start_stage_vec, value) = table::next_mut<vector<u8>, UserVesting>(&mut iter);
 
             let (vest_max_amount, vest_amount) = calculate_user_vest(value, l2_score);
 
@@ -465,9 +465,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare_mut<vector<u8>, OperatorVesting>(iter)) { break };
+            if (!table::prepare_mut<vector<u8>, OperatorVesting>(&mut iter)) { break };
 
-            let (_, value) = table::next_mut<vector<u8>, OperatorVesting>(iter);
+            let (_, value) = table::next_mut<vector<u8>, OperatorVesting>(&mut iter);
 
             // move vesting if end stage is over or the left reward is empty
             if (stage > value.end_stage || value.remaining_reward == 0) {
@@ -943,9 +943,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, bool>(iter)) { break };
+            if (!table::prepare<vector<u8>, bool>(&mut iter)) { break };
 
-            let (key, _) = table::next<vector<u8>, bool>(iter);
+            let (key, _) = table::next<vector<u8>, bool>(&mut iter);
             vector::push_back(
                 &mut claimed_stages,
                 table_key::decode_u64(key)
@@ -990,9 +990,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, UserVesting>(iter)) { break };
+            if (!table::prepare<vector<u8>, UserVesting>(&mut iter)) { break };
 
-            let (_, value) = table::next<vector<u8>, UserVesting>(iter);
+            let (_, value) = table::next<vector<u8>, UserVesting>(&mut iter);
             locked_reward = locked_reward + value.remaining_reward;
         };
 
@@ -1018,9 +1018,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
+            if (!table::prepare_mut<vector<u8>, UserVesting>(&mut iter)) { break };
 
-            let (_, value) = table::next_mut<vector<u8>, UserVesting>(iter);
+            let (_, value) = table::next_mut<vector<u8>, UserVesting>(&mut iter);
 
             let (_, vest_amount) = calculate_user_vest(value, l2_score);
             vested_reward = vested_reward + vest_amount;
@@ -1102,9 +1102,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, bool>(iter)) { break };
+            if (!table::prepare<vector<u8>, bool>(&mut iter)) { break };
 
-            let (key, _) = table::next<vector<u8>, bool>(iter);
+            let (key, _) = table::next<vector<u8>, bool>(&mut iter);
             vector::push_back(
                 &mut claimed_stages,
                 table_key::decode_u64(key)
@@ -1151,9 +1151,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, OperatorVesting>(iter)) { break };
+            if (!table::prepare<vector<u8>, OperatorVesting>(&mut iter)) { break };
 
-            let (_, value) = table::next<vector<u8>, OperatorVesting>(iter);
+            let (_, value) = table::next<vector<u8>, OperatorVesting>(&mut iter);
             locked_reward = locked_reward + value.remaining_reward;
         };
 
@@ -1180,9 +1180,9 @@ module initia_std::vip_vesting {
             1
         );
         loop {
-            if (!table::prepare_mut<vector<u8>, OperatorVesting>(iter)) { break };
+            if (!table::prepare_mut<vector<u8>, OperatorVesting>(&mut iter)) { break };
 
-            let (_, value) = table::next_mut<vector<u8>, OperatorVesting>(iter);
+            let (_, value) = table::next_mut<vector<u8>, OperatorVesting>(&mut iter);
 
             let vest_amount = calculate_operator_vest(value);
             vested_reward = vested_reward + vest_amount;

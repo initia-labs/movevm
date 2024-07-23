@@ -203,8 +203,8 @@ module initia_std::vip_tvl_manager {
             1
         );
         loop {
-            if (!table::prepare<vector<u8>, u64>(iter)) { break };
-            let (time_vec, snapshot_tvl) = table::next<vector<u8>, u64>(iter);
+            if (!table::prepare<vector<u8>, u64>(&mut iter)) { break };
+            let (time_vec, snapshot_tvl) = table::next<vector<u8>, u64>(&mut iter);
 
             vector::push_back(
                 &mut snapshot_responses,

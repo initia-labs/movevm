@@ -718,8 +718,8 @@ module initia_std::vip_weight_vote {
             option::none(),
             2
         );
-        if (!table::prepare<vector<u8>, Challenge>(iter)) { 1 } else {
-            let (challenge_id, _) = table::next<vector<u8>, Challenge>(iter);
+        if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { 1 } else {
+            let (challenge_id, _) = table::next<vector<u8>, Challenge>(&mut iter);
             table_key::decode_u64(challenge_id) + 1
         }
     }
@@ -735,18 +735,18 @@ module initia_std::vip_weight_vote {
             2
         );
         assert!(
-            table::prepare<vector<u8>, Proposal>(iter),
+            table::prepare<vector<u8>, Proposal>(&mut iter),
             error::not_found(ECYCLE_NOT_FOUND)
         );
-        let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(iter);
+        let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(&mut iter);
 
         // if last proposal is in progress, use former proposal
         if (proposal.voting_end_time > timestamp) {
             assert!(
-                table::prepare<vector<u8>, Proposal>(iter),
+                table::prepare<vector<u8>, Proposal>(&mut iter),
                 error::not_found(ECYCLE_NOT_FOUND)
             );
-            (cycle_key, _) = table::next<vector<u8>, Proposal>(iter);
+            (cycle_key, _) = table::next<vector<u8>, Proposal>(&mut iter);
         };
 
         let last_finalized_proposal_cycle = table_key::decode_u64(cycle_key);
@@ -1217,8 +1217,8 @@ module initia_std::vip_weight_vote {
 
         let challenge_responses = vector::empty<ChallengeResponse>();
         loop {
-            if (!table::prepare<vector<u8>, Challenge>(iter)) { break };
-            let (_, challenge) = table::next<vector<u8>, Challenge>(iter);
+            if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { break };
+            let (_, challenge) = table::next<vector<u8>, Challenge>(&mut iter);
             if (challenge.cycle == cycle) {
                 vector::push_back(
                     &mut challenge_responses,

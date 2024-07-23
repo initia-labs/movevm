@@ -225,7 +225,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                account: account,
+                addr: account,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -265,7 +265,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                account: account,
+                addr: account,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
