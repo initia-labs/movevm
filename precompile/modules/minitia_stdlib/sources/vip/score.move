@@ -633,7 +633,7 @@ module minitia_std::vip_score {
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();
         add_deployer_script(chain, signer::address_of(deployer));
-        set_init_stage(deployer, init_stage);
+        // set_init_stage(deployer, init_stage);
         vector::push_back(&mut scores, 100);
         vector::push_back(&mut addrs, @0x123);
 
