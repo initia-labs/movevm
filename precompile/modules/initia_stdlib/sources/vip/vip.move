@@ -498,61 +498,61 @@ module initia_std::vip {
         )
     }
 
-    public fun claim_user_reward(
-        account: &signer,
-        bridge_id: u64,
-        stage: u64,
-        merkle_proofs: vector<vector<u8>>,
-        l2_score: u64,
-    ): (FungibleAsset) acquires ModuleStore {
-        // check claim period
-        check_claimable_period(bridge_id, stage);
+    // public fun claim_user_reward(
+    //     account: &signer,
+    //     bridge_id: u64,
+    //     stage: u64,
+    //     merkle_proofs: vector<vector<u8>>,
+    //     l2_score: u64,
+    // ): (FungibleAsset) acquires ModuleStore {
+    //     // check claim period
+    //     check_claimable_period(bridge_id, stage);
 
-        let account_addr = signer::address_of(account);
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+    //     let account_addr = signer::address_of(account);
+    //     let module_store = borrow_global<ModuleStore>(@initia_std);
 
-        assert!(
-            table::contains(
-                &module_store.stage_data,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(ESTAGE_DATA_NOT_FOUND)
-        );
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-        let snapshot = table::borrow(
-            &stage_data.snapshots,
-            table_key::encode_u64(bridge_id)
-        );
+    //     assert!(
+    //         table::contains(
+    //             &module_store.stage_data,
+    //             table_key::encode_u64(stage)
+    //         ),
+    //         error::not_found(ESTAGE_DATA_NOT_FOUND)
+    //     );
+    //     let stage_data = table::borrow(
+    //         &module_store.stage_data,
+    //         table_key::encode_u64(stage)
+    //     );
+    //     let snapshot = table::borrow(
+    //         &stage_data.snapshots,
+    //         table_key::encode_u64(bridge_id)
+    //     );
 
-        let target_hash = score_hash(
-            bridge_id,
-            stage,
-            account_addr,
-            l2_score,
-            snapshot.total_l2_score,
-        );
-        // if a length of merkle proofs is 0, it will be passed
-        assert_merkle_proofs(
-            merkle_proofs,
-            snapshot.merkle_root,
-            target_hash,
-        );
+    //     let target_hash = score_hash(
+    //         bridge_id,
+    //         stage,
+    //         account_addr,
+    //         l2_score,
+    //         snapshot.total_l2_score,
+    //     );
+    //     // if a length of merkle proofs is 0, it will be passed
+    //     assert_merkle_proofs(
+    //         merkle_proofs,
+    //         snapshot.merkle_root,
+    //         target_hash,
+    //     );
 
-        let (vested_reward) = vip_vesting::claim_user_reward(
-            account_addr,
-            bridge_id,
-            stage,
-            stage + stage_data.vesting_period,
-            l2_score,
-            snapshot.total_l2_score,
-            stage_data.minimum_score_ratio,
-        );
+    //     let (vested_reward) = vip_vesting::claim_user_reward(
+    //         account_addr,
+    //         bridge_id,
+    //         stage,
+    //         stage + stage_data.vesting_period,
+    //         l2_score,
+    //         snapshot.total_l2_score,
+    //         stage_data.minimum_score_ratio,
+    //     );
 
-        (vested_reward)
-    }
+    //     (vested_reward)
+    // }
 
     fun zapping(
         account: &signer,
@@ -892,7 +892,7 @@ module initia_std::vip {
     }
 
     // retunr claim operator reward and remaining(by rounding math issue on finalized stage)
-    public fun claim_operator_reward(
+    fun claim_operator_reward(
         operator: &signer,
         bridge_id: u64,
         stage: u64,
