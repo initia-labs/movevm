@@ -1502,7 +1502,7 @@ module initia_std::vip {
             &stage,
             |i, s| {
                 assert!(
-                    *s > prev_stage,
+                    *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
                 prev_stage = *s;

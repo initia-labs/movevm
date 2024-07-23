@@ -67,7 +67,6 @@ module initia_std::vip_vesting {
 
     struct VestingChange has drop, store {
         start_stage: u64,
-        stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
     }
@@ -125,7 +124,6 @@ module initia_std::vip_vesting {
         account: address,
         bridge_id: u64,
         start_stage: u64,
-        stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
     }
@@ -410,7 +408,6 @@ module initia_std::vip_vesting {
                     account: account_addr,
                     bridge_id: bridge_id,
                     start_stage: value.start_stage,
-                    stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
@@ -500,7 +497,6 @@ module initia_std::vip_vesting {
                 &mut vesting_changes,
                 VestingChange {
                     start_stage: value.start_stage,
-                    stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
