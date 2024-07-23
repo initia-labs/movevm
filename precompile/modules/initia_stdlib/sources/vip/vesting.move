@@ -392,7 +392,9 @@ module initia_std::vip_vesting {
             vested_reward = vested_reward + vest_amount;
             value.remaining_reward = value.remaining_reward - vest_amount;
             event::emit(
-                VestingChange {
+                VestingChangedEvent {
+                    account: account_addr,
+                    bridge_id: bridge_id,
                     start_stage: value.start_stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
