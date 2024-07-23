@@ -222,7 +222,7 @@ module initia_std::vip_weight_vote {
 
     #[event]
     struct CreateChallengeEvent has drop, store {
-        challenge_id:u64,
+        challenge_id: u64,
         title: String,
         summary: String,
         api_uri: String,
@@ -1303,6 +1303,7 @@ module initia_std::vip_weight_vote {
         let (height, curr_time) = block::get_block_info();
         block::set_block_info(height, curr_time + period);
     }
+
     #[test_only]
     fun init_test(chain: &signer): coin::MintCapability {
         let init_stage = 1;
@@ -1658,7 +1659,7 @@ module initia_std::vip_weight_vote {
 
         let module_response = get_module_store();
         let vote = get_proposal(2);
-    
+
         assert!(module_response.current_cycle == 2, 1);
         assert!(
             module_response.submitter == signer::address_of(u1),
@@ -1698,7 +1699,7 @@ module initia_std::vip_weight_vote {
 
         module_response = get_module_store();
         vote = get_proposal(2);
-        
+
         assert!(module_response.current_cycle == 2, 5);
         assert!(
             module_response.submitter == signer::address_of(u2),

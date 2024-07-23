@@ -66,8 +66,8 @@ module initia_std::vip_vesting {
     }
 
     struct VestingChange has drop, store {
-        vesting_start_stage: u64,
-        calculate_stage: u64, /*stage calculating remaing reward and vested reward*/
+        start_stage: u64,
+        stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
     }
@@ -100,21 +100,21 @@ module initia_std::vip_vesting {
     struct UserVestingFinalizedEvent has drop, store {
         account: address,
         bridge_id: u64,
-        stage: u64,
+        start_stage: u64,
     }
 
     #[event]
     struct OperatorVestingFinalizedEvent has drop, store {
         account: address,
         bridge_id: u64,
-        stage: u64,
+        start_stage: u64,
     }
 
     #[event]
     struct UserVestingClaimEvent has drop, store {
         account: address,
         bridge_id: u64,
-        stage: u64,
+        start_stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
 
@@ -124,8 +124,8 @@ module initia_std::vip_vesting {
     struct VestingChangedEvent has drop, store {
         account: address,
         bridge_id: u64,
-        vesting_start_stage: u64,
-        calculate_stage: u64,
+        start_stage: u64,
+        stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
     }
@@ -134,7 +134,7 @@ module initia_std::vip_vesting {
     struct OperatorVestingClaimEvent has drop, store {
         account: address,
         bridge_id: u64,
-        stage: u64,
+        start_stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
         vesting_changes: vector<VestingChange>,
@@ -213,7 +213,7 @@ module initia_std::vip_vesting {
             table_key::encode_u64(stage),
             true
         );
-        
+
         table::add(
             &mut vesting_store.vestings,
             table_key::encode_u64(stage),
@@ -365,32 +365,34 @@ module initia_std::vip_vesting {
             if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
 
             let (start_stage_vec, value) = table::next_mut<vector<u8>, UserVesting>(iter);
-        
+
             let (vest_max_amount, vest_amount) = calculate_user_vest(value, l2_score);
 
             total_vested_reward = total_vested_reward + vest_amount;
             let penalty_reward = vest_max_amount - vest_amount;
-            if(penalty_reward > 0) {
+            if (penalty_reward > 0) {
                 let start_stage = table_key::decode_u64(start_stage_vec);
                 total_penalty_reward = total_penalty_reward + penalty_reward;
-                event::emit(PenaltyEvent {
-                    account:account_addr,
-                    bridge_id:bridge_id,
-                    start_stage: start_stage,
-                    amount: penalty_reward
-                });
-                
+                event::emit(
+                    PenaltyEvent {
+                        account: account_addr,
+                        bridge_id: bridge_id,
+                        start_stage: start_stage,
+                        amount: penalty_reward
+                    }
+                );
+
             };
 
             value.remaining_reward = value.remaining_reward - vest_max_amount;
 
             // if vesting end stage is equal or more, it will be finalized
-            if (stage >= value.end_stage ) {
+            if (stage >= value.end_stage) {
                 event::emit(
                     UserVestingFinalizedEvent {
                         account: account_addr,
                         bridge_id,
-                        stage: value.start_stage,
+                        start_stage: value.start_stage,
                     }
                 );
                 // give the remaining reward to vest reward because of floor problem
@@ -407,8 +409,8 @@ module initia_std::vip_vesting {
                 VestingChangedEvent {
                     account: account_addr,
                     bridge_id: bridge_id,
-                    vesting_start_stage: value.start_stage,
-                    calculate_stage: stage,
+                    start_stage: value.start_stage,
+                    stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
@@ -439,7 +441,10 @@ module initia_std::vip_vesting {
             }
         );
 
-        (total_vested_reward, total_penalty_reward)
+        (
+            total_vested_reward,
+            total_penalty_reward
+        )
     }
 
     fun vest_operator_reward(
@@ -473,7 +478,7 @@ module initia_std::vip_vesting {
                     OperatorVestingFinalizedEvent {
                         account: account_addr,
                         bridge_id,
-                        stage: value.start_stage,
+                        start_stage: value.start_stage,
                     }
                 );
                 if (value.remaining_reward > 0) {
@@ -494,8 +499,8 @@ module initia_std::vip_vesting {
             vector::push_back(
                 &mut vesting_changes,
                 VestingChange {
-                    vesting_start_stage: value.start_stage,
-                    calculate_stage: stage,
+                    start_stage: value.start_stage,
+                    stage: stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
                 }
@@ -789,7 +794,7 @@ module initia_std::vip_vesting {
         );
 
         let vesting_reward_amount = 0;
-        
+
         // if l2_score is less than 0, do not create new position
         if (l2_score > 0) {
             vesting_reward_amount = add_user_vesting(
@@ -807,7 +812,7 @@ module initia_std::vip_vesting {
             UserVestingClaimEvent {
                 account: account_addr,
                 bridge_id,
-                stage: start_stage,
+                start_stage: start_stage,
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
             }
@@ -839,7 +844,7 @@ module initia_std::vip_vesting {
             OperatorVestingClaimEvent {
                 account: account_addr,
                 bridge_id,
-                stage: start_stage,
+                start_stage: start_stage,
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
                 vesting_changes,
@@ -877,24 +882,32 @@ module initia_std::vip_vesting {
             error::invalid_argument(EREWARD_NOT_ENOUGH)
         );
         vesting.remaining_reward = vesting.remaining_reward - zapping_amount;
+
+        let reward_store_addr = get_user_reward_store_address(bridge_id);
+
+        let start_stage = vesting.start_stage;
+        let remaining_reward = vesting.remaining_reward;
         // handle vesting positions that have changed to zapping positions
-        if(vesting.remaining_reward == 0 ){
-            // remove from vesting positons and add finalized positions in vesting store 
-            let vesting_store_addr = get_vesting_store_address<UserVesting>(
-                account_addr, bridge_id
+        if (remaining_reward == 0) {
+            // remove from vesting positons and add finalized positions in vesting store
+            let finalized_vestings = table::remove(
+                &mut vesting_store.vestings,
+                table_key::encode_u64(start_stage)
             );
-            let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
-            let finalized_vestings = table::remove(&mut vesting_store.vestings, table_key::encode_u64(vesting.start_stage));
-            table::add(&mut vesting_store.vestings_finalized, table_key::encode_u64(vesting.start_stage),finalized_vestings);
+            table::add(
+                &mut vesting_store.vestings_finalized,
+                table_key::encode_u64(start_stage),
+                finalized_vestings
+            );
             event::emit(
                 UserVestingFinalizedEvent {
                     account: account_addr,
                     bridge_id,
-                    stage: vesting.start_stage,
+                    start_stage: start_stage,
                 }
             );
         };
-        let reward_store_addr = get_user_reward_store_address(bridge_id);
+
         vip_reward::withdraw(reward_store_addr, zapping_amount)
     }
 
@@ -1038,6 +1051,7 @@ module initia_std::vip_vesting {
         let vesting = get_vesting_finalized<UserVesting>(account_addr, bridge_id, stage);
         vesting.initial_reward
     }
+
     #[view]
     public fun get_user_vesting_remaining_reward(
         account_addr: address,
