@@ -1,4 +1,4 @@
-module initia_std::vip_weight_vote {
+module publisher::vip_weight_vote {
     use std::bcs;
     use std::error;
     use std::signer;
@@ -17,8 +17,8 @@ module initia_std::vip_weight_vote {
     use initia_std::table::{Self, Table};
     use initia_std::table_key;
 
-    use initia_std::vip;
-    use initia_std::vip_reward;
+    use publisher::vip;
+    use publisher::vip_reward;
 
     //
     // Errors
@@ -271,7 +271,7 @@ module initia_std::vip_weight_vote {
             error::permission_denied(EUNAUTHORIZED)
         );
         assert!(
-            !exists<ModuleStore>(@initia_std),
+            !exists<ModuleStore>(@publisher),
             error::already_exists(EMODULE_STORE_ALREADY_EXISTS)
         );
 
@@ -312,7 +312,7 @@ module initia_std::vip_weight_vote {
             signer::address_of(chain) == @initia_std,
             error::permission_denied(EUNAUTHORIZED)
         );
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         if (option::is_some(&cycle_interval)) {
             module_store.cycle_interval = option::extract(&mut cycle_interval);
@@ -363,7 +363,7 @@ module initia_std::vip_weight_vote {
         api_uri: String,
         snapshot_height: u64,
     ) acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
 
         assert!(
@@ -394,7 +394,7 @@ module initia_std::vip_weight_vote {
         weights: vector<Decimal128>,
     ) acquires ModuleStore {
         let addr = signer::address_of(account);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
 
         let weight_sum = decimal128::new(0);
@@ -472,7 +472,7 @@ module initia_std::vip_weight_vote {
 
     // it will be executed by agent; but there is no permission to execute proposal
     public entry fun execute_proposal() acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
 
         // check vote state
@@ -537,7 +537,7 @@ module initia_std::vip_weight_vote {
     ) acquires ModuleStore {
         let (_, timestamp) = get_block_info();
         let challenger = signer::address_of(account);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (cycle, proposal) = last_finalized_proposal(module_store, timestamp);
 
         // transfer deposit
@@ -633,7 +633,7 @@ module initia_std::vip_weight_vote {
         let addr = signer::address_of(account);
 
         // check challenge state
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let challenge_key = table_key::encode_u64(challenge_id);
         assert!(
             table::contains(
@@ -761,7 +761,7 @@ module initia_std::vip_weight_vote {
 
     fun execute_challenge_internal(challenge_id: u64): bool acquires ModuleStore {
         let (_, timestamp) = get_block_info();
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         // get challenge
         let challenge_key = table_key::encode_u64(challenge_id);
@@ -863,7 +863,7 @@ module initia_std::vip_weight_vote {
             };
 
             // remove exists cycle
-            let constructor_ref = object::create_object(@initia_std, true);
+            let constructor_ref = object::create_object(@publisher, true);
             let object_signer = object::generate_signer(&constructor_ref);
             move_to(
                 &object_signer,
@@ -1129,7 +1129,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_module_store(): ModuleResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
 
         ModuleResponse {
             current_cycle: module_store.current_cycle,
@@ -1147,7 +1147,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_total_tally(cycle: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
@@ -1159,7 +1159,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_tally(cycle: u64, bridge_id: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
@@ -1175,7 +1175,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_challenge(challenge_id: u64): ChallengeResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let challenge_key = table_key::encode_u64(challenge_id);
         assert!(
             table::contains(
@@ -1211,7 +1211,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_challenge_by_cycle(cycle: u64): vector<ChallengeResponse> acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let iter = table::iter(
             &module_store.challenges,
             option::none(),
@@ -1253,7 +1253,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_proposal(cycle: u64): ProposalResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
@@ -1273,7 +1273,7 @@ module initia_std::vip_weight_vote {
 
     #[view]
     public fun get_weight_vote(cycle: u64, user: address): WeightVoteResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),

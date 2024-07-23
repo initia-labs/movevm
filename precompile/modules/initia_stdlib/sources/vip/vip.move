@@ -1,4 +1,4 @@
-module initia_std::vip {
+module publisher::vip {
     use std::hash::sha3_256;
     use std::error;
     use std::string;
@@ -17,18 +17,14 @@ module initia_std::vip {
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::simple_map::{Self, SimpleMap};
     use initia_std::bcs;
-    use initia_std::vip_zapping;
-    use initia_std::vip_operator;
-    use initia_std::vip_vesting::{
-        Self,
-        UserVestingClaimInfo,
-        OperatorVestingClaimInfo
-    };
-    use initia_std::vip_reward;
-    use initia_std::vip_vault;
-    use initia_std::vip_tvl_manager;
+    use publisher::vip_zapping;
+    use publisher::vip_operator;
+    use publisher::vip_vesting::{Self, UserVestingClaimInfo, OperatorVestingClaimInfo};
+    use publisher::vip_reward;
+    use publisher::vip_vault;
+    use publisher::vip_tvl_manager;
 
-    friend initia_std::vip_weight_vote;
+    friend publisher::vip_weight_vote;
 
     //
     // Errors
@@ -321,6 +317,18 @@ module initia_std::vip {
         );
     }
 
+    public entry fun initialize(chain: &signer, stage_start_time: u64) acquires ModuleStore {
+        check_chain_permission(chain);
+        let (_, block_time) = block::get_block_info();
+        assert!(
+            stage_start_time > block_time,
+            error::invalid_argument(EINITIAILIZE)
+        );
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        module_store.stage_start_time = stage_start_time;
+        module_store.stage_end_time = stage_start_time;
+    }
+
     // Compare bytes and return a following result number:
     // 0: equal
     // 1: v1 is greator than v2
@@ -428,7 +436,7 @@ module initia_std::vip {
     }
 
     fun check_agent_permission(agent: &signer) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         assert!(
             signer::address_of(agent) == module_store.agent_data.agent,
             error::permission_denied(EUNAUTHORIZED)
@@ -858,7 +866,7 @@ module initia_std::vip {
     }
 
     public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         table::contains(
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
@@ -869,7 +877,7 @@ module initia_std::vip {
         bridge_ids: vector<u64>,
         weights: vector<Decimal256>,
     ) acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         assert!(
             vector::length(&bridge_ids) == vector::length(&weights),
@@ -903,7 +911,7 @@ module initia_std::vip {
         new_l2_total_score: u64
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             module_store.stage >= challenge_stage,
             error::permission_denied(EINVALID_CHALLENGE_STAGE)
@@ -1054,7 +1062,7 @@ module initia_std::vip {
         new_api_uri: string::String
     ) acquires ModuleStore {
         check_agent_permission(old_agent);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         module_store.agent_data = AgentData {
             agent: new_agent,
             api_uri: new_api_uri,
@@ -1067,7 +1075,7 @@ module initia_std::vip {
         new_api_uri: string::String
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         module_store.agent_data = AgentData {
             agent: new_agent,
             api_uri: new_api_uri,
@@ -1077,7 +1085,7 @@ module initia_std::vip {
     // add tvl snapshot of all bridges on this stage
     public entry fun add_tvl_snapshot(agent: &signer,) acquires ModuleStore {
         check_agent_permission(agent);
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         add_tvl_snapshot_internal(module_store);
     }
 
@@ -1112,7 +1120,7 @@ module initia_std::vip {
         let (_, fund_time) = block::get_block_info();
         check_agent_permission(agent);
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         // add tvl snapshot for this stage before fund reward to final snapshot of current stage
         add_tvl_snapshot_internal(module_store);
@@ -1178,7 +1186,7 @@ module initia_std::vip {
         total_l2_score: u64,
     ) acquires ModuleStore {
         check_agent_permission(agent);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         assert!(
             table::contains(
@@ -1234,7 +1242,7 @@ module initia_std::vip {
         total_l2_score: u64,
     ) acquires ModuleStore {
         check_agent_permission(agent);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             table::contains(
                 &module_store.stage_data,
@@ -1266,7 +1274,7 @@ module initia_std::vip {
     fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
 
         let (_, curr_time) = block::get_block_info();
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let stage_data = table::borrow(
             &module_store.stage_data,
             table_key::encode_u64(stage)
@@ -1460,7 +1468,7 @@ module initia_std::vip {
         weight: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let bridge = load_bridge_mut(
             &mut module_store.bridges,
             bridge_id
@@ -1566,7 +1574,7 @@ module initia_std::vip {
             !vip_vesting::is_user_vesting_position_finalized(account_addr, bridge_id, stage),
             error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED)
         );
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let curr_stage = module_store.stage;
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
@@ -1648,7 +1656,7 @@ module initia_std::vip {
         bridge_id: u64,
         commission_rate: Decimal256
     ) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         vip_operator::update_operator_commission(
             operator,
             bridge_id,
@@ -1672,7 +1680,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_snapshot(bridge_id: u64, stage: u64): SnapshotResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
 
         assert!(
             table::contains(
@@ -1710,7 +1718,7 @@ module initia_std::vip {
         bridge_id: u64,
         fund_reward_amount: u64
     ): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let balance_shares = simple_map::create<u64, Decimal256>();
         let weight_shares = simple_map::create<u64, Decimal256>();
 
@@ -1751,7 +1759,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_stage_data(stage: u64): StageDataResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let stage_data = table::borrow(
             &module_store.stage_data,
             table_key::encode_u64(stage)
@@ -1770,7 +1778,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_bridge_info(bridge_id: u64): BridgeResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let bridge = load_bridge(&module_store.bridges, bridge_id);
 
         BridgeResponse {
@@ -1787,7 +1795,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_executed_challenge(challenge_id: u64,): ExecutedChallengeResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let key = table_key::encode_u64(challenge_id);
         let executed_challenge = table::borrow(&module_store.challenges, key);
 
@@ -1802,7 +1810,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_bridge_infos(): vector<BridgeResponse> acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let iter = table::iter(
             &module_store.bridges,
             option::none(),
@@ -1834,7 +1842,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_whitelisted_bridge_ids(): vector<u64> acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let bridge_ids = vector::empty<u64>();
 
         let iter = table::iter(
@@ -1856,7 +1864,7 @@ module initia_std::vip {
 
     #[view]
     public fun get_module_store(): ModuleResponse acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         ModuleResponse {
             stage: module_store.stage,
@@ -3111,7 +3119,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x80003, location = initia_std::vip_vesting)]
+    #[expected_failure(abort_code = 0x80003, location = Self)]
     fun failed_claim_already_claimed(
         chain: &signer,
         operator: &signer,

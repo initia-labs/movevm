@@ -1,14 +1,14 @@
-module initia_std::vip_vault {
+module publisher::vip_vault {
     use std::error;
     use std::signer;
     use initia_std::object::{Self, ExtendRef};
     use initia_std::fungible_asset::FungibleAsset;
     use initia_std::primary_fungible_store;
     use initia_std::fungible_asset;
-    use initia_std::vip_reward;
+    use publisher::vip_reward;
 
-    friend initia_std::vip;
-    friend initia_std::vip_vesting;
+    friend publisher::vip;
+    friend publisher::vip_vesting;
     //
     // Errors
     //
@@ -75,7 +75,7 @@ module initia_std::vip_vault {
     //
 
     public(friend) fun get_vault_store_address(): address acquires ModuleStore {
-        borrow_global<ModuleStore>(@initia_std).vault_store_addr
+        borrow_global<ModuleStore>(@publisher).vault_store_addr
     }
 
     public(friend) fun claim(stage: u64,): FungibleAsset acquires ModuleStore {
@@ -146,7 +146,7 @@ module initia_std::vip_vault {
 
     #[view]
     public fun reward_per_stage(): u64 acquires ModuleStore {
-        let vault_store = borrow_global<ModuleStore>(@initia_std);
+        let vault_store = borrow_global<ModuleStore>(@publisher);
         vault_store.reward_per_stage
     }
 

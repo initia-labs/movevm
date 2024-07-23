@@ -1,4 +1,4 @@
-module initia_std::vip_operator {
+module publisher::vip_operator {
     use std::error;
     use std::signer;
     use std::vector;
@@ -8,7 +8,7 @@ module initia_std::vip_operator {
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::bcs;
 
-    friend initia_std::vip;
+    friend publisher::vip;
     //
     // Errors
     //
@@ -207,7 +207,7 @@ module initia_std::vip_operator {
         bridge_id: u64
     ): address {
         let seed = generate_operator_store_seed(operator_addr, bridge_id);
-        object::create_object_address(@initia_std, seed)
+        object::create_object_address(@publisher, seed)
     }
 
     //

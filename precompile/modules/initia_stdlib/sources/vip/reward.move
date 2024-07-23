@@ -1,4 +1,4 @@
-module initia_std::vip_reward {
+module publisher::vip_reward {
     use std::error;
     use std::string;
     use std::signer;
@@ -17,11 +17,11 @@ module initia_std::vip_reward {
     use initia_std::bcs;
     use initia_std::fungible_asset;
     use initia_std::type_info;
-    friend initia_std::vip_weight_vote;
-    friend initia_std::vip_vesting;
-    friend initia_std::vip_zapping;
-    friend initia_std::vip_vault;
-    friend initia_std::vip;
+    friend publisher::vip_weight_vote;
+    friend publisher::vip_vesting;
+    friend publisher::vip_zapping;
+    friend publisher::vip_vault;
+    friend publisher::vip;
 
     //
     // Errors
@@ -79,7 +79,7 @@ module initia_std::vip_reward {
 
     fun create_reward_store_address<Vesting: copy + drop + store>(bridge_id: u64): address {
         let seed = generate_reward_store_seed<Vesting>(bridge_id);
-        object::create_object_address(@initia_std, seed)
+        object::create_object_address(@publisher, seed)
     }
 
     //

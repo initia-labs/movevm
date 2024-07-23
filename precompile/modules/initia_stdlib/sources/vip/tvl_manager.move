@@ -1,4 +1,4 @@
-module initia_std::vip_tvl_manager {
+module publisher::vip_tvl_manager {
     use std::error;
     use initia_std::vector;
     use initia_std::option;
@@ -6,7 +6,7 @@ module initia_std::vip_tvl_manager {
     use initia_std::table;
     use initia_std::block;
     use initia_std::decimal256;
-    friend initia_std::vip;
+    friend publisher::vip;
     const EINVALID_EPOCH: u64 = 1;
     ///
     const EINVALID_BRIDGE_ID: u64 = 2;
@@ -57,7 +57,7 @@ module initia_std::vip_tvl_manager {
         balance: u64
     ) acquires ModuleStore {
         let (_, block_time) = block::get_block_info();
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         // create the average tvl table for the stage(vip stage) if not exist
         if (!table::contains(
@@ -140,7 +140,7 @@ module initia_std::vip_tvl_manager {
     public fun get_average_tvl(stage: u64, bridge_id: u64,): u64 acquires ModuleStore {
         let stage_key = table_key::encode_u64(stage);
         let bridge_id_key = table_key::encode_u64(bridge_id);
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         if (!table::contains(
                 &module_store.average_tvl,
                 stage_key
@@ -168,7 +168,7 @@ module initia_std::vip_tvl_manager {
 
     #[view]
     public fun get_snapshots(stage: u64, bridge_id: u64): vector<TVLSnapshotResponse> acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         if (!table::contains(
                 &module_store.snapshots,
                 table_key::encode_u64(stage)

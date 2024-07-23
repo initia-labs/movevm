@@ -1,4 +1,4 @@
-module initia_std::vip_vesting {
+module publisher::vip_vesting {
     use std::error;
     use std::signer;
     use std::vector;
@@ -12,10 +12,10 @@ module initia_std::vip_vesting {
     use initia_std::table_key;
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::bcs;
-    use initia_std::vip_reward;
+    use publisher::vip_reward;
     use initia_std::type_info;
-    use initia_std::vip_vault;
-    friend initia_std::vip;
+    use publisher::vip_vault;
+    friend publisher::vip;
 
     //
     // Errors
@@ -1398,7 +1398,7 @@ module initia_std::vip_vesting {
     }
 
     #[test(chain = @0x1)]
-    #[expected_failure(abort_code = 0x80001, location = initia_std::vip_reward)]
+    #[expected_failure(abort_code = 0x80001, location = publisher::vip_reward)]
     fun failed_register_reward_store_twice(chain: &signer,) {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));

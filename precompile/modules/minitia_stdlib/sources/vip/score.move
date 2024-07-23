@@ -1,5 +1,5 @@
 /// vip_score is the contract to provide a score for each contracts.
-module minitia_std::vip_score {
+module mpublisher::vip_score {
     use std::vector;
     use std::event;
 

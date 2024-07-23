@@ -1,4 +1,4 @@
-module initia_std::vip_zapping {
+module publisher::vip_zapping {
     use std::error;
     use std::signer;
     use std::option::Option;
@@ -20,7 +20,7 @@ module initia_std::vip_zapping {
     use initia_std::simple_map::{Self, SimpleMap};
     use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
 
-    friend initia_std::vip;
+    friend publisher::vip;
 
     //
     // Errors
@@ -171,7 +171,7 @@ module initia_std::vip_zapping {
     }
 
     fun init_module(chain: &signer) {
-        let constructor_ref = object::create_object(@initia_std, false);
+        let constructor_ref = object::create_object(@publisher, false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
 
         move_to(
@@ -239,7 +239,7 @@ module initia_std::vip_zapping {
             error::not_found(EZAPPING_NOT_EXIST)
         );
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let zapping = table::borrow_mut(&mut module_store.zappings, zid);
         let reward = staking::claim_reward(&mut zapping.delegation);
 
@@ -258,7 +258,7 @@ module initia_std::vip_zapping {
 
     public entry fun update_lock_period_script(chain: &signer, lock_period: u64,) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         module_store.lock_period = lock_period;
     }
 
@@ -284,7 +284,7 @@ module initia_std::vip_zapping {
 
         let pair = object::convert<Metadata, dex::Config>(lp_metadata);
         let (_height, timestamp) = block::get_block_info();
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let release_time = timestamp + module_store.lock_period;
         let zapping_amount = fungible_asset::amount(&esinit);
         let esinit_metadata = fungible_asset::asset_metadata(&esinit);
@@ -434,7 +434,7 @@ module initia_std::vip_zapping {
         );
         let delegation = staking::delegate(validator, lock_coin);
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let zid = module_store.zid;
         assert!(
             !table::contains(&module_store.zappings, zid),
@@ -522,7 +522,7 @@ module initia_std::vip_zapping {
             error::not_found(EZAPPING_NOT_EXIST)
         );
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let zapping = table::remove(&mut module_store.zappings, zid);
         simple_map::remove(&mut ls_store.entries, &zid);
 
@@ -598,7 +598,7 @@ module initia_std::vip_zapping {
 
     #[view]
     public fun get_zapping(zid: u64): ZappingResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         assert!(
             table::contains(&module_store.zappings, zid),
             error::not_found(EZAPPING_NOT_EXIST)
@@ -621,7 +621,7 @@ module initia_std::vip_zapping {
 
     #[view]
     public fun get_delegation_info(zid: u64): DelegationInfo acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         assert!(
             table::contains(&module_store.zappings, zid),
             error::not_found(EZAPPING_NOT_EXIST)
@@ -666,7 +666,7 @@ module initia_std::vip_zapping {
     use std::string;
 
     #[test_only]
-    use initia_std::vip_reward;
+    use publisher::vip_reward;
 
     #[test_only]
     public fun init_module_for_test(chain: &signer) {
