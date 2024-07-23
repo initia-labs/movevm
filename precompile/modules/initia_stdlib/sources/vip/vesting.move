@@ -365,13 +365,6 @@ module initia_std::vip_vesting {
             let (_, value) = table::next_mut<vector<u8>, UserVesting>(iter);
             // handle vesting positions that have changed to zapping positions
             if (value.remaining_reward == 0) {
-                event::emit(
-                    UserVestingFinalizedEvent {
-                        account: account_addr,
-                        bridge_id,
-                        stage: value.start_stage,
-                    }
-                );
                 vector::push_back(
                     &mut finalized_vestings,
                     value.start_stage
@@ -885,7 +878,15 @@ module initia_std::vip_vesting {
             error::invalid_argument(EREWARD_NOT_ENOUGH)
         );
         vesting.remaining_reward = vesting.remaining_reward - zapping_amount;
-
+        if(vesting.remaining_reward == 0 ){
+            event::emit(
+                UserVestingFinalizedEvent {
+                    account: account_addr,
+                    bridge_id,
+                    stage: vesting.start_stage,
+                }
+            );
+        };
         let reward_store_addr = get_user_reward_store_address(bridge_id);
         vip_reward::withdraw(reward_store_addr, zapping_amount)
     }
