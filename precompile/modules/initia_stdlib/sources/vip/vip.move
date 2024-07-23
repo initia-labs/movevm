@@ -19,7 +19,7 @@ module initia_std::vip {
     use initia_std::bcs;
     use initia_std::vip_zapping;
     use initia_std::vip_operator;
-    use initia_std::vip_vesting;
+    use initia_std::vip_vesting::{Self, VestingClaimInfo};
     use initia_std::vip_reward;
     use initia_std::vip_vault;
     use initia_std::vip_tvl_manager;
@@ -1431,6 +1431,7 @@ module initia_std::vip {
         bridge_id: u64,
         stage: vector<u64>,
     ) acquires ModuleStore {
+
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let account_addr = signer::address_of(operator);
         // check if the claim is attempted from a position that has not been finalized.
@@ -1459,6 +1460,7 @@ module initia_std::vip {
                     *s > prev_stage,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
+
                 prev_stage = *s;
                 claim_operator_reward_script(operator, bridge_id, *s,);
             }
@@ -1472,14 +1474,19 @@ module initia_std::vip {
         merkle_proofs: vector<vector<vector<u8>>>,
         l2_score: vector<u64>,
     ) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        let account_addr = signer::address_of(account);
+        let len = vector::length(&stage);
         assert!(
-            vector::length(&stage) == vector::length(&merkle_proofs) && vector::length(
-                &merkle_proofs
-            ) == vector::length(&l2_score),
+            len == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) == vector::length(
+                &l2_score
+            ),
             error::invalid_argument(EINVALID_BATCH_ARGUMENT)
         );
+        let final_stage = *vector::borrow(&mut stage, len - 1);
+        // check claimable on final stage by challenge period
+        check_claimable_period(bridge_id, final_stage);
+
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let account_addr = signer::address_of(account);
         // check if the claim is attempted from a position that has not been finalized.
         let first_stage = *vector::borrow(&mut stage, 0);
         let prev_stage = first_stage - 1;
@@ -1498,6 +1505,8 @@ module initia_std::vip {
             );
         };
 
+        let claimInfos: vector<VestingClaimInfo> = vector[];
+        // make vesting position claim info
         vector::enumerate_ref(
             &stage,
             |i, s| {
@@ -1505,16 +1514,48 @@ module initia_std::vip {
                     *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
+
+                // if there is no vesting store, register it
+                if (!vip_vesting::is_user_vesting_store_registered(
+                        signer::address_of(account),
+                        bridge_id
+                    )) {
+                    vip_vesting::register_user_vesting_store(account, bridge_id);
+                };
+
                 prev_stage = *s;
-                claim_user_reward_script(
-                    account,
-                    bridge_id,
-                    *s,
-                    *vector::borrow(&merkle_proofs, i),
-                    *vector::borrow(&l2_score, i),
+
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*s)
                 );
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_vesting_claim_info(
+                        *s,
+                        *s + module_store.vesting_period,
+                        *vector::borrow(&l2_score, i),
+                        module_store.minimum_score_ratio,
+                        snapshot.total_l2_score,
+                    )
+                );
+
             }
         );
+        // call batch claim user reward
+        let vested_reward = vip_vesting::batch_claim_user_reward(
+            account_addr, bridge_id, claimInfos
+        );
+        coin::deposit(
+            signer::address_of(account),
+            vested_reward
+        );
+
     }
 
     public entry fun update_vip_weights(
