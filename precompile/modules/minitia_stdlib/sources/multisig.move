@@ -7,7 +7,7 @@ module minitia_std::multisig {
     use std::event;
 
     use minitia_std::block::get_block_info;
-    use minitia_std::cosmos::move_execute;
+    use minitia_std::cosmos::{move_execute, move_execute_with_json};
     use minitia_std::object::{Self, ExtendRef};
     use minitia_std::simple_map::{Self, SimpleMap};
     use minitia_std::table::{Self, Table};
@@ -72,6 +72,8 @@ module minitia_std::multisig {
         proposal_height: u64,
         votes: SimpleMap<address, bool>,
         status: u8,
+        is_json: bool,
+        json_args: vector<String>,
     }
 
     // events
@@ -134,6 +136,8 @@ module minitia_std::multisig {
         config_version: u64,
         yes_vote_count: u64,
         status: String,
+        is_json: bool,
+        json_args: vector<String>,
     }
 
     struct ConfigResponse has drop {
@@ -281,44 +285,39 @@ module minitia_std::multisig {
         type_args: vector<String>,
         args: vector<vector<u8>>,
     ) acquires MultisigWallet {
-        let addr = signer::address_of(account);
-        let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
-        assert_member(&multisig_wallet.members, &addr);
-
-        let (height, timestamp) = get_block_info();
-        let config_version = multisig_wallet.config_version;
-
-        let proposal = Proposal {
+        create_proposal_internal(
+            account,
+            multisig_addr,
             module_address,
             module_name,
             function_name,
             type_args,
             args,
-            config_version,
-            proposal_height: height,
-            proposal_timestamp: timestamp,
-            votes: simple_map::create(),
-            status: 0, // in voting period
-        };
+            false,
+            vector[],
+        )
+    }
 
-        let proposal_id = table::length(&multisig_wallet.proposals) + 1;
-        table::add(
-            &mut multisig_wallet.proposals,
-            proposal_id,
-            proposal
-        );
-
-        event::emit<CreateProposalEvent>(
-            CreateProposalEvent {
-                multisig_addr,
-                proposal_id,
-                module_address,
-                module_name,
-                function_name,
-                type_args,
-                args,
-                config_version,
-            }
+    /// Create new proposal
+    public entry fun create_proposal_with_json(
+        account: &signer,
+        multisig_addr: address,
+        module_address: address,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<String>,
+    ) acquires MultisigWallet {
+        create_proposal_internal(
+            account,
+            multisig_addr,
+            module_address,
+            module_name,
+            function_name,
+            type_args,
+            vector[],
+            true,
+            args,
         )
     }
 
@@ -409,14 +408,26 @@ module minitia_std::multisig {
         let multisig_signer = &object::generate_signer_for_extending(
             &multisig_wallet.extend_ref
         );
-        move_execute(
-            multisig_signer,
-            proposal.module_address,
-            proposal.module_name,
-            proposal.function_name,
-            proposal.type_args,
-            proposal.args,
-        );
+
+        if (!proposal.is_json) {
+            move_execute(
+                multisig_signer,
+                proposal.module_address,
+                proposal.module_name,
+                proposal.function_name,
+                proposal.type_args,
+                proposal.args,
+            )
+        } else {
+            move_execute_with_json(
+                multisig_signer,
+                proposal.module_address,
+                proposal.module_name,
+                proposal.function_name,
+                proposal.type_args,
+                proposal.json_args,
+            )
+        };
 
         proposal.status = 1; // executed
 
@@ -465,6 +476,60 @@ module minitia_std::multisig {
                 members: new_members,
                 threshold: new_threshold,
                 max_voting_period: new_max_voting_period,
+            }
+        )
+    }
+
+    fun create_proposal_internal(
+        account: &signer,
+        multisig_addr: address,
+        module_address: address,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<vector<u8>>,
+        is_json: bool,
+        json_args: vector<String>,
+    ) acquires MultisigWallet {
+        let addr = signer::address_of(account);
+        let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        assert_member(&multisig_wallet.members, &addr);
+
+        let (height, timestamp) = get_block_info();
+        let config_version = multisig_wallet.config_version;
+
+        let proposal = Proposal {
+            module_address,
+            module_name,
+            function_name,
+            type_args,
+            args,
+            config_version,
+            proposal_height: height,
+            proposal_timestamp: timestamp,
+            votes: simple_map::create(),
+            status: 0, // in voting period
+            is_json,
+            json_args,
+        };
+
+        let proposal_id = table::length(&multisig_wallet.proposals) + 1;
+        table::add(
+            &mut multisig_wallet.proposals,
+            proposal_id,
+            proposal
+        );
+
+        event::emit<CreateProposalEvent>(
+            CreateProposalEvent {
+                multisig_addr,
+                proposal_id,
+                module_address,
+                module_name,
+                function_name,
+                type_args,
+                args,
+                config_version,
             }
         )
     }
@@ -557,6 +622,8 @@ module minitia_std::multisig {
             status: string::utf8(
                 *vector::borrow(&STATUS,(status_index as u64))
             ),
+            is_json: proposal.is_json,
+            json_args: proposal.json_args,
         }
     }
 
@@ -940,5 +1007,55 @@ module minitia_std::multisig {
         );
 
         execute_proposal(&account1, multisig_addr, 1);
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun proposal_with_json(
+        account1: signer,
+        account2: signer,
+        account3: signer,
+    ) acquires MultisigWallet {
+        // create multisig wallet
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::none(),
+            option::none(),
+        );
+        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+
+        create_proposal_with_json(
+            &account1,
+            multisig_addr,
+            @minitia_std,
+            string::utf8(b"multisig"),
+            string::utf8(b"update_config"),
+            vector[],
+            vector[
+                string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
+                string::utf8(b"\"3\""),
+                string::utf8(b""),
+                string::utf8(b""),
+            ],
+        );
+
+        let proposal = get_proposal(multisig_addr, 1);
+        assert!(proposal.module_address == @minitia_std, 0);
+        assert!(proposal.module_name == string::utf8(b"multisig"), 1);
+        assert!(proposal.function_name == string::utf8(b"update_config"), 2);
+        assert!(proposal.type_args == vector[], 3);
+        assert!(proposal.json_args == vector[
+            string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
+            string::utf8(b"\"3\""),
+            string::utf8(b""),
+            string::utf8(b""),
+        ], 4);
+        assert!(proposal.args == vector[], 5);
     }
 }
