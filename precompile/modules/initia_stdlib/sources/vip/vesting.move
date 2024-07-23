@@ -142,7 +142,9 @@ module initia_std::vip_vesting {
 
     #[event]
     struct PenaltyEvent has drop, store {
-        offender: address,
+        account: address,
+        bridge_id: u64,
+        start_stage: u64,
         amount: u64,
     }
 
@@ -346,8 +348,8 @@ module initia_std::vip_vesting {
         stage: u64,
         l2_score: u64,
     ): (u64, u64) acquires VestingStore {
-        let vested_reward = 0u64;
-        let penalty_reward = 0u64;
+        let total_vested_reward = 0u64;
+        let total_penalty_reward = 0u64;
         let finalized_vestings = vector::empty<u64>();
         let vesting_store_addr = get_vesting_store_address<UserVesting>(
             account_addr, bridge_id
@@ -362,24 +364,27 @@ module initia_std::vip_vesting {
         loop {
             if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
 
-            let (_, value) = table::next_mut<vector<u8>, UserVesting>(iter);
-            // handle vesting positions that have changed to zapping positions
-            if (value.remaining_reward == 0) {
-                vector::push_back(
-                    &mut finalized_vestings,
-                    value.start_stage
-                );
-                continue
-            };
+            let (start_stage_vec, value) = table::next_mut<vector<u8>, UserVesting>(iter);
         
             let (vest_max_amount, vest_amount) = calculate_user_vest(value, l2_score);
 
-            vested_reward = vested_reward + vest_amount;
-            penalty_reward = penalty_reward + vest_max_amount - vest_amount;
+            total_vested_reward = total_vested_reward + vest_amount;
+            let penalty_reward = vest_max_amount - vest_amount;
+            if(penalty_reward > 0) {
+                let start_stage = table_key::decode_u64(start_stage_vec);
+                total_penalty_reward = total_penalty_reward + penalty_reward;
+                event::emit(PenaltyEvent {
+                    account:account_addr,
+                    bridge_id:bridge_id,
+                    start_stage: start_stage,
+                    amount: penalty_reward
+                });
+                
+            };
+
             value.remaining_reward = value.remaining_reward - vest_max_amount;
 
-            
-            // move vesting if end stage is 
+            // if vesting end stage is equal or more, it will be finalized
             if (stage >= value.end_stage ) {
                 event::emit(
                     UserVestingFinalizedEvent {
@@ -388,9 +393,9 @@ module initia_std::vip_vesting {
                         stage: value.start_stage,
                     }
                 );
-                // give the remaining reward to vest reward
+                // give the remaining reward to vest reward because of floor problem
                 if (value.remaining_reward > 0) {
-                    vested_reward = vested_reward + value.remaining_reward;
+                    total_vested_reward = total_vested_reward + value.remaining_reward;
                     value.remaining_reward = 0;
                 };
                 vector::push_back(
@@ -434,7 +439,7 @@ module initia_std::vip_vesting {
             }
         );
 
-        (vested_reward, penalty_reward)
+        (total_vested_reward, total_penalty_reward)
     }
 
     fun vest_operator_reward(
@@ -575,12 +580,6 @@ module initia_std::vip_vesting {
                 vip_vault::get_vault_store_address()
             );
 
-            event::emit(
-                PenaltyEvent {
-                    offender: account_addr,
-                    amount: penalty_amount
-                }
-            )
         };
 
         (vested_reward,)
@@ -878,7 +877,15 @@ module initia_std::vip_vesting {
             error::invalid_argument(EREWARD_NOT_ENOUGH)
         );
         vesting.remaining_reward = vesting.remaining_reward - zapping_amount;
+        // handle vesting positions that have changed to zapping positions
         if(vesting.remaining_reward == 0 ){
+            // remove from vesting positons and add finalized positions in vesting store 
+            let vesting_store_addr = get_vesting_store_address<UserVesting>(
+                account_addr, bridge_id
+            );
+            let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+            let finalized_vestings = table::remove(&mut vesting_store.vestings, table_key::encode_u64(vesting.start_stage));
+            table::add(&mut vesting_store.vestings_finalized, table_key::encode_u64(vesting.start_stage),finalized_vestings);
             event::emit(
                 UserVestingFinalizedEvent {
                     account: account_addr,
