@@ -113,7 +113,7 @@ module initia_std::vip_vesting {
     struct UserVestingClaimEvent has drop, store {
         account: address,
         bridge_id: u64,
-        start_stage: u64,
+        stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
 
@@ -132,7 +132,7 @@ module initia_std::vip_vesting {
     struct OperatorVestingClaimEvent has drop, store {
         account: address,
         bridge_id: u64,
-        start_stage: u64,
+        stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
         vesting_changes: vector<VestingChange>,
@@ -808,7 +808,7 @@ module initia_std::vip_vesting {
             UserVestingClaimEvent {
                 account: account_addr,
                 bridge_id,
-                start_stage: start_stage,
+                stage: start_stage,
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
             }
@@ -840,7 +840,7 @@ module initia_std::vip_vesting {
             OperatorVestingClaimEvent {
                 account: account_addr,
                 bridge_id,
-                start_stage: start_stage,
+                stage: start_stage,
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
                 vesting_changes,
