@@ -440,7 +440,7 @@ module initia_std::vip_vesting {
         );
 
         // vest previous vesting rewards until the stage
-        let (vested_amount, vesting_changes) = vest_operator_reward(
+        let (vested_amount, _) = vest_operator_reward(
             account_addr, bridge_id, stage,
         );
         let reward_store_addr = get_operator_reward_store_address(bridge_id);
