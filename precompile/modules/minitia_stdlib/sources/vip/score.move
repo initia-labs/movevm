@@ -9,7 +9,6 @@ module minitia_std::vip_score {
     use minitia_std::simple_map::{Self, SimpleMap};
 
     struct ModuleStore has key {
-        init_stage: u64,
         deployers: SimpleMap<address, bool>,
         scores: table::Table<u64 /* stage */, Scores>,
     }
@@ -69,7 +68,7 @@ module minitia_std::vip_score {
 
     #[event]
     struct UpdateScoreEvent has drop, store {
-        account: address,
+        addr: address,
         stage: u64,
         score: u64,
         total_score: u64
@@ -88,17 +87,10 @@ module minitia_std::vip_score {
         move_to(
             chain,
             ModuleStore {
-                init_stage: 1,
                 deployers: simple_map::create<address, bool>(),
                 scores: table::new<u64, Scores>(),
             }
         );
-    }
-
-    entry public fun set_init_stage(deployer: &signer, stage: u64) acquires ModuleStore {
-        check_deployer_permission(deployer);
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        module_store.init_stage = stage;
     }
 
     /// Check signer is chain
@@ -135,7 +127,7 @@ module minitia_std::vip_score {
 
         event::emit(
             UpdateScoreEvent {
-                account: account,
+                addr: account,
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
@@ -148,8 +140,7 @@ module minitia_std::vip_score {
         stage: u64
     ) {
         // init stage is always finalized because it is the first stage.
-        let init_stage = module_store.init_stage;
-        if (stage == init_stage) { return };
+        if (stage == 1) { return };
         assert!(
             table::contains(&module_store.scores, stage - 1) && table::borrow(
                 &module_store.scores, stage - 1
