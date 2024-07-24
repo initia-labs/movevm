@@ -1374,7 +1374,6 @@ module publisher::vip {
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
-        let (_, block_time) = block::get_block_info();
 
         // if there is no vesting store, register it
         if (!vip_vesting::is_user_vesting_store_registered(
