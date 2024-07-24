@@ -203,6 +203,8 @@ module initia_std::vip_weight_vote {
         api_uri: String,
         snapshot_height: u64,
         voting_end_time: u64,
+        cycle_start_timestamp:u64,
+        cycle_end_timestamp:u64,
     }
 
     #[event]
@@ -936,6 +938,8 @@ module initia_std::vip_weight_vote {
                 api_uri,
                 snapshot_height,
                 voting_end_time,
+                cycle_start_timestamp:module_store.cycle_start_timestamp,
+                cycle_end_timestamp:module_store.cycle_end_timestamp
             }
         )
     }
