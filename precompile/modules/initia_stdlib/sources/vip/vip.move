@@ -281,14 +281,19 @@ module initia_std::vip {
     //
     // Implementations
     //
-
-    fun init_module(chain: &signer) {
+    public entry fun initialize(chain: &signer, stage_start_time: u64, agent: address, api:string::String) {
+        check_chain_permission(chain);
+        let (_, block_time) = block::get_block_info();
+        assert!(
+            stage_start_time > block_time,
+            error::invalid_argument(EINITIAILIZE)
+        );
         move_to(
             chain,
             ModuleStore {
                 stage: DEFAULT_VIP_START_STAGE,
-                stage_start_time: 0,
-                stage_end_time: 0,
+                stage_start_time: stage_start_time,
+                stage_end_time: stage_start_time,
                 stage_interval: DEFAULT_STAGE_INTERVAL,
                 vesting_period: DEFAULT_VESTING_PERIOD,
                 challenge_period: DEFAULT_CHALLENGE_PERIOD,
@@ -299,8 +304,8 @@ module initia_std::vip {
                     &string::utf8(DEFAULT_POOL_SPLIT_RATIO)
                 ),
                 agent_data: AgentData {
-                    agent: signer::address_of(chain),
-                    api_uri: string::utf8(b""),
+                    agent: agent,
+                    api_uri: api,
                 },
                 maximum_tvl_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_MAXIMUM_TVL_RATIO)
@@ -314,18 +319,6 @@ module initia_std::vip {
                 challenges: table::new<vector<u8>, ExecutedChallenge>(),
             }
         );
-    }
-
-    public entry fun initialize(chain: &signer, stage_start_time: u64) acquires ModuleStore {
-        check_chain_permission(chain);
-        let (_, block_time) = block::get_block_info();
-        assert!(
-            stage_start_time > block_time,
-            error::invalid_argument(EINITIAILIZE)
-        );
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.stage_start_time = stage_start_time;
-        module_store.stage_end_time = stage_start_time;
     }
 
     // Compare bytes and return a following result number:
@@ -1126,10 +1119,6 @@ module initia_std::vip {
         let fund_stage = module_store.stage;
         let stage_start_time = module_store.stage_start_time;
         let stage_end_time = module_store.stage_end_time;
-        assert!(
-            stage_start_time != 0,
-            error::unavailable(EINITIAILIZE)
-        );
         let stage_interval = module_store.stage_interval;
         assert!(
             stage_end_time <= fund_time,
@@ -2048,21 +2037,15 @@ module initia_std::vip {
     }
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) acquires ModuleStore {
+    public fun init_module_for_test(chain: &signer){
         vip_vault::init_module_for_test(chain);
         vip_vault::update_reward_per_stage(
             chain,
             DEFAULT_REWARD_PER_STAGE_FOR_TEST
         );
-        init_module(chain);
         skip_period(10);
         let (_, block_time) = block::get_block_info();
-        initialize(chain, block_time + 100);
-        update_agent_by_chain(
-            chain,
-            signer::address_of(chain),
-            string::utf8(DEFAULT_API_URI_FOR_TEST)
-        );
+        initialize(chain, block_time + 100,signer::address_of(chain),string::utf8(DEFAULT_API_URI_FOR_TEST));
         skip_period(100);
     }
 
