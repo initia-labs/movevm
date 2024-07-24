@@ -1,6 +1,7 @@
 module publisher::vip_vault {
     use std::error;
     use std::signer;
+    
     use initia_std::object::{Self, ExtendRef};
     use initia_std::fungible_asset::FungibleAsset;
     use initia_std::primary_fungible_store;

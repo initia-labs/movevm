@@ -4,7 +4,7 @@ module publisher::vip {
     use std::string;
     use std::signer;
     use std::vector;
-    use std::option;
+    use std::option::{Self, Option};
     use std::event;
     use std::block;
 
@@ -1462,47 +1462,60 @@ module publisher::vip {
     }
     public entry fun update_params(
         chain: &signer,
-        stage_interval: u64,
-        vesting_period: u64,
-        minimum_eligible_tvl: u64,
-        maximum_tvl_ratio: Decimal256,
-        minimum_score_ratio: Decimal256,
-        pool_split_ratio: Decimal256,
-        challenge_period: u64,
+        stage_interval: Option<u64>,
+        vesting_period: Option<u64>,
+        minimum_eligible_tvl: Option<u64>,
+        maximum_tvl_ratio: Option<Decimal256>,
+        minimum_score_ratio: Option<Decimal256>,
+        pool_split_ratio: Option<Decimal256>,
+        challenge_period: Option<u64>,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        if (option::is_some(&stage_interval)){
+            module_store.stage_interval = option::extract(&mut stage_interval);
+            assert!(
+                module_store.stage_interval > 0,
+                error::invalid_argument(EINVALID_VEST_PERIOD)
+            );
+        };
 
-        assert!(
-            stage_interval > 0,
-            error::invalid_argument(EINVALID_VEST_PERIOD)
-        );
-        module_store.stage_interval = stage_interval;
+        if (option::is_some(&vesting_period)) {
+            module_store.vesting_period = option::extract(&mut vesting_period);
+            assert!(
+                module_store.vesting_period > 0,
+                error::invalid_argument(EINVALID_VEST_PERIOD)
+            );
+        };
 
-        assert!(
-            vesting_period > 0 && vesting_period > 0,
-            error::invalid_argument(EINVALID_VEST_PERIOD)
-        );
-        module_store.vesting_period = vesting_period;
+        if (option::is_some(&minimum_eligible_tvl)) {
+    
+            module_store.vesting_period = option::extract(&mut minimum_eligible_tvl);
+        };
 
-        module_store.minimum_eligible_tvl = minimum_eligible_tvl;
+        if (option::is_some(&maximum_tvl_ratio)) {
+            module_store.maximum_tvl_ratio = option::extract(&mut maximum_tvl_ratio);
+            assert!(
+                decimal256::val(&module_store.maximum_tvl_ratio) <= decimal256::val(&decimal256::one()),
+                error::invalid_argument(EINVALID_MAX_TVL)
+            );
+        };
 
-        assert!(
-            decimal256::val(&maximum_tvl_ratio) <= decimal256::val(&decimal256::one()),
-            error::invalid_argument(EINVALID_MAX_TVL)
-        );
-        module_store.maximum_tvl_ratio = maximum_tvl_ratio;
+        if (option::is_some(&minimum_score_ratio)) {
+            module_store.minimum_score_ratio = option::extract(&mut minimum_score_ratio);
+        };
 
-        module_store.minimum_score_ratio = minimum_score_ratio;
+        if (option::is_some(&pool_split_ratio)) {
+            module_store.pool_split_ratio = option::extract(&mut pool_split_ratio);
+            assert!(
+                decimal256::val(&module_store.pool_split_ratio) <= decimal256::val(&decimal256::one()),
+                error::invalid_argument(EINVALID_MIN_SCORE_RATIO)
+            );        
+        };
 
-        assert!(
-            decimal256::val(&pool_split_ratio) <= decimal256::val(&decimal256::one()),
-            error::invalid_argument(EINVALID_MIN_SCORE_RATIO)
-        );
-
-        module_store.pool_split_ratio = pool_split_ratio;
-
-        module_store.challenge_period = challenge_period;
+        if (option::is_some(&challenge_period)) {
+            module_store.challenge_period = option::extract(&mut challenge_period);
+        }  
     }
 
     public entry fun update_operator_commission(
