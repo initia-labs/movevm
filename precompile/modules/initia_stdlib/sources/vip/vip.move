@@ -810,6 +810,7 @@ module initia_std::vip {
         module_store: &ModuleStore,
         weight_shares: &mut SimpleMap<u64, Decimal256>
     ) {
+        
         let iter = table::iter(
             &module_store.bridges,
             option::none(),
@@ -827,9 +828,11 @@ module initia_std::vip {
                 )) {
                 module_store.maximum_weight_ratio
             } else {bridge.vip_weight};
-
             simple_map::add(weight_shares, bridge_id, weight);
-        }
+            if(table::length(&module_store.bridges) == 1) {
+                simple_map::add(weight_shares, bridge_id, decimal256::one());
+            };
+        };
     }
 
     fun validate_vip_weights(module_store: &ModuleStore) {
