@@ -765,7 +765,7 @@ module publisher::vip_vesting {
             &penalty_keys,
             |key| {
                 let penalty_amount = simple_map::borrow(&penalty_map, key);
-                    event::emit(
+                event::emit(
                     PenaltyEvent {
                         account: account_addr,
                         bridge_id: bridge_id,
