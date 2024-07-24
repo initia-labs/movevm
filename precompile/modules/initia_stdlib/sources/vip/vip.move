@@ -58,6 +58,7 @@ module publisher::vip {
     const EPREV_STAGE_SNAPSHOT_NOT_FOUND: u64 = 26;
     const EALREADY_FINALIZED_OR_ZAPPED: u64 = 27;
     const ETOO_EARLY_FUND: u64 = 28;
+    const EINVALID_STAGE_INTERVAL: u64 = 29;
     //
     //  Constants
     //
@@ -1476,7 +1477,7 @@ module publisher::vip {
             module_store.stage_interval = option::extract(&mut stage_interval);
             assert!(
                 module_store.stage_interval > 0,
-                error::invalid_argument(EINVALID_VEST_PERIOD)
+                error::invalid_argument(EINVALID_STAGE_INTERVAL)
             );
         };
 
