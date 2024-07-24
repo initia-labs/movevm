@@ -19,7 +19,11 @@ module initia_std::vip {
     use initia_std::bcs;
     use initia_std::vip_zapping;
     use initia_std::vip_operator;
-    use initia_std::vip_vesting::{Self, VestingClaimInfo};
+    use initia_std::vip_vesting::{
+        Self,
+        UserVestingClaimInfo,
+        OperatorVestingClaimInfo
+    };
     use initia_std::vip_reward;
     use initia_std::vip_vault;
     use initia_std::vip_tvl_manager;
@@ -498,62 +502,6 @@ module initia_std::vip {
         )
     }
 
-    // public fun claim_user_reward(
-    //     account: &signer,
-    //     bridge_id: u64,
-    //     stage: u64,
-    //     merkle_proofs: vector<vector<u8>>,
-    //     l2_score: u64,
-    // ): (FungibleAsset) acquires ModuleStore {
-    //     // check claim period
-    //     check_claimable_period(bridge_id, stage);
-
-    //     let account_addr = signer::address_of(account);
-    //     let module_store = borrow_global<ModuleStore>(@initia_std);
-
-    //     assert!(
-    //         table::contains(
-    //             &module_store.stage_data,
-    //             table_key::encode_u64(stage)
-    //         ),
-    //         error::not_found(ESTAGE_DATA_NOT_FOUND)
-    //     );
-    //     let stage_data = table::borrow(
-    //         &module_store.stage_data,
-    //         table_key::encode_u64(stage)
-    //     );
-    //     let snapshot = table::borrow(
-    //         &stage_data.snapshots,
-    //         table_key::encode_u64(bridge_id)
-    //     );
-
-    //     let target_hash = score_hash(
-    //         bridge_id,
-    //         stage,
-    //         account_addr,
-    //         l2_score,
-    //         snapshot.total_l2_score,
-    //     );
-    //     // if a length of merkle proofs is 0, it will be passed
-    //     assert_merkle_proofs(
-    //         merkle_proofs,
-    //         snapshot.merkle_root,
-    //         target_hash,
-    //     );
-
-    //     let (vested_reward) = vip_vesting::claim_user_reward(
-    //         account_addr,
-    //         bridge_id,
-    //         stage,
-    //         stage + stage_data.vesting_period,
-    //         l2_score,
-    //         snapshot.total_l2_score,
-    //         stage_data.minimum_score_ratio,
-    //     );
-
-    //     (vested_reward)
-    // }
-
     fun zapping(
         account: &signer,
         bridge_id: u64,
@@ -889,41 +837,6 @@ module initia_std::vip {
 
             simple_map::add(weight_shares, bridge_id, weight);
         }
-    }
-
-    // retunr claim operator reward and remaining(by rounding math issue on finalized stage)
-    fun claim_operator_reward(
-        operator: &signer,
-        bridge_id: u64,
-        stage: u64,
-    ): (FungibleAsset) acquires ModuleStore {
-        // check claim period
-        check_claimable_period(bridge_id, stage);
-
-        let operator_addr = signer::address_of(operator);
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-
-        // assert claimable conditions
-        assert!(
-            table::contains(
-                &module_store.stage_data,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(ESTAGE_DATA_NOT_FOUND)
-        );
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-
-        let (vested_reward) = vip_vesting::claim_operator_reward(
-            operator_addr,
-            bridge_id,
-            stage,
-            stage + stage_data.vesting_period,
-        );
-
-        (vested_reward)
     }
 
     fun validate_vip_weights(module_store: &ModuleStore) {
@@ -1377,64 +1290,77 @@ module initia_std::vip {
         );
     }
 
-    fun claim_operator_reward_script(
+    public entry fun batch_claim_operator_reward_script(
         operator: &signer,
         bridge_id: u64,
-        stage: u64,
+        stages: vector<u64>,
     ) acquires ModuleStore {
         if (
             !vip_vesting::is_operator_vesting_store_registered(
-
                 signer::address_of(operator),
                 bridge_id
             )) {
             vip_vesting::register_operator_vesting_store(operator, bridge_id);
         };
-
-        let vested_reward = claim_operator_reward(operator, bridge_id, stage,);
-
-        coin::deposit(
-            signer::address_of(operator),
-            vested_reward
-        );
-    }
-
-    public entry fun batch_claim_operator_reward_script(
-        operator: &signer,
-        bridge_id: u64,
-        stage: vector<u64>,
-    ) acquires ModuleStore {
-
-        let module_store = borrow_global<ModuleStore>(@initia_std);
         let account_addr = signer::address_of(operator);
+        let len = vector::length(&stages);
+        let final_stage = *vector::borrow(&mut stages, len - 1);
+        // check claimable on final stage by challenge period
+        check_claimable_period(bridge_id, final_stage);
         // check if the claim is attempted from a position that has not been finalized.
-        let first_stage = *vector::borrow(&mut stage, 0);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let first_stage = *vector::borrow(&mut stages, 0);
         let prev_stage = first_stage - 1;
         let init_stage = table::borrow(
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
         ).init_stage;
-        // hypothesis: for a finalized vesting position, all its previous stages must also be finalized.
-        // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
+        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
+        // so if vesting position of prev stage is claimed, then it will be okay but if is not, make the error
         if (prev_stage >= init_stage) {
             assert!(
                 vip_vesting::get_operator_last_claimed_stage(account_addr, bridge_id) == prev_stage,
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
-        // check if the claim is attempted from a position that has not been finalized.
+        // check if the claim is attempted from a position that has not been claimed.
         // if an attempt is made to claim from a vesting position of the next stage without finalizing the current one, an error should be raised
+        let claimInfos: vector<OperatorVestingClaimInfo> = vector[];
+        // make vesting position claim info
         vector::enumerate_ref(
-            &stage,
-            |_i, s| {
+            &stages,
+            |i, s| {
+                // check stages consecutively
                 assert!(
-                    *s > prev_stage,
+                    *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
 
+                // if there is no vesting store, register it
+                if (!vip_vesting::is_user_vesting_store_registered(
+                        signer::address_of(operator),
+                        bridge_id
+                    )) {
+                    vip_vesting::register_user_vesting_store(operator, bridge_id);
+                };
+
                 prev_stage = *s;
-                claim_operator_reward_script(operator, bridge_id, *s,);
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_operator_vesting_claim_infos(
+                        *s, *s + module_store.vesting_period,
+                    )
+                );
             }
+        );
+        // call batch claim user reward
+        let vested_reward = vip_vesting::batch_claim_operator_reward(
+            account_addr, bridge_id, claimInfos
+        );
+        coin::deposit(
+            signer::address_of(operator),
+            vested_reward
         );
     }
 
@@ -1474,11 +1400,12 @@ module initia_std::vip {
             );
         };
 
-        let claimInfos: vector<VestingClaimInfo> = vector[];
+        let claimInfos: vector<UserVestingClaimInfo> = vector[];
         // make vesting position claim info
         vector::enumerate_ref(
             &stage,
             |i, s| {
+                // check stages consecutively
                 assert!(
                     *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
@@ -1505,7 +1432,7 @@ module initia_std::vip {
 
                 vector::push_back(
                     &mut claimInfos,
-                    vip_vesting::build_vesting_claim_info(
+                    vip_vesting::build_user_vesting_claim_infos(
                         *s,
                         *s + module_store.vesting_period,
                         *vector::borrow(&l2_score, i),
@@ -1513,7 +1440,6 @@ module initia_std::vip {
                         snapshot.total_l2_score,
                     )
                 );
-
             }
         );
         // call batch claim user reward
@@ -3293,8 +3219,11 @@ module initia_std::vip {
 
         test_setup_scene1(chain, bridge_id);
         // try claim operator reward scriptl;without skipping challenge period
-        claim_operator_reward_script(operator, bridge_id, 10);
-
+        batch_claim_operator_reward_script(
+            operator,
+            bridge_id,
+            vector[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        );
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -3346,7 +3275,7 @@ module initia_std::vip {
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
-        claim_operator_reward_script(operator, bridge_id, 1,);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[1]);
 
     }
 
@@ -4446,7 +4375,8 @@ module initia_std::vip {
                 *simple_map::borrow(&score_map, &4)
             ],
         );
-        claim_operator_reward_script(operator, bridge_id, 4);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[1, 2]);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[3, 4]);
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
@@ -4501,7 +4431,7 @@ module initia_std::vip {
                 *simple_map::borrow(&score_map, &5)
             ],
         );
-        claim_operator_reward_script(operator, bridge_id, 5);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[5]);
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
@@ -4545,7 +4475,7 @@ module initia_std::vip {
             0
         );
         assert!(
-            operator_claimed_stages == vector[4, 5],
+            operator_claimed_stages == vector[1, 2, 3, 4, 5],
             0
         );
     }
