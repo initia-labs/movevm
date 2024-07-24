@@ -131,7 +131,6 @@ module publisher::vip_vesting {
         stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
-
     }
 
     #[event]

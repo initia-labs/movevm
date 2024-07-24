@@ -37,7 +37,7 @@ module publisher::vip {
     const EUNAUTHORIZED: u64 = 5;
     const EINVALID_MIN_ELIGIBLE_TVL: u64 = 6;
     const EINVALID_MAX_TVL: u64 = 7;
-    const EINVALID_MIN_SCORE_RATIO: u64 = 8;
+    const EINVALID_RATIO: u64 = 8;
     const EINVALID_TOTAL_SHARE: u64 = 9;
     const EINITIAILIZE: u64 = 10;
     const EINVALID_STAGE_RANGE: u64 = 11;
@@ -1487,10 +1487,8 @@ module publisher::vip {
                 error::invalid_argument(EINVALID_VEST_PERIOD)
             );
         };
-
         if (option::is_some(&minimum_eligible_tvl)) {
-    
-            module_store.vesting_period = option::extract(&mut minimum_eligible_tvl);
+            module_store.minimum_eligible_tvl = option::extract(&mut minimum_eligible_tvl);
         };
 
         if (option::is_some(&maximum_tvl_ratio)) {
@@ -1503,14 +1501,18 @@ module publisher::vip {
 
         if (option::is_some(&minimum_score_ratio)) {
             module_store.minimum_score_ratio = option::extract(&mut minimum_score_ratio);
+            assert!(
+                decimal256::val(&module_store.minimum_score_ratio) <= decimal256::val(&decimal256::one()),
+                error::invalid_argument(EINVALID_RATIO)
+            );  
         };
 
         if (option::is_some(&pool_split_ratio)) {
             module_store.pool_split_ratio = option::extract(&mut pool_split_ratio);
             assert!(
                 decimal256::val(&module_store.pool_split_ratio) <= decimal256::val(&decimal256::one()),
-                error::invalid_argument(EINVALID_MIN_SCORE_RATIO)
-            );        
+                error::invalid_argument(EINVALID_RATIO)
+            );  
         };
 
         if (option::is_some(&challenge_period)) {
