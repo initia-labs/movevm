@@ -68,12 +68,6 @@ module publisher::vip_vesting {
         vest_max_amount: u64
     }
 
-    struct VestingChange has drop, store {
-        start_stage: u64,
-        initial_reward: u64,
-        remaining_reward: u64,
-    }
-
     struct UserVestingClaimInfo has drop, copy {
         start_stage: u64,
         end_stage: u64,
@@ -135,7 +129,7 @@ module publisher::vip_vesting {
     }
 
     #[event]
-    struct VestingChangedEvent has drop, store {
+    struct UserVestingChangedEvent has drop, store {
         account: address,
         bridge_id: u64,
         start_stage: u64,
@@ -150,6 +144,15 @@ module publisher::vip_vesting {
         stage: u64,
         vesting_reward_amount: u64,
         vested_reward_amount: u64,
+    }
+
+    #[event]
+    struct OperatorVestingChangedEvent has drop, store {
+        account: address,
+        bridge_id: u64,
+        start_stage: u64,
+        initial_reward: u64,
+        remaining_reward: u64,
     }
 
     #[event]
@@ -788,7 +791,7 @@ module publisher::vip_vesting {
             );
             if (vesting.initial_reward != vesting.remaining_reward) {
                 event::emit(
-                    VestingChangedEvent {
+                    UserVestingChangedEvent {
                         account: account_addr,
                         bridge_id: bridge_id,
                         start_stage: vesting.start_stage,
@@ -886,7 +889,7 @@ module publisher::vip_vesting {
             );
             if (vesting.initial_reward != vesting.remaining_reward) {
                 event::emit(
-                    VestingChangedEvent {
+                    OperatorVestingChangedEvent {
                         account: operator_addr,
                         bridge_id: bridge_id,
                         start_stage: vesting.start_stage,

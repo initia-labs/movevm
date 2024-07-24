@@ -144,16 +144,7 @@ module publisher::vip {
         user_reward_store_addr: address,
     }
 
-    struct RewardDistribution has drop, store {
-        bridge_id: u64,
-        user_reward_store_addr: address,
-        operator_reward_store_addr: address,
-        user_reward_amount: u64,
-        operator_reward_amount: u64
-    }
-
     struct ExecutedChallenge has store, drop {
-
         challenge_id: u64,
         bridge_id: u64,
         stage: u64,
