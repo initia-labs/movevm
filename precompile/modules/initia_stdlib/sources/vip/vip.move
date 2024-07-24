@@ -317,18 +317,6 @@ module publisher::vip {
         );
     }
 
-    public entry fun initialize(chain: &signer, stage_start_time: u64) acquires ModuleStore {
-        check_chain_permission(chain);
-        let (_, block_time) = block::get_block_info();
-        assert!(
-            stage_start_time > block_time,
-            error::invalid_argument(EINITIAILIZE)
-        );
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        module_store.stage_start_time = stage_start_time;
-        module_store.stage_end_time = stage_start_time;
-    }
-
     // Compare bytes and return a following result number:
     // 0: equal
     // 1: v1 is greator than v2
