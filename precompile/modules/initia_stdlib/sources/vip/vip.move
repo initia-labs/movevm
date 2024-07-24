@@ -4990,9 +4990,4 @@ module initia_std::vip {
             batch_stakelisted_metadata,
         );
     }
-
-    // #[test(chain = @0x1, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    // fun test_penalty(chain: &signer, receiver: &signer) {
-
-    // }
 }

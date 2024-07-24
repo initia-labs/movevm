@@ -556,10 +556,10 @@ module initia_std::vip_vesting {
             reward_store_addr,
             claim_info.start_stage
         );
-        let score_ratio = decimal256::from_ratio_u64(
+        let score_ratio = if(claim_info.total_l2_score == 0){decimal256::zero()} else {decimal256::from_ratio_u64(
             claim_info.l2_score,
             claim_info.total_l2_score
-        );
+        )};
         let vesting_reward_amount = decimal256::mul_u64(&score_ratio, stage_reward);
         let minimum_score = decimal256::mul_u64(
             &claim_info.minimum_score_ratio,
