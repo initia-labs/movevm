@@ -19,7 +19,11 @@ module initia_std::vip {
     use initia_std::bcs;
     use initia_std::vip_zapping;
     use initia_std::vip_operator;
-    use initia_std::vip_vesting;
+    use initia_std::vip_vesting::{
+        Self,
+        UserVestingClaimInfo,
+        OperatorVestingClaimInfo
+    };
     use initia_std::vip_reward;
     use initia_std::vip_vault;
     use initia_std::vip_tvl_manager;
@@ -498,62 +502,6 @@ module initia_std::vip {
         )
     }
 
-    public fun claim_user_reward(
-        account: &signer,
-        bridge_id: u64,
-        stage: u64,
-        merkle_proofs: vector<vector<u8>>,
-        l2_score: u64,
-    ): (FungibleAsset) acquires ModuleStore {
-        // check claim period
-        check_claimable_period(bridge_id, stage);
-
-        let account_addr = signer::address_of(account);
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-
-        assert!(
-            table::contains(
-                &module_store.stage_data,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(ESTAGE_DATA_NOT_FOUND)
-        );
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-        let snapshot = table::borrow(
-            &stage_data.snapshots,
-            table_key::encode_u64(bridge_id)
-        );
-
-        let target_hash = score_hash(
-            bridge_id,
-            stage,
-            account_addr,
-            l2_score,
-            snapshot.total_l2_score,
-        );
-        // if a length of merkle proofs is 0, it will be passed
-        assert_merkle_proofs(
-            merkle_proofs,
-            snapshot.merkle_root,
-            target_hash,
-        );
-
-        let (vested_reward) = vip_vesting::claim_user_reward(
-            account_addr,
-            bridge_id,
-            stage,
-            stage + stage_data.vesting_period,
-            l2_score,
-            snapshot.total_l2_score,
-            stage_data.minimum_score_ratio,
-        );
-
-        (vested_reward)
-    }
-
     fun zapping(
         account: &signer,
         bridge_id: u64,
@@ -889,41 +837,6 @@ module initia_std::vip {
 
             simple_map::add(weight_shares, bridge_id, weight);
         }
-    }
-
-    // retunr claim operator reward and remaining(by rounding math issue on finalized stage)
-    public fun claim_operator_reward(
-        operator: &signer,
-        bridge_id: u64,
-        stage: u64,
-    ): (FungibleAsset) acquires ModuleStore {
-        // check claim period
-        check_claimable_period(bridge_id, stage);
-
-        let operator_addr = signer::address_of(operator);
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-
-        // assert claimable conditions
-        assert!(
-            table::contains(
-                &module_store.stage_data,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(ESTAGE_DATA_NOT_FOUND)
-        );
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-
-        let (vested_reward) = vip_vesting::claim_operator_reward(
-            operator_addr,
-            bridge_id,
-            stage,
-            stage + stage_data.vesting_period,
-        );
-
-        (vested_reward)
     }
 
     fun validate_vip_weights(module_store: &ModuleStore) {
@@ -1377,91 +1290,77 @@ module initia_std::vip {
         );
     }
 
-    fun claim_operator_reward_script(
+    public entry fun batch_claim_operator_reward_script(
         operator: &signer,
         bridge_id: u64,
-        stage: u64,
+        stages: vector<u64>,
     ) acquires ModuleStore {
         if (
             !vip_vesting::is_operator_vesting_store_registered(
-
                 signer::address_of(operator),
                 bridge_id
             )) {
             vip_vesting::register_operator_vesting_store(operator, bridge_id);
         };
-
-        let vested_reward = claim_operator_reward(operator, bridge_id, stage,);
-
-        coin::deposit(
-            signer::address_of(operator),
-            vested_reward
-        );
-    }
-
-    fun claim_user_reward_script(
-        account: &signer,
-        bridge_id: u64,
-        stage: u64,
-        merkle_proofs: vector<vector<u8>>,
-        l2_score: u64,
-    ) acquires ModuleStore {
-        if (!vip_vesting::is_user_vesting_store_registered(
-                signer::address_of(account),
-                bridge_id
-            )) {
-            vip_vesting::register_user_vesting_store(account, bridge_id);
-        };
-
-        let (vested_reward) = claim_user_reward(
-            account,
-            bridge_id,
-            stage,
-            merkle_proofs,
-            l2_score,
-        );
-        coin::deposit(
-            signer::address_of(account),
-            vested_reward
-        );
-    }
-
-    public entry fun batch_claim_operator_reward_script(
-        operator: &signer,
-        bridge_id: u64,
-        stage: vector<u64>,
-    ) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
         let account_addr = signer::address_of(operator);
+        let len = vector::length(&stages);
+        let final_stage = *vector::borrow(&mut stages, len - 1);
+        // check claimable on final stage by challenge period
+        check_claimable_period(bridge_id, final_stage);
         // check if the claim is attempted from a position that has not been finalized.
-        let first_stage = *vector::borrow(&mut stage, 0);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let first_stage = *vector::borrow(&mut stages, 0);
         let prev_stage = first_stage - 1;
         let init_stage = table::borrow(
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
         ).init_stage;
-        // hypothesis: for a finalized vesting position, all its previous stages must also be finalized.
-        // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
+        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
+        // so if vesting position of prev stage is claimed, then it will be okay but if is not, make the error
         if (prev_stage >= init_stage) {
             assert!(
-                vip_vesting::is_operator_vesting_position_finalized(
-                    account_addr, bridge_id, prev_stage
-                ),
+                vip_vesting::get_operator_last_claimed_stage(account_addr, bridge_id) == prev_stage,
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
-        // check if the claim is attempted from a position that has not been finalized.
+        // check if the claim is attempted from a position that has not been claimed.
         // if an attempt is made to claim from a vesting position of the next stage without finalizing the current one, an error should be raised
+        let claimInfos: vector<OperatorVestingClaimInfo> = vector[];
+        // make vesting position claim info
         vector::enumerate_ref(
-            &stage,
-            |_i, s| {
+            &stages,
+            |i, s| {
+                // check stages consecutively
                 assert!(
-                    *s > prev_stage,
+                    *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
+
+                // if there is no vesting store, register it
+                if (!vip_vesting::is_user_vesting_store_registered(
+                        signer::address_of(operator),
+                        bridge_id
+                    )) {
+                    vip_vesting::register_user_vesting_store(operator, bridge_id);
+                };
+
                 prev_stage = *s;
-                claim_operator_reward_script(operator, bridge_id, *s,);
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_operator_vesting_claim_infos(
+                        *s, *s + module_store.vesting_period,
+                    )
+                );
             }
+        );
+        // call batch claim user reward
+        let vested_reward = vip_vesting::batch_claim_operator_reward(
+            account_addr, bridge_id, claimInfos
+        );
+        coin::deposit(
+            signer::address_of(operator),
+            vested_reward
         );
     }
 
@@ -1472,14 +1371,19 @@ module initia_std::vip {
         merkle_proofs: vector<vector<vector<u8>>>,
         l2_score: vector<u64>,
     ) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        let account_addr = signer::address_of(account);
+        let len = vector::length(&stage);
         assert!(
-            vector::length(&stage) == vector::length(&merkle_proofs) && vector::length(
-                &merkle_proofs
-            ) == vector::length(&l2_score),
+            len == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) == vector::length(
+                &l2_score
+            ) && len != 0,
             error::invalid_argument(EINVALID_BATCH_ARGUMENT)
         );
+        let final_stage = *vector::borrow(&mut stage, len - 1);
+        // check claimable on final stage by challenge period
+        check_claimable_period(bridge_id, final_stage);
+
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let account_addr = signer::address_of(account);
         // check if the claim is attempted from a position that has not been finalized.
         let first_stage = *vector::borrow(&mut stage, 0);
         let prev_stage = first_stage - 1;
@@ -1487,34 +1391,66 @@ module initia_std::vip {
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
         ).init_stage;
-        // hypothesis: for a finalized vesting position, all its previous stages must also be finalized.
-        // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
+        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
+        // so if vesting position of prev stage is claimed, then it will be okay but if is not, make the error
         if (prev_stage >= init_stage) {
             assert!(
-                vip_vesting::is_user_vesting_position_finalized(
-                    account_addr, bridge_id, prev_stage
-                ),
+                vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id) == prev_stage,
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
 
+        let claimInfos: vector<UserVestingClaimInfo> = vector[];
+        // make vesting position claim info
         vector::enumerate_ref(
             &stage,
             |i, s| {
+                // check stages consecutively
                 assert!(
                     *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
+
+                // if there is no vesting store, register it
+                if (!vip_vesting::is_user_vesting_store_registered(
+                        signer::address_of(account),
+                        bridge_id
+                    )) {
+                    vip_vesting::register_user_vesting_store(account, bridge_id);
+                };
+
                 prev_stage = *s;
-                claim_user_reward_script(
-                    account,
-                    bridge_id,
-                    *s,
-                    *vector::borrow(&merkle_proofs, i),
-                    *vector::borrow(&l2_score, i),
+
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*s)
+                );
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_user_vesting_claim_infos(
+                        *s,
+                        *s + module_store.vesting_period,
+                        *vector::borrow(&l2_score, i),
+                        module_store.minimum_score_ratio,
+                        snapshot.total_l2_score,
+                    )
                 );
             }
         );
+        // call batch claim user reward
+        let vested_reward = vip_vesting::batch_claim_user_reward(
+            account_addr, bridge_id, claimInfos
+        );
+        coin::deposit(
+            signer::address_of(account),
+            vested_reward
+        );
+
     }
 
     public entry fun update_vip_weights(
@@ -2651,19 +2587,18 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
-        );
-        claim_user_reward_script(
-            receiver,
-            bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
+            vector[1, 2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1),
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             vip_vesting::get_user_vesting_minimum_score(
@@ -2698,12 +2633,16 @@ module initia_std::vip {
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             vip_vesting::get_user_vesting_minimum_score(
@@ -2732,12 +2671,16 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &3),
+            vector[4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
 
         assert!(
@@ -2797,12 +2740,16 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2812,12 +2759,16 @@ module initia_std::vip {
             1
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
+            vector[2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2827,12 +2778,16 @@ module initia_std::vip {
             2
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2842,12 +2797,16 @@ module initia_std::vip {
             3
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &4),
+            vector[4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2890,40 +2849,34 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1, 2, 3, 4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &2),
+                *simple_map::borrow(&merkle_proof_map, &3),
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1),
+                *simple_map::borrow(&score_map, &2),
+                *simple_map::borrow(&score_map, &3),
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
-        claim_user_reward_script(
+
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
-        );
-        claim_user_reward_script(
-            receiver,
-            bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
-        );
-        claim_user_reward_script(
-            receiver,
-            bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &4),
-        );
-        claim_user_reward_script(
-            receiver,
-            bridge_id,
-            5,
-            *simple_map::borrow(&merkle_proof_map, &5),
-            *simple_map::borrow(&score_map, &5),
+            vector[5],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
 
         assert!(
@@ -2975,19 +2928,27 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1), // vesting 1 created
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ], // vesting 1 created
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2), // vesting 2 created
+            vector[2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ], // vesting 2 created
         );
 
         vip_vesting::get_user_vesting(
@@ -3001,26 +2962,38 @@ module initia_std::vip {
             2
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &4), // vesting 1 finalized
+            vector[4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ], // vesting 1 finalized
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            5,
-            *simple_map::borrow(&merkle_proof_map, &5),
-            *simple_map::borrow(&score_map, &5), // vesting 2 finalized
+            vector[5],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ], // vesting 2 finalized
         );
 
         vip_vesting::get_user_vesting_finalized(
@@ -3152,7 +3125,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x10006, location = initia_std::vip_vesting)]
+    #[expected_failure(abort_code = 0x80003, location = initia_std::vip_vesting)]
     fun failed_claim_already_claimed(
         chain: &signer,
         operator: &signer,
@@ -3175,19 +3148,27 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
     }
 
@@ -3211,12 +3192,16 @@ module initia_std::vip {
 
         test_setup_scene1(chain, bridge_id);
         // try claim user reward scriptl;without skipping challenge period
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            10,
-            *simple_map::borrow(&merkle_proof_map, &10),
-            *simple_map::borrow(&score_map, &10),
+            vector[10],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &10)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &10)
+            ],
         );
     }
 
@@ -3234,8 +3219,11 @@ module initia_std::vip {
 
         test_setup_scene1(chain, bridge_id);
         // try claim operator reward scriptl;without skipping challenge period
-        claim_operator_reward_script(operator, bridge_id, 10);
-
+        batch_claim_operator_reward_script(
+            operator,
+            bridge_id,
+            vector[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        );
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -3259,12 +3247,16 @@ module initia_std::vip {
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
     }
 
@@ -3283,7 +3275,7 @@ module initia_std::vip {
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
-        claim_operator_reward_script(operator, bridge_id, 1,);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[1]);
 
     }
 
@@ -3406,48 +3398,72 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
+            vector[2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &4),
+            vector[4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            5,
-            *simple_map::borrow(&merkle_proof_map, &5),
-            *simple_map::borrow(&score_map, &5),
+            vector[5],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            6,
-            *simple_map::borrow(&merkle_proof_map, &6),
-            *simple_map::borrow(&score_map, &6),
+            vector[6],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &6)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &6)
+            ],
         );
 
         let initial_reward_vesting_finalized = vip_vesting::get_user_vesting_finalized_initial_reward(
@@ -3471,7 +3487,8 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_claim_jump_stage(
+    #[expected_failure(abort_code = 0x10016, location = Self)]
+    fun failed_claim_jump_stage(
         chain: &signer,
         operator: &signer,
         receiver: &signer
@@ -3497,19 +3514,18 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
-        );
-        claim_user_reward_script(
-            receiver,
-            bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[1, 3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1),
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
 
         assert!(
@@ -3922,26 +3938,42 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id1,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id1,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
+            vector[2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id1,
-            5,
-            *simple_map::borrow(&merkle_proof_map, &5),
-            *simple_map::borrow(&score_map, &5),
+            vector[3, 4, 5],
+            vector[
+                vector[],
+                vector[],
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                0,
+                0,
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
     }
 
@@ -3972,12 +4004,16 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         assert!(
             coin::balance(
@@ -3987,12 +4023,16 @@ module initia_std::vip {
             1
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
+            vector[2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             coin::balance(
@@ -4003,12 +4043,16 @@ module initia_std::vip {
         );
 
         // half score
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             coin::balance(
@@ -4021,12 +4065,16 @@ module initia_std::vip {
             4
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &4),
+            vector[4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
         assert!(
             coin::balance(
@@ -4043,12 +4091,16 @@ module initia_std::vip {
             5
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            5,
-            *simple_map::borrow(&merkle_proof_map, &5),
-            *simple_map::borrow(&score_map, &5),
+            vector[5],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
         assert!(
             coin::balance(
@@ -4239,12 +4291,16 @@ module initia_std::vip {
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            1,
-            *simple_map::borrow(&merkle_proof_map, &1),
-            *simple_map::borrow(&score_map, &1),
+            vector[1],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         assert!(
             vip_vesting::get_user_locked_reward(
@@ -4264,12 +4320,16 @@ module initia_std::vip {
             0
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            2,
-            *simple_map::borrow(&merkle_proof_map, &2),
-            *simple_map::borrow(&score_map, &2),
+            vector[2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             vip_vesting::get_user_unlocked_reward(
@@ -4281,12 +4341,16 @@ module initia_std::vip {
             0
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            3,
-            *simple_map::borrow(&merkle_proof_map, &3),
-            *simple_map::borrow(&score_map, &3),
+            vector[3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             vip_vesting::get_user_unlocked_reward(
@@ -4300,14 +4364,19 @@ module initia_std::vip {
             0
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            4,
-            *simple_map::borrow(&merkle_proof_map, &4),
-            *simple_map::borrow(&score_map, &4),
+            vector[4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
-        claim_operator_reward_script(operator, bridge_id, 4);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[1, 2]);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[3, 4]);
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
@@ -4351,14 +4420,18 @@ module initia_std::vip {
             0
         );
 
-        claim_user_reward_script(
+        batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            5,
-            *simple_map::borrow(&merkle_proof_map, &5),
-            *simple_map::borrow(&score_map, &5),
+            vector[5],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
-        claim_operator_reward_script(operator, bridge_id, 5);
+        batch_claim_operator_reward_script(operator, bridge_id, vector[5]);
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
@@ -4402,7 +4475,7 @@ module initia_std::vip {
             0
         );
         assert!(
-            operator_claimed_stages == vector[4, 5],
+            operator_claimed_stages == vector[1, 2, 3, 4, 5],
             0
         );
     }
@@ -4887,12 +4960,16 @@ module initia_std::vip {
                 DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
             );
 
-            claim_user_reward_script(
+            batch_claim_user_reward_script(
                 receiver,
                 bridge_id,
-                idx,
-                *simple_map::borrow(&merkle_proof_map, &idx),
-                *simple_map::borrow(&score_map, &idx),
+                vector[idx],
+                vector[
+                    *simple_map::borrow(&merkle_proof_map, &idx)
+                ],
+                vector[
+                    *simple_map::borrow(&score_map, &idx)
+                ],
             );
 
             vector::push_back(&mut batch_lp_metadata, lp_metadata);
