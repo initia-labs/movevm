@@ -418,6 +418,16 @@ module publisher::vip_vesting {
             penalty_reward = penalty_reward + value.vest_max_amount - vest_amount;
             value.remaining_reward = value.remaining_reward - value.vest_max_amount;
 
+            if (penalty_reward > 0 ) {
+                event::emit(
+                    PenaltyEvent {
+                        account: account_addr,
+                        bridge_id: bridge_id,
+                        start_stage: value.start_stage,
+                        amount: penalty_reward
+                    }
+                );
+            };
             if (claim_info.start_stage >= value.end_stage) {
                 event::emit(
                     UserVestingFinalizedEvent {
@@ -491,7 +501,7 @@ module publisher::vip_vesting {
 
             if (claim_info.start_stage >= value.end_stage) {
                 event::emit(
-                    UserVestingFinalizedEvent {
+                    OperatorVestingFinalizedEvent {
                         account: account_addr,
                         bridge_id,
                         start_stage: value.start_stage,
@@ -721,15 +731,6 @@ module publisher::vip_vesting {
             };
 
             i = i + 1;
-
-            event::emit(
-                PenaltyEvent {
-                    account: account_addr,
-                    bridge_id: bridge_id,
-                    start_stage: claim_info.start_stage,
-                    amount: penalty_reward
-                }
-            );
 
             event::emit(
                 UserVestingClaimEvent {

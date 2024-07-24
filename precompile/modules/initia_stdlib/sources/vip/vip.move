@@ -1351,25 +1351,25 @@ module publisher::vip {
     public entry fun batch_claim_user_reward_script(
         account: &signer,
         bridge_id: u64,
-        stage: vector<u64>, /**/
+        stages: vector<u64>, /**/
         merkle_proofs: vector<vector<vector<u8>>>,
-        l2_score: vector<u64>,
+        l2_scores: vector<u64>,
     ) acquires ModuleStore {
-        let len = vector::length(&stage);
+        let len = vector::length(&stages);
         assert!(
             len == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) == vector::length(
-                &l2_score
+                &l2_scores
             ) && len != 0,
             error::invalid_argument(EINVALID_BATCH_ARGUMENT)
         );
-        let final_stage = *vector::borrow(&mut stage, len - 1);
+        let final_stage = *vector::borrow(&mut stages, len - 1);
         // check claimable on final stage by challenge period
         check_claimable_period(bridge_id, final_stage);
 
         let module_store = borrow_global<ModuleStore>(@publisher);
         let account_addr = signer::address_of(account);
         // check if the claim is attempted from a position that has not been finalized.
-        let first_stage = *vector::borrow(&mut stage, 0);
+        let first_stage = *vector::borrow(&mut stages, 0);
         let prev_stage = first_stage - 1;
         let init_stage = table::borrow(
             &module_store.bridges,
@@ -1383,31 +1383,58 @@ module publisher::vip {
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
+        let (_, block_time) = block::get_block_info();
+
+        // if there is no vesting store, register it
+        if (!vip_vesting::is_user_vesting_store_registered(
+                signer::address_of(account),
+                bridge_id
+            )) {
+            vip_vesting::register_user_vesting_store(account, bridge_id);
+        };
 
         let claimInfos: vector<UserVestingClaimInfo> = vector[];
         // make vesting position claim info
         vector::enumerate_ref(
-            &stage,
-            |i, s| {
+            &stages,
+            |i, stage| {
                 // check stages consecutively
                 assert!(
-                    *s == prev_stage + 1,
+                    *stage == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
 
-                // if there is no vesting store, register it
-                if (!vip_vesting::is_user_vesting_store_registered(
-                        signer::address_of(account),
-                        bridge_id
-                    )) {
-                    vip_vesting::register_user_vesting_store(account, bridge_id);
-                };
+                let merkle_proof = vector::borrow(&merkle_proofs, i);
+                let l2_score = vector::borrow(&l2_scores, i);
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*stage)
+                );
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
 
-                prev_stage = *s;
+                // check merkle proof
+                let target_hash = score_hash(
+                    bridge_id,
+                    *stage,
+                    account_addr,
+                    *l2_score,
+                    snapshot.total_l2_score,
+                );
+
+                assert_merkle_proofs(
+                    *merkle_proof,
+                    snapshot.merkle_root,
+                    target_hash,
+                );
+
+                prev_stage = *stage;
 
                 let stage_data = table::borrow(
                     &module_store.stage_data,
-                    table_key::encode_u64(*s)
+                    table_key::encode_u64(*stage)
                 );
                 let snapshot = table::borrow(
                     &stage_data.snapshots,
@@ -1417,9 +1444,9 @@ module publisher::vip {
                 vector::push_back(
                     &mut claimInfos,
                     vip_vesting::build_user_vesting_claim_infos(
-                        *s,
-                        *s + module_store.vesting_period,
-                        *vector::borrow(&l2_score, i),
+                        *stage,
+                        *stage + module_store.vesting_period,
+                        *l2_score,
                         module_store.minimum_score_ratio,
                         snapshot.total_l2_score,
                     )
