@@ -1399,7 +1399,6 @@ module initia_std::vip {
         );
     }
 
-
     public entry fun batch_claim_operator_reward_script(
         operator: &signer,
         bridge_id: u64,
@@ -1419,9 +1418,7 @@ module initia_std::vip {
         // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
         if (prev_stage >= init_stage) {
             assert!(
-                vip_vesting::is_operator_vesting_position_finalized(
-                    account_addr, bridge_id, prev_stage
-                ),
+                vip_vesting::get_operator_last_claimed_stage(account_addr, bridge_id) == prev_stage,
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
@@ -1468,13 +1465,11 @@ module initia_std::vip {
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
         ).init_stage;
-        // hypothesis: for a finalized vesting position, all its previous stages must also be finalized.
-        // so if vesting position of prev stage is finalized, then it will be okay but if is not, make the error
+        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
+        // so if vesting position of prev stage is claimed, then it will be okay but if is not, make the error
         if (prev_stage >= init_stage) {
             assert!(
-                vip_vesting::is_user_vesting_position_finalized(
-                    account_addr, bridge_id, prev_stage
-                ) || vip_vesting::get_user_last_claimed_stage(account_addr,bridge_id) == prev_stage,
+                vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id) == prev_stage,
                 error::invalid_argument(EINVALID_BATCH_ARGUMENT)
             );
         };
@@ -2665,13 +2660,19 @@ module initia_std::vip {
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
-        
+
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            vector[1,2],
-            vector[*simple_map::borrow(&merkle_proof_map, &1),*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &1),*simple_map::borrow(&score_map, &2)],
+            vector[1, 2],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1),
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             vip_vesting::get_user_vesting_minimum_score(
@@ -2710,8 +2711,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[3],
-            vector[*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             vip_vesting::get_user_vesting_minimum_score(
@@ -2744,8 +2749,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[4],
-            vector[*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
 
         assert!(
@@ -2809,8 +2818,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2824,8 +2837,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[2],
-            vector[*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &2)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2839,8 +2856,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[3],
-            vector[*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2854,8 +2875,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[4],
-            vector[*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &4)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
         assert!(
             vip_vesting::get_user_last_claimed_stage(
@@ -2901,17 +2926,31 @@ module initia_std::vip {
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            vector[1,2,3,4],
-            vector[*simple_map::borrow(&merkle_proof_map, &1),*simple_map::borrow(&merkle_proof_map, &2),*simple_map::borrow(&merkle_proof_map, &3),*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &1),*simple_map::borrow(&score_map, &2),*simple_map::borrow(&score_map, &3),*simple_map::borrow(&score_map, &4)],
+            vector[1, 2, 3, 4],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &2),
+                *simple_map::borrow(&merkle_proof_map, &3),
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1),
+                *simple_map::borrow(&score_map, &2),
+                *simple_map::borrow(&score_map, &3),
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
 
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[5],
-            vector[*simple_map::borrow(&merkle_proof_map, &5)],
-            vector[*simple_map::borrow(&score_map, &5)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
 
         assert!(
@@ -2967,15 +3006,23 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)], // vesting 1 created
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ], // vesting 1 created
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[2],
-            vector[*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &2)], // vesting 2 created
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ], // vesting 2 created
         );
 
         vip_vesting::get_user_vesting(
@@ -2993,22 +3040,34 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[3],
-            vector[*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[4],
-            vector[*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &4)], // vesting 1 finalized
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ], // vesting 1 finalized
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[5],
-            vector[*simple_map::borrow(&merkle_proof_map, &5)],
-            vector[*simple_map::borrow(&score_map, &5)], // vesting 2 finalized
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ], // vesting 2 finalized
         );
 
         vip_vesting::get_user_vesting_finalized(
@@ -3167,15 +3226,23 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
     }
 
@@ -3203,8 +3270,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[10],
-            vector[*simple_map::borrow(&merkle_proof_map, &10)],
-            vector[*simple_map::borrow(&score_map, &10)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &10)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &10)
+            ],
         );
     }
 
@@ -3251,8 +3322,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
     }
 
@@ -3398,44 +3473,68 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
 
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[2],
-            vector[*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &2)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[3],
-            vector[*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[4],
-            vector[*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &4)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[5],
-            vector[*simple_map::borrow(&merkle_proof_map, &5)],
-            vector[*simple_map::borrow(&score_map, &5)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
             vector[6],
-            vector[*simple_map::borrow(&merkle_proof_map, &6)],
-            vector[*simple_map::borrow(&score_map, &6)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &6)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &6)
+            ],
         );
 
         let initial_reward_vesting_finalized = vip_vesting::get_user_vesting_finalized_initial_reward(
@@ -3489,9 +3588,15 @@ module initia_std::vip {
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            vector[1,3],
-            vector[*simple_map::borrow(&merkle_proof_map, &1),*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &1),*simple_map::borrow(&score_map, &3)],
+            vector[1, 3],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1),
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1),
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
 
         assert!(
@@ -3908,22 +4013,38 @@ module initia_std::vip {
             receiver,
             bridge_id1,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id1,
             vector[2],
-            vector[*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &2)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         batch_claim_user_reward_script(
             receiver,
             bridge_id1,
-            vector[3,4,5],
-            vector[vector[],vector[],*simple_map::borrow(&merkle_proof_map, &5)],
-            vector[0,0,*simple_map::borrow(&score_map, &5)],
+            vector[3, 4, 5],
+            vector[
+                vector[],
+                vector[],
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                0,
+                0,
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
     }
 
@@ -3958,8 +4079,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         assert!(
             coin::balance(
@@ -3973,8 +4098,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[2],
-            vector[*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &2)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             coin::balance(
@@ -3989,8 +4118,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[3],
-            vector[*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             coin::balance(
@@ -4007,8 +4140,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[4],
-            vector[*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &4)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
         assert!(
             coin::balance(
@@ -4029,8 +4166,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[5],
-            vector[*simple_map::borrow(&merkle_proof_map, &5)],
-            vector[*simple_map::borrow(&score_map, &5)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
         assert!(
             coin::balance(
@@ -4225,8 +4366,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[1],
-            vector[*simple_map::borrow(&merkle_proof_map, &1)],
-            vector[*simple_map::borrow(&score_map, &1)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &1)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &1)
+            ],
         );
         assert!(
             vip_vesting::get_user_locked_reward(
@@ -4250,8 +4395,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[2],
-            vector[*simple_map::borrow(&merkle_proof_map, &2)],
-            vector[*simple_map::borrow(&score_map, &2)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &2)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &2)
+            ],
         );
         assert!(
             vip_vesting::get_user_unlocked_reward(
@@ -4267,8 +4416,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[3],
-            vector[*simple_map::borrow(&merkle_proof_map, &3)],
-            vector[*simple_map::borrow(&score_map, &3)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &3)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &3)
+            ],
         );
         assert!(
             vip_vesting::get_user_unlocked_reward(
@@ -4286,8 +4439,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[4],
-            vector[*simple_map::borrow(&merkle_proof_map, &4)],
-            vector[*simple_map::borrow(&score_map, &4)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &4)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &4)
+            ],
         );
         claim_operator_reward_script(operator, bridge_id, 4);
         assert!(
@@ -4337,8 +4494,12 @@ module initia_std::vip {
             receiver,
             bridge_id,
             vector[5],
-            vector[*simple_map::borrow(&merkle_proof_map, &5)],
-            vector[*simple_map::borrow(&score_map, &5)],
+            vector[
+                *simple_map::borrow(&merkle_proof_map, &5)
+            ],
+            vector[
+                *simple_map::borrow(&score_map, &5)
+            ],
         );
         claim_operator_reward_script(operator, bridge_id, 5);
         assert!(
@@ -4873,8 +5034,12 @@ module initia_std::vip {
                 receiver,
                 bridge_id,
                 vector[idx],
-                vector[*simple_map::borrow(&merkle_proof_map, &idx)],
-                vector[*simple_map::borrow(&score_map, &idx)],
+                vector[
+                    *simple_map::borrow(&merkle_proof_map, &idx)
+                ],
+                vector[
+                    *simple_map::borrow(&score_map, &idx)
+                ],
             );
 
             vector::push_back(&mut batch_lp_metadata, lp_metadata);

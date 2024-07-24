@@ -342,7 +342,7 @@ module initia_std::vip_vesting {
         let (key, _) = table::next<vector<u8>, bool>(iter);
         table_key::decode_u64(key)
     }
-    
+
     fun vest_operator_reward(
         account_addr: address,
         bridge_id: u64,
@@ -433,18 +433,14 @@ module initia_std::vip_vesting {
         account_addr: address,
         bridge_id: u64,
         stage: u64,
-    ): (
-        FungibleAsset
-    ) acquires VestingStore {
+    ): (FungibleAsset) acquires VestingStore {
         assert!(
             get_last_claimed_stage<OperatorVesting>(account_addr, bridge_id) < stage,
             error::invalid_argument(ESTAGE_ALREADY_CLAIMED)
         );
 
         // vest previous vesting rewards until the stage
-        let (vested_amount, _) = vest_operator_reward(
-            account_addr, bridge_id, stage,
-        );
+        let (vested_amount, _) = vest_operator_reward(account_addr, bridge_id, stage,);
         let reward_store_addr = get_operator_reward_store_address(bridge_id);
         let vested_reward = vip_reward::withdraw(reward_store_addr, vested_amount);
 
@@ -859,14 +855,14 @@ module initia_std::vip_vesting {
             total_vested_reward
         )
     }
-    
+
     public(friend) fun claim_operator_reward(
         account_addr: address,
         bridge_id: u64,
         start_stage: u64,
         end_stage: u64,
     ): (FungibleAsset) acquires VestingStore {
-        let vested_reward= claim_previous_operator_vestings(
+        let vested_reward = claim_previous_operator_vestings(
             account_addr,
             bridge_id,
             start_stage,
