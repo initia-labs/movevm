@@ -79,7 +79,7 @@ module publisher::vip_vault {
     }
 
     public(friend) fun claim(stage: u64,): FungibleAsset acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             stage == module_store.claimable_stage,
             error::invalid_argument(EINVALID_STAGE)
@@ -123,7 +123,7 @@ module publisher::vip_vault {
     public entry fun update_reward_per_stage(chain: &signer, reward_per_stage: u64) acquires ModuleStore {
         check_chain_permission(chain);
 
-        let vault_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let vault_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             reward_per_stage > 0,
             error::invalid_argument(EINVALID_REWARD_PER_STAGE)

@@ -67,12 +67,12 @@ module publisher::vip {
     const DEFAULT_POOL_SPLIT_RATIO: vector<u8> = b"0.4";
     const DEFAULT_MIN_SCORE_RATIO: vector<u8> = b"0.5";
     const DEFAULT_VESTING_PERIOD: u64 = 52; // 52 times
-    const DEFAULT_STAGE_INTERVAL: u64 = 604800; // 1 week
+    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 60; // 1 hour
     const DEFAULT_MINIMUM_ELIGIBLE_TVL: u64 = 0;
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 0;
-    const DEFAULT_CHALLENGE_PERIOD: u64 = 604800; // 7 days
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 1200; // 20min
 
     struct ModuleStore has key {
         // current stage
@@ -806,7 +806,6 @@ module publisher::vip {
         module_store: &ModuleStore,
         weight_shares: &mut SimpleMap<u64, Decimal256>
     ) {
-        
         let iter = table::iter(
             &module_store.bridges,
             option::none(),
@@ -825,10 +824,6 @@ module publisher::vip {
                 module_store.maximum_weight_ratio
             } else {bridge.vip_weight};
             simple_map::add(weight_shares, bridge_id, weight);
-            if(table::length(&module_store.bridges) == 1) {
-                simple_map::remove(weight_shares, &bridge_id);
-                simple_map::add(weight_shares, bridge_id, decimal256::one());
-            };
         };
     }
 
@@ -1296,7 +1291,7 @@ module publisher::vip {
         // check claimable on final stage by challenge period
         check_claimable_period(bridge_id, final_stage);
         // check if the claim is attempted from a position that has not been finalized.
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let first_stage = *vector::borrow(&mut stages, 0);
         let prev_stage = first_stage - 1;
         let init_stage = table::borrow(
@@ -1370,7 +1365,7 @@ module publisher::vip {
         // check claimable on final stage by challenge period
         check_claimable_period(bridge_id, final_stage);
 
-        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         let account_addr = signer::address_of(account);
         // check if the claim is attempted from a position that has not been finalized.
         let first_stage = *vector::borrow(&mut stage, 0);
@@ -1465,70 +1460,63 @@ module publisher::vip {
 
         validate_vip_weights(module_store);
     }
-
-    public entry fun update_stage_interval(chain: &signer, stage_interval: u64,) acquires ModuleStore {
+    public entry fun update_params(
+        chain: &signer,
+        stage_interval: u64,
+        vesting_period: u64,
+        minimum_eligible_tvl: u64,
+        maximum_tvl_ratio: Decimal256,
+        minimum_score_ratio: Decimal256,
+        pool_split_ratio: Decimal256,
+        challenge_period: u64,
+    ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+
         assert!(
             stage_interval > 0,
             error::invalid_argument(EINVALID_VEST_PERIOD)
         );
         module_store.stage_interval = stage_interval;
-    }
 
-    public entry fun update_vesting_period(chain: &signer, vesting_period: u64,) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
             vesting_period > 0 && vesting_period > 0,
             error::invalid_argument(EINVALID_VEST_PERIOD)
         );
         module_store.vesting_period = vesting_period;
-    }
 
-    public entry fun update_minimum_eligible_tvl(
-        chain: &signer,
-        minimum_eligible_tvl: u64,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         module_store.minimum_eligible_tvl = minimum_eligible_tvl;
-    }
 
-    public entry fun update_maximum_tvl_ratio(
-        chain: &signer,
-        maximum_tvl_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
             decimal256::val(&maximum_tvl_ratio) <= decimal256::val(&decimal256::one()),
             error::invalid_argument(EINVALID_MAX_TVL)
         );
         module_store.maximum_tvl_ratio = maximum_tvl_ratio;
-    }
 
-    public entry fun update_minimum_score_ratio(
-        chain: &signer,
-        minimum_score_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         module_store.minimum_score_ratio = minimum_score_ratio;
-    }
 
-    public entry fun update_pool_split_ratio(
-        chain: &signer,
-        pool_split_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
             decimal256::val(&pool_split_ratio) <= decimal256::val(&decimal256::one()),
             error::invalid_argument(EINVALID_MIN_SCORE_RATIO)
         );
 
         module_store.pool_split_ratio = pool_split_ratio;
+
+        module_store.challenge_period = challenge_period;
+    }
+
+    public entry fun update_operator_commission(
+        operator: &signer,
+        bridge_id: u64,
+        commission_rate: Decimal256
+    ) acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        vip_operator::update_operator_commission(
+            operator,
+            bridge_id,
+            module_store.stage,
+            commission_rate
+        );
     }
 
     public entry fun update_l2_score_contract(
@@ -1639,29 +1627,7 @@ module publisher::vip {
         );
     }
 
-    public entry fun update_operator_commission(
-        operator: &signer,
-        bridge_id: u64,
-        commission_rate: Decimal256
-    ) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        vip_operator::update_operator_commission(
-            operator,
-            bridge_id,
-            module_store.stage,
-            commission_rate
-        );
-    }
-
-    entry public fun update_challenge_period(
-        chain: &signer,
-        challenge_period: u64,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        module_store.challenge_period = challenge_period;
-    }
-
+    
     //
     // View Functions
     //
