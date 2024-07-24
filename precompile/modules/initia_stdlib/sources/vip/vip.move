@@ -830,6 +830,7 @@ module initia_std::vip {
             } else {bridge.vip_weight};
             simple_map::add(weight_shares, bridge_id, weight);
             if(table::length(&module_store.bridges) == 1) {
+                simple_map::remove(weight_shares, &bridge_id);
                 simple_map::add(weight_shares, bridge_id, decimal256::one());
             };
         };
