@@ -1449,7 +1449,7 @@ module initia_std::vip {
         assert!(
             len == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) == vector::length(
                 &l2_score
-            ),
+            ) && len != 0,
             error::invalid_argument(EINVALID_BATCH_ARGUMENT)
         );
         let final_stage = *vector::borrow(&mut stage, len - 1);
