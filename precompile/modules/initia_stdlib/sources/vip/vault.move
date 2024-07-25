@@ -61,7 +61,7 @@ module publisher::vip_vault {
 
     fun check_chain_permission(chain: &signer) {
         assert!(
-            signer::address_of(chain) == @initia_std,
+            signer::address_of(chain) == @initia_std || signer::address_of(chain) == @publisher,
             error::permission_denied(EUNAUTHORIZED)
         );
     }

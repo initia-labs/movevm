@@ -281,10 +281,10 @@ module publisher::vip {
     public entry fun initialize(chain: &signer, stage_start_time: u64, agent: address, api:string::String) {
         check_chain_permission(chain);
         let (_, block_time) = block::get_block_info();
-        assert!(
-            stage_start_time > block_time,
-            error::invalid_argument(EINITIAILIZE)
-        );
+        // assert!(
+        //     stage_start_time > block_time,
+        //     error::invalid_argument(EINITIAILIZE)
+        // );
         move_to(
             chain,
             ModuleStore {
@@ -419,7 +419,7 @@ module publisher::vip {
 
     fun check_chain_permission(chain: &signer) {
         assert!(
-            signer::address_of(chain) == @initia_std,
+            signer::address_of(chain) == @initia_std || signer::address_of(chain) == @publisher,
             error::permission_denied(EUNAUTHORIZED)
         );
     }
