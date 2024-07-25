@@ -1413,13 +1413,14 @@ module publisher::vip {
                     *l2_score,
                     snapshot.total_l2_score,
                 );
-
-                assert_merkle_proofs(
-                    *merkle_proof,
-                    snapshot.merkle_root,
-                    target_hash,
-                );
-
+                if( *l2_score != 0) {
+                    assert_merkle_proofs(
+                        *merkle_proof,
+                        snapshot.merkle_root,
+                        target_hash,
+                    );
+                };
+                
                 prev_stage = *stage;
 
                 let stage_data = table::borrow(

@@ -10,6 +10,7 @@ module publisher::vip_tvl_manager {
     const EINVALID_EPOCH: u64 = 1;
     ///
     const EINVALID_BRIDGE_ID: u64 = 2;
+
     struct ModuleStore has key {
         // The average tvl each stage(vip stage) and bridge id
         snapshots: table::Table<
