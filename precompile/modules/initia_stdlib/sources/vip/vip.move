@@ -4,7 +4,7 @@ module initia_std::vip {
     use std::string;
     use std::signer;
     use std::vector;
-    use std::option;
+    use std::option::{Self, Option};
     use std::event;
     use std::block;
 
@@ -19,11 +19,7 @@ module initia_std::vip {
     use initia_std::bcs;
     use initia_std::vip_zapping;
     use initia_std::vip_operator;
-    use initia_std::vip_vesting::{
-        Self,
-        UserVestingClaimInfo,
-        OperatorVestingClaimInfo
-    };
+    use initia_std::vip_vesting::{Self, UserVestingClaimInfo, OperatorVestingClaimInfo};
     use initia_std::vip_reward;
     use initia_std::vip_vault;
     use initia_std::vip_tvl_manager;
@@ -41,7 +37,7 @@ module initia_std::vip {
     const EUNAUTHORIZED: u64 = 5;
     const EINVALID_MIN_ELIGIBLE_TVL: u64 = 6;
     const EINVALID_MAX_TVL: u64 = 7;
-    const EINVALID_MIN_SCORE_RATIO: u64 = 8;
+    const EINVALID_RATIO: u64 = 8;
     const EINVALID_TOTAL_SHARE: u64 = 9;
     const EINITIAILIZE: u64 = 10;
     const EINVALID_STAGE_RANGE: u64 = 11;
@@ -62,6 +58,7 @@ module initia_std::vip {
     const EPREV_STAGE_SNAPSHOT_NOT_FOUND: u64 = 26;
     const EALREADY_FINALIZED_OR_ZAPPED: u64 = 27;
     const ETOO_EARLY_FUND: u64 = 28;
+    const EINVALID_STAGE_INTERVAL: u64 = 29;
     //
     //  Constants
     //
@@ -71,12 +68,12 @@ module initia_std::vip {
     const DEFAULT_POOL_SPLIT_RATIO: vector<u8> = b"0.4";
     const DEFAULT_MIN_SCORE_RATIO: vector<u8> = b"0.5";
     const DEFAULT_VESTING_PERIOD: u64 = 52; // 52 times
-    const DEFAULT_STAGE_INTERVAL: u64 = 604800; // 1 week
+    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 60; // 1 hour
     const DEFAULT_MINIMUM_ELIGIBLE_TVL: u64 = 0;
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 0;
-    const DEFAULT_CHALLENGE_PERIOD: u64 = 604800; // 7 days
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 1200; // 20min
 
     struct ModuleStore has key {
         // current stage
@@ -147,16 +144,7 @@ module initia_std::vip {
         user_reward_store_addr: address,
     }
 
-    struct RewardDistribution has drop, store {
-        bridge_id: u64,
-        user_reward_store_addr: address,
-        operator_reward_store_addr: address,
-        user_reward_amount: u64,
-        operator_reward_amount: u64
-    }
-
     struct ExecutedChallenge has store, drop {
-
         challenge_id: u64,
         bridge_id: u64,
         stage: u64,
@@ -422,7 +410,7 @@ module initia_std::vip {
 
     fun check_chain_permission(chain: &signer) {
         assert!(
-            signer::address_of(chain) == @initia_std,
+            signer::address_of(chain) == @initia_std || signer::address_of(chain) == @initia_std,
             error::permission_denied(EUNAUTHORIZED)
         );
     }
@@ -810,7 +798,6 @@ module initia_std::vip {
         module_store: &ModuleStore,
         weight_shares: &mut SimpleMap<u64, Decimal256>
     ) {
-        
         let iter = table::iter(
             &module_store.bridges,
             option::none(),
@@ -829,10 +816,6 @@ module initia_std::vip {
                 module_store.maximum_weight_ratio
             } else {bridge.vip_weight};
             simple_map::add(weight_shares, bridge_id, weight);
-            if(table::length(&module_store.bridges) == 1) {
-                simple_map::remove(weight_shares, &bridge_id);
-                simple_map::add(weight_shares, bridge_id, decimal256::one());
-            };
         };
     }
 
@@ -1121,7 +1104,6 @@ module initia_std::vip {
         // add tvl snapshot for next stage for minimum snapshot number( > 2)
         add_tvl_snapshot_internal(module_store);
         let fund_stage = module_store.stage;
-        let stage_start_time = module_store.stage_start_time;
         let stage_end_time = module_store.stage_end_time;
         let stage_interval = module_store.stage_interval;
         assert!(
@@ -1360,25 +1342,25 @@ module initia_std::vip {
     public entry fun batch_claim_user_reward_script(
         account: &signer,
         bridge_id: u64,
-        stage: vector<u64>, /**/
+        stages: vector<u64>, /**/
         merkle_proofs: vector<vector<vector<u8>>>,
-        l2_score: vector<u64>,
+        l2_scores: vector<u64>,
     ) acquires ModuleStore {
-        let len = vector::length(&stage);
+        let len = vector::length(&stages);
         assert!(
             len == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) == vector::length(
-                &l2_score
+                &l2_scores
             ) && len != 0,
             error::invalid_argument(EINVALID_BATCH_ARGUMENT)
         );
-        let final_stage = *vector::borrow(&mut stage, len - 1);
+        let final_stage = *vector::borrow(&mut stages, len - 1);
         // check claimable on final stage by challenge period
         check_claimable_period(bridge_id, final_stage);
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let account_addr = signer::address_of(account);
         // check if the claim is attempted from a position that has not been finalized.
-        let first_stage = *vector::borrow(&mut stage, 0);
+        let first_stage = *vector::borrow(&mut stages, 0);
         let prev_stage = first_stage - 1;
         let init_stage = table::borrow(
             &module_store.bridges,
@@ -1393,30 +1375,56 @@ module initia_std::vip {
             );
         };
 
+        // if there is no vesting store, register it
+        if (!vip_vesting::is_user_vesting_store_registered(
+                signer::address_of(account),
+                bridge_id
+            )) {
+            vip_vesting::register_user_vesting_store(account, bridge_id);
+        };
+
         let claimInfos: vector<UserVestingClaimInfo> = vector[];
         // make vesting position claim info
         vector::enumerate_ref(
-            &stage,
-            |i, s| {
+            &stages,
+            |i, stage| {
                 // check stages consecutively
                 assert!(
-                    *s == prev_stage + 1,
+                    *stage == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
 
-                // if there is no vesting store, register it
-                if (!vip_vesting::is_user_vesting_store_registered(
-                        signer::address_of(account),
-                        bridge_id
-                    )) {
-                    vip_vesting::register_user_vesting_store(account, bridge_id);
-                };
+                let merkle_proof = vector::borrow(&merkle_proofs, i);
+                let l2_score = vector::borrow(&l2_scores, i);
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*stage)
+                );
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
 
-                prev_stage = *s;
+                // check merkle proof
+                let target_hash = score_hash(
+                    bridge_id,
+                    *stage,
+                    account_addr,
+                    *l2_score,
+                    snapshot.total_l2_score,
+                );
+
+                assert_merkle_proofs(
+                    *merkle_proof,
+                    snapshot.merkle_root,
+                    target_hash,
+                );
+
+                prev_stage = *stage;
 
                 let stage_data = table::borrow(
                     &module_store.stage_data,
-                    table_key::encode_u64(*s)
+                    table_key::encode_u64(*stage)
                 );
                 let snapshot = table::borrow(
                     &stage_data.snapshots,
@@ -1426,9 +1434,9 @@ module initia_std::vip {
                 vector::push_back(
                     &mut claimInfos,
                     vip_vesting::build_user_vesting_claim_infos(
-                        *s,
-                        *s + module_store.vesting_period,
-                        *vector::borrow(&l2_score, i),
+                        *stage,
+                        *stage + module_store.vesting_period,
+                        *l2_score,
                         module_store.minimum_score_ratio,
                         snapshot.total_l2_score,
                     )
@@ -1470,70 +1478,78 @@ module initia_std::vip {
 
         validate_vip_weights(module_store);
     }
-
-    public entry fun update_stage_interval(chain: &signer, stage_interval: u64,) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(
-            stage_interval > 0,
-            error::invalid_argument(EINVALID_VEST_PERIOD)
-        );
-        module_store.stage_interval = stage_interval;
-    }
-
-    public entry fun update_vesting_period(chain: &signer, vesting_period: u64,) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(
-            vesting_period > 0 && vesting_period > 0,
-            error::invalid_argument(EINVALID_VEST_PERIOD)
-        );
-        module_store.vesting_period = vesting_period;
-    }
-
-    public entry fun update_minimum_eligible_tvl(
+    public entry fun update_params(
         chain: &signer,
-        minimum_eligible_tvl: u64,
+        stage_interval: Option<u64>,
+        vesting_period: Option<u64>,
+        minimum_eligible_tvl: Option<u64>,
+        maximum_tvl_ratio: Option<Decimal256>,
+        minimum_score_ratio: Option<Decimal256>,
+        pool_split_ratio: Option<Decimal256>,
+        challenge_period: Option<u64>,
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        module_store.minimum_eligible_tvl = minimum_eligible_tvl;
+        if (option::is_some(&stage_interval)){
+            module_store.stage_interval = option::extract(&mut stage_interval);
+            assert!(
+                module_store.stage_interval > 0,
+                error::invalid_argument(EINVALID_STAGE_INTERVAL)
+            );
+        };
+
+        if (option::is_some(&vesting_period)) {
+            module_store.vesting_period = option::extract(&mut vesting_period);
+            assert!(
+                module_store.vesting_period > 0,
+                error::invalid_argument(EINVALID_VEST_PERIOD)
+            );
+        };
+        if (option::is_some(&minimum_eligible_tvl)) {
+            module_store.minimum_eligible_tvl = option::extract(&mut minimum_eligible_tvl);
+        };
+
+        if (option::is_some(&maximum_tvl_ratio)) {
+            module_store.maximum_tvl_ratio = option::extract(&mut maximum_tvl_ratio);
+            assert!(
+                decimal256::val(&module_store.maximum_tvl_ratio) <= decimal256::val(&decimal256::one()),
+                error::invalid_argument(EINVALID_MAX_TVL)
+            );
+        };
+
+        if (option::is_some(&minimum_score_ratio)) {
+            module_store.minimum_score_ratio = option::extract(&mut minimum_score_ratio);
+            assert!(
+                decimal256::val(&module_store.minimum_score_ratio) <= decimal256::val(&decimal256::one()),
+                error::invalid_argument(EINVALID_RATIO)
+            );  
+        };
+
+        if (option::is_some(&pool_split_ratio)) {
+            module_store.pool_split_ratio = option::extract(&mut pool_split_ratio);
+            assert!(
+                decimal256::val(&module_store.pool_split_ratio) <= decimal256::val(&decimal256::one()),
+                error::invalid_argument(EINVALID_RATIO)
+            );  
+        };
+
+        if (option::is_some(&challenge_period)) {
+            module_store.challenge_period = option::extract(&mut challenge_period);
+        }  
     }
 
-    public entry fun update_maximum_tvl_ratio(
-        chain: &signer,
-        maximum_tvl_ratio: Decimal256,
+    public entry fun update_operator_commission(
+        operator: &signer,
+        bridge_id: u64,
+        commission_rate: Decimal256
     ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(
-            decimal256::val(&maximum_tvl_ratio) <= decimal256::val(&decimal256::one()),
-            error::invalid_argument(EINVALID_MAX_TVL)
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        vip_operator::update_operator_commission(
+            operator,
+            bridge_id,
+            module_store.stage,
+            commission_rate
         );
-        module_store.maximum_tvl_ratio = maximum_tvl_ratio;
-    }
-
-    public entry fun update_minimum_score_ratio(
-        chain: &signer,
-        minimum_score_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        module_store.minimum_score_ratio = minimum_score_ratio;
-    }
-
-    public entry fun update_pool_split_ratio(
-        chain: &signer,
-        pool_split_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        assert!(
-            decimal256::val(&pool_split_ratio) <= decimal256::val(&decimal256::one()),
-            error::invalid_argument(EINVALID_MIN_SCORE_RATIO)
-        );
-
-        module_store.pool_split_ratio = pool_split_ratio;
     }
 
     public entry fun update_l2_score_contract(
@@ -1644,29 +1660,7 @@ module initia_std::vip {
         );
     }
 
-    public entry fun update_operator_commission(
-        operator: &signer,
-        bridge_id: u64,
-        commission_rate: Decimal256
-    ) acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@initia_std);
-        vip_operator::update_operator_commission(
-            operator,
-            bridge_id,
-            module_store.stage,
-            commission_rate
-        );
-    }
-
-    entry public fun update_challenge_period(
-        chain: &signer,
-        challenge_period: u64,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        module_store.challenge_period = challenge_period;
-    }
-
+    
     //
     // View Functions
     //
@@ -2039,7 +2033,51 @@ module initia_std::vip {
         let (height, curr_time) = block::get_block_info();
         block::set_block_info(height, curr_time + period);
     }
-
+    #[test_only]
+    fun update_minimum_score_ratio(
+        chain: &signer,
+        minimum_score_ratio: Decimal256,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.minimum_score_ratio = minimum_score_ratio;
+    }
+    #[test_only]
+    fun update_vesting_period(
+        chain: &signer,
+        vesting_period: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.vesting_period = vesting_period;
+    }
+    #[test_only]
+    fun update_minimum_eligible_tvl(
+        chain: &signer,
+        minimum_eligible_tvl: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.minimum_eligible_tvl = minimum_eligible_tvl;
+    }
+    #[test_only]
+    fun update_pool_split_ratio(
+        chain: &signer,
+        pool_split_ratio: Decimal256,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.pool_split_ratio = pool_split_ratio;
+    }
+    #[test_only]
+    fun update_challenge_period(
+        chain: &signer,
+        challenge_period: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.challenge_period = challenge_period;
+    }
     #[test_only]
     public fun init_module_for_test(chain: &signer){
         vip_vault::init_module_for_test(chain);
@@ -3112,7 +3150,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x80003, location = initia_std::vip_vesting)]
+    #[expected_failure(abort_code = 0x80003, location = Self)]
     fun failed_claim_already_claimed(
         chain: &signer,
         operator: &signer,
