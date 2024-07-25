@@ -1420,7 +1420,7 @@ module initia_std::vip {
                     snapshot.total_l2_score,
                 );
                 // check if score is not 0 or merkle root is not empty
-                if (vector::length(merkle_proof) != 0 || *l2_score != 0) {
+                if (*l2_score != 0) {
                     assert_merkle_proofs(
                         *merkle_proof,
                         snapshot.merkle_root,
