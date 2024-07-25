@@ -263,7 +263,8 @@ module publisher::vip {
         bridge_id: u64,
         stage: u64,
         total_l2_score: u64,
-        merkle_root: vector<u8>
+        merkle_root: vector<u8>,
+        create_time:u64,
     }
 
     //
@@ -1204,7 +1205,8 @@ module publisher::vip {
                 bridge_id: bridge_id,
                 stage: stage,
                 total_l2_score: total_l2_score,
-                merkle_root: merkle_root
+                merkle_root: merkle_root,
+                create_time: create_time,
             }
         )
     }
