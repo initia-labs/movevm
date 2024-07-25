@@ -1413,12 +1413,13 @@ module initia_std::vip {
                     *l2_score,
                     snapshot.total_l2_score,
                 );
-
-                assert_merkle_proofs(
-                    *merkle_proof,
-                    snapshot.merkle_root,
-                    target_hash,
-                );
+                if (vector::length(merkle_proof) != 0 && *l2_score != 0) {
+                    assert_merkle_proofs(
+                        *merkle_proof,
+                        snapshot.merkle_root,
+                        target_hash,
+                    );
+                };
 
                 prev_stage = *stage;
 
@@ -3150,7 +3151,7 @@ module initia_std::vip {
     }
 
     #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x80003, location = Self)]
+    #[expected_failure(abort_code = 0x80003, location = vip_vesting)]
     fun failed_claim_already_claimed(
         chain: &signer,
         operator: &signer,
