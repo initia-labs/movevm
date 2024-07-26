@@ -194,7 +194,7 @@ module publisher::vip_vault {
     }
 
     #[test(chain = @0x1, publisher = @publisher, funder = @0x2)]
-    fun e2e_viptest(chain: &signer, publisher: &signer, funder: &signer) acquires ModuleStore {
+    fun e2e(chain: &signer, publisher: &signer, funder: &signer) acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
         init_module(publisher);
         let (_, _, mint_cap) = initialize_coin(chain, string::utf8(b"uinit"));
