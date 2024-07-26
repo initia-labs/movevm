@@ -430,7 +430,7 @@ module publisher::vip_vesting {
                 value.remaining_reward = value.remaining_reward - value.vest_max_amount;
             } else if(value.remaining_reward > vest_amount){
                 vested_reward = vested_reward + vest_amount;
-                penalty_reward = penalty_reward + value.vest_max_amount - vest_amount;
+                penalty_reward = penalty_reward + value.remaining_reward - vest_amount;
                 value.remaining_reward = 0;
             } else {
                 vested_reward = vested_reward + value.remaining_reward;
