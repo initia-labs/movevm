@@ -19,7 +19,11 @@ module publisher::vip {
     use initia_std::bcs;
     use publisher::vip_zapping;
     use publisher::vip_operator;
-    use publisher::vip_vesting::{Self, UserVestingClaimInfo, OperatorVestingClaimInfo};
+    use publisher::vip_vesting::{
+        Self,
+        UserVestingClaimInfo,
+        OperatorVestingClaimInfo
+    };
     use publisher::vip_reward;
     use publisher::vip_vault;
     use publisher::vip_tvl_manager;
@@ -264,13 +268,18 @@ module publisher::vip {
         stage: u64,
         total_l2_score: u64,
         merkle_root: vector<u8>,
-        create_time:u64,
+        create_time: u64,
     }
 
     //
     // Implementations
     //
-    public entry fun initialize(chain: &signer, stage_start_time: u64, agent: address, api:string::String) {
+    public entry fun initialize(
+        chain: &signer,
+        stage_start_time: u64,
+        agent: address,
+        api: string::String
+    ) {
         check_chain_permission(chain);
         move_to(
             chain,
@@ -287,10 +296,7 @@ module publisher::vip {
                 pool_split_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_POOL_SPLIT_RATIO)
                 ),
-                agent_data: AgentData {
-                    agent: agent,
-                    api_uri: api,
-                },
+                agent_data: AgentData {agent: agent, api_uri: api,},
                 maximum_tvl_ratio: decimal256::from_string(
                     &string::utf8(DEFAULT_MAXIMUM_TVL_RATIO)
                 ),
@@ -1242,6 +1248,7 @@ module publisher::vip {
         snapshot.merkle_root = merkle_root;
         snapshot.total_l2_score = total_l2_score;
     }
+
     fun check_claimable(bridge_id: u64, stage: u64): bool acquires ModuleStore {
         let (_, curr_time) = block::get_block_info();
         let module_store = borrow_global<ModuleStore>(@publisher);
@@ -1256,6 +1263,7 @@ module publisher::vip {
 
         curr_time > snapshot_create_time + module_store.challenge_period
     }
+
     fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
 
         let (_, curr_time) = block::get_block_info();
@@ -1423,14 +1431,14 @@ module publisher::vip {
                     *l2_score,
                     snapshot.total_l2_score,
                 );
-                if( *l2_score != 0) {
+                if (*l2_score != 0) {
                     assert_merkle_proofs(
                         *merkle_proof,
                         snapshot.merkle_root,
                         target_hash,
                     );
                 };
-                
+
                 prev_stage = *stage;
 
                 let stage_data = table::borrow(
@@ -1489,6 +1497,7 @@ module publisher::vip {
 
         validate_vip_weights(module_store);
     }
+
     public entry fun update_params(
         chain: &signer,
         stage_interval: Option<u64>,
@@ -1501,7 +1510,7 @@ module publisher::vip {
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        if (option::is_some(&stage_interval)){
+        if (option::is_some(&stage_interval)) {
             module_store.stage_interval = option::extract(&mut stage_interval);
             assert!(
                 module_store.stage_interval > 0,
@@ -1523,7 +1532,9 @@ module publisher::vip {
         if (option::is_some(&maximum_tvl_ratio)) {
             module_store.maximum_tvl_ratio = option::extract(&mut maximum_tvl_ratio);
             assert!(
-                decimal256::val(&module_store.maximum_tvl_ratio) <= decimal256::val(&decimal256::one()),
+                decimal256::val(&module_store.maximum_tvl_ratio) <= decimal256::val(
+                    &decimal256::one()
+                ),
                 error::invalid_argument(EINVALID_MAX_TVL)
             );
         };
@@ -1531,22 +1542,26 @@ module publisher::vip {
         if (option::is_some(&minimum_score_ratio)) {
             module_store.minimum_score_ratio = option::extract(&mut minimum_score_ratio);
             assert!(
-                decimal256::val(&module_store.minimum_score_ratio) <= decimal256::val(&decimal256::one()),
+                decimal256::val(&module_store.minimum_score_ratio) <= decimal256::val(
+                    &decimal256::one()
+                ),
                 error::invalid_argument(EINVALID_RATIO)
-            );  
+            );
         };
 
         if (option::is_some(&pool_split_ratio)) {
             module_store.pool_split_ratio = option::extract(&mut pool_split_ratio);
             assert!(
-                decimal256::val(&module_store.pool_split_ratio) <= decimal256::val(&decimal256::one()),
+                decimal256::val(&module_store.pool_split_ratio) <= decimal256::val(
+                    &decimal256::one()
+                ),
                 error::invalid_argument(EINVALID_RATIO)
-            );  
+            );
         };
 
         if (option::is_some(&challenge_period)) {
             module_store.challenge_period = option::extract(&mut challenge_period);
-        }  
+        }
     }
 
     public entry fun update_operator_commission(
@@ -1597,10 +1612,12 @@ module publisher::vip {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
-        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id);
+        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(
+            account_addr, bridge_id
+        );
         let can_zap = if (last_claimed_stage == module_store.stage) {
-            true
-        }  else {
+             true
+        } else {
             // check is there any claimable reward
             let check_stage = last_claimed_stage + 1;
             !check_claimable(bridge_id, check_stage)
@@ -1678,7 +1695,6 @@ module publisher::vip {
         );
     }
 
-    
     //
     // View Functions
     //
@@ -2054,7 +2070,7 @@ module publisher::vip {
     }
 
     #[test_only]
-    public fun init_module_for_test(publisher: &signer){
+    public fun init_module_for_test(publisher: &signer) {
         vip_vault::init_module_for_test(publisher);
         vip_vault::update_reward_per_stage(
             publisher,
@@ -2062,7 +2078,12 @@ module publisher::vip {
         );
         skip_period(10);
         let (_, block_time) = block::get_block_info();
-        initialize(publisher, block_time + 100, signer::address_of(publisher), string::utf8(DEFAULT_API_URI_FOR_TEST));
+        initialize(
+            publisher,
+            block_time + 100,
+            signer::address_of(publisher),
+            string::utf8(DEFAULT_API_URI_FOR_TEST)
+        );
         skip_period(100);
     }
 
@@ -2565,7 +2586,11 @@ module publisher::vip {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_update_vip_weight(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
+    fun test_update_vip_weight(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) acquires ModuleStore {
         let init_stage = 1;
         let mint_amount = 1_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
@@ -2768,7 +2793,11 @@ module publisher::vip {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_update_l2_score_contract(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
+    fun test_update_l2_score_contract(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             publisher,
@@ -3090,7 +3119,11 @@ module publisher::vip {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_update_minimum_eligible_tvl(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
+    fun test_update_minimum_eligible_tvl(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) acquires ModuleStore {
         test_setup(
             chain,
             publisher,
@@ -3295,7 +3328,11 @@ module publisher::vip {
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
-    fun failed_operator_claim_invalid_period(chain: &signer, publisher: &signer, operator: &signer,) acquires ModuleStore {
+    fun failed_operator_claim_invalid_period(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+    ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             publisher,
@@ -3352,7 +3389,11 @@ module publisher::vip {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun operator_claim_valid_period(chain: &signer, publisher: &signer, operator: &signer,) acquires ModuleStore {
+    fun operator_claim_valid_period(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+    ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             publisher,
@@ -3640,7 +3681,11 @@ module publisher::vip {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_fund_reward_script(chain: &signer, publisher: &signer, operator: &signer,) acquires ModuleStore {
+    fun test_fund_reward_script(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+    ) acquires ModuleStore {
         let init_stage = 1;
         let mint_amount = 100_000_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
@@ -4586,9 +4631,12 @@ module publisher::vip {
     }
 
     #[test(publisher = @publisher)]
-    fun test_update_challenge_period( publisher: &signer) acquires ModuleStore {
+    fun test_update_challenge_period(publisher: &signer) acquires ModuleStore {
         init_module_for_test(publisher);
-        update_challenge_period(publisher, DEFAULT_NEW_CHALLENGE_PERIOD);
+        update_challenge_period(
+            publisher,
+            DEFAULT_NEW_CHALLENGE_PERIOD
+        );
         assert!(
             get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,
             0
@@ -4597,7 +4645,11 @@ module publisher::vip {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x111)]
-    fun test_update_snapshot(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
+    fun test_update_snapshot(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
             publisher,
@@ -4639,7 +4691,11 @@ module publisher::vip {
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x10015, location = Self)]
-    fun failed_update_vip_weights(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_update_vip_weights(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) acquires ModuleStore {
         let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
@@ -4713,7 +4769,11 @@ module publisher::vip {
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x10015, location = Self)]
-    fun failed_update_vip_weight(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_update_vip_weight(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) acquires ModuleStore {
         let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(

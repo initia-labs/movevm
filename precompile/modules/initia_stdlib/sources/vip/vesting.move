@@ -428,7 +428,8 @@ module publisher::vip_vesting {
                 vested_reward = vested_reward + vest_amount;
                 penalty_reward = penalty_reward + value.vest_max_amount - vest_amount;
                 value.remaining_reward = value.remaining_reward - value.vest_max_amount;
-            } else if(value.remaining_reward > vest_amount){
+            }
+            else if (value.remaining_reward > vest_amount) {
                 vested_reward = vested_reward + vest_amount;
                 penalty_reward = penalty_reward + value.remaining_reward - vest_amount;
                 value.remaining_reward = 0;
@@ -436,7 +437,6 @@ module publisher::vip_vesting {
                 vested_reward = vested_reward + value.remaining_reward;
                 value.remaining_reward = 0;
             };
-            
 
             if (penalty_reward > 0) {
                 if (!simple_map::contains_key(penalty_map, &value.start_stage)) {
@@ -966,18 +966,18 @@ module publisher::vip_vesting {
             // remove from vesting positons and add finalized positions in vesting store
             let finalized_vestings = table::remove(
                 &mut vesting_store.vestings,
-                table_key::encode_u64( start_stage)
+                table_key::encode_u64(start_stage)
             );
             table::add(
                 &mut vesting_store.vestings_finalized,
-                table_key::encode_u64( start_stage),
+                table_key::encode_u64(start_stage),
                 finalized_vestings
             );
             event::emit(
                 UserVestingFinalizedEvent {
                     account: account_addr,
                     bridge_id,
-                    start_stage:  start_stage,
+                    start_stage: start_stage,
                 }
             );
         };

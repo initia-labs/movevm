@@ -1,6 +1,6 @@
 module minitia_std::multisig {
     use std::error;
-    use std::option::{Self,Option};
+    use std::option::{Self, Option};
     use std::signer;
     use std::string::{Self, String};
     use std::vector;
@@ -146,22 +146,54 @@ module minitia_std::multisig {
 
     // view functions
     #[view]
-    public fun get_proposal(multisig_addr: address, proposal_id: u64): ProposalResponse acquires MultisigWallet {
+    public fun get_proposal(
+        multisig_addr: address,
+        proposal_id: u64
+    ): ProposalResponse acquires MultisigWallet {
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let proposal = table::borrow(&multisig_wallet.proposals, proposal_id);
-        proposal_to_proposal_response(multisig_wallet, multisig_addr, proposal_id, proposal)
+        let proposal = table::borrow(
+            &multisig_wallet.proposals,
+            proposal_id
+        );
+        proposal_to_proposal_response(
+            multisig_wallet,
+            multisig_addr,
+            proposal_id,
+            proposal
+        )
     }
 
     #[view]
-    public fun get_proposals(multisig_addr: address, start_after: Option<u64>, limit: u8): vector<ProposalResponse> acquires MultisigWallet {
-        if (limit > MAX_LIMIT) { limit = MAX_LIMIT };
+    public fun get_proposals(
+        multisig_addr: address,
+        start_after: Option<u64>,
+        limit: u8
+    ): vector<ProposalResponse> acquires MultisigWallet {
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT
+        };
         let res: vector<ProposalResponse> = vector[];
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let iter = table::iter(&multisig_wallet.proposals, option::none(), start_after, 2);
+        let iter = table::iter(
+            &multisig_wallet.proposals,
+            option::none(),
+            start_after,
+            2
+        );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<u64, Proposal>(&mut iter)) {
+        while (
+            vector::length(&res) <(limit as u64) && table::prepare<u64, Proposal>(&mut iter)
+        ) {
             let (proposal_id, proposal) = table::next<u64, Proposal>(&mut iter);
-            vector::push_back(&mut res, proposal_to_proposal_response(multisig_wallet, multisig_addr, proposal_id, proposal));
+            vector::push_back(
+                &mut res,
+                proposal_to_proposal_response(
+                    multisig_wallet,
+                    multisig_addr,
+                    proposal_id,
+                    proposal
+                )
+            );
         };
 
         res
@@ -191,9 +223,19 @@ module minitia_std::multisig {
         max_voting_period_height: Option<u64>,
         max_voting_period_timestamp: Option<u64>,
     ) {
-        assert_member(&members, &signer::address_of(account));
-        assert!(vector::length(&members) >= threshold, error::invalid_argument(EINVALID_THRESHOLD));
-        let constructor_ref = object::create_named_object(account, *string::bytes(&name), false);
+        assert_member(
+            &members,
+            &signer::address_of(account)
+        );
+        assert!(
+            vector::length(&members) >= threshold,
+            error::invalid_argument(EINVALID_THRESHOLD)
+        );
+        let constructor_ref = object::create_named_object(
+            account,
+            *string::bytes(&name),
+            false
+        );
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let multisig_signer = object::generate_signer(&constructor_ref);
         let multisig_addr = signer::address_of(&multisig_signer);
@@ -202,16 +244,22 @@ module minitia_std::multisig {
             timestamp: max_voting_period_timestamp,
         };
         let members_map = simple_map::create<address, bool>();
-        vector::for_each(members, |member| simple_map::add(&mut members_map, member, true)); // just for check uniqueness
-
-        move_to(&multisig_signer, MultisigWallet {
-            extend_ref,
-            config_version: 1,
+        vector::for_each(
             members,
-            threshold,
-            max_voting_period,
-            proposals: table::new(),
-        });
+            |member| simple_map::add(&mut members_map, member, true)
+        ); // just for check uniqueness
+
+        move_to(
+            &multisig_signer,
+            MultisigWallet {
+                extend_ref,
+                config_version: 1,
+                members,
+                threshold,
+                max_voting_period,
+                proposals: table::new(),
+            }
+        );
 
         event::emit<CreateMultisigAccountEvent>(
             CreateMultisigAccountEvent {
@@ -254,7 +302,11 @@ module minitia_std::multisig {
         };
 
         let proposal_id = table::length(&multisig_wallet.proposals) + 1;
-        table::add(&mut multisig_wallet.proposals, proposal_id, proposal);
+        table::add(
+            &mut multisig_wallet.proposals,
+            proposal_id,
+            proposal
+        );
 
         event::emit<CreateProposalEvent>(
             CreateProposalEvent {
@@ -281,11 +333,26 @@ module minitia_std::multisig {
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
         assert_member(&multisig_wallet.members, &voter);
 
-        assert!(table::contains(&multisig_wallet.proposals, proposal_id), error::invalid_argument(EPROPOSAL_NOT_FOUND));
-        let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
+        assert!(
+            table::contains(
+                &multisig_wallet.proposals,
+                proposal_id
+            ),
+            error::invalid_argument(EPROPOSAL_NOT_FOUND)
+        );
+        let proposal = table::borrow_mut(
+            &mut multisig_wallet.proposals,
+            proposal_id
+        );
 
-        assert_config_version(multisig_wallet.config_version, proposal);
-        assert_proposal(&multisig_wallet.max_voting_period, proposal);
+        assert_config_version(
+            multisig_wallet.config_version,
+            proposal
+        );
+        assert_proposal(
+            &multisig_wallet.max_voting_period,
+            proposal
+        );
 
         vote(&mut proposal.votes, voter, vote_yes);
 
@@ -309,19 +376,39 @@ module minitia_std::multisig {
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
         assert_member(&multisig_wallet.members, &executor);
 
-        assert!(table::contains(&multisig_wallet.proposals, proposal_id), error::invalid_argument(EPROPOSAL_NOT_FOUND));
-        let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
-
-        assert_config_version(multisig_wallet.config_version, proposal);
-        assert_proposal(&multisig_wallet.max_voting_period, proposal);
-
-        // check passed 
         assert!(
-            yes_vote_count(&proposal.votes, &multisig_wallet.members) >= multisig_wallet.threshold,
+            table::contains(
+                &multisig_wallet.proposals,
+                proposal_id
+            ),
+            error::invalid_argument(EPROPOSAL_NOT_FOUND)
+        );
+        let proposal = table::borrow_mut(
+            &mut multisig_wallet.proposals,
+            proposal_id
+        );
+
+        assert_config_version(
+            multisig_wallet.config_version,
+            proposal
+        );
+        assert_proposal(
+            &multisig_wallet.max_voting_period,
+            proposal
+        );
+
+        // check passed
+        assert!(
+            yes_vote_count(
+                &proposal.votes,
+                &multisig_wallet.members
+            ) >= multisig_wallet.threshold,
             error::invalid_state(ENOT_PASS),
         );
 
-        let multisig_signer = &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        let multisig_signer = &object::generate_signer_for_extending(
+            &multisig_wallet.extend_ref
+        );
         move_execute(
             multisig_signer,
             proposal.module_address,
@@ -353,9 +440,15 @@ module minitia_std::multisig {
         let multisig_addr = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
 
-        assert!(vector::length(&new_members) >= new_threshold, error::invalid_argument(EINVALID_THRESHOLD));
+        assert!(
+            vector::length(&new_members) >= new_threshold,
+            error::invalid_argument(EINVALID_THRESHOLD)
+        );
         let new_members_map = simple_map::create<address, bool>();
-        vector::for_each(new_members, |member| simple_map::add(&mut new_members_map, member, true)); // just for check uniqueness
+        vector::for_each(
+            new_members,
+            |member| simple_map::add(&mut new_members_map, member, true)
+        ); // just for check uniqueness
         let new_max_voting_period = Period {
             height: new_max_voting_period_height,
             timestamp: new_max_voting_period_timestamp,
@@ -376,26 +469,34 @@ module minitia_std::multisig {
         )
     }
 
-    fun is_proposal_expired(max_period: &Period, proposal_height: u64, proposal_timestamp: u64): bool {
+    fun is_proposal_expired(
+        max_period: &Period,
+        proposal_height: u64,
+        proposal_timestamp: u64
+    ): bool {
         let (height, timestamp) = get_block_info();
         let expired_height = if (option::is_some(&max_period.height)) {
             let max_voting_period_height = *option::borrow(&max_period.height);
-            (max_voting_period_height + proposal_height) >= height
-        } else {
-            false
-        };
+            (
+                max_voting_period_height + proposal_height
+            ) >= height
+        } else { false };
 
         let expired_timestamp = if (option::is_some(&max_period.timestamp)) {
             let max_voting_period_timestamp = *option::borrow(&max_period.timestamp);
-            (max_voting_period_timestamp + proposal_timestamp) >= timestamp
-        } else {
-            false
-        };
+            (
+                max_voting_period_timestamp + proposal_timestamp
+            ) >= timestamp
+        } else { false };
 
         expired_height || expired_timestamp
     }
 
-    fun vote(votes: &mut SimpleMap<address, bool>, voter: address, vote_yes: bool) {
+    fun vote(
+        votes: &mut SimpleMap<address, bool>,
+        voter: address,
+        vote_yes: bool
+    ) {
         if (simple_map::contains_key(votes, &voter)) {
             let vote = simple_map::borrow_mut(votes, &voter);
             *vote = vote_yes;
@@ -404,13 +505,19 @@ module minitia_std::multisig {
         };
     }
 
-    fun yes_vote_count(votes: &SimpleMap<address, bool>, members: &vector<address>): u64 {
+    fun yes_vote_count(
+        votes: &SimpleMap<address, bool>,
+        members: &vector<address>
+    ): u64 {
         let yes_count = 0;
-        vector::for_each_ref(members, |member| {
-            if (simple_map::contains_key(votes, member) && *simple_map::borrow(votes, member)) {
-                yes_count = yes_count + 1;
+        vector::for_each_ref(
+            members,
+            |member| {
+                if (simple_map::contains_key(votes, member) && *simple_map::borrow(votes, member)) {
+                    yes_count = yes_count + 1;
+                }
             }
-        });
+        );
 
         yes_count
     }
@@ -422,8 +529,15 @@ module minitia_std::multisig {
         proposal: &Proposal,
     ): ProposalResponse {
         let status_index = proposal.status;
-        let is_expired = is_proposal_expired(&multisig_wallet.max_voting_period, proposal.proposal_height, proposal.proposal_timestamp);
-        let yes_vote_count = yes_vote_count(&proposal.votes, &multisig_wallet.members);
+        let is_expired = is_proposal_expired(
+            &multisig_wallet.max_voting_period,
+            proposal.proposal_height,
+            proposal.proposal_timestamp
+        );
+        let yes_vote_count = yes_vote_count(
+            &proposal.votes,
+            &multisig_wallet.members
+        );
         if (status_index == 0 && is_expired) {
             status_index = 2
         };
@@ -440,20 +554,40 @@ module minitia_std::multisig {
             proposal_timestamp: proposal.proposal_timestamp,
             config_version: proposal.config_version,
             yes_vote_count,
-            status: string::utf8(*vector::borrow(&STATUS, (status_index as u64))),
+            status: string::utf8(
+                *vector::borrow(&STATUS,(status_index as u64))
+            ),
         }
     }
 
-    inline fun assert_member(members: &vector<address>, member: &address) {
-        assert!(vector::contains(members, member), error::permission_denied(ENOT_MEMBER))
+    inline fun assert_member(
+        members: &vector<address>,
+        member: &address
+    ) {
+        assert!(
+            vector::contains(members, member),
+            error::permission_denied(ENOT_MEMBER)
+        )
     }
 
-    inline fun assert_config_version(multisig_wallet_config_version: u64, execute_proposal: &Proposal) {
-        assert!(multisig_wallet_config_version == execute_proposal.config_version, error::invalid_state(EOLD_CONFIG_VERSION))
+    inline fun assert_config_version(
+        multisig_wallet_config_version: u64,
+        execute_proposal: &Proposal
+    ) {
+        assert!(
+            multisig_wallet_config_version == execute_proposal.config_version,
+            error::invalid_state(EOLD_CONFIG_VERSION)
+        )
     }
 
-    inline fun assert_proposal(max_voting_period: &Period, proposal: &Proposal) {
-        assert!(proposal.status == 0, error::invalid_state(EINVALID_PROPOSAL_STATUS));
+    inline fun assert_proposal(
+        max_voting_period: &Period,
+        proposal: &Proposal
+    ) {
+        assert!(
+            proposal.status == 0,
+            error::invalid_state(EINVALID_PROPOSAL_STATUS)
+        );
         assert!(
             !is_proposal_expired(
                 max_voting_period,
@@ -480,7 +614,14 @@ module minitia_std::multisig {
         let addr2 = signer::address_of(&account2);
         let addr3 = signer::address_of(&account3);
 
-        create_multisig_account(&account4, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::none(), option::none());
+        create_multisig_account(
+            &account4,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::none(),
+            option::none()
+        );
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
@@ -495,7 +636,14 @@ module minitia_std::multisig {
         let addr2 = signer::address_of(&account2);
         let addr3 = signer::address_of(&account3);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 4, option::none(), option::none());
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            4,
+            option::none(),
+            option::none()
+        );
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
@@ -510,7 +658,14 @@ module minitia_std::multisig {
         let addr2 = signer::address_of(&account2);
         let addr3 = signer::address_of(&account3);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr1, addr2, addr3], 3, option::none(), option::none());
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr1, addr2, addr3],
+            3,
+            option::none(),
+            option::none()
+        );
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104)]
@@ -527,7 +682,14 @@ module minitia_std::multisig {
         let addr3 = signer::address_of(&account3);
         let addr4 = signer::address_of(&account4);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::none(), option::none());
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::none(),
+            option::none()
+        );
         let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
 
         create_proposal(
@@ -560,7 +722,14 @@ module minitia_std::multisig {
         let addr3 = signer::address_of(&account3);
         let addr4 = signer::address_of(&account4);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::none(), option::none());
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::none(),
+            option::none()
+        );
         let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
 
         create_proposal(
@@ -595,7 +764,14 @@ module minitia_std::multisig {
         let addr3 = signer::address_of(&account3);
         let addr4 = signer::address_of(&account4);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::some(10), option::some(10));
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::some(10),
+            option::some(10)
+        );
         let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
 
         set_block_info(100, 100);
@@ -632,7 +808,14 @@ module minitia_std::multisig {
         let addr3 = signer::address_of(&account3);
         let addr4 = signer::address_of(&account4);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::some(10), option::some(10));
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::some(10),
+            option::some(10)
+        );
         let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
 
         set_block_info(100, 100);
@@ -669,7 +852,14 @@ module minitia_std::multisig {
         let addr3 = signer::address_of(&account3);
         let addr4 = signer::address_of(&account4);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::none(), option::none());
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::none(),
+            option::none()
+        );
         let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
 
         create_proposal(
@@ -708,7 +898,14 @@ module minitia_std::multisig {
         let addr3 = signer::address_of(&account3);
         let addr4 = signer::address_of(&account4);
 
-        create_multisig_account(&account1, string::utf8(b"multisig wallet"), vector[addr1, addr2, addr3], 2, option::none(), option::none());
+        create_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2,
+            option::none(),
+            option::none()
+        );
         let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
 
         create_proposal(
@@ -731,8 +928,16 @@ module minitia_std::multisig {
         vote_proposal(&account3, multisig_addr, 1, false);
 
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let multisig_signer = object::generate_signer_for_extending(&multisig_wallet.extend_ref);
-        update_config(&multisig_signer, vector[addr1, addr2, addr4], 2, option::none(), option::none());
+        let multisig_signer = object::generate_signer_for_extending(
+            &multisig_wallet.extend_ref
+        );
+        update_config(
+            &multisig_signer,
+            vector[addr1, addr2, addr4],
+            2,
+            option::none(),
+            option::none()
+        );
 
         execute_proposal(&account1, multisig_addr, 1);
     }

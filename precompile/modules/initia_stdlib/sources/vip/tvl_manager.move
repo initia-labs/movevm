@@ -218,7 +218,6 @@ module publisher::vip_tvl_manager {
         snapshot_responses
     }
 
-
     #[test_only]
     const DEFAULT_EPOCH_FOR_TEST: u64 = 1;
 

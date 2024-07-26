@@ -7,7 +7,12 @@ module initia_std::dex {
 
     use initia_std::object::{Self, Object, ExtendRef};
     use initia_std::block::get_block_info;
-    use initia_std::fungible_asset::{Self, Metadata, FungibleAsset, FungibleStore};
+    use initia_std::fungible_asset::{
+        Self,
+        Metadata,
+        FungibleAsset,
+        FungibleStore
+    };
     use initia_std::primary_fungible_store;
     use initia_std::decimal128::{Self, Decimal128};
     use initia_std::string::{Self, String};
@@ -220,9 +225,7 @@ module initia_std::dex {
     const MAX_FEE_RATE: u128 = 50_000_000_000_000_000; // 5%
 
     #[view]
-    public fun get_pair_metadata(
-        pair: Object<Config>,
-    ): PairMetadataResponse acquires Pool {
+    public fun get_pair_metadata(pair: Object<Config>,): PairMetadataResponse acquires Pool {
         let pool = borrow_global_mut<Pool>(object::object_address(pair));
         let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
         let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
@@ -234,9 +237,7 @@ module initia_std::dex {
     }
 
     #[view]
-    public fun get_pair_denom(
-        pair: Object<Config>,
-    ): PairDenomResponse acquires Pool {
+    public fun get_pair_denom(pair: Object<Config>,): PairDenomResponse acquires Pool {
         let pair_metadata = get_pair_metadata(pair);
 
         PairDenomResponse {
@@ -252,7 +253,13 @@ module initia_std::dex {
         pair: Object<Config>,
         base_coin: Object<Metadata>,
     ): Decimal128 acquires Config, Pool {
-        let (coin_a_pool, coin_b_pool, coin_a_weight, coin_b_weight, _) = pool_info(pair, false);
+        let (
+            coin_a_pool,
+            coin_b_pool,
+            coin_a_weight,
+            coin_b_weight,
+            _
+        ) = pool_info(pair, false);
 
         let pair_key = generate_pair_key(pair);
         let base_addr = object::object_address(base_coin);
@@ -261,10 +268,25 @@ module initia_std::dex {
             error::invalid_argument(ECOIN_TYPE),
         );
         let is_base_a = base_addr == pair_key.coin_a;
-        let (base_pool, quote_pool, base_weight, quote_weight) = if (is_base_a) {
-            (coin_a_pool, coin_b_pool, coin_a_weight, coin_b_weight)
+        let (
+            base_pool,
+            quote_pool,
+            base_weight,
+            quote_weight
+        ) = if (is_base_a) {
+            (
+                coin_a_pool,
+                coin_b_pool,
+                coin_a_weight,
+                coin_b_weight
+            )
         } else {
-            (coin_b_pool, coin_a_pool, coin_b_weight, coin_a_weight)
+            (
+                coin_b_pool,
+                coin_a_pool,
+                coin_b_weight,
+                coin_a_weight
+            )
         };
 
         decimal128::from_ratio_u64(
@@ -280,7 +302,10 @@ module initia_std::dex {
     ): Decimal128 acquires Config, Pool {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let base_metadata = coin::denom_to_metadata(base_coin);
-        get_spot_price(object::convert(pair_metadata), base_metadata)
+        get_spot_price(
+            object::convert(pair_metadata),
+            base_metadata
+        )
     }
 
     #[view]
@@ -297,8 +322,19 @@ module initia_std::dex {
             error::invalid_argument(ECOIN_TYPE),
         );
         let is_offer_a = offer_address == pair_key.coin_a;
-        let (pool_a, pool_b, weight_a, weight_b, swap_fee_rate) = pool_info(pair, true);
-        let (offer_pool, return_pool, offer_weight, return_weight) = if (is_offer_a) {
+        let (
+            pool_a,
+            pool_b,
+            weight_a,
+            weight_b,
+            swap_fee_rate
+        ) = pool_info(pair, true);
+        let (
+            offer_pool,
+            return_pool,
+            offer_weight,
+            return_weight
+        ) = if (is_offer_a) {
             (pool_a, pool_b, weight_a, weight_b)
         } else {
             (pool_b, pool_a, weight_b, weight_a)
@@ -323,7 +359,11 @@ module initia_std::dex {
     ): u64 acquires Config, Pool {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
-        get_swap_simulation(object::convert(pair_metadata), offer_metadata, offer_amount)
+        get_swap_simulation(
+            object::convert(pair_metadata),
+            offer_metadata,
+            offer_amount
+        )
     }
 
     #[view]
@@ -340,8 +380,19 @@ module initia_std::dex {
             error::invalid_argument(ECOIN_TYPE),
         );
         let is_offer_a = offer_address == pair_key.coin_a;
-        let (pool_a, pool_b, weight_a, weight_b, swap_fee_rate) = pool_info(pair, true);
-        let (offer_pool, return_pool, offer_weight, return_weight) = if (is_offer_a) {
+        let (
+            pool_a,
+            pool_b,
+            weight_a,
+            weight_b,
+            swap_fee_rate
+        ) = pool_info(pair, true);
+        let (
+            offer_pool,
+            return_pool,
+            offer_weight,
+            return_weight
+        ) = if (is_offer_a) {
             (pool_a, pool_b, weight_a, weight_b)
         } else {
             (pool_b, pool_a, weight_b, weight_a)
@@ -366,7 +417,11 @@ module initia_std::dex {
     ): u64 acquires Config, Pool {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
-        get_swap_simulation_given_out(object::convert(pair_metadata), offer_metadata, return_amount)
+        get_swap_simulation_given_out(
+            object::convert(pair_metadata),
+            offer_metadata,
+            return_amount
+        )
     }
 
     #[view]
@@ -412,10 +467,7 @@ module initia_std::dex {
         let pair_addr = object::object_address(pair);
         let config = borrow_global<Config>(pair_addr);
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
-        CurrentWeightResponse {
-            coin_a_weight,
-            coin_b_weight,
-        }
+        CurrentWeightResponse {coin_a_weight, coin_b_weight,}
     }
 
     #[view]
@@ -439,24 +491,30 @@ module initia_std::dex {
 
         assert!(
             option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after)
-                && option::is_some(&coin_b_start_after) == option::is_some(&liquidity_token_start_after),
+                && option::is_some(&coin_b_start_after) == option::is_some(
+                &liquidity_token_start_after
+            ),
             ESTART_AFTER
         );
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
         let start_after = if (option::is_some(&coin_a_start_after)) {
-            option::some(PairKey {
-                coin_a: option::extract(&mut coin_a_start_after),
-                coin_b: option::extract(&mut coin_b_start_after),
-                liquidity_token: option::extract(&mut liquidity_token_start_after),
-            })
+            option::some(
+                PairKey {
+                    coin_a: option::extract(&mut coin_a_start_after),
+                    coin_b: option::extract(&mut coin_b_start_after),
+                    liquidity_token: option::extract(&mut liquidity_token_start_after),
+                }
+            )
         } else {
-            option::some(PairKey {
-                coin_a: @0x0,
-                coin_b: @0x0,
-                liquidity_token: @0x0,
-            })
+            option::some(
+                PairKey {
+                    coin_a: @0x0,
+                    coin_b: @0x0,
+                    liquidity_token: @0x0,
+                }
+            )
         };
 
         let res = vector[];
@@ -467,7 +525,11 @@ module initia_std::dex {
             1,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
+        while (
+            vector::length(&res) <(limit as u64) && table::prepare<PairKey, PairResponse>(
+                &mut pairs_iter
+            )
+        ) {
             let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(&mut res, *value)
@@ -492,27 +554,39 @@ module initia_std::dex {
 
         assert!(
             option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after)
-                && option::is_some(&coin_b_start_after) == option::is_some(&liquidity_token_start_after),
+                && option::is_some(&coin_b_start_after) == option::is_some(
+                &liquidity_token_start_after
+            ),
             ESTART_AFTER
         );
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
         let start_after = if (option::is_some(&coin_a_start_after)) {
-            let coin_a_start_after = coin::denom_to_metadata(option::extract(&mut coin_a_start_after));
-            let coin_b_start_after = coin::denom_to_metadata(option::extract(&mut coin_b_start_after));
-            let liquidity_token_start_after = coin::denom_to_metadata(option::extract(&mut liquidity_token_start_after));
-            option::some(PairKey {
-                coin_a: object::object_address(coin_a_start_after),
-                coin_b: object::object_address(coin_b_start_after),
-                liquidity_token: object::object_address(liquidity_token_start_after),
-            })
+            let coin_a_start_after = coin::denom_to_metadata(
+                option::extract(&mut coin_a_start_after)
+            );
+            let coin_b_start_after = coin::denom_to_metadata(
+                option::extract(&mut coin_b_start_after)
+            );
+            let liquidity_token_start_after = coin::denom_to_metadata(
+                option::extract(&mut liquidity_token_start_after)
+            );
+            option::some(
+                PairKey {
+                    coin_a: object::object_address(coin_a_start_after),
+                    coin_b: object::object_address(coin_b_start_after),
+                    liquidity_token: object::object_address(liquidity_token_start_after),
+                }
+            )
         } else {
-            option::some(PairKey {
-                coin_a: @0x0,
-                coin_b: @0x0,
-                liquidity_token: @0x0,
-            })
+            option::some(
+                PairKey {
+                    coin_a: @0x0,
+                    coin_b: @0x0,
+                    liquidity_token: @0x0,
+                }
+            )
         };
 
         let res = vector[];
@@ -523,16 +597,29 @@ module initia_std::dex {
             1,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
+        while (
+            vector::length(&res) <(limit as u64) && table::prepare<PairKey, PairResponse>(
+                &mut pairs_iter
+            )
+        ) {
             let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
             if (&key != option::borrow(&start_after)) {
-                vector::push_back(&mut res, PairByDenomResponse {
-                    coin_a: coin::metadata_to_denom(object::address_to_object(value.coin_a)),
-                    coin_b: coin::metadata_to_denom(object::address_to_object(value.coin_b)),
-                    liquidity_token: coin::metadata_to_denom(object::address_to_object(value.liquidity_token)),
-                    weights: value.weights,
-                    swap_fee_rate: value.swap_fee_rate,
-                })
+                vector::push_back(
+                    &mut res,
+                    PairByDenomResponse {
+                        coin_a: coin::metadata_to_denom(
+                            object::address_to_object(value.coin_a)
+                        ),
+                        coin_b: coin::metadata_to_denom(
+                            object::address_to_object(value.coin_b)
+                        ),
+                        liquidity_token: coin::metadata_to_denom(
+                            object::address_to_object(value.liquidity_token)
+                        ),
+                        weights: value.weights,
+                        swap_fee_rate: value.swap_fee_rate,
+                    }
+                )
             }
         };
 
@@ -555,17 +642,21 @@ module initia_std::dex {
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
         let start_after = if (option::is_some(&start_after)) {
-            option::some(PairKey {
-                coin_a,
-                coin_b,
-                liquidity_token: option::extract(&mut start_after),
-            })
+            option::some(
+                PairKey {
+                    coin_a,
+                    coin_b,
+                    liquidity_token: option::extract(&mut start_after),
+                }
+            )
         } else {
-            option::some(PairKey {
-                coin_a,
-                coin_b,
-                liquidity_token: @0x0,
-            })
+            option::some(
+                PairKey {
+                    coin_a,
+                    coin_b,
+                    liquidity_token: @0x0,
+                }
+            )
         };
 
         let res = vector[];
@@ -576,7 +667,11 @@ module initia_std::dex {
             1,
         );
 
-        while (vector::length(&res) < (limit as u64) && table::prepare<PairKey, PairResponse>(&mut pairs_iter)) {
+        while (
+            vector::length(&res) <(limit as u64) && table::prepare<PairKey, PairResponse>(
+                &mut pairs_iter
+            )
+        ) {
             let (key, value) = table::next<PairKey, PairResponse>(&mut pairs_iter);
             if (coin_a != key.coin_a || coin_b != key.coin_b) break;
             if (&key != option::borrow(&start_after)) {
@@ -625,7 +720,14 @@ module initia_std::dex {
         weight.timestamp
     }
 
-    public fun unpack_pair_response(pair_response: &PairResponse): (address, address, address, Weights, Decimal128) {
+    public fun unpack_pair_response(pair_response: &PairResponse)
+        : (
+        address,
+        address,
+        address,
+        Weights,
+        Decimal128
+    ) {
         (
             pair_response.coin_a,
             pair_response.coin_b,
@@ -635,7 +737,9 @@ module initia_std::dex {
         )
     }
 
-    public fun unpack_current_weight_response(current_weight_response: &CurrentWeightResponse): (Decimal128, Decimal128) {
+    public fun unpack_current_weight_response(
+        current_weight_response: &CurrentWeightResponse
+    ): (Decimal128, Decimal128) {
         (
             current_weight_response.coin_a_weight,
             current_weight_response.coin_b_weight,
@@ -644,14 +748,20 @@ module initia_std::dex {
 
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
-        assert!(signer::address_of(chain) == @initia_std, error::permission_denied(EUNAUTHORIZED));
+        assert!(
+            signer::address_of(chain) == @initia_std,
+            error::permission_denied(EUNAUTHORIZED)
+        );
     }
 
     fun init_module(chain: &signer) {
-        move_to(chain, ModuleStore {
-            pairs: table::new<PairKey, PairResponse>(),
-            pair_count: 0,
-        });
+        move_to(
+            chain,
+            ModuleStore {
+                pairs: table::new<PairKey, PairResponse>(),
+                pair_count: 0,
+            }
+        );
     }
 
     public entry fun create_pair_script(
@@ -680,11 +790,30 @@ module initia_std::dex {
             }
         };
 
-        let coin_a = coin::withdraw(creator, coin_a_metadata, coin_a_amount);
-        let coin_b = coin::withdraw(creator, coin_b_metadata, coin_b_amount);
+        let coin_a = coin::withdraw(
+            creator,
+            coin_a_metadata,
+            coin_a_amount
+        );
+        let coin_b = coin::withdraw(
+            creator,
+            coin_b_metadata,
+            coin_b_amount
+        );
 
-        let liquidity_token = create_pair(creator, name, symbol, swap_fee_rate, coin_a, coin_b, weights);
-        coin::deposit(signer::address_of(creator), liquidity_token);
+        let liquidity_token = create_pair(
+            creator,
+            name,
+            symbol,
+            swap_fee_rate,
+            coin_a,
+            coin_b,
+            weights
+        );
+        coin::deposit(
+            signer::address_of(creator),
+            liquidity_token
+        );
     }
 
     /// Create LBP pair
@@ -707,8 +836,14 @@ module initia_std::dex {
         coin_b_amount: u64,
     ) acquires CoinCapabilities, Config, ModuleStore, Pool {
         let (_, timestamp) = get_block_info();
-        assert!(start_time > timestamp, error::invalid_argument(ELBP_START_TIME));
-        assert!(end_time > start_time, error::invalid_argument(EWEIGHTS_TIMESTAMP));
+        assert!(
+            start_time > timestamp,
+            error::invalid_argument(ELBP_START_TIME)
+        );
+        assert!(
+            end_time > start_time,
+            error::invalid_argument(EWEIGHTS_TIMESTAMP)
+        );
         let weights = Weights {
             weights_before: Weight {
                 coin_a_weight: coin_a_start_weight,
@@ -722,11 +857,30 @@ module initia_std::dex {
             }
         };
 
-        let coin_a = coin::withdraw(creator, coin_a_metadata, coin_a_amount);
-        let coin_b = coin::withdraw(creator, coin_b_metadata, coin_b_amount);
+        let coin_a = coin::withdraw(
+            creator,
+            coin_a_metadata,
+            coin_a_amount
+        );
+        let coin_b = coin::withdraw(
+            creator,
+            coin_b_metadata,
+            coin_b_amount
+        );
 
-        let liquidity_token = create_pair(creator, name, symbol, swap_fee_rate, coin_a, coin_b, weights);
-        coin::deposit(signer::address_of(creator), liquidity_token);
+        let liquidity_token = create_pair(
+            creator,
+            name,
+            symbol,
+            swap_fee_rate,
+            coin_a,
+            coin_b,
+            weights
+        );
+        coin::deposit(
+            signer::address_of(creator),
+            liquidity_token
+        );
     }
 
     /// update swap fee rate
@@ -748,10 +902,7 @@ module initia_std::dex {
 
         // update PairResponse
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pair_response = table::borrow_mut(
-            &mut module_store.pairs,
-            pair_key,
-        );
+        let pair_response = table::borrow_mut(&mut module_store.pairs, pair_key,);
 
         pair_response.swap_fee_rate = swap_fee_rate;
 
@@ -800,12 +951,24 @@ module initia_std::dex {
         // calculate the best coin amount
         let (coin_a, coin_b) = if (total_share == 0) {
             (
-                coin::withdraw(account, fungible_asset::store_metadata(pool.coin_a_store), coin_a_amount_in),
-                coin::withdraw(account, fungible_asset::store_metadata(pool.coin_b_store), coin_b_amount_in),
+                coin::withdraw(
+                    account,
+                    fungible_asset::store_metadata(pool.coin_a_store),
+                    coin_a_amount_in
+                ),
+                coin::withdraw(
+                    account,
+                    fungible_asset::store_metadata(pool.coin_b_store),
+                    coin_b_amount_in
+                ),
             )
         } else {
-            let coin_a_share_ratio = decimal128::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-            let coin_b_share_ratio = decimal128::from_ratio_u64(coin_b_amount_in, coin_b_amount);
+            let coin_a_share_ratio = decimal128::from_ratio_u64(
+                coin_a_amount_in, coin_a_amount
+            );
+            let coin_b_share_ratio = decimal128::from_ratio_u64(
+                coin_b_amount_in, coin_b_amount
+            );
             if (decimal128::val(&coin_a_share_ratio) > decimal128::val(&coin_b_share_ratio)) {
                 coin_a_amount_in = decimal128::mul_u64(&coin_b_share_ratio, coin_a_amount);
             } else {
@@ -813,22 +976,32 @@ module initia_std::dex {
             };
 
             (
-                coin::withdraw(account, fungible_asset::store_metadata(pool.coin_a_store), coin_a_amount_in),
-                coin::withdraw(account, fungible_asset::store_metadata(pool.coin_b_store), coin_b_amount_in),
+                coin::withdraw(
+                    account,
+                    fungible_asset::store_metadata(pool.coin_a_store),
+                    coin_a_amount_in
+                ),
+                coin::withdraw(
+                    account,
+                    fungible_asset::store_metadata(pool.coin_b_store),
+                    coin_b_amount_in
+                ),
             )
         };
 
-        let liquidity_token = provide_liquidity(
-            pair,
-            coin_a,
-            coin_b,
-            min_liquidity,
-        );
+        let liquidity_token = provide_liquidity(pair, coin_a, coin_b, min_liquidity,);
 
         let liquidity_token_amount = fungible_asset::amount(&liquidity_token);
-        coin::deposit(signer::address_of(account), liquidity_token);
+        coin::deposit(
+            signer::address_of(account),
+            liquidity_token
+        );
 
-        (coin_a_amount_in, coin_b_amount_in, liquidity_token_amount)
+        (
+            coin_a_amount_in,
+            coin_b_amount_in,
+            liquidity_token_amount
+        )
     }
 
     /// Withdraw liquidity with liquidity token in the token store
@@ -839,10 +1012,17 @@ module initia_std::dex {
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>,
     ) acquires CoinCapabilities, Config, Pool {
-        assert!(liquidity != 0, error::invalid_argument(EZERO_LIQUIDITY));
+        assert!(
+            liquidity != 0,
+            error::invalid_argument(EZERO_LIQUIDITY)
+        );
 
         let addr = signer::address_of(account);
-        let liquidity_token = coin::withdraw(account, object::convert<Config, Metadata>(pair), liquidity);
+        let liquidity_token = coin::withdraw(
+            account,
+            object::convert<Config, Metadata>(pair),
+            liquidity
+        );
         let (coin_a, coin_b) = withdraw_liquidity(
             liquidity_token,
             min_coin_a_amount,
@@ -861,15 +1041,24 @@ module initia_std::dex {
         offer_coin_amount: u64,
         min_return: Option<u64>,
     ) acquires Config, Pool {
-        let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
+        let offer_coin = coin::withdraw(
+            account,
+            offer_coin,
+            offer_coin_amount
+        );
         let return_coin = swap(pair, offer_coin);
 
         assert!(
-            option::is_none(&min_return) || *option::borrow(&min_return) <= fungible_asset::amount(&return_coin),
+            option::is_none(&min_return) || *option::borrow(&min_return) <= fungible_asset::amount(
+                &return_coin
+            ),
             error::invalid_state(EMIN_RETURN),
         );
 
-        coin::deposit(signer::address_of(account), return_coin);
+        coin::deposit(
+            signer::address_of(account),
+            return_coin
+        );
     }
 
     /// Single asset provide liquidity with token in the token store
@@ -883,9 +1072,7 @@ module initia_std::dex {
         let addr = signer::address_of(account);
         let provide_coin = coin::withdraw(account, provide_coin, amount_in);
         let liquidity_token = single_asset_provide_liquidity(
-            pair,
-            provide_coin,
-            min_liquidity,
+            pair, provide_coin, min_liquidity,
         );
 
         coin::deposit(addr, liquidity_token);
@@ -902,31 +1089,43 @@ module initia_std::dex {
         let pool = borrow_global_mut<Pool>(pair_addr);
         let config = borrow_global_mut<Config>(pair_addr);
         let total_share = option::extract(
-            &mut fungible_asset::supply(fungible_asset::metadata_from_asset(&lp_token))
+            &mut fungible_asset::supply(
+                fungible_asset::metadata_from_asset(&lp_token)
+            )
         );
         let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
         let given_token_amount = fungible_asset::amount(&lp_token);
         let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
-        let given_share_ratio = decimal128::from_ratio((given_token_amount as u128), total_share);
+        let given_share_ratio = decimal128::from_ratio(
+            (given_token_amount as u128),
+            total_share
+        );
         let coin_a_amount_out = decimal128::mul_u64(&given_share_ratio, coin_a_amount);
         let coin_b_amount_out = decimal128::mul_u64(&given_share_ratio, coin_b_amount);
         check_lbp_ended(&config.weights);
 
         assert!(
-            option::is_none(&min_coin_a_amount) || *option::borrow(&min_coin_a_amount) <= coin_a_amount_out,
+            option::is_none(&min_coin_a_amount) || *option::borrow(&min_coin_a_amount) <=
+                coin_a_amount_out,
             error::invalid_state(EMIN_WITHDRAW),
         );
         assert!(
-            option::is_none(&min_coin_b_amount) || *option::borrow(&min_coin_b_amount) <= coin_b_amount_out,
+            option::is_none(&min_coin_b_amount) || *option::borrow(&min_coin_b_amount) <=
+                coin_b_amount_out,
             error::invalid_state(EMIN_WITHDRAW),
         );
 
         // burn liquidity token
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
-        coin::burn(&liquidity_token_capabilities.burn_cap, lp_token);
+        coin::burn(
+            &liquidity_token_capabilities.burn_cap,
+            lp_token
+        );
 
         // emit events
-        let pair_key = generate_pair_key(object::address_to_object<Config>(pair_addr));
+        let pair_key = generate_pair_key(
+            object::address_to_object<Config>(pair_addr)
+        );
         event::emit<WithdrawEvent>(
             WithdrawEvent {
                 coin_a: pair_key.coin_a,
@@ -942,8 +1141,16 @@ module initia_std::dex {
         // withdraw and return the coins
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         (
-            fungible_asset::withdraw(pair_signer, pool.coin_a_store, coin_a_amount_out),
-            fungible_asset::withdraw(pair_signer, pool.coin_b_store, coin_b_amount_out),
+            fungible_asset::withdraw(
+                pair_signer,
+                pool.coin_a_store,
+                coin_a_amount_out
+            ),
+            fungible_asset::withdraw(
+                pair_signer,
+                pool.coin_b_store,
+                coin_b_amount_out
+            ),
         )
     }
 
@@ -970,13 +1177,20 @@ module initia_std::dex {
         let is_provide_a = provide_address == pair_key.coin_a;
 
         let total_share = option::extract(&mut fungible_asset::supply(pair));
-        assert!(total_share != 0, error::invalid_state(EZERO_LIQUIDITY));
+        assert!(
+            total_share != 0,
+            error::invalid_state(EZERO_LIQUIDITY)
+        );
 
         // load values for fee and increased liquidity amount calculation
         let amount_in = fungible_asset::amount(&provide_coin);
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
         let pool = borrow_global_mut<Pool>(pair_addr);
-        let (normalized_weight, pool_amount_in, provide_coin_addr) = if (is_provide_a) {
+        let (
+            normalized_weight,
+            pool_amount_in,
+            provide_coin_addr
+        ) = if (is_provide_a) {
             let normalized_weight = decimal128::from_ratio(
                 decimal128::val(&coin_a_weight),
                 decimal128::val(&coin_a_weight) + decimal128::val(&coin_b_weight)
@@ -985,7 +1199,11 @@ module initia_std::dex {
             let pool_amount_in = fungible_asset::balance(pool.coin_a_store);
             fungible_asset::deposit(pool.coin_a_store, provide_coin);
 
-            (normalized_weight, pool_amount_in, pair_key.coin_a)
+            (
+                normalized_weight,
+                pool_amount_in,
+                pair_key.coin_a
+            )
         } else {
             let normalized_weight = decimal128::from_ratio(
                 decimal128::val(&coin_b_weight),
@@ -995,32 +1213,48 @@ module initia_std::dex {
             let pool_amount_in = fungible_asset::balance(pool.coin_b_store);
             fungible_asset::deposit(pool.coin_b_store, provide_coin);
 
-            (normalized_weight, pool_amount_in, pair_key.coin_b)
+            (
+                normalized_weight,
+                pool_amount_in,
+                pair_key.coin_b
+            )
         };
 
         // CONTRACT: cannot provide more than the pool amount to prevent huge price impact
-        assert!(pool_amount_in > amount_in, error::invalid_argument(EPRICE_IMPACT));
+        assert!(
+            pool_amount_in > amount_in,
+            error::invalid_argument(EPRICE_IMPACT)
+        );
 
         // compute fee amount with the assumption that we will swap (1 - normalized_weight) of amount_in
         let adjusted_swap_amount = decimal128::mul_u64(
-            &decimal128::sub(&decimal128::one(), &normalized_weight),
+            &decimal128::sub(
+                &decimal128::one(),
+                &normalized_weight
+            ),
             amount_in
         );
-        let fee_amount = decimal128::mul_u64(&config.swap_fee_rate, adjusted_swap_amount);
+        let fee_amount = decimal128::mul_u64(
+            &config.swap_fee_rate,
+            adjusted_swap_amount
+        );
 
         // actual amount in after deducting fee amount
         let adjusted_amount_in = amount_in - fee_amount;
 
         // calculate new total share and new liquidity
-        let base = decimal128::from_ratio_u64(adjusted_amount_in + pool_amount_in, pool_amount_in);
+        let base = decimal128::from_ratio_u64(
+            adjusted_amount_in + pool_amount_in,
+            pool_amount_in
+        );
         let pool_ratio = pow(&base, &normalized_weight);
         let new_total_share = decimal128::mul_u128(&pool_ratio, total_share);
         let liquidity = (new_total_share - total_share as u64);
 
         // check min liquidity assertion
         assert!(
-            option::is_none(&min_liquidity_amount) ||
-                *option::borrow(&min_liquidity_amount) <= liquidity,
+            option::is_none(&min_liquidity_amount) || *option::borrow(&min_liquidity_amount)
+                <= liquidity,
             error::invalid_state(EMIN_LIQUIDITY),
         );
 
@@ -1039,7 +1273,10 @@ module initia_std::dex {
 
         // mint liquidity tokens to provider
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
-        coin::mint(&liquidity_token_capabilities.mint_cap, liquidity)
+        coin::mint(
+            &liquidity_token_capabilities.mint_cap,
+            liquidity
+        )
     }
 
     /// Swap directly
@@ -1057,11 +1294,38 @@ module initia_std::dex {
         );
         let is_offer_a = offer_address == pair_key.coin_a;
 
-        let (pool_a, pool_b, weight_a, weight_b, swap_fee_rate) = pool_info(pair ,true);
-        let (offer_coin_addr, return_coin_addr, offer_pool, return_pool, offer_weight, return_weight) = if (is_offer_a) {
-            (pair_key.coin_a, pair_key.coin_b, pool_a, pool_b, weight_a, weight_b)
+        let (
+            pool_a,
+            pool_b,
+            weight_a,
+            weight_b,
+            swap_fee_rate
+        ) = pool_info(pair, true);
+        let (
+            offer_coin_addr,
+            return_coin_addr,
+            offer_pool,
+            return_pool,
+            offer_weight,
+            return_weight
+        ) = if (is_offer_a) {
+            (
+                pair_key.coin_a,
+                pair_key.coin_b,
+                pool_a,
+                pool_b,
+                weight_a,
+                weight_b
+            )
         } else {
-            (pair_key.coin_b, pair_key.coin_a, pool_b, pool_a, weight_b, weight_a)
+            (
+                pair_key.coin_b,
+                pair_key.coin_a,
+                pool_b,
+                pool_a,
+                weight_b,
+                weight_a
+            )
         };
         let (return_amount, fee_amount) = swap_simulation(
             offer_pool,
@@ -1079,10 +1343,18 @@ module initia_std::dex {
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         let return_coin = if (is_offer_a) {
             fungible_asset::deposit(pool.coin_a_store, offer_coin);
-            fungible_asset::withdraw(pair_signer, pool.coin_b_store, return_amount)
+            fungible_asset::withdraw(
+                pair_signer,
+                pool.coin_b_store,
+                return_amount
+            )
         } else {
             fungible_asset::deposit(pool.coin_b_store, offer_coin);
-            fungible_asset::withdraw(pair_signer, pool.coin_a_store, return_amount)
+            fungible_asset::withdraw(
+                pair_signer,
+                pool.coin_a_store,
+                return_amount
+            )
         };
 
         // emit events
@@ -1109,7 +1381,12 @@ module initia_std::dex {
         coin_b: FungibleAsset,
         weights: Weights,
     ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool {
-        let (mint_cap, burn_cap, freeze_cap, extend_ref) = coin::initialize_and_generate_extend_ref (
+        let (
+            mint_cap,
+            burn_cap,
+            freeze_cap,
+            extend_ref
+        ) = coin::initialize_and_generate_extend_ref(
             creator,
             option::none(),
             name,
@@ -1124,26 +1401,35 @@ module initia_std::dex {
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
         );
 
-        assert!(coin_address(&coin_a) != coin_address(&coin_b), error::invalid_argument(ESAME_COIN_TYPE));
+        assert!(
+            coin_address(&coin_a) != coin_address(&coin_b),
+            error::invalid_argument(ESAME_COIN_TYPE)
+        );
 
         let pair_signer = &object::generate_signer_for_extending(&extend_ref);
         let pair_address = signer::address_of(pair_signer);
         // transfer pair object's ownership to initia_std
         object::transfer_raw(creator, pair_address, @initia_std);
 
-        let coin_a_store = primary_fungible_store::create_primary_store(pair_address, fungible_asset::asset_metadata(&coin_a));
-        let coin_b_store = primary_fungible_store::create_primary_store(pair_address, fungible_asset::asset_metadata(&coin_b));
+        let coin_a_store = primary_fungible_store::create_primary_store(
+            pair_address,
+            fungible_asset::asset_metadata(&coin_a)
+        );
+        let coin_b_store = primary_fungible_store::create_primary_store(
+            pair_address,
+            fungible_asset::asset_metadata(&coin_b)
+        );
         let coin_a_addr = coin_address(&coin_a);
         let coin_b_addr = coin_address(&coin_b);
 
         move_to(
             pair_signer,
-            Pool { coin_a_store, coin_b_store }
+            Pool {coin_a_store, coin_b_store}
         );
 
         move_to(
             pair_signer,
-            CoinCapabilities { mint_cap, freeze_cap, burn_cap },
+            CoinCapabilities {mint_cap, freeze_cap, burn_cap},
         );
 
         move_to(
@@ -1185,7 +1471,11 @@ module initia_std::dex {
         // let coin_a_type = type_info::type_name<CoinA>();
         // let coin_b_type = type_info::type_name<CoinB>();
         // let liquidity_token_type = type_info::type_name<LiquidityToken>();
-        let pair_key = PairKey { coin_a: coin_a_addr, coin_b: coin_b_addr, liquidity_token: pair_address};
+        let pair_key = PairKey {
+            coin_a: coin_a_addr,
+            coin_b: coin_b_addr,
+            liquidity_token: pair_address
+        };
 
         // add pair to table for queries
         table::add(
@@ -1234,23 +1524,28 @@ module initia_std::dex {
 
         let total_share = option::extract(&mut fungible_asset::supply(pair));
         let liquidity = if (total_share == 0) {
-            if (coin_a_amount_in > coin_b_amount_in) {
-                coin_a_amount_in
-            } else {
-                coin_b_amount_in
-            }
+            if (coin_a_amount_in > coin_b_amount_in) { coin_a_amount_in } else { coin_b_amount_in }
         } else {
-            let coin_a_share_ratio = decimal128::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-            let coin_b_share_ratio = decimal128::from_ratio_u64(coin_b_amount_in, coin_b_amount);
+            let coin_a_share_ratio = decimal128::from_ratio_u64(
+                coin_a_amount_in, coin_a_amount
+            );
+            let coin_b_share_ratio = decimal128::from_ratio_u64(
+                coin_b_amount_in, coin_b_amount
+            );
             if (decimal128::val(&coin_a_share_ratio) > decimal128::val(&coin_b_share_ratio)) {
-                (decimal128::mul_u128(&coin_b_share_ratio, total_share) as u64)
+                (
+                    decimal128::mul_u128(&coin_b_share_ratio, total_share) as u64
+                )
             } else {
-                (decimal128::mul_u128(&coin_a_share_ratio, total_share) as u64)
+                (
+                    decimal128::mul_u128(&coin_a_share_ratio, total_share) as u64
+                )
             }
         };
 
         assert!(
-            option::is_none(&min_liquidity_amount) || *option::borrow(&min_liquidity_amount) <= liquidity,
+            option::is_none(&min_liquidity_amount) || *option::borrow(&min_liquidity_amount)
+                <= liquidity,
             error::invalid_state(EMIN_LIQUIDITY),
         );
 
@@ -1269,7 +1564,10 @@ module initia_std::dex {
         fungible_asset::deposit(pool.coin_b_store, coin_b);
 
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pool_addr);
-        coin::mint(&liquidity_token_capabilities.mint_cap, liquidity)
+        coin::mint(
+            &liquidity_token_capabilities.mint_cap,
+            liquidity
+        )
     }
 
     fun coin_address(fa: &FungibleAsset): address {
@@ -1280,7 +1578,10 @@ module initia_std::dex {
     fun check_lbp_ended(weights: &Weights) {
         let (_, timestamp) = get_block_info();
 
-        assert!(timestamp >= weights.weights_after.timestamp, error::invalid_state(ELBP_NOT_ENDED))
+        assert!(
+            timestamp >= weights.weights_after.timestamp,
+            error::invalid_state(ELBP_NOT_ENDED)
+        )
     }
 
     fun generate_pair_key<T: key>(pair: Object<T>): PairKey acquires Pool {
@@ -1299,11 +1600,21 @@ module initia_std::dex {
     fun get_weight(weights: &Weights): (Decimal128, Decimal128) {
         let (_, timestamp) = get_block_info();
         if (timestamp <= weights.weights_before.timestamp) {
-            (weights.weights_before.coin_a_weight, weights.weights_before.coin_b_weight)
-        } else if (timestamp < weights.weights_after.timestamp) {
-            let interval = (weights.weights_after.timestamp - weights.weights_before.timestamp as u128);
-            let time_diff_after = (weights.weights_after.timestamp - timestamp as u128);
-            let time_diff_before = (timestamp - weights.weights_before.timestamp as u128);
+            (
+                weights.weights_before.coin_a_weight,
+                weights.weights_before.coin_b_weight
+            )
+        }
+        else if (timestamp < weights.weights_after.timestamp) {
+            let interval = (
+                weights.weights_after.timestamp - weights.weights_before.timestamp as u128
+            );
+            let time_diff_after = (
+                weights.weights_after.timestamp - timestamp as u128
+            );
+            let time_diff_before = (
+                timestamp - weights.weights_before.timestamp as u128
+            );
 
             // when timestamp_before < timestamp < timestamp_after
             // weight is linearly change from before to after
@@ -1317,27 +1628,62 @@ module initia_std::dex {
             //   = g * t_a * t - g * t_a * t_b + c * t - c * t_b
             // l = m + n = g * t * (t_a - t_b) + c * (t_a - t_b)
             // weight = l / (t_a - t_b) = g * t + c
-            let coin_a_m = decimal128::new(decimal128::val(&weights.weights_after.coin_a_weight) * time_diff_before);
-            let coin_a_n = decimal128::new(decimal128::val(&weights.weights_before.coin_a_weight) * time_diff_after);
+            let coin_a_m = decimal128::new(
+                decimal128::val(
+                    &weights.weights_after.coin_a_weight
+                ) * time_diff_before
+            );
+            let coin_a_n = decimal128::new(
+                decimal128::val(
+                    &weights.weights_before.coin_a_weight
+                ) * time_diff_after
+            );
             let coin_a_l = decimal128::add(&coin_a_m, &coin_a_n);
 
-            let coin_b_m = decimal128::new(decimal128::val(&weights.weights_after.coin_b_weight) * time_diff_before);
-            let coin_b_n = decimal128::new(decimal128::val(&weights.weights_before.coin_b_weight) * time_diff_after);
+            let coin_b_m = decimal128::new(
+                decimal128::val(
+                    &weights.weights_after.coin_b_weight
+                ) * time_diff_before
+            );
+            let coin_b_n = decimal128::new(
+                decimal128::val(
+                    &weights.weights_before.coin_b_weight
+                ) * time_diff_after
+            );
             let coin_b_l = decimal128::add(&coin_b_m, &coin_b_n);
-            (decimal128::div(&coin_a_l, interval), decimal128::div(&coin_b_l, interval))
-        } else {
-            (weights.weights_after.coin_a_weight, weights.weights_after.coin_b_weight)
+            (
+                decimal128::div(&coin_a_l, interval),
+                decimal128::div(&coin_b_l, interval)
+            )
+        }
+        else {
+            (
+                weights.weights_after.coin_a_weight,
+                weights.weights_after.coin_b_weight
+            )
         }
     }
 
     /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
-    public fun pool_info(pair: Object<Config>, lbp_assertion: bool): (u64, u64, Decimal128, Decimal128, Decimal128) acquires Config, Pool {
+    public fun pool_info(
+        pair: Object<Config>,
+        lbp_assertion: bool
+    ): (
+        u64,
+        u64,
+        Decimal128,
+        Decimal128,
+        Decimal128
+    ) acquires Config, Pool {
         let pair_addr = object::object_address(pair);
         let config = borrow_global<Config>(pair_addr);
         if (lbp_assertion) {
             // assert LBP start time
             let (_, timestamp) = get_block_info();
-            assert!(timestamp >= config.weights.weights_before.timestamp, error::invalid_state(ELBP_NOT_STARTED));
+            assert!(
+                timestamp >= config.weights.weights_before.timestamp,
+                error::invalid_state(ELBP_NOT_STARTED)
+            );
         };
 
         let pool = borrow_global<Pool>(pair_addr);
@@ -1363,10 +1709,16 @@ module initia_std::dex {
         amount_in: u64,
         swap_fee_rate: Decimal128,
     ): (u64, u64) {
-        assert!(amount_in > 0, error::invalid_argument(EZERO_AMOUNT_IN));
+        assert!(
+            amount_in > 0,
+            error::invalid_argument(EZERO_AMOUNT_IN)
+        );
 
         let one = decimal128::one();
-        let exp = decimal128::from_ratio(decimal128::val(&weight_in), decimal128::val(&weight_out));
+        let exp = decimal128::from_ratio(
+            decimal128::val(&weight_in),
+            decimal128::val(&weight_out)
+        );
 
         // avoid zero fee amount to prevent fee bypass attack
         let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
@@ -1375,9 +1727,18 @@ module initia_std::dex {
         };
 
         let adjusted_amount_in = amount_in - fee_amount;
-        let base = decimal128::from_ratio_u64(pool_amount_in, pool_amount_in + adjusted_amount_in);
+        let base = decimal128::from_ratio_u64(
+            pool_amount_in,
+            pool_amount_in + adjusted_amount_in
+        );
         let sub_amount = pow(&base, &exp);
-        (decimal128::mul_u64(&decimal128::sub(&one, &sub_amount), pool_amount_out), fee_amount)
+        (
+            decimal128::mul_u64(
+                &decimal128::sub(&one, &sub_amount),
+                pool_amount_out
+            ),
+            fee_amount
+        )
     }
 
     public fun swap_simulation_given_out(
@@ -1389,13 +1750,23 @@ module initia_std::dex {
         swap_fee_rate: Decimal128,
     ): (u64, u64) {
         let one = decimal128::one();
-        let exp = decimal128::from_ratio(decimal128::val(&weight_out), decimal128::val(&weight_in));
-        let base = decimal128::from_ratio_u64(pool_amount_out, pool_amount_out - amount_out);
+        let exp = decimal128::from_ratio(
+            decimal128::val(&weight_out),
+            decimal128::val(&weight_in)
+        );
+        let base = decimal128::from_ratio_u64(
+            pool_amount_out,
+            pool_amount_out - amount_out
+        );
         let base_exp = pow(&base, &exp);
-        let adjusted_amount_in = decimal128::val(&decimal128::sub(&base_exp, &one)) * (pool_amount_in as u128) ;
+        let adjusted_amount_in = decimal128::val(&decimal128::sub(&base_exp, &one)) * (
+            pool_amount_in as u128
+        );
         let sub_one_fee = decimal128::sub(&one, &swap_fee_rate);
 
-        let amount_in = ( adjusted_amount_in / decimal128::val(&sub_one_fee) as u64);
+        let amount_in = (
+            adjusted_amount_in / decimal128::val(&sub_one_fee) as u64
+        );
         let fee_amount = decimal128::mul_u64(&swap_fee_rate, amount_in);
 
         (amount_in, fee_amount)
@@ -1404,14 +1775,17 @@ module initia_std::dex {
     public fun pool_metadata(pair: Object<Config>): (Object<Metadata>, Object<Metadata>) acquires Pool {
         let pair_addr = object::object_address(pair);
         let pool = borrow_global<Pool>(pair_addr);
-        (fungible_asset::store_metadata(pool.coin_a_store), fungible_asset::store_metadata(pool.coin_b_store))
+        (
+            fungible_asset::store_metadata(pool.coin_a_store),
+            fungible_asset::store_metadata(pool.coin_b_store)
+        )
     }
 
     /// a^x = 1 + sigma[(k^n)/n!]
     /// k = x * ln(a)
     fun pow(base: &Decimal128, exp: &Decimal128): Decimal128 {
         assert!(
-            decimal128::val(base) != 0 && decimal128::val(base) < 2000000000000000000,
+            decimal128::val(base) != 0 && decimal128::val(base) <2000000000000000000,
             error::invalid_argument(EOUT_OF_BASE_RANGE),
         );
 
@@ -1422,7 +1796,7 @@ module initia_std::dex {
         let index = 1;
         let subs: vector<Decimal128> = vector[];
         while (decimal128::val(&comp) > PRECISION) {
-            if (index & 1 == 1 && neg) {
+            if (index &1 == 1 && neg) {
                 vector::push_back(&mut subs, comp)
             } else {
                 res = decimal128::add(&res, &comp)
@@ -1448,9 +1822,15 @@ module initia_std::dex {
         let one = decimal128::val(&decimal128::one());
         let num_val = decimal128::val(num);
         let (a, a_neg) = if (num_val >= one) {
-            (decimal128::sub(num, &decimal128::one()), false)
+            (
+                decimal128::sub(num, &decimal128::one()),
+                false
+            )
         } else {
-            (decimal128::sub(&decimal128::one(), num), true)
+            (
+                decimal128::sub(&decimal128::one(), num),
+                true
+            )
         };
 
         let res = decimal128::zero();
@@ -1458,7 +1838,7 @@ module initia_std::dex {
         let index = 1;
 
         while (decimal128::val(&comp) > PRECISION) {
-            if (index & 1 == 0 && !a_neg) {
+            if (index &1 == 0 && !a_neg) {
                 res = decimal128::sub(&res, &comp);
             } else {
                 res = decimal128::add(&res, &comp);
@@ -1467,7 +1847,9 @@ module initia_std::dex {
             // comp(old) = a ^ n / n
             // comp(new) = comp(old) * a * n / (n + 1) = a ^ (n + 1) / (n + 1)
             comp = decimal128::div(
-                &decimal128::new(decimal128::val(&mul_decimal128s(&comp, &a)) * index), // comp * a * index
+                &decimal128::new(
+                    decimal128::val(&mul_decimal128s(&comp, &a)) * index
+                ), // comp * a * index
                 index + 1,
             );
 
@@ -1477,16 +1859,23 @@ module initia_std::dex {
         (res, a_neg)
     }
 
-    fun mul_decimal128s(decimal128_0: &Decimal128, decimal128_1: &Decimal128): Decimal128 {
-        let one = (decimal128::val(&decimal128::one()) as u256);
-        let val_mul = (decimal128::val(decimal128_0) as u256) * (decimal128::val(decimal128_1) as u256);
+    fun mul_decimal128s(
+        decimal128_0: &Decimal128,
+        decimal128_1: &Decimal128
+    ): Decimal128 {
+        let one = (
+            decimal128::val(&decimal128::one()) as u256
+        );
+        let val_mul = (
+            decimal128::val(decimal128_0) as u256
+        ) * (
+            decimal128::val(decimal128_1) as u256
+        );
         decimal128::new((val_mul / one as u128))
     }
 
     #[test_only]
-    public fun init_module_for_test(
-        chain: &signer
-    ) {
+    public fun init_module_for_test(chain: &signer) {
         init_module(chain);
     }
 
@@ -1508,11 +1897,13 @@ module initia_std::dex {
     }
 
     #[test_only]
-    fun initialized_coin(
-        account: &signer,
-        symbol: String,
-    ): (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability) {
-        let (mint_cap, burn_cap, freeze_cap, _) = coin::initialize_and_generate_extend_ref (
+    fun initialized_coin(account: &signer, symbol: String,)
+        : (
+        coin::BurnCapability,
+        coin::FreezeCapability,
+        coin::MintCapability
+    ) {
+        let (mint_cap, burn_cap, freeze_cap, _) = coin::initialize_and_generate_extend_ref(
             account,
             option::none(),
             string::utf8(b""),
@@ -1522,25 +1913,39 @@ module initia_std::dex {
             string::utf8(b""),
         );
 
-        return (burn_cap, freeze_cap, mint_cap)
+        return(burn_cap, freeze_cap, mint_cap)
     }
 
     #[test(chain = @0x1)]
-    fun end_to_end(
-        chain: signer,
-    ) acquires Config, CoinCapabilities, ModuleStore, Pool {
+    fun end_to_end(chain: signer,) acquires Config, CoinCapabilities, ModuleStore, Pool {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test(&chain);
 
         let chain_addr = signer::address_of(&chain);
 
-        let (initia_burn_cap, initia_freeze_cap, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"INIT"));
-        let (usdc_burn_cap, usdc_freeze_cap, usdc_mint_cap) = initialized_coin(&chain, string::utf8(b"USDC"));
+        let (
+            initia_burn_cap,
+            initia_freeze_cap,
+            initia_mint_cap
+        ) = initialized_coin(&chain, string::utf8(b"INIT"));
+        let (
+            usdc_burn_cap,
+            usdc_freeze_cap,
+            usdc_mint_cap
+        ) = initialized_coin(&chain, string::utf8(b"USDC"));
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
         let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
 
-        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
-        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
+        coin::mint_to(
+            &initia_mint_cap,
+            chain_addr,
+            100000000
+        );
+        coin::mint_to(
+            &usdc_mint_cap,
+            chain_addr,
+            100000000
+        );
 
         // spot price is 1
         create_pair_script(
@@ -1559,64 +1964,149 @@ module initia_std::dex {
         let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
         let pair = object::convert<Metadata, Config>(lp_metadata);
 
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000, 0);
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000, 1);
-        assert!(coin::balance(chain_addr, lp_metadata) == 80000000, 2);
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000,
+            0
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000,
+            1
+        );
+        assert!(
+            coin::balance(chain_addr, lp_metadata) == 80000000,
+            2
+        );
 
         // swap init to usdc
-        swap_script(&chain, pair, init_metadata, 1000, option::none());
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000 - 1000, 3);
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000 + 996, 4); // return 999 commission 3
+        swap_script(
+            &chain,
+            pair,
+            init_metadata,
+            1000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000 - 1000,
+            3
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996,
+            4
+        ); // return 999 commission 3
 
         // swap usdc to init
-        swap_script(&chain, pair, usdc_metadata, 1000, option::none());
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997, 5); // return 1000 commission 3
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000, 6);
+        swap_script(
+            &chain,
+            pair,
+            usdc_metadata,
+            1000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997,
+            5
+        ); // return 1000 commission 3
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000,
+            6
+        );
 
         // withdraw liquidity
-        withdraw_liquidity_script(&chain, pair, 40000000, option::none(), option::none());
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997 + 40000001, 7);
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000 + 10000002, 8);
+        withdraw_liquidity_script(
+            &chain,
+            pair,
+            40000000,
+            option::none(),
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997 + 40000001
+                ,
+            7
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000 + 10000002
+                ,
+            8
+        );
 
         // single asset provide liquidity (coin b)
         // pool balance - init: 40000002, usdc: 10000002
-        single_asset_provide_liquidity_script(&chain, pair, usdc_metadata, 100000, option::none());
-        assert!(coin::balance(chain_addr, lp_metadata) == 40000000 + 79491, 9);
+        single_asset_provide_liquidity_script(
+            &chain,
+            pair,
+            usdc_metadata,
+            100000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, lp_metadata) == 40000000 + 79491,
+            9
+        );
 
         // single asset provide liquidity (coin a)
         // pool balance - init: 40000002, usdc: 10100002
-        single_asset_provide_liquidity_script(&chain, pair, init_metadata, 100000, option::none());
-        assert!(coin::balance(chain_addr, lp_metadata) == 40000000 + 79491 + 80090, 10);
+        single_asset_provide_liquidity_script(
+            &chain,
+            pair,
+            init_metadata,
+            100000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, lp_metadata) == 40000000 + 79491 + 80090,
+            10
+        );
 
-        move_to(&chain, CoinCapsInit {
-            burn_cap: initia_burn_cap,
-            freeze_cap: initia_freeze_cap,
-            mint_cap: initia_mint_cap,
-        });
+        move_to(
+            &chain,
+            CoinCapsInit {
+                burn_cap: initia_burn_cap,
+                freeze_cap: initia_freeze_cap,
+                mint_cap: initia_mint_cap,
+            }
+        );
 
-        move_to(&chain, CoinCapsUsdc {
-            burn_cap: usdc_burn_cap,
-            freeze_cap: usdc_freeze_cap,
-            mint_cap: usdc_mint_cap,
-        });
+        move_to(
+            &chain,
+            CoinCapsUsdc {
+                burn_cap: usdc_burn_cap,
+                freeze_cap: usdc_freeze_cap,
+                mint_cap: usdc_mint_cap,
+            }
+        );
     }
 
     #[test(chain = @0x1)]
-    fun lbp_end_to_end(
-        chain: signer,
-    ) acquires Config, CoinCapabilities, ModuleStore, Pool {
+    fun lbp_end_to_end(chain: signer,) acquires Config, CoinCapabilities, ModuleStore, Pool {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test(&chain);
 
         let chain_addr = signer::address_of(&chain);
 
-        let (initia_burn_cap, initia_freeze_cap, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"INIT"));
-        let (usdc_burn_cap, usdc_freeze_cap, usdc_mint_cap) = initialized_coin(&chain, string::utf8(b"USDC"));
+        let (
+            initia_burn_cap,
+            initia_freeze_cap,
+            initia_mint_cap
+        ) = initialized_coin(&chain, string::utf8(b"INIT"));
+        let (
+            usdc_burn_cap,
+            usdc_freeze_cap,
+            usdc_mint_cap
+        ) = initialized_coin(&chain, string::utf8(b"USDC"));
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
         let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
 
-        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
-        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
+        coin::mint_to(
+            &initia_mint_cap,
+            chain_addr,
+            100000000
+        );
+        coin::mint_to(
+            &usdc_mint_cap,
+            chain_addr,
+            100000000
+        );
 
         set_block_info(10, 1000);
 
@@ -1640,55 +2130,97 @@ module initia_std::dex {
         let pair = object::convert<Metadata, Config>(lp_metadata);
 
         assert!(
-            get_spot_price(pair, init_metadata) ==
-            decimal128::from_string(&string::utf8(b"24.75")),
+            get_spot_price(pair, init_metadata) == decimal128::from_string(
+                &string::utf8(b"24.75")
+            ),
             0,
         );
 
         // 0.8 : 0.2
         set_block_info(11, 2500);
         assert!(
-            get_spot_price(pair, init_metadata) ==
-            decimal128::from_string(&string::utf8(b"1")),
+            get_spot_price(pair, init_metadata) == decimal128::from_string(
+                &string::utf8(b"1")
+            ),
             1,
         );
 
         // 0.61 : 0.39
         set_block_info(12, 3500);
         assert!(
-            get_spot_price(pair, init_metadata) ==
-            decimal128::from_string(&string::utf8(b"0.391025641025641025")),
+            get_spot_price(pair, init_metadata) == decimal128::from_string(
+                &string::utf8(b"0.391025641025641025")
+            ),
             2,
         );
 
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000, 0);
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000, 1);
-        assert!(coin::balance(chain_addr, lp_metadata) == 80000000, 3);
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000,
+            0
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000,
+            1
+        );
+        assert!(
+            coin::balance(chain_addr, lp_metadata) == 80000000,
+            3
+        );
 
         // swap test during LBP (0.8: 0.2)
         set_block_info(11, 2500);
 
         // swap init to usdc
-        swap_script(&chain, pair, init_metadata, 1000, option::none());
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000 - 1000, 4);
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000 + 996, 5); // return 999 commission 3
+        swap_script(
+            &chain,
+            pair,
+            init_metadata,
+            1000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000 - 1000,
+            4
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996,
+            5
+        ); // return 999 commission 3
 
         // swap usdc to init
-        swap_script(&chain, pair, usdc_metadata, 1000, option::none());
-        assert!(coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997, 6); // return 1000 commission 3
-        assert!(coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000, 7);
+        swap_script(
+            &chain,
+            pair,
+            usdc_metadata,
+            1000,
+            option::none()
+        );
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997,
+            6
+        ); // return 1000 commission 3
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000,
+            7
+        );
 
-        move_to(&chain, CoinCapsInit {
-            burn_cap: initia_burn_cap,
-            freeze_cap: initia_freeze_cap,
-            mint_cap: initia_mint_cap,
-        });
+        move_to(
+            &chain,
+            CoinCapsInit {
+                burn_cap: initia_burn_cap,
+                freeze_cap: initia_freeze_cap,
+                mint_cap: initia_mint_cap,
+            }
+        );
 
-        move_to(&chain, CoinCapsUsdc {
-            burn_cap: usdc_burn_cap,
-            freeze_cap: usdc_freeze_cap,
-            mint_cap: usdc_mint_cap,
-        });
+        move_to(
+            &chain,
+            CoinCapsUsdc {
+                burn_cap: usdc_burn_cap,
+                freeze_cap: usdc_freeze_cap,
+                mint_cap: usdc_mint_cap,
+            }
+        );
     }
 
     #[test]
@@ -1709,36 +2241,39 @@ module initia_std::dex {
         set_block_info(10, 1000);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(2, 10)
-                && coin_b_weight == decimal128::from_ratio(8, 10),
+            coin_a_weight == decimal128::from_ratio(2, 10) && coin_b_weight == decimal128::from_ratio(
+                8, 10
+            ),
             0,
         );
 
         set_block_info(15, 1500);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(5, 10)
-                && coin_b_weight == decimal128::from_ratio(5, 10),
+            coin_a_weight == decimal128::from_ratio(5, 10) && coin_b_weight == decimal128::from_ratio(
+                5, 10
+            ),
             1,
         );
 
         set_block_info(20, 2000);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(8, 10)
-                && coin_b_weight == decimal128::from_ratio(2, 10),
+            coin_a_weight == decimal128::from_ratio(8, 10) && coin_b_weight == decimal128::from_ratio(
+                2, 10
+            ),
             2,
         );
 
         set_block_info(30, 3000);
         let (coin_a_weight, coin_b_weight) = get_weight(&weights);
         assert!(
-            coin_a_weight == decimal128::from_ratio(8, 10)
-                && coin_b_weight == decimal128::from_ratio(2, 10),
+            coin_a_weight == decimal128::from_ratio(8, 10) && coin_b_weight == decimal128::from_ratio(
+                2, 10
+            ),
             3,
         );
     }
-
 
     #[test(chain = @0x1)]
     fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore {
@@ -1758,9 +2293,21 @@ module initia_std::dex {
         let b_addr = object::object_address(b_metadata);
         let c_addr = object::object_address(c_metadata);
 
-        coin::mint_to(&coin_a_mint_cap, chain_addr, 100000000);
-        coin::mint_to(&coin_b_mint_cap, chain_addr, 100000000);
-        coin::mint_to(&coin_c_mint_cap, chain_addr, 100000000);
+        coin::mint_to(
+            &coin_a_mint_cap,
+            chain_addr,
+            100000000
+        );
+        coin::mint_to(
+            &coin_b_mint_cap,
+            chain_addr,
+            100000000
+        );
+        coin::mint_to(
+            &coin_c_mint_cap,
+            chain_addr,
+            100000000
+        );
 
         create_pair_script(
             &chain,
@@ -1774,7 +2321,10 @@ module initia_std::dex {
             1,
             1,
         );
-        let lp_1_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL1"));
+        let lp_1_metadata = coin::metadata(
+            chain_addr,
+            string::utf8(b"SYMBOL1")
+        );
         let pair_1 = object::convert<Metadata, Config>(lp_1_metadata);
         let pair_1_addr = object::object_address(pair_1);
 
@@ -1790,7 +2340,10 @@ module initia_std::dex {
             1,
             1,
         );
-        let lp_2_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL2"));
+        let lp_2_metadata = coin::metadata(
+            chain_addr,
+            string::utf8(b"SYMBOL2")
+        );
         let pair_2 = object::convert<Metadata, Config>(lp_2_metadata);
         let pair_2_addr = object::object_address(pair_2);
 
@@ -1806,10 +2359,12 @@ module initia_std::dex {
             1,
             1,
         );
-        let lp_3_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL3"));
+        let lp_3_metadata = coin::metadata(
+            chain_addr,
+            string::utf8(b"SYMBOL3")
+        );
         let pair_3 = object::convert<Metadata, Config>(lp_3_metadata);
         let pair_3_addr = object::object_address(pair_3);
-
 
         create_pair_script(
             &chain,
@@ -1823,7 +2378,10 @@ module initia_std::dex {
             1,
             1,
         );
-        let lp_4_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL4"));
+        let lp_4_metadata = coin::metadata(
+            chain_addr,
+            string::utf8(b"SYMBOL4")
+        );
         let pair_4 = object::convert<Metadata, Config>(lp_4_metadata);
         let pair_4_addr = object::object_address(pair_4);
 
@@ -1843,7 +2401,12 @@ module initia_std::dex {
             }
         };
 
-        let res = get_all_pairs(option::none(), option::none(), option::none(), 10);
+        let res = get_all_pairs(
+            option::none(),
+            option::none(),
+            option::none(),
+            10
+        );
         assert!(
             res == vector[
                 PairResponse {

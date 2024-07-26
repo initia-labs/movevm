@@ -1,7 +1,7 @@
 module publisher::vip_vault {
     use std::error;
     use std::signer;
-    
+
     use initia_std::object::{Self, ExtendRef};
     use initia_std::fungible_asset::FungibleAsset;
     use initia_std::primary_fungible_store;
@@ -186,19 +186,23 @@ module publisher::vip_vault {
             string::utf8(b""),
         );
 
-        (
-            burn_cap,
-            freeze_cap,
-            mint_cap,
-        )
+        (burn_cap, freeze_cap, mint_cap,)
     }
 
     #[test(chain = @0x1, publisher = @publisher, funder = @0x2)]
-    fun e2e(chain: &signer, publisher: &signer, funder: &signer) acquires ModuleStore {
+    fun e2e(
+        chain: &signer,
+        publisher: &signer,
+        funder: &signer
+    ) acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
         init_module(publisher);
         let (_, _, mint_cap) = initialize_coin(chain, string::utf8(b"uinit"));
-        coin::mint_to(&mint_cap, signer::address_of(funder), 1000000);
+        coin::mint_to(
+            &mint_cap,
+            signer::address_of(funder),
+            1000000
+        );
 
         // udpate reward_per_stage
         update_reward_per_stage(publisher, 1000);
@@ -208,11 +212,20 @@ module publisher::vip_vault {
         deposit(funder, 1000);
         assert!(balance() == 1000, 2);
         let vault_addr = get_vault_store_address();
-        assert!(coin::balance(vault_addr, coin::metadata(@0x1, string::utf8(b"uinit"))) == balance(), 3);
+        assert!(
+            coin::balance(
+                vault_addr,
+                coin::metadata(@0x1, string::utf8(b"uinit"))
+            ) == balance(),
+            3
+        );
 
         // claim
         let fa = claim(1);
-        assert!(fungible_asset::amount(&fa) == 1000, 4);
+        assert!(
+            fungible_asset::amount(&fa) == 1000,
+            4
+        );
         let module_store = borrow_global<ModuleStore>(@publisher);
         assert!(module_store.claimable_stage == 2, 5);
 

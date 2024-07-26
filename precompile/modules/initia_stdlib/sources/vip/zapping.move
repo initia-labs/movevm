@@ -795,7 +795,11 @@ module publisher::vip_zapping {
     }
 
     #[test(chain = @0x1, publisher = @publisher, account = @0x999)]
-    fun test_zapping(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
+    fun test_zapping(
+        chain: &signer,
+        publisher: &signer,
+        account: &signer,
+    ) acquires ModuleStore, LSStore {
         let (
             esinit_metadata,
             stakelisted_metadata,
@@ -877,7 +881,11 @@ module publisher::vip_zapping {
     }
 
     #[test(chain = @0x1, publisher = @publisher, account = @0x999)]
-    fun test_zapping_multiple(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
+    fun test_zapping_multiple(
+        chain: &signer,
+        publisher: &signer,
+        account: &signer,
+    ) acquires ModuleStore, LSStore {
         let (
             esinit_metadata,
             stakelisted_metadata,
@@ -927,8 +935,18 @@ module publisher::vip_zapping {
 
     #[test(chain = @0x1, publisher = @publisher, account = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = fungible_asset)]
-    fun test_zapping_insufficient_zapping(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val) = test_setup_for_zapping(chain, publisher, account, 0, 0,);
+    fun test_zapping_insufficient_zapping(
+        chain: &signer,
+        publisher: &signer,
+        account: &signer,
+    ) acquires ModuleStore, LSStore {
+        let (e_m, s_m, l_m, val) = test_setup_for_zapping(
+            chain,
+            publisher,
+            account,
+            0,
+            0,
+        );
         let stage = 10;
         let start_time = 1000000;
 
@@ -1098,7 +1116,11 @@ module publisher::vip_zapping {
 
     #[test(chain = @0x1, publisher = @publisher, account = @0x2)]
     #[expected_failure(abort_code = 0xD0002, location = Self)]
-    fun test_zapping_claim_not_released(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
+    fun test_zapping_claim_not_released(
+        chain: &signer,
+        publisher: &signer,
+        account: &signer,
+    ) acquires ModuleStore, LSStore {
         let (e_m, s_m, l_m, val) = test_setup_for_zapping(
             chain,
             publisher,

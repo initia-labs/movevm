@@ -2,7 +2,13 @@
 /// metadata object can be any object that equipped with `Metadata` resource.
 module minitia_std::fungible_asset {
     use minitia_std::event;
-    use minitia_std::object::{Self, Object, ConstructorRef, DeleteRef, ExtendRef};
+    use minitia_std::object::{
+        Self,
+        Object,
+        ConstructorRef,
+        DeleteRef,
+        ExtendRef
+    };
 
     use std::error;
     use std::option::{Self, Option};
@@ -176,18 +182,37 @@ module minitia_std::fungible_asset {
         icon_uri: String,
         project_uri: String,
     ): Object<Metadata> {
-        assert!(!object::can_generate_delete_ref(constructor_ref), error::invalid_argument(EOBJECT_IS_DELETABLE));
+        assert!(
+            !object::can_generate_delete_ref(constructor_ref),
+            error::invalid_argument(EOBJECT_IS_DELETABLE)
+        );
         let metadata_object_signer = &object::generate_signer(constructor_ref);
 
         // metadata validations
-        assert!(string::length(&name) <= MAX_NAME_LENGTH, error::out_of_range(ENAME_TOO_LONG));
-        assert!(string::length(&symbol) <= MAX_SYMBOL_LENGTH, error::out_of_range(ESYMBOL_TOO_LONG));
-        assert!(decimals <= MAX_DECIMALS, error::out_of_range(EDECIMALS_TOO_LARGE));
-        assert!(string::length(&icon_uri) <= MAX_URI_LENGTH, error::out_of_range(EURI_TOO_LONG));
-        assert!(string::length(&project_uri) <= MAX_URI_LENGTH, error::out_of_range(EURI_TOO_LONG));
+        assert!(
+            string::length(&name) <= MAX_NAME_LENGTH,
+            error::out_of_range(ENAME_TOO_LONG)
+        );
+        assert!(
+            string::length(&symbol) <= MAX_SYMBOL_LENGTH,
+            error::out_of_range(ESYMBOL_TOO_LONG)
+        );
+        assert!(
+            decimals <= MAX_DECIMALS,
+            error::out_of_range(EDECIMALS_TOO_LARGE)
+        );
+        assert!(
+            string::length(&icon_uri) <= MAX_URI_LENGTH,
+            error::out_of_range(EURI_TOO_LONG)
+        );
+        assert!(
+            string::length(&project_uri) <= MAX_URI_LENGTH,
+            error::out_of_range(EURI_TOO_LONG)
+        );
 
         // store metadata
-        move_to(metadata_object_signer,
+        move_to(
+            metadata_object_signer,
             Metadata {
                 name,
                 symbol,
@@ -198,10 +223,13 @@ module minitia_std::fungible_asset {
         );
 
         // store supply
-        move_to(metadata_object_signer, Supply {
-            current: 0,
-            maximum: maximum_supply
-        });
+        move_to(
+            metadata_object_signer,
+            Supply {
+                current: 0,
+                maximum: maximum_supply
+            }
+        );
 
         // return metadata object
         object::object_from_constructor_ref<Metadata>(constructor_ref)
@@ -304,9 +332,7 @@ module minitia_std::fungible_asset {
     public fun balance<T: key>(store: Object<T>): u64 acquires FungibleStore {
         if (store_exists(object::object_address(store))) {
             borrow_store_resource(store).balance
-        } else {
-            0
-        }
+        } else { 0 }
     }
 
     #[view]
@@ -355,11 +381,14 @@ module minitia_std::fungible_asset {
         metadata: Object<T>,
     ): Object<FungibleStore> {
         let store_obj = &object::generate_signer(constructor_ref);
-        move_to(store_obj, FungibleStore {
-            metadata: object::convert(metadata),
-            balance: 0,
-            frozen: false,
-        });
+        move_to(
+            store_obj,
+            FungibleStore {
+                metadata: object::convert(metadata),
+                balance: 0,
+                frozen: false,
+            }
+        );
 
         object::object_from_constructor_ref<FungibleStore>(constructor_ref)
     }
@@ -371,11 +400,14 @@ module minitia_std::fungible_asset {
         metadata: Object<T>,
     ): Object<FungibleStore> {
         let store_obj = &object::generate_signer_for_extending(extend_ref);
-        move_to(store_obj, FungibleStore {
-            metadata: object::convert(metadata),
-            balance: 0,
-            frozen: false,
-        });
+        move_to(
+            store_obj,
+            FungibleStore {
+                metadata: object::convert(metadata),
+                balance: 0,
+                frozen: false,
+            }
+        );
 
         let obj_addr = object::address_from_extend_ref(extend_ref);
         object::address_to_object<FungibleStore>(obj_addr)
@@ -385,25 +417,38 @@ module minitia_std::fungible_asset {
     public fun remove_store(delete_ref: &DeleteRef) acquires FungibleStore {
         let store = object::object_from_delete_ref<FungibleStore>(delete_ref);
         let addr = object::object_address(store);
-        let FungibleStore { metadata: _, balance, frozen: _ }
-            = move_from<FungibleStore>(addr);
-        assert!(balance == 0, error::permission_denied(EBALANCE_IS_NOT_ZERO));
+        let FungibleStore {metadata: _, balance, frozen: _} = move_from<FungibleStore>(addr);
+        assert!(
+            balance == 0,
+            error::permission_denied(EBALANCE_IS_NOT_ZERO)
+        );
     }
 
     /// Withdraw `amount` of the fungible asset from `store` by the owner.
     public fun withdraw<T: key>(
-        owner: &signer,
-        store: Object<T>,
+        owner: &signer, store: Object<T>,
         amount: u64,
     ): FungibleAsset acquires FungibleStore {
-        assert!(object::owns(store, signer::address_of(owner)), error::permission_denied(ENOT_STORE_OWNER));
-        assert!(!is_frozen(store), error::invalid_argument(ESTORE_IS_FROZEN));
-        withdraw_internal(object::object_address(store), amount)
+        assert!(
+            object::owns(store, signer::address_of(owner)),
+            error::permission_denied(ENOT_STORE_OWNER)
+        );
+        assert!(
+            !is_frozen(store),
+            error::invalid_argument(ESTORE_IS_FROZEN)
+        );
+        withdraw_internal(
+            object::object_address(store),
+            amount
+        )
     }
 
     /// Deposit `amount` of the fungible asset to `store`.
     public fun deposit<T: key>(store: Object<T>, fa: FungibleAsset) acquires FungibleStore {
-        assert!(!is_frozen(store), error::invalid_argument(ESTORE_IS_FROZEN));
+        assert!(
+            !is_frozen(store),
+            error::invalid_argument(ESTORE_IS_FROZEN)
+        );
         deposit_internal(store, fa);
     }
 
@@ -416,24 +461,22 @@ module minitia_std::fungible_asset {
 
         // emit event
         let metadata_addr = object::object_address(metadata);
-        event::emit(MintEvent { metadata_addr, amount });
+        event::emit(MintEvent {metadata_addr, amount});
 
-        FungibleAsset {
-            metadata,
-            amount
-        }
+        FungibleAsset {metadata, amount}
     }
 
     /// Mint the specified `amount` of the fungible asset to a destination store.
-    public fun mint_to<T: key>(ref: &MintRef, store: Object<T>, amount: u64)
-    acquires FungibleStore, Supply {
+    public fun mint_to<T: key>(
+        ref: &MintRef, store: Object<T>,
+        amount: u64
+    ) acquires FungibleStore, Supply {
         deposit(store, mint(ref, amount));
     }
 
     /// Enable/disable a store's ability to do direct transfers of the fungible asset.
     public fun set_frozen_flag<T: key>(
-        ref: &TransferRef,
-        store: Object<T>,
+        ref: &TransferRef, store: Object<T>,
         frozen: bool,
     ) acquires FungibleStore {
         assert!(
@@ -443,51 +486,73 @@ module minitia_std::fungible_asset {
 
         let metadata_addr = object::object_address(ref.metadata);
         let store_addr = object::object_address(store);
-        
+
         // cannot freeze module account store
-        assert!(!is_module_account_store_addr(store_addr), error::invalid_argument(ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE));
+        assert!(
+            !is_module_account_store_addr(store_addr),
+            error::invalid_argument(
+                ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE
+            )
+        );
 
         borrow_global_mut<FungibleStore>(store_addr).frozen = frozen;
-        
+
         // emit event
-        event::emit(FrozenEvent { store_addr, metadata_addr, frozen });
+        event::emit(
+            FrozenEvent {
+                store_addr,
+                metadata_addr,
+                frozen
+            }
+        );
     }
 
     /// Burns a fungible asset
     public fun burn(ref: &BurnRef, fa: FungibleAsset) acquires Supply {
-        let FungibleAsset {
-            metadata,
-            amount,
-        } = fa;
-        assert!(ref.metadata == metadata, error::invalid_argument(EBURN_REF_AND_FUNGIBLE_ASSET_MISMATCH));
+        let FungibleAsset {metadata, amount,} = fa;
+        assert!(
+            ref.metadata == metadata,
+            error::invalid_argument(
+                EBURN_REF_AND_FUNGIBLE_ASSET_MISMATCH
+            )
+        );
         decrease_supply(metadata, amount);
 
         // emit event
         let metadata_addr = object::object_address(metadata);
-        event::emit(BurnEvent { metadata_addr, amount });
+        event::emit(BurnEvent {metadata_addr, amount});
     }
 
     /// Burn the `amount` of the fungible asset from the given store.
     public fun burn_from<T: key>(
-        ref: &BurnRef,
-        store: Object<T>,
+        ref: &BurnRef, store: Object<T>,
         amount: u64
     ) acquires FungibleStore, Supply {
         let metadata = ref.metadata;
-        assert!(metadata == store_metadata(store), error::invalid_argument(EBURN_REF_AND_STORE_MISMATCH));
+        assert!(
+            metadata == store_metadata(store),
+            error::invalid_argument(EBURN_REF_AND_STORE_MISMATCH)
+        );
 
         let store_addr = object::object_address(store);
 
         // cannot burn module account funds
-        assert!(!is_module_account_store_addr(store_addr), error::invalid_argument(ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE));
+        assert!(
+            !is_module_account_store_addr(store_addr),
+            error::invalid_argument(
+                ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE
+            )
+        );
 
-        burn(ref, withdraw_internal(store_addr, amount));
+        burn(
+            ref,
+            withdraw_internal(store_addr, amount)
+        );
     }
 
     /// Withdraw `amount` of the fungible asset from the `store` ignoring `frozen`.
     public fun withdraw_with_ref<T: key>(
-        ref: &TransferRef,
-        store: Object<T>,
+        ref: &TransferRef, store: Object<T>,
         amount: u64
     ): FungibleAsset acquires FungibleStore {
         assert!(
@@ -497,20 +562,29 @@ module minitia_std::fungible_asset {
 
         // cannot withdraw module account funds
         let store_addr = object::object_address(store);
-        assert!(!is_module_account_store_addr(store_addr), error::invalid_argument(ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE));
+        assert!(
+            !is_module_account_store_addr(store_addr),
+            error::invalid_argument(
+                ECONNOT_MANIPULATE_MODULE_ACCOUNT_STORE
+            )
+        );
 
-        withdraw_internal(object::object_address(store), amount)
+        withdraw_internal(
+            object::object_address(store),
+            amount
+        )
     }
 
     /// Deposit the fungible asset into the `store` ignoring `frozen`.
     public fun deposit_with_ref<T: key>(
-        ref: &TransferRef,
-        store: Object<T>,
+        ref: &TransferRef, store: Object<T>,
         fa: FungibleAsset
     ) acquires FungibleStore {
         assert!(
             ref.metadata == fa.metadata,
-            error::invalid_argument(ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH)
+            error::invalid_argument(
+                ETRANSFER_REF_AND_FUNGIBLE_ASSET_MISMATCH
+            )
         );
         deposit_internal(store, fa);
     }
@@ -536,8 +610,14 @@ module minitia_std::fungible_asset {
     }
 
     /// Extract a given amount from the given fungible asset and return a new one.
-    public fun extract(fungible_asset: &mut FungibleAsset, amount: u64): FungibleAsset {
-        assert!(fungible_asset.amount >= amount, error::invalid_argument(EINSUFFICIENT_BALANCE));
+    public fun extract(
+        fungible_asset: &mut FungibleAsset,
+        amount: u64
+    ): FungibleAsset {
+        assert!(
+            fungible_asset.amount >= amount,
+            error::invalid_argument(EINSUFFICIENT_BALANCE)
+        );
         fungible_asset.amount = fungible_asset.amount - amount;
         FungibleAsset {
             metadata: fungible_asset.metadata,
@@ -547,51 +627,73 @@ module minitia_std::fungible_asset {
 
     /// "Merges" the two given fungible assets. The fungible asset passed in as `dst_fungible_asset` will have a value
     /// equal to the sum of the two (`dst_fungible_asset` and `src_fungible_asset`).
-    public fun merge(dst_fungible_asset: &mut FungibleAsset, src_fungible_asset: FungibleAsset) {
-        let FungibleAsset { metadata, amount } = src_fungible_asset;
-        assert!(metadata == dst_fungible_asset.metadata, error::invalid_argument(EFUNGIBLE_ASSET_MISMATCH));
+    public fun merge(
+        dst_fungible_asset: &mut FungibleAsset,
+        src_fungible_asset: FungibleAsset
+    ) {
+        let FungibleAsset {metadata, amount} = src_fungible_asset;
+        assert!(
+            metadata == dst_fungible_asset.metadata,
+            error::invalid_argument(EFUNGIBLE_ASSET_MISMATCH)
+        );
         dst_fungible_asset.amount = dst_fungible_asset.amount + amount;
     }
 
     /// Destroy an empty fungible asset.
     public fun destroy_zero(fungible_asset: FungibleAsset) {
-        let FungibleAsset { amount, metadata: _ } = fungible_asset;
-        assert!(amount == 0, error::invalid_argument(EAMOUNT_IS_NOT_ZERO));
+        let FungibleAsset {amount, metadata: _} = fungible_asset;
+        assert!(
+            amount == 0,
+            error::invalid_argument(EAMOUNT_IS_NOT_ZERO)
+        );
     }
 
     fun deposit_internal<T: key>(store: Object<T>, fa: FungibleAsset) acquires FungibleStore {
-        let FungibleAsset { metadata, amount } = fa;
+        let FungibleAsset {metadata, amount} = fa;
         if (amount == 0) return;
 
         let store_metadata = store_metadata(store);
-        assert!(metadata == store_metadata, error::invalid_argument(EFUNGIBLE_ASSET_AND_STORE_MISMATCH));
+        assert!(
+            metadata == store_metadata,
+            error::invalid_argument(EFUNGIBLE_ASSET_AND_STORE_MISMATCH)
+        );
         let metadata_addr = object::object_address(store_metadata);
         let store_addr = object::object_address(store);
-        let store = borrow_global_mut<FungibleStore>(store_addr);
-        store.balance = store.balance + amount;
-
+        let store = borrow_global_mut<FungibleStore>(store_addr);store.balance = store.balance
+            + amount;
 
         // emit event
-        event::emit(DepositEvent { store_addr, metadata_addr, amount });
+        event::emit(
+            DepositEvent {
+                store_addr,
+                metadata_addr,
+                amount
+            }
+        );
     }
 
     /// Extract `amount` of the fungible asset from `store`.
-    fun withdraw_internal(
-        store_addr: address,
-        amount: u64,
-    ): FungibleAsset acquires FungibleStore {
+    fun withdraw_internal(store_addr: address, amount: u64,): FungibleAsset acquires FungibleStore {
         let store = borrow_global_mut<FungibleStore>(store_addr);
         let metadata = store.metadata;
         if (amount == 0) return zero(metadata);
 
-        assert!(store.balance >= amount, error::invalid_argument(EINSUFFICIENT_BALANCE));
-        store.balance = store.balance - amount;
+        assert!(
+            store.balance >= amount,
+            error::invalid_argument(EINSUFFICIENT_BALANCE)
+        );store.balance = store.balance - amount;
 
         // emit event
         let metadata_addr = object::object_address(metadata);
-        event::emit(WithdrawEvent { store_addr, metadata_addr, amount });
+        event::emit(
+            WithdrawEvent {
+                store_addr,
+                metadata_addr,
+                amount
+            }
+        );
 
-        FungibleAsset { metadata, amount }
+        FungibleAsset {metadata, amount}
     }
 
     /// Increase the supply of a fungible asset by minting.
@@ -599,7 +701,10 @@ module minitia_std::fungible_asset {
         if (amount == 0) return;
 
         let metadata_address = object::object_address(metadata);
-        assert!(exists<Supply>(metadata_address), error::not_found(ESUPPLY_NOT_FOUND));
+        assert!(
+            exists<Supply>(metadata_address),
+            error::not_found(ESUPPLY_NOT_FOUND)
+        );
         let supply = borrow_global_mut<Supply>(metadata_address);
         if (option::is_some(&supply.maximum)) {
             let max = *option::borrow_mut(&mut supply.maximum);
@@ -616,7 +721,10 @@ module minitia_std::fungible_asset {
         if (amount == 0) return;
 
         let metadata_address = object::object_address(metadata);
-        assert!(exists<Supply>(metadata_address), error::not_found(ESUPPLY_NOT_FOUND));
+        assert!(
+            exists<Supply>(metadata_address),
+            error::not_found(ESUPPLY_NOT_FOUND)
+        );
         let supply = borrow_global_mut<Supply>(metadata_address);
         assert!(
             supply.current >= (amount as u128),
@@ -631,16 +739,12 @@ module minitia_std::fungible_asset {
         account::exists_at(owner_addr) && account::is_module_account(owner_addr)
     }
 
-    inline fun borrow_fungible_metadata<T: key>(
-        metadata: Object<T>
-    ): &Metadata acquires Metadata {
+    inline fun borrow_fungible_metadata<T: key>(metadata: Object<T>): &Metadata acquires Metadata {
         let addr = object::object_address(metadata);
         borrow_global<Metadata>(addr)
     }
 
-    inline fun borrow_fungible_metadata_mut<T: key>(
-        metadata: Object<T>
-    ): &mut Metadata acquires Metadata {
+    inline fun borrow_fungible_metadata_mut<T: key>(metadata: Object<T>): &mut Metadata acquires Metadata {
         let addr = object::object_address(metadata);
         borrow_global_mut<Metadata>(addr)
     }
@@ -663,14 +767,17 @@ module minitia_std::fungible_asset {
     }
 
     #[test_only]
-    public fun init_test_metadata(constructor_ref: &ConstructorRef): (MintRef, TransferRef, BurnRef) {
+    public fun init_test_metadata(constructor_ref: &ConstructorRef)
+        : (MintRef, TransferRef, BurnRef) {
         add_fungibility(
             constructor_ref,
             option::some(100) /* max supply */,
             string::utf8(b"TEST"),
             string::utf8(b"@@"),
             0,
-            string::utf8(b"http://www.example.com/favicon.ico"),
+            string::utf8(
+                b"http://www.example.com/favicon.ico"
+            ),
             string::utf8(b"http://www.example.com"),
         );
         let mint_ref = generate_mint_ref(constructor_ref);
@@ -680,34 +787,65 @@ module minitia_std::fungible_asset {
     }
 
     #[test_only]
-    public fun create_fungible_asset(
-        creator: &signer
-    ): (MintRef, TransferRef, BurnRef, Object<Metadata>) {
+    public fun create_fungible_asset(creator: &signer)
+        : (
+        MintRef,
+        TransferRef,
+        BurnRef,
+        Object<Metadata>
+    ) {
         let (creator_ref, token_object) = create_test_token(creator);
         let (mint, transfer, burn) = init_test_metadata(&creator_ref);
-        (mint, transfer, burn, object::convert(token_object))
+        (
+            mint,
+            transfer,
+            burn,
+            object::convert(token_object)
+        )
     }
 
     #[test_only]
-    public fun create_test_store<T: key>(owner: &signer, metadata: Object<T>): Object<FungibleStore> {
+    public fun create_test_store<T: key>(owner: &signer, metadata: Object<T>)
+        : Object<FungibleStore> {
         let owner_addr = signer::address_of(owner);
-        create_store(&object::create_object(owner_addr, true), metadata)
+        create_store(
+            &object::create_object(owner_addr, true),
+            metadata
+        )
     }
 
     #[test(creator = @0xcafe)]
     fun test_metadata_basic_flow(creator: &signer) acquires Metadata, Supply {
         let (creator_ref, metadata) = create_test_token(creator);
         init_test_metadata(&creator_ref);
-        assert!(supply(metadata) == option::some(0), 1);
-        assert!(maximum(metadata) == option::some(100), 2);
-        assert!(name(metadata) == string::utf8(b"TEST"), 3);
-        assert!(symbol(metadata) == string::utf8(b"@@"), 4);
+        assert!(
+            supply(metadata) == option::some(0),
+            1
+        );
+        assert!(
+            maximum(metadata) == option::some(100),
+            2
+        );
+        assert!(
+            name(metadata) == string::utf8(b"TEST"),
+            3
+        );
+        assert!(
+            symbol(metadata) == string::utf8(b"@@"),
+            4
+        );
         assert!(decimals(metadata) == 0, 5);
 
         increase_supply(metadata, 50);
-        assert!(supply(metadata) == option::some(50), 6);
+        assert!(
+            supply(metadata) == option::some(50),
+            6
+        );
         decrease_supply(metadata, 30);
-        assert!(supply(metadata) == option::some(20), 7);
+        assert!(
+            supply(metadata) == option::some(20),
+            7
+        );
     }
 
     #[test(creator = @0xcafe)]
@@ -728,30 +866,49 @@ module minitia_std::fungible_asset {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_e2e_basic_flow(
-        creator: &signer,
-        aaron: &signer,
-    ) acquires FungibleStore, Supply {
-        let (mint_ref, transfer_ref, burn_ref, test_token) = create_fungible_asset(creator);
+    fun test_e2e_basic_flow(creator: &signer, aaron: &signer,) acquires FungibleStore, Supply {
+        let (
+            mint_ref,
+            transfer_ref,
+            burn_ref,
+            test_token
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
         let creator_store = create_test_store(creator, metadata);
         let aaron_store = create_test_store(aaron, metadata);
 
-        assert!(supply(test_token) == option::some(0), 1);
+        assert!(
+            supply(test_token) == option::some(0),
+            1
+        );
         // Mint
         let fa = mint(&mint_ref, 100);
-        assert!(supply(test_token) == option::some(100), 2);
+        assert!(
+            supply(test_token) == option::some(100),
+            2
+        );
         // Deposit
         deposit(creator_store, fa);
         // Withdraw
         let fa = withdraw(creator, creator_store, 80);
-        assert!(supply(test_token) == option::some(100), 3);
+        assert!(
+            supply(test_token) == option::some(100),
+            3
+        );
         deposit(aaron_store, fa);
         // Burn
         burn_from(&burn_ref, aaron_store, 30);
-        assert!(supply(test_token) == option::some(70), 4);
+        assert!(
+            supply(test_token) == option::some(70),
+            4
+        );
         // Transfer
-        transfer(creator, creator_store, aaron_store, 10);
+        transfer(
+            creator,
+            creator_store,
+            aaron_store,
+            10
+        );
         assert!(balance(creator_store) == 10, 5);
         assert!(balance(aaron_store) == 60, 6);
 
@@ -761,9 +918,7 @@ module minitia_std::fungible_asset {
 
     #[test(creator = @0xcafe)]
     #[expected_failure(abort_code = 0x10003, location = Self)]
-    fun test_frozen(
-        creator: &signer
-    ) acquires FungibleStore, Supply {
+    fun test_frozen(creator: &signer) acquires FungibleStore, Supply {
         let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
 
         let creator_store = create_test_store(creator, mint_ref.metadata);
@@ -773,10 +928,7 @@ module minitia_std::fungible_asset {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_transfer_with_ref(
-        creator: &signer,
-        aaron: &signer,
-    ) acquires FungibleStore, Supply {
+    fun test_transfer_with_ref(creator: &signer, aaron: &signer,) acquires FungibleStore, Supply {
         let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
         let creator_store = create_test_store(creator, metadata);
@@ -786,7 +938,12 @@ module minitia_std::fungible_asset {
         set_frozen_flag(&transfer_ref, creator_store, true);
         set_frozen_flag(&transfer_ref, aaron_store, true);
         deposit_with_ref(&transfer_ref, creator_store, fa);
-        transfer_with_ref(&transfer_ref, creator_store, aaron_store, 80);
+        transfer_with_ref(
+            &transfer_ref,
+            creator_store,
+            aaron_store,
+            80
+        );
         assert!(balance(creator_store) == 20, 1);
         assert!(balance(aaron_store) == 80, 2);
         assert!(!!is_frozen(creator_store), 3);
@@ -819,19 +976,10 @@ module minitia_std::fungible_asset {
     fun test_fungible_asset_mismatch_when_merge(creator: &signer, aaron: &signer) {
         let (_, _, _, metadata1) = create_fungible_asset(creator);
         let (_, _, _, metadata2) = create_fungible_asset(aaron);
-        let base = FungibleAsset {
-            metadata: metadata1,
-            amount: 1,
-        };
-        let addon = FungibleAsset {
-            metadata: metadata2,
-            amount: 1
-        };
+        let base = FungibleAsset {metadata: metadata1, amount: 1,};
+        let addon = FungibleAsset {metadata: metadata2, amount: 1};
         merge(&mut base, addon);
-        let FungibleAsset {
-            metadata: _,
-            amount: _
-        } = base;
+        let FungibleAsset {metadata: _, amount: _} = base;
     }
 
     #[test(creator = @0xcafe, module_acc = @0x123)]
@@ -839,11 +987,20 @@ module minitia_std::fungible_asset {
     fun test_freeze_module_account_store(creator: &signer, module_acc: &signer) acquires FungibleStore {
         let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
-        
-        let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(signer::address_of(module_acc), 10, 0, 3);
 
-        set_frozen_flag(&transfer_ref, module_acc_store, true);
+        let module_acc_store = create_test_store(module_acc, metadata);
+        account::set_account_info(
+            signer::address_of(module_acc),
+            10,
+            0,
+            3
+        );
+
+        set_frozen_flag(
+            &transfer_ref,
+            module_acc_store,
+            true
+        );
     }
 
     #[test(creator = @0xcafe, module_acc = @0x123)]
@@ -851,9 +1008,14 @@ module minitia_std::fungible_asset {
     fun test_burn_module_account_funds(creator: &signer, module_acc: &signer) acquires FungibleStore, Supply {
         let (mint_ref, _transfer_ref, burn_ref, _) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
-        
+
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(signer::address_of(module_acc), 10, 0, 3);
+        account::set_account_info(
+            signer::address_of(module_acc),
+            10,
+            0,
+            3
+        );
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);
@@ -865,9 +1027,14 @@ module minitia_std::fungible_asset {
     fun test_withdraw_module_account_funds_with_ref(creator: &signer, module_acc: &signer) acquires FungibleStore, Supply {
         let (mint_ref, transfer_ref, _burn_ref, _) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
-        
+
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(signer::address_of(module_acc), 10, 0, 3);
+        account::set_account_info(
+            signer::address_of(module_acc),
+            10,
+            0,
+            3
+        );
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);

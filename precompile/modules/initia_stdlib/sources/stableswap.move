@@ -477,15 +477,10 @@ module initia_std::stableswap {
         while (i < n) {
             let metadata = *vector::borrow(&pool.coin_metadata, i);
             let amount = *vector::borrow(&coin_amounts, i);
-            let coin = if (amount == 0) {
-                fungible_asset::zero(metadata)
-            } else {
+            let coin = if (amount == 0) {fungible_asset::zero(metadata)} else {
                 primary_fungible_store::withdraw(account, metadata, amount)
             };
-            vector::push_back(
-                &mut coins,
-                coin
-            );
+            vector::push_back(&mut coins, coin);
             i = i + 1;
         };
 
@@ -1336,9 +1331,14 @@ module initia_std::stableswap {
         return_coin_metadata: Object<Metadata>,
         offer_amount: u64,
     ): (u64, u64) acquires Pool {
-        swap_simulation_(pool_obj, offer_coin_metadata, return_coin_metadata, offer_amount, true)
+        swap_simulation_(
+            pool_obj,
+            offer_coin_metadata,
+            return_coin_metadata,
+            offer_amount,
+            true
+        )
     }
-
 
     public fun swap_simulation_reverse(
         pool_obj: Object<Pool>,
@@ -1346,7 +1346,13 @@ module initia_std::stableswap {
         return_coin_metadata: Object<Metadata>,
         return_amount: u64,
     ): (u64, u64) acquires Pool {
-        swap_simulation_(pool_obj, offer_coin_metadata, return_coin_metadata, return_amount, false)
+        swap_simulation_(
+            pool_obj,
+            offer_coin_metadata,
+            return_coin_metadata,
+            return_amount,
+            false
+        )
     }
 
     fun swap_simulation_(

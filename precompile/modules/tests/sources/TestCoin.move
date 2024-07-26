@@ -22,30 +22,28 @@ module TestAccount::TestCoin {
     public entry fun mint<CoinType>(account: signer, value: u64) acquires Coin {
         let account_addr = signer::address_of(&account);
         if (!exists<Coin<CoinType>>(account_addr)) {
-            move_to(&account, Coin<CoinType> { value, test: true });
+            move_to(
+                &account,
+                Coin<CoinType> {value, test: true}
+            );
         } else {
             let coin = borrow_global_mut<Coin<CoinType>>(account_addr);
             coin.value = coin.value + value;
         };
 
-        
         // emit event
-        event::emit(
-            MintEvent {
-                amount: value,
-            }
-        );
+        event::emit(MintEvent {amount: value,});
     }
 
     #[view]
-    public fun get<CoinType>(account: address): u64 acquires Coin{
+    public fun get<CoinType>(account: address): u64 acquires Coin {
         let c = borrow_global<Coin<CoinType>>(account);
         c.value
     }
 
     #[view]
-    public fun number():u64 {
-        123
+    public fun number(): u64 {
+         123
     }
 
     #[view]

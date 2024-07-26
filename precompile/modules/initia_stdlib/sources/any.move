@@ -35,7 +35,10 @@ module initia_std::any {
 
     /// Unpack a value from the `Any` representation. This aborts if the value has not the expected type `T`.
     public fun unpack<T>(x: Any): T {
-        assert!(type_info::type_name<T>() == x.type_name, error::invalid_argument(ETYPE_MISMATCH));
+        assert!(
+            type_info::type_name<T>() == x.type_name,
+            error::invalid_argument(ETYPE_MISMATCH)
+        );
         from_bytes<T>(x.data)
     }
 
@@ -45,11 +48,19 @@ module initia_std::any {
     }
 
     #[test_only]
-    struct S has store, drop { x: u64 }
+    struct S has store, drop {
+        x: u64
+    }
 
     #[test]
     fun test_any() {
-        assert!(unpack<u64>(pack(22)) == 22, 1);
-        assert!(unpack<S>(pack(S { x: 22 })) == S { x: 22 }, 2);
+        assert!(
+            unpack<u64>(pack(22)) == 22,
+            1
+        );
+        assert!(
+            unpack<S>(pack(S {x: 22})) == S {x: 22},
+            2
+        );
     }
 }

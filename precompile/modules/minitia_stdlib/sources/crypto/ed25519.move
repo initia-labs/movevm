@@ -48,7 +48,10 @@ module minitia_std::ed25519 {
 
     /// Constructs an Signature struct from the given 64 bytes.
     public fun signature_from_bytes(bytes: vector<u8>): Signature {
-        assert!(std::vector::length(&bytes) == SIGNATURE_SIZE, std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE));
+        assert!(
+            std::vector::length(&bytes) == SIGNATURE_SIZE,
+            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE)
+        );
         Signature { bytes }
     }
 
@@ -68,7 +71,11 @@ module minitia_std::ed25519 {
         public_key: &PublicKey,
         signature: &Signature,
     ): bool {
-        verify_internal(message, public_key.bytes, signature.bytes)
+        verify_internal(
+            message,
+            public_key.bytes,
+            signature.bytes
+        )
     }
 
     /// Performs batch Ed25519 signature verification.
@@ -95,7 +102,11 @@ module minitia_std::ed25519 {
         batch_verify_internal(messages, public_keys, signatures)
     }
 
-    native fun verify_internal(message: vector<u8>, public_key: vector<u8>, signature: vector<u8>): bool;
+    native fun verify_internal(
+        message: vector<u8>,
+        public_key: vector<u8>,
+        signature: vector<u8>
+    ): bool;
 
     native fun batch_verify_internal(
         messages: vector<vector<u8>>,
@@ -107,7 +118,10 @@ module minitia_std::ed25519 {
     native public fun generate_keys(): (vector<u8>, vector<u8>);
 
     #[test_only]
-    native public fun sign(message: vector<u8>, secrete_key: vector<u8>): vector<u8>;
+    native public fun sign(
+        message: vector<u8>,
+        secrete_key: vector<u8>
+    ): vector<u8>;
 
     //
     // Tests

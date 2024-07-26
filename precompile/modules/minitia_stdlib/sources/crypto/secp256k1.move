@@ -51,7 +51,10 @@ module minitia_std::secp256k1 {
 
     /// Constructs an Signature struct from the given 64 bytes.
     public fun signature_from_bytes(bytes: vector<u8>): Signature {
-        assert!(std::vector::length(&bytes) == SIGNATURE_SIZE, std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE));
+        assert!(
+            std::vector::length(&bytes) == SIGNATURE_SIZE,
+            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE)
+        );
         Signature { bytes }
     }
 
@@ -76,7 +79,11 @@ module minitia_std::secp256k1 {
             std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),
         );
 
-        return verify_internal(message, public_key.bytes, signature.bytes)
+        return verify_internal(
+            message,
+            public_key.bytes,
+            signature.bytes
+        )
     }
 
     /// Recovers the signer's (33-byte) compressed public key from a secp256k1 ECDSA `signature` given the `recovery_id`
@@ -95,7 +102,11 @@ module minitia_std::secp256k1 {
             std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),
         );
 
-        let (pk, success) = recover_public_key_internal(recovery_id, message, signature.bytes);
+        let (pk, success) = recover_public_key_internal(
+            recovery_id,
+            message,
+            signature.bytes
+        );
         if (success) {
             std::option::some(public_key_from_bytes(pk))
         } else {
@@ -103,7 +114,7 @@ module minitia_std::secp256k1 {
         }
     }
 
-    // 
+    //
     // Native functions
     //
 
@@ -129,7 +140,10 @@ module minitia_std::secp256k1 {
 
     #[test_only]
     /// Generates an secp256k1 ECDSA signature for a given byte array using a given signing key.
-    native public fun sign(message: vector<u8>, secrete_key: vector<u8>): (u8, vector<u8>);
+    native public fun sign(
+        message: vector<u8>,
+        secrete_key: vector<u8>
+    ): (u8, vector<u8>);
 
     //
     // Tests
@@ -159,12 +173,24 @@ module minitia_std::secp256k1 {
         let (rid, sig_bytes) = sign(msg, sk);
         let sig = signature_from_bytes(sig_bytes);
         let recovered_pk = recover_public_key(msg, rid, &sig);
-        assert!(std::option::is_some(&recovered_pk), 1);
-        assert!(std::option::extract(&mut recovered_pk).bytes == pk.bytes, 2);
+        assert!(
+            std::option::is_some(&recovered_pk),
+            1
+        );
+        assert!(
+            std::option::extract(&mut recovered_pk).bytes == pk.bytes,
+            2
+        );
 
         let wrong_msg: vector<u8> = hash::sha2_256(b"test initia");
         let recovered_pk = recover_public_key(wrong_msg, rid, &sig);
-        assert!(std::option::is_some(&recovered_pk), 3);
-        assert!(std::option::extract(&mut recovered_pk).bytes != pk.bytes, 4);
+        assert!(
+            std::option::is_some(&recovered_pk),
+            3
+        );
+        assert!(
+            std::option::extract(&mut recovered_pk).bytes != pk.bytes,
+            4
+        );
     }
 }

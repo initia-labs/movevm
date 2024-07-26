@@ -6,8 +6,7 @@ script {
 
         if (option::is_some<u64>(&val)) {
             BasicCoin::mint<CoinType>(me, option::extract<u64>(&mut val));
-        }
-        else {
+        } else {
             BasicCoin::mint<CoinType>(me, 200);
         }
     }
