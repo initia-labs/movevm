@@ -434,8 +434,8 @@ module publisher::vip_vesting {
                 let penalty_amount = simple_map::borrow_mut(penalty_map, &value.start_stage);
                 *penalty_amount = *penalty_amount + penalty_reward;
             };
-
-            if (claim_info.start_stage >= value.end_stage) {
+            // position finalized when stage is over the end stage or remaining reward is 0
+            if (claim_info.start_stage >= value.end_stage || value.remaining_reward == 0) {
                 event::emit(
                     UserVestingFinalizedEvent {
                         account: account_addr,
