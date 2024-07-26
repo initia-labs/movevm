@@ -1242,7 +1242,20 @@ module publisher::vip {
         snapshot.merkle_root = merkle_root;
         snapshot.total_l2_score = total_l2_score;
     }
+    fun check_claimable(bridge_id: u64, stage: u64): bool acquires ModuleStore {
+        let (_, curr_time) = block::get_block_info();
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        let stage_data = table::borrow(
+            &module_store.stage_data,
+            table_key::encode_u64(stage)
+        );
+        let snapshot_create_time = table::borrow(
+            &stage_data.snapshots,
+            table_key::encode_u64(bridge_id)
+        ).create_time;
 
+        curr_time > snapshot_create_time + module_store.challenge_period
+    }
     fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
 
         let (_, curr_time) = block::get_block_info();
@@ -1582,11 +1595,18 @@ module publisher::vip {
             error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED)
         );
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let curr_stage = module_store.stage;
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
+        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id);
+        let can_zap = if (last_claimed_stage == module_store.stage) {
+            true
+        }  else {
+            // check is there any claimable reward
+            let check_stage = last_claimed_stage + 1;
+            !check_claimable(bridge_id, check_stage)
+        };
         assert!(
-            vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id) == curr_stage,
+            can_zap,
             error::not_implemented(ECLAIMABLE_REWARD_CAN_BE_EXIST)
         );
 
