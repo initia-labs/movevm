@@ -1967,6 +1967,7 @@ module publisher::vip {
         )
     }
 
+    //
     // Test Functions
     //
 
@@ -2053,62 +2054,15 @@ module publisher::vip {
     }
 
     #[test_only]
-    fun update_minimum_score_ratio(
-        chain: &signer,
-        minimum_score_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.minimum_score_ratio = minimum_score_ratio;
-    }
-
-    #[test_only]
-    fun update_vesting_period(chain: &signer, vesting_period: u64,) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.vesting_period = vesting_period;
-    }
-
-    #[test_only]
-    fun update_minimum_eligible_tvl(
-        chain: &signer,
-        minimum_eligible_tvl: u64,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.minimum_eligible_tvl = minimum_eligible_tvl;
-    }
-
-    #[test_only]
-    fun update_pool_split_ratio(
-        chain: &signer,
-        pool_split_ratio: Decimal256,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.pool_split_ratio = pool_split_ratio;
-    }
-
-    #[test_only]
-    fun update_challenge_period(
-        chain: &signer,
-        challenge_period: u64,
-    ) acquires ModuleStore {
-        check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        module_store.challenge_period = challenge_period;
-    }
-
-    #[test_only]
-    public fun init_module_for_test(chain: &signer){
-        vip_vault::init_module_for_test(chain);
+    public fun init_module_for_test(publisher: &signer){
+        vip_vault::init_module_for_test(publisher);
         vip_vault::update_reward_per_stage(
-            chain,
+            publisher,
             DEFAULT_REWARD_PER_STAGE_FOR_TEST
         );
         skip_period(10);
         let (_, block_time) = block::get_block_info();
-        initialize(chain, block_time + 100,signer::address_of(chain),string::utf8(DEFAULT_API_URI_FOR_TEST));
+        initialize(publisher, block_time + 100, signer::address_of(publisher), string::utf8(DEFAULT_API_URI_FOR_TEST));
         skip_period(100);
     }
 
@@ -2190,6 +2144,7 @@ module publisher::vip {
     #[test_only]
     public fun test_setup(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
@@ -2197,13 +2152,13 @@ module publisher::vip {
         mint_amount: u64,
     ): u64 acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(publisher);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
         test_register_bridge(
-            chain,
+            publisher,
             operator,
             bridge_id,
             bridge_address,
@@ -2227,14 +2182,14 @@ module publisher::vip {
         );
 
         update_minimum_score_ratio(
-            chain,
+            publisher,
             decimal256::from_string(
                 &string::utf8(DEFAULT_MIN_SCORE_RATIO_FOR_TEST)
             ),
         );
 
         update_vip_weight(
-            chain,
+            publisher,
             bridge_id,
             decimal256::from_string(
                 &string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)
@@ -2416,67 +2371,72 @@ module publisher::vip {
     }
 
     #[test_only]
-    public fun merkle_root_and_proof_scene2()
-        : (
-        SimpleMap<u64, vector<u8>>,
-        SimpleMap<u64, vector<vector<u8>>>,
-        SimpleMap<u64, u64>,
-        SimpleMap<u64, u64>
-    ) {
-        let root_map = simple_map::create<u64, vector<u8>>();
-        let proofs_map = simple_map::create<u64, vector<vector<u8>>>();
-        let total_score_map = simple_map::create<u64, u64>();
+    fun update_minimum_score_ratio(chain: &signer, ratio: Decimal256) acquires ModuleStore {
+        update_params(
+            chain,
+            option::none(), //stage_interval: Option<u64>,
+            option::none(), //vesting_period: Option<u64>,
+            option::none(), //minimum_eligible_tvl: Option<u64>,
+            option::none(), //maximum_tvl_ratio: Option<Decimal256>,
+            option::some(ratio), //minimum_score_ratio: Option<Decimal256>,
+            option::none(), //pool_split_ratio: Option<Decimal256>,
+            option::none(), //challenge_period: Option<u64>,
+        )
+    }
 
-        simple_map::add(
-            &mut root_map,
-            1,
-            x"da8a26abe037981b46c77de776621601ea78ae2e9e4d095f4f6887d7b8fb4229"
-        );
-        simple_map::add(
-            &mut root_map,
-            2,
-            x"edbea69a471f721622e7c64d086b901a52b6edb058b97c8a776cd7f3180e1659"
-        );
-        simple_map::add(
-            &mut root_map,
-            3,
-            x"ecd24a0e9fe1ec83999cbdc0641f15cda95d40589073a6e8cc3234fde9357e65"
-        );
-        simple_map::add(
-            &mut root_map,
-            4,
-            x"5725135c9c856f4241a05027c815a64fe687525f496dcdc6c57f23a87d5e4ac1"
-        );
-        simple_map::add(
-            &mut root_map,
-            5,
-            x"183e88a1ca56d8a51d9390d8460621fe651997d63bf26392912e29e7323b08b0"
-        );
-        simple_map::add(
-            &mut root_map,
-            6,
-            x"9de1fd227b37e6ad88c1eae0f4fd97f8436900befa9c80f4f66735e9e8646f54"
-        );
+    #[test_only]
+    fun update_vesting_period(chain: &signer, period: u64) acquires ModuleStore {
+        update_params(
+            chain,
+            option::none(), //stage_interval: Option<u64>,
+            option::some(period), //vesting_period: Option<u64>,
+            option::none(), //minimum_eligible_tvl: Option<u64>,
+            option::none(), //maximum_tvl_ratio: Option<Decimal256>,
+            option::none(), //minimum_score_ratio: Option<Decimal256>,
+            option::none(), //pool_split_ratio: Option<Decimal256>,
+            option::none(), //challenge_period: Option<u64>,
+        )
+    }
 
-        simple_map::add(&mut proofs_map, 1, vector[]);
-        simple_map::add(&mut proofs_map, 2, vector[]);
-        simple_map::add(&mut proofs_map, 3, vector[]);
-        simple_map::add(&mut proofs_map, 4, vector[]);
-        simple_map::add(&mut proofs_map, 5, vector[]);
-        simple_map::add(&mut proofs_map, 6, vector[]);
+    #[test_only]
+    fun update_minimum_eligible_tvl(chain: &signer, tvl: u64) acquires ModuleStore {
+        update_params(
+            chain,
+            option::none(), //stage_interval: Option<u64>,
+            option::none(), //vesting_period: Option<u64>,
+            option::some(tvl), //minimum_eligible_tvl: Option<u64>,
+            option::none(), //maximum_tvl_ratio: Option<Decimal256>,
+            option::none(), //minimum_score_ratio: Option<Decimal256>,
+            option::none(), //pool_split_ratio: Option<Decimal256>,
+            option::none(), //challenge_period: Option<u64>,
+        )
+    }
 
-        simple_map::add(&mut total_score_map, 1, 1_000);
-        simple_map::add(&mut total_score_map, 2, 1_000);
-        simple_map::add(&mut total_score_map, 3, 500);
-        simple_map::add(&mut total_score_map, 4, 500);
-        simple_map::add(&mut total_score_map, 5, 100);
-        simple_map::add(&mut total_score_map, 6, 100);
+    #[test_only]
+    fun update_pool_split_ratio(chain: &signer, ratio: Decimal256) acquires ModuleStore {
+        update_params(
+            chain,
+            option::none(), //stage_interval: Option<u64>,
+            option::none(), //vesting_period: Option<u64>,
+            option::none(), //minimum_eligible_tvl: Option<u64>,
+            option::none(), //maximum_tvl_ratio: Option<Decimal256>,
+            option::none(), //minimum_score_ratio: Option<Decimal256>,
+            option::some(ratio), //pool_split_ratio: Option<Decimal256>,
+            option::none(), //challenge_period: Option<u64>,
+        )
+    }
 
-        (
-            root_map,
-            proofs_map,
-            total_score_map,
-            total_score_map
+    #[test_only]
+    fun update_challenge_period(chain: &signer, period: u64) acquires ModuleStore {
+        update_params(
+            chain,
+            option::none(), //stage_interval: Option<u64>,
+            option::none(), //vesting_period: Option<u64>,
+            option::none(), //minimum_eligible_tvl: Option<u64>,
+            option::none(), //maximum_tvl_ratio: Option<Decimal256>,
+            option::none(), //minimum_score_ratio: Option<Decimal256>,
+            option::none(), //pool_split_ratio: Option<Decimal256>,
+            option::some(period), //challenge_period: Option<u64>,
         )
     }
 
@@ -2604,13 +2564,13 @@ module publisher::vip {
         };
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_update_vip_weight(chain: &signer, operator: &signer,) acquires ModuleStore {
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun test_update_vip_weight(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
         let init_stage = 1;
         let mint_amount = 1_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
 
         coin::mint_to(
             &mint_cap,
@@ -2620,7 +2580,7 @@ module publisher::vip {
 
         // initialize vip_reward
         register(
-            chain,
+            publisher,
             signer::address_of(operator),
             1,
             @0x90,
@@ -2642,7 +2602,7 @@ module publisher::vip {
         );
 
         let new_weight = decimal256::from_string(&string::utf8(b"0.7"));
-        update_vip_weight(chain, 1, new_weight,);
+        update_vip_weight(publisher, 1, new_weight);
 
         let bridge_info = get_bridge_info(1);
         assert!(
@@ -2654,14 +2614,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_update_minimum_score_ratio(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -2676,18 +2638,18 @@ module publisher::vip {
             total_score_map
         ) = merkle_root_and_proof_scene1();
 
-        fund_reward_script(chain);
+        fund_reward_script(publisher);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        fund_reward_script(chain);
+        fund_reward_script(publisher);
         submit_snapshot(
-            chain,
+            publisher,
             bridge_id,
             1,
             *simple_map::borrow(&merkle_root_map, &1),
             *simple_map::borrow(&total_score_map, &1),
         );
         submit_snapshot(
-            chain,
+            publisher,
             bridge_id,
             2,
             *simple_map::borrow(&merkle_root_map, &2),
@@ -2729,13 +2691,13 @@ module publisher::vip {
         );
 
         update_minimum_score_ratio(
-            chain,
-            decimal256::from_string(&string::utf8(b"10"))
+            publisher,
+            decimal256::from_string(&string::utf8(b"1"))
         );
 
-        fund_reward_script(chain);
+        fund_reward_script(publisher);
         submit_snapshot(
-            chain,
+            publisher,
             bridge_id,
             3,
             *simple_map::borrow(&merkle_root_map, &3),
@@ -2755,23 +2717,24 @@ module publisher::vip {
                 *simple_map::borrow(&score_map, &3)
             ],
         );
+
         assert!(
             vip_vesting::get_user_vesting_minimum_score(
                 signer::address_of(receiver),
                 bridge_id,
                 3
-            ) == 4_000_000,
+            ) == 400_000,
             3
         );
 
         update_minimum_score_ratio(
-            chain,
+            publisher,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
 
-        fund_reward_script(chain);
+        fund_reward_script(publisher);
         submit_snapshot(
-            chain,
+            publisher,
             bridge_id,
             4,
             *simple_map::borrow(&merkle_root_map, &4),
@@ -2804,10 +2767,11 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_update_l2_score_contract(chain: &signer, operator: &signer) acquires ModuleStore {
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_update_l2_score_contract(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -2817,7 +2781,7 @@ module publisher::vip {
 
         let new_vip_l2_score_contract = string::utf8(b"new_vip_l2_score_contract");
         update_l2_score_contract(
-            chain,
+            publisher,
             bridge_id,
             new_vip_l2_score_contract
         );
@@ -2829,14 +2793,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_get_last_claimed_stages(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -2845,7 +2811,7 @@ module publisher::vip {
         );
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -2928,14 +2894,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_update_vesting_period(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -2951,10 +2919,10 @@ module publisher::vip {
         let portion = 10;
         let reward_per_stage = total_reward_per_stage / portion;
         let vesting_period = 10;
-        update_vesting_period(chain, vesting_period);
+        update_vesting_period(publisher, vesting_period);
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3014,14 +2982,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_finalized_vesting(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3030,10 +3000,10 @@ module publisher::vip {
         );
 
         let vesting_period = 2;
-        update_vesting_period(chain, vesting_period,);
+        update_vesting_period(publisher, vesting_period,);
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3119,10 +3089,11 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_update_minimum_eligible_tvl(chain: &signer, operator: &signer) acquires ModuleStore {
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun test_update_minimum_eligible_tvl(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
         test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3136,7 +3107,7 @@ module publisher::vip {
             0
         );
 
-        update_minimum_eligible_tvl(chain, 1_000_000_000_000);
+        update_minimum_eligible_tvl(publisher, 1_000_000_000_000);
 
         let module_response = get_module_store();
         assert!(
@@ -3144,7 +3115,7 @@ module publisher::vip {
             0
         );
 
-        update_minimum_eligible_tvl(chain, 500_000_000_000);
+        update_minimum_eligible_tvl(publisher, 500_000_000_000);
 
         let module_response = get_module_store();
         assert!(
@@ -3153,22 +3124,24 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_execute_challenge(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         new_agent: address,
     ) acquires ModuleStore {
         let challenge_stage = 10;
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
         let (_, create_time) = block::get_block_info();
         let title: string::String = string::utf8(NEW_API_URI_FOR_TEST);
         let summary: string::String = string::utf8(NEW_API_URI_FOR_TEST);
@@ -3235,15 +3208,17 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0x80003, location = Self)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[expected_failure(abort_code = 0x80003, location = vip_vesting)]
     fun failed_claim_already_claimed(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3253,7 +3228,7 @@ module publisher::vip {
 
         skip_period(1);
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3283,15 +3258,17 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
     fun failed_user_claim_invalid_period(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3301,7 +3278,7 @@ module publisher::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
 
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
         // try claim user reward scriptl;without skipping challenge period
         batch_claim_user_reward_script(
             receiver,
@@ -3316,11 +3293,12 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x50017, location = Self)]
-    fun failed_operator_claim_invalid_period(chain: &signer, operator: &signer,) acquires ModuleStore {
+    fun failed_operator_claim_invalid_period(chain: &signer, publisher: &signer, operator: &signer,) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3328,7 +3306,7 @@ module publisher::vip {
             1_000_000_000_000,
         );
 
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
         // try claim operator reward scriptl;without skipping challenge period
         batch_claim_operator_reward_script(
             operator,
@@ -3337,14 +3315,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_user_claim_valid_period(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3354,7 +3334,7 @@ module publisher::vip {
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
 
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
@@ -3371,10 +3351,11 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun operator_claim_valid_period(chain: &signer, operator: &signer,) acquires ModuleStore {
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun operator_claim_valid_period(chain: &signer, publisher: &signer, operator: &signer,) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3382,7 +3363,7 @@ module publisher::vip {
             1_000_000_000_000,
         );
 
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
         );
@@ -3390,22 +3371,24 @@ module publisher::vip {
 
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, new_agent = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x50018, location = Self)]
     fun failed_execute_challenge(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         new_agent: address,
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             1_000_000_000_000,
         );
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3433,14 +3416,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_batch_claim(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3449,7 +3434,7 @@ module publisher::vip {
         );
 
         let (_, merkle_proof_map, _, _) = merkle_root_and_proof_scene2();
-        test_setup_scene2(chain, bridge_id);
+        test_setup_scene2(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3477,14 +3462,16 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_shrink_reward(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3497,13 +3484,13 @@ module publisher::vip {
         let reward_per_stage = total_reward_per_stage;
 
         update_minimum_score_ratio(
-            chain,
+            publisher,
             decimal256::from_string(&string::utf8(b"0.3"))
         );
-        update_vesting_period(chain, vesting_period,);
+        update_vesting_period(publisher, vesting_period,);
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene2();
-        test_setup_scene2(chain, bridge_id);
+        test_setup_scene2(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3597,15 +3584,17 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x10016, location = Self)]
     fun failed_claim_jump_stage(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -3619,7 +3608,7 @@ module publisher::vip {
         let vesting_period = DEFAULT_VESTING_PERIOD;
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -3650,14 +3639,14 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_fund_reward_script(chain: &signer, operator: &signer,) acquires ModuleStore {
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    fun test_fund_reward_script(chain: &signer, publisher: &signer, operator: &signer,) acquires ModuleStore {
         let init_stage = 1;
         let mint_amount = 100_000_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(publisher);
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
 
         coin::mint_to(
             &mint_cap,
@@ -3672,7 +3661,7 @@ module publisher::vip {
 
         // initialize vip_reward
         register(
-            chain,
+            publisher,
             operator_addr,
             1,
             @0x90,
@@ -3694,7 +3683,7 @@ module publisher::vip {
         );
 
         register(
-            chain,
+            publisher,
             operator_addr,
             2,
             @0x91,
@@ -3716,7 +3705,7 @@ module publisher::vip {
         );
 
         register(
-            chain,
+            publisher,
             operator_addr,
             3,
             @0x92,
@@ -3743,11 +3732,11 @@ module publisher::vip {
             0
         );
         update_pool_split_ratio(
-            chain,
+            publisher,
             decimal256::from_string(&string::utf8(b"0.7"))
         );
-        add_tvl_snapshot(chain);
-        fund_reward_script(chain);
+        add_tvl_snapshot(publisher);
+        fund_reward_script(publisher);
         skip_period(DEFAULT_STAGE_INTERVAL);
         assert!(
             get_expected_reward(
@@ -3798,8 +3787,8 @@ module publisher::vip {
             ),
             0
         );
-        add_tvl_snapshot(chain);
-        fund_reward_script(chain);
+        add_tvl_snapshot(publisher);
+        fund_reward_script(publisher);
         skip_period(DEFAULT_STAGE_INTERVAL);
         assert!(
             vip_reward::balance(
@@ -3830,8 +3819,8 @@ module publisher::vip {
             2,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
-        add_tvl_snapshot(chain);
-        fund_reward_script(chain);
+        add_tvl_snapshot(publisher);
+        fund_reward_script(publisher);
         skip_period(DEFAULT_STAGE_INTERVAL);
         assert!(
             vip_reward::balance(
@@ -3861,20 +3850,21 @@ module publisher::vip {
 
     }
 
-    #[test(chain = @0x1, agent = @0x2, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, agent = @0x2, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_deregistered_bridge(
         chain: &signer,
+        publisher: &signer,
         agent: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore, TestCapability {
         let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
+        vip_tvl_manager::init_module_for_test(publisher);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
 
         move_to(
             chain,
@@ -3910,7 +3900,7 @@ module publisher::vip {
         );
 
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id1,
             bridge_address1,
@@ -3933,7 +3923,7 @@ module publisher::vip {
 
         // need other L2 to increase stage
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id2,
             bridge_address2,
@@ -3962,12 +3952,12 @@ module publisher::vip {
         ) = merkle_root_and_proof_scene1();
 
         update_agent(
-            chain,
+            publisher,
             signer::address_of(agent),
             string::utf8(b"")
         );
         update_vip_weights(
-            chain,
+            publisher,
             vector[1, 2],
             vector[
                 decimal256::from_string(&string::utf8(b"0.5")),
@@ -3978,7 +3968,7 @@ module publisher::vip {
         skip_period(DEFAULT_STAGE_INTERVAL);
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        deregister(chain, bridge_id1);
+        deregister(publisher, bridge_id1);
 
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
@@ -3986,7 +3976,7 @@ module publisher::vip {
         skip_period(DEFAULT_STAGE_INTERVAL);
 
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id1,
             @0x999,
@@ -4088,9 +4078,10 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_e2e_scene1(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
@@ -4098,6 +4089,7 @@ module publisher::vip {
         let vesting_period = DEFAULT_USER_VESTING_PERIOD_FOR_TEST;
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -4109,7 +4101,7 @@ module publisher::vip {
         let reward_per_stage = total_reward_per_stage / 10;
 
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -4307,9 +4299,10 @@ module publisher::vip {
         ); // not exists
     }
 
-    #[test(chain = @0x1, agent = @0x2, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, agent = @0x2, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_e2e_scene2(
         chain: &signer,
+        publisher: &signer,
         agent: &signer,
         operator: &signer,
         receiver: &signer
@@ -4318,6 +4311,7 @@ module publisher::vip {
         let operator_vesting_period = DEFAULT_OPERATOR_VESTING_PERIOD_FOR_TEST;
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x99,
@@ -4326,7 +4320,7 @@ module publisher::vip {
         );
 
         update_minimum_score_ratio(
-            chain,
+            publisher,
             decimal256::from_string(&string::utf8(b"0.5"))
         );
         let share_portion = 10;
@@ -4342,17 +4336,17 @@ module publisher::vip {
         ) = merkle_root_and_proof_scene1();
 
         update_agent(
-            chain,
+            publisher,
             signer::address_of(agent),
             string::utf8(b"")
         );
 
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        vip_vault::update_reward_per_stage(chain, total_reward_per_stage / 2);
+        vip_vault::update_reward_per_stage(publisher, total_reward_per_stage / 2);
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        vip_vault::update_reward_per_stage(chain, total_reward_per_stage);
+        vip_vault::update_reward_per_stage(publisher, total_reward_per_stage);
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
         // set commission from stage 4
@@ -4591,10 +4585,10 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x111)]
-    fun test_update_challenge_period(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
-        update_challenge_period(chain, DEFAULT_NEW_CHALLENGE_PERIOD);
+    #[test(publisher = @publisher)]
+    fun test_update_challenge_period( publisher: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
+        update_challenge_period(publisher, DEFAULT_NEW_CHALLENGE_PERIOD);
         assert!(
             get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,
             0
@@ -4602,19 +4596,20 @@ module publisher::vip {
 
     }
 
-    #[test(chain = @0x1, operator = @0x111)]
-    fun test_update_snapshot(chain: &signer, operator: &signer) acquires ModuleStore {
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x111)]
+    fun test_update_snapshot(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = test_setup(
             chain,
+            publisher,
             operator,
             BRIDGE_ID_FOR_TEST,
             @0x1111,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             10000000000000000,
         );
-        fund_reward_script(chain);
+        fund_reward_script(publisher);
         submit_snapshot(
-            chain,
+            publisher,
             bridge_id,
             1,
             x"8888888888888888888888888888888888888888888888888888888888888888",
@@ -4628,7 +4623,7 @@ module publisher::vip {
         assert!(snapshot.total_l2_score == 0, 0);
 
         update_snapshot(
-            chain,
+            publisher,
             bridge_id,
             1,
             x"7777777777777777777777777777777777777777777777777777777777777777",
@@ -4642,15 +4637,15 @@ module publisher::vip {
         assert!(snapshot.total_l2_score == 100, 0);
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x10015, location = Self)]
-    fun failed_update_vip_weights(chain: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_update_vip_weights(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
         let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
 
         move_to(
             chain,
@@ -4662,7 +4657,7 @@ module publisher::vip {
         let (bridge_address1, bridge_address2) = (@0x999, @0x1000);
 
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id1,
             bridge_address1,
@@ -4685,7 +4680,7 @@ module publisher::vip {
 
         // need other L2 to increase stage
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id2,
             bridge_address2,
@@ -4707,7 +4702,7 @@ module publisher::vip {
         );
 
         update_vip_weights(
-            chain,
+            publisher,
             vector[1, 2],
             vector[
                 decimal256::from_string(&string::utf8(b"0.5")),
@@ -4716,15 +4711,15 @@ module publisher::vip {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     #[expected_failure(abort_code = 0x10015, location = Self)]
-    fun failed_update_vip_weight(chain: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_update_vip_weight(chain: &signer, publisher: &signer, operator: &signer) acquires ModuleStore {
         let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
 
         move_to(
             chain,
@@ -4736,7 +4731,7 @@ module publisher::vip {
         let (bridge_address1, bridge_address2) = (@0x999, @0x1000);
 
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id1,
             bridge_address1,
@@ -4759,7 +4754,7 @@ module publisher::vip {
 
         // need other L2 to increase stage
         register(
-            chain,
+            publisher,
             operator_addr,
             bridge_id2,
             bridge_address2,
@@ -4781,7 +4776,7 @@ module publisher::vip {
         );
 
         update_vip_weights(
-            chain,
+            publisher,
             vector[1, 2],
             vector[
                 decimal256::from_string(&string::utf8(b"0.5")),
@@ -4789,7 +4784,7 @@ module publisher::vip {
             ],
         );
         update_vip_weight(
-            chain,
+            publisher,
             1,
             decimal256::from_string(&string::utf8(b"0.7"))
         );
@@ -4798,6 +4793,7 @@ module publisher::vip {
     #[test_only]
     public fun test_setup_for_zapping(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         account: &signer,
         bridge_id: u64,
@@ -4814,9 +4810,9 @@ module publisher::vip {
         dex::init_module_for_test(chain);
         staking::init_module_for_test(chain);
         primary_fungible_store::init_module_for_test(chain);
-        vip_zapping::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
-        init_module_for_test(chain);
+        vip_zapping::init_module_for_test(publisher);
+        vip_tvl_manager::init_module_for_test(publisher);
+        init_module_for_test(publisher);
 
         let (_burn_cap, _freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
@@ -4859,7 +4855,7 @@ module publisher::vip {
         let validator = string::utf8(b"val");
 
         register(
-            chain,
+            publisher,
             signer::address_of(operator),
             bridge_id,
             bridge_address,
@@ -4931,22 +4927,23 @@ module publisher::vip {
         )
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_zapping(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer,
-        relayer: &signer,
     ) acquires ModuleStore {
         let mint_amount = 10_000_000_000_000;
         let (
             bridge_id,
-            reward_metadata,
+            _,
             stakelisted_metadata,
             lp_metadata,
             validator
         ) = test_setup_for_zapping(
             chain,
+            publisher,
             operator,
             receiver,
             1,
@@ -4955,7 +4952,7 @@ module publisher::vip {
         );
 
         let (_, merkle_proof_map, _, _) = merkle_root_and_proof_scene1();
-        test_setup_scene1(chain, bridge_id);
+        test_setup_scene1(publisher, bridge_id);
 
         skip_period(
             DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
@@ -4994,7 +4991,6 @@ module publisher::vip {
 
         let stage = 1;
         let lock_period = 60 * 60 * 24; // 1 day
-        let val = string::utf8(b"val");
 
         skip_period(100);
         vip_zapping::update_lock_period_script(chain, lock_period);
@@ -5019,9 +5015,10 @@ module publisher::vip {
         // TODO: staking reward distribution test
     }
 
-    #[test(chain = @0x1, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_full_vesting_zapping(
         chain: &signer,
+        publisher: &signer,
         operator: &signer,
         receiver: &signer,
     ) acquires ModuleStore {
@@ -5034,6 +5031,7 @@ module publisher::vip {
             validator
         ) = test_setup_for_zapping(
             chain,
+            publisher,
             operator,
             receiver,
             1,
@@ -5058,9 +5056,9 @@ module publisher::vip {
         ) = merkle_root_and_proof_scene1();
 
         while (idx <= vesting_period) {
-            fund_reward_script(chain);
+            fund_reward_script(publisher);
             submit_snapshot(
-                chain,
+                publisher,
                 bridge_id,
                 idx,
                 *simple_map::borrow(&merkle_root_map, &idx),

@@ -1394,8 +1394,8 @@ module publisher::vip_vesting {
 
     // <-- REWARD ----->
 
-    #[test(chain = @0x1)]
-    fun test_register_reward_store(chain: &signer,) {
+    #[test(chain = @0x1, publisher = @publisher)]
+    fun test_register_reward_store(chain: &signer, publisher: &signer) {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));
 
@@ -1403,7 +1403,7 @@ module publisher::vip_vesting {
             !is_user_reward_store_registered(1),
             1
         );
-        register_user_reward_store(chain, 1);
+        register_user_reward_store(publisher, 1);
         assert!(
             is_user_reward_store_registered(1),
             2
@@ -1413,22 +1413,22 @@ module publisher::vip_vesting {
             !is_operator_reward_store_registered(1),
             3
         );
-        register_operator_reward_store(chain, 1);
+        register_operator_reward_store(publisher, 1);
         assert!(
             is_operator_reward_store_registered(1),
             4
         );
 
-        register_user_reward_store(chain, 2);
-        register_operator_reward_store(chain, 2);
+        register_user_reward_store(publisher, 2);
+        register_operator_reward_store(publisher, 2);
     }
 
-    #[test(chain = @0x1)]
-    fun test_add_reward_per_stage(chain: &signer,) {
+    #[test(chain = @0x1, publisher = @publisher)]
+    fun test_add_reward_per_stage(chain: &signer, publisher: &signer) {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));
 
-        register_user_reward_store(chain, 1);
+        register_user_reward_store(publisher, 1);
         let reward_store_addr = get_user_reward_store_address(1);
         vip_reward::add_reward_per_stage(reward_store_addr, 1, 100);
         assert!(
@@ -1436,7 +1436,7 @@ module publisher::vip_vesting {
             1
         );
 
-        register_operator_reward_store(chain, 1);
+        register_operator_reward_store(publisher, 1);
         let reward_store_addr = get_operator_reward_store_address(1);
         vip_reward::add_reward_per_stage(reward_store_addr, 1, 200);
         assert!(
@@ -1445,13 +1445,13 @@ module publisher::vip_vesting {
         );
     }
 
-    #[test(chain = @0x1)]
+    #[test(chain = @0x1, publisher = @publisher)]
     #[expected_failure(abort_code = 0x80001, location = publisher::vip_reward)]
-    fun failed_register_reward_store_twice(chain: &signer,) {
+    fun failed_register_reward_store_twice(chain: &signer, publisher: &signer) {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));
 
-        register_user_reward_store(chain, 1);
-        register_user_reward_store(chain, 1);
+        register_user_reward_store(publisher, 1);
+        register_user_reward_store(publisher, 1);
     }
 }
