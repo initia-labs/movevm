@@ -2033,6 +2033,53 @@ module publisher::vip {
     }
 
     #[test_only]
+    fun update_minimum_score_ratio(
+        chain: &signer,
+        minimum_score_ratio: Decimal256,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.minimum_score_ratio = minimum_score_ratio;
+    }
+
+    #[test_only]
+    fun update_vesting_period(chain: &signer, vesting_period: u64,) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.vesting_period = vesting_period;
+    }
+
+    #[test_only]
+    fun update_minimum_eligible_tvl(
+        chain: &signer,
+        minimum_eligible_tvl: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.minimum_eligible_tvl = minimum_eligible_tvl;
+    }
+
+    #[test_only]
+    fun update_pool_split_ratio(
+        chain: &signer,
+        pool_split_ratio: Decimal256,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.pool_split_ratio = pool_split_ratio;
+    }
+
+    #[test_only]
+    fun update_challenge_period(
+        chain: &signer,
+        challenge_period: u64,
+    ) acquires ModuleStore {
+        check_chain_permission(chain);
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        module_store.challenge_period = challenge_period;
+    }
+
+    #[test_only]
     public fun init_module_for_test(chain: &signer){
         vip_vault::init_module_for_test(chain);
         vip_vault::update_reward_per_stage(
@@ -2344,6 +2391,71 @@ module publisher::vip {
             root_map,
             proofs_map,
             score_map,
+            total_score_map
+        )
+    }
+
+    #[test_only]
+    public fun merkle_root_and_proof_scene2()
+        : (
+        SimpleMap<u64, vector<u8>>,
+        SimpleMap<u64, vector<vector<u8>>>,
+        SimpleMap<u64, u64>,
+        SimpleMap<u64, u64>
+    ) {
+        let root_map = simple_map::create<u64, vector<u8>>();
+        let proofs_map = simple_map::create<u64, vector<vector<u8>>>();
+        let total_score_map = simple_map::create<u64, u64>();
+
+        simple_map::add(
+            &mut root_map,
+            1,
+            x"da8a26abe037981b46c77de776621601ea78ae2e9e4d095f4f6887d7b8fb4229"
+        );
+        simple_map::add(
+            &mut root_map,
+            2,
+            x"edbea69a471f721622e7c64d086b901a52b6edb058b97c8a776cd7f3180e1659"
+        );
+        simple_map::add(
+            &mut root_map,
+            3,
+            x"ecd24a0e9fe1ec83999cbdc0641f15cda95d40589073a6e8cc3234fde9357e65"
+        );
+        simple_map::add(
+            &mut root_map,
+            4,
+            x"5725135c9c856f4241a05027c815a64fe687525f496dcdc6c57f23a87d5e4ac1"
+        );
+        simple_map::add(
+            &mut root_map,
+            5,
+            x"183e88a1ca56d8a51d9390d8460621fe651997d63bf26392912e29e7323b08b0"
+        );
+        simple_map::add(
+            &mut root_map,
+            6,
+            x"9de1fd227b37e6ad88c1eae0f4fd97f8436900befa9c80f4f66735e9e8646f54"
+        );
+
+        simple_map::add(&mut proofs_map, 1, vector[]);
+        simple_map::add(&mut proofs_map, 2, vector[]);
+        simple_map::add(&mut proofs_map, 3, vector[]);
+        simple_map::add(&mut proofs_map, 4, vector[]);
+        simple_map::add(&mut proofs_map, 5, vector[]);
+        simple_map::add(&mut proofs_map, 6, vector[]);
+
+        simple_map::add(&mut total_score_map, 1, 1_000);
+        simple_map::add(&mut total_score_map, 2, 1_000);
+        simple_map::add(&mut total_score_map, 3, 500);
+        simple_map::add(&mut total_score_map, 4, 500);
+        simple_map::add(&mut total_score_map, 5, 100);
+        simple_map::add(&mut total_score_map, 6, 100);
+
+        (
+            root_map,
+            proofs_map,
+            total_score_map,
             total_score_map
         )
     }

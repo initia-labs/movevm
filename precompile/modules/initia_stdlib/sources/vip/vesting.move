@@ -950,28 +950,33 @@ module publisher::vip_vesting {
             error::invalid_argument(EREWARD_NOT_ENOUGH)
         );
         vesting.remaining_reward = vesting.remaining_reward - zapping_amount;
-
+        event::emit(
+            UserVestingChangedEvent {
+                account: account_addr,
+                bridge_id,
+                start_stage: vesting.start_stage,
+                initial_reward: vesting.initial_reward,
+                remaining_reward: vesting.remaining_reward,
+            }
+        );
         let reward_store_addr = get_user_reward_store_address(bridge_id);
-
-        let start_stage = vesting.start_stage;
-        let remaining_reward = vesting.remaining_reward;
         // handle vesting positions that have changed to zapping positions
-        if (remaining_reward == 0) {
+        if (vesting.remaining_reward == 0) {
             // remove from vesting positons and add finalized positions in vesting store
             let finalized_vestings = table::remove(
                 &mut vesting_store.vestings,
-                table_key::encode_u64(start_stage)
+                table_key::encode_u64( vesting.start_stage)
             );
             table::add(
                 &mut vesting_store.vestings_finalized,
-                table_key::encode_u64(start_stage),
+                table_key::encode_u64( vesting.start_stage),
                 finalized_vestings
             );
             event::emit(
                 UserVestingFinalizedEvent {
                     account: account_addr,
                     bridge_id,
-                    start_stage: start_stage,
+                    start_stage:  vesting.start_stage,
                 }
             );
         };
