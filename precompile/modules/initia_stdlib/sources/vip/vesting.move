@@ -960,23 +960,24 @@ module publisher::vip_vesting {
             }
         );
         let reward_store_addr = get_user_reward_store_address(bridge_id);
+        let start_stage = vesting.start_stage;
         // handle vesting positions that have changed to zapping positions
         if (vesting.remaining_reward == 0) {
             // remove from vesting positons and add finalized positions in vesting store
             let finalized_vestings = table::remove(
                 &mut vesting_store.vestings,
-                table_key::encode_u64( vesting.start_stage)
+                table_key::encode_u64( start_stage)
             );
             table::add(
                 &mut vesting_store.vestings_finalized,
-                table_key::encode_u64( vesting.start_stage),
+                table_key::encode_u64( start_stage),
                 finalized_vestings
             );
             event::emit(
                 UserVestingFinalizedEvent {
                     account: account_addr,
                     bridge_id,
-                    start_stage:  vesting.start_stage,
+                    start_stage:  start_stage,
                 }
             );
         };
