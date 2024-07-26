@@ -696,6 +696,7 @@ module publisher::vip_zapping {
     #[test_only]
     public fun test_setup_for_zapping(
         chain: &signer,
+        publisher: &signer,
         account: &signer,
         esinit_amount: u64,
         stakelisted_amount: u64,
@@ -707,7 +708,7 @@ module publisher::vip_zapping {
     ) {
         dex::init_module_for_test(chain);
         staking::test_setup(chain);
-        init_module_for_test(chain);
+        init_module_for_test(publisher);
 
         let (_burn_cap, _freeze_cap, mint_cap) = initialize_coin(
             chain, string::utf8(b"INIT")
@@ -793,8 +794,8 @@ module publisher::vip_zapping {
         )
     }
 
-    #[test(chain = @0x1, account = @0x999)]
-    fun test_zapping(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
+    #[test(chain = @0x1, publisher = @publisher, account = @0x999)]
+    fun test_zapping(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
         let (
             esinit_metadata,
             stakelisted_metadata,
@@ -802,6 +803,7 @@ module publisher::vip_zapping {
             val
         ) = test_setup_for_zapping(
             chain,
+            publisher,
             account,
             1_000_000_000,
             1_000_000_000,
@@ -874,8 +876,8 @@ module publisher::vip_zapping {
         );
     }
 
-    #[test(chain = @0x1, account = @0x999)]
-    fun test_zapping_multiple(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
+    #[test(chain = @0x1, publisher = @publisher, account = @0x999)]
+    fun test_zapping_multiple(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
         let (
             esinit_metadata,
             stakelisted_metadata,
@@ -883,6 +885,7 @@ module publisher::vip_zapping {
             val
         ) = test_setup_for_zapping(
             chain,
+            publisher,
             account,
             1_000_000_000,
             1_000_000_000,
@@ -922,10 +925,10 @@ module publisher::vip_zapping {
         }
     }
 
-    #[test(chain = @0x1, account = @0x999)]
+    #[test(chain = @0x1, publisher = @publisher, account = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = fungible_asset)]
-    fun test_zapping_insufficient_zapping(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val) = test_setup_for_zapping(chain, account, 0, 0,);
+    fun test_zapping_insufficient_zapping(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
+        let (e_m, s_m, l_m, val) = test_setup_for_zapping(chain, publisher, account, 0, 0,);
         let stage = 10;
         let start_time = 1000000;
 
@@ -945,14 +948,16 @@ module publisher::vip_zapping {
         );
     }
 
-    #[test(chain = @0x1, account = @0x3, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
+    #[test(chain = @0x1, publisher = @publisher, account = @0x3, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
     fun test_claim_reward(
         chain: &signer,
+        publisher: &signer,
         account: &signer,
         relayer: &signer,
     ) acquires ModuleStore, LSStore {
         let (e_m, s_m, l_m, val) = test_setup_for_zapping(
             chain,
+            publisher,
             account,
             1_000_000_000,
             1_000_000_000,
@@ -1001,15 +1006,17 @@ module publisher::vip_zapping {
         );
     }
 
-    #[test(chain = @0x1, user_a = @0x998, user_b = @0x999, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
+    #[test(chain = @0x1, publisher = @publisher, user_a = @0x998, user_b = @0x999, relayer = @0x3d18d54532fc42e567090852db6eb21fa528f952)]
     fun test_zapping_claim(
         chain: &signer,
+        publisher: &signer,
         user_a: &signer,
         user_b: &signer,
         relayer: &signer,
     ) acquires ModuleStore, LSStore {
         let (e_m, s_m, l_m, val) = test_setup_for_zapping(
             chain,
+            publisher,
             user_a,
             1_000_000_000,
             1_000_000_000,
@@ -1089,11 +1096,12 @@ module publisher::vip_zapping {
         );
     }
 
-    #[test(chain = @0x1, account = @0x2)]
+    #[test(chain = @0x1, publisher = @publisher, account = @0x2)]
     #[expected_failure(abort_code = 0xD0002, location = Self)]
-    fun test_zapping_claim_not_released(chain: &signer, account: &signer,) acquires ModuleStore, LSStore {
+    fun test_zapping_claim_not_released(chain: &signer, publisher: &signer, account: &signer,) acquires ModuleStore, LSStore {
         let (e_m, s_m, l_m, val) = test_setup_for_zapping(
             chain,
+            publisher,
             account,
             1_000_000_000,
             1_000_000_000,

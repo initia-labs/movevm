@@ -263,13 +263,13 @@ module publisher::vip_operator {
     #[test_only]
     use std::string;
 
-    #[test(chain = @0x1, operator = @0x999)]
-    fun test_update_operator_commission(chain: &signer, operator: &signer,) acquires OperatorStore {
+    #[test(publisher = @publisher, operator = @0x999)]
+    fun test_update_operator_commission(publisher: &signer, operator: &signer) acquires OperatorStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
         register_operator_store(
-            chain,
+            publisher,
             operator_addr,
             bridge_id,
             10,
@@ -323,14 +323,14 @@ module publisher::vip_operator {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x999)]
+    #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10003, location = Self)]
-    fun failed_invalid_change_rate(chain: &signer, operator: &signer,) acquires OperatorStore {
+    fun failed_invalid_change_rate(publisher: &signer, operator: &signer) acquires OperatorStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
         register_operator_store(
-            chain,
+            publisher,
             operator_addr,
             bridge_id,
             10,
@@ -347,14 +347,14 @@ module publisher::vip_operator {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x999)]
+    #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
-    fun failed_over_max_rate(chain: &signer, operator: &signer,) acquires OperatorStore {
+    fun failed_over_max_rate(publisher: &signer, operator: &signer) acquires OperatorStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
         register_operator_store(
-            chain,
+            publisher,
             operator_addr,
             bridge_id,
             10,
@@ -371,14 +371,14 @@ module publisher::vip_operator {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x999)]
+    #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
-    fun failed_not_valid_stage(chain: &signer, operator: &signer,) acquires OperatorStore {
+    fun failed_not_valid_stage(publisher: &signer, operator: &signer) acquires OperatorStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
         register_operator_store(
-            chain,
+            publisher,
             operator_addr,
             bridge_id,
             10,
@@ -395,14 +395,14 @@ module publisher::vip_operator {
         );
     }
 
-    #[test(chain = @0x1, operator = @0x999)]
+    #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10006, location = Self)]
-    fun failed_invalid_commission_rate(chain: &signer, operator: &signer,) {
+    fun failed_invalid_commission_rate(publisher: &signer, operator: &signer) {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
         register_operator_store(
-            chain,
+            publisher,
             operator_addr,
             bridge_id,
             10,

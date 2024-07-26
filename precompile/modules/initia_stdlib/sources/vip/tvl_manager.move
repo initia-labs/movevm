@@ -218,6 +218,7 @@ module publisher::vip_tvl_manager {
         snapshot_responses
     }
 
+
     #[test_only]
     const DEFAULT_EPOCH_FOR_TEST: u64 = 1;
 
@@ -237,9 +238,9 @@ module publisher::vip_tvl_manager {
         block::set_block_info(height, curr_time + period);
     }
 
-    #[test(chain = @0x1)]
-    public fun add_snapshot_for_test(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+    #[test(publisher = @publisher)]
+    public fun add_snapshot_for_test(publisher: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let balance = 1_000_000_000_000;
         add_snapshot(
             DEFAULT_EPOCH_FOR_TEST,
@@ -254,9 +255,9 @@ module publisher::vip_tvl_manager {
         assert!(average_tvl == balance, 0);
     }
 
-    #[test(chain = @0x1)]
-    public fun add_multi_snapshot_for_test(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+    #[test(publisher = @publisher)]
+    public fun add_multi_snapshot_for_test(publisher: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let balance1 = 1_000_000_000_000;
         let balance2 = 2_000_000_000_000;
         let balance3 = 3_000_000_000_000;

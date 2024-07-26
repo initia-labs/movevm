@@ -1309,10 +1309,10 @@ module publisher::vip_weight_vote {
     }
 
     #[test_only]
-    fun init_test(chain: &signer): coin::MintCapability {
+    fun init_test(chain: &signer, publisher: &signer): coin::MintCapability {
         let init_stage = 1;
         initialize(
-            chain,
+            publisher,
             100,
             100,
             10,
@@ -1333,9 +1333,9 @@ module publisher::vip_weight_vote {
             string::utf8(b""),
             string::utf8(b""),
         );
-        vip::init_module_for_test(chain);
+        vip::init_module_for_test(publisher);
         vip::register(
-            chain,
+            publisher,
             @0x2,
             1,
             @0x12,
@@ -1346,7 +1346,7 @@ module publisher::vip_weight_vote {
             decimal256::zero(),
         );
         vip::register(
-            chain,
+            publisher,
             @0x2,
             2,
             @0x12,
@@ -1449,16 +1449,17 @@ module publisher::vip_weight_vote {
         proofs
     }
 
-    #[test(chain = @0x1, submitter = @0x2, u1 = @0x101, u2 = @0x102, u3 = @0x103, u4 = @0x104)]
+    #[test(chain = @0x1, publisher = @publisher, submitter = @0x2, u1 = @0x101, u2 = @0x102, u3 = @0x103, u4 = @0x104)]
     fun proposal_end_to_end(
         chain: &signer,
+        publisher: &signer,
         submitter: &signer,
         u1: &signer,
         u2: &signer,
         u3: &signer,
         u4: &signer,
     ) acquires ModuleStore {
-        init_test(chain);
+        init_test(chain, publisher);
         let addresses = vector[
             signer::address_of(u1),
             signer::address_of(u2),
@@ -1569,9 +1570,10 @@ module publisher::vip_weight_vote {
         execute_proposal();
     }
 
-    #[test(chain = @0x1, submitter = @0x2, u1 = @0x101, u2 = @0x102, u3 = @0x103, u4 = @0x104)]
+    #[test(chain = @0x1, publisher = @publisher, submitter = @0x2, u1 = @0x101, u2 = @0x102, u3 = @0x103, u4 = @0x104)]
     fun challenge_end_to_end(
         chain: &signer,
+        publisher: &signer,
         submitter: &signer,
         u1: &signer,
         u2: &signer,
@@ -1579,7 +1581,7 @@ module publisher::vip_weight_vote {
         u4: &signer,
     ) acquires ModuleStore {
         // fund
-        let mint_cap = init_test(chain);
+        let mint_cap = init_test(chain, publisher);
         coin::mint_to(
             &mint_cap,
             signer::address_of(u1),
