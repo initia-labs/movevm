@@ -199,7 +199,10 @@ module publisher::vip_vesting {
                 error::invalid_argument(EINVALID_VESTING_TYPE)
             )
         };
-
+        vector::append(
+            &mut seed,
+            bcs::to_bytes(&@publisher)
+        );
         vector::append(
             &mut seed,
             bcs::to_bytes(&bridge_id)

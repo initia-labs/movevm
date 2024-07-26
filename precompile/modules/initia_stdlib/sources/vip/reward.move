@@ -65,10 +65,15 @@ module publisher::vip_reward {
     //
 
     fun generate_reward_store_seed<Vesting: copy + drop + store>(bridge_id: u64): vector<u8> {
+        let vesting_type = type_info::type_of<Vesting>();
         let seed = if (
-            type_info::type_name<Vesting>() == string::utf8(
-                b"0x1::vip_vesting::OperatorVesting"
-            )) {vector[OPERATOR_REWARD_PREFIX]} else {vector[USER_REWARD_PREFIX]};
+            type_info::struct_name(&vesting_type) == b"OperatorVesting"
+        ) {vector[OPERATOR_REWARD_PREFIX]} else {vector[USER_REWARD_PREFIX]};
+
+        vector::append(
+            &mut seed,
+            bcs::to_bytes(&@publisher)
+        );
 
         vector::append(
             &mut seed,
