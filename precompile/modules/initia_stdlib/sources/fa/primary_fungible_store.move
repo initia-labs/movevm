@@ -164,8 +164,7 @@ module initia_std::primary_fungible_store {
                 store_addr,
                 metadata_addr,
             }
-        );
-        store
+        );store
     }
 
     #[view]

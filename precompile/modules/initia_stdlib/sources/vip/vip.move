@@ -1265,20 +1265,8 @@ module publisher::vip {
     }
 
     fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
-
-        let (_, curr_time) = block::get_block_info();
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-        let snapshot_create_time = table::borrow(
-            &stage_data.snapshots,
-            table_key::encode_u64(bridge_id)
-        ).create_time;
-
         assert!(
-            curr_time > snapshot_create_time + module_store.challenge_period,
+            check_claimable(bridge_id, stage),
             error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
         );
     }
