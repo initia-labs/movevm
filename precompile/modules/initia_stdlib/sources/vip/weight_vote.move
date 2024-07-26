@@ -267,7 +267,7 @@ module publisher::vip_weight_vote {
         challenge_deposit_amount: u64,
     ) {
         assert!(
-            signer::address_of(chain) == @initia_std,
+            signer::address_of(chain) == @initia_std || signer::address_of(chain) == @publisher,
             error::permission_denied(EUNAUTHORIZED)
         );
         assert!(
