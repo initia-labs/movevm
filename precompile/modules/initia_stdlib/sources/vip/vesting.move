@@ -413,6 +413,7 @@ module publisher::vip_vesting {
         let len = vector::length(user_vestings);
         while (idx < len) {
             let value = vector::borrow_mut(user_vestings, idx);
+            let vest_max_amount = if(value.remaining_reward > value.vest_max_amount){value.vest_max_amount} else {value.remaining_reward};
             let vest_amount = if (claim_info.l2_score >= value.minimum_score) {value.vest_max_amount} else {
                 (
                     (value.vest_max_amount as u128) * (claim_info.l2_score as u128) / (
@@ -420,9 +421,9 @@ module publisher::vip_vesting {
                     ) as u64
                 )
             };
+            value.remaining_reward = value.remaining_reward - vest_max_amount;
             vested_reward = vested_reward + vest_amount;
-            penalty_reward = penalty_reward + value.vest_max_amount - vest_amount;
-            value.remaining_reward = value.remaining_reward - value.vest_max_amount;
+            penalty_reward = penalty_reward + vest_max_amount - vest_amount;
 
             if (penalty_reward > 0) {
                 if (!simple_map::contains_key(penalty_map, &value.start_stage)) {
