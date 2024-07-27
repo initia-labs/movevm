@@ -5305,6 +5305,6 @@ module publisher::vip {
         receiver: &signer,
     ) acquires ModuleStore {
         // reward will should be returned to vault
-        //
+        // reward 
     }
 }

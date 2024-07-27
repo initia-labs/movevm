@@ -581,6 +581,8 @@ module publisher::vip_weight_vote {
             abort error::invalid_state(ECANNOT_CREATE_CHALLENGE_PROPOSAL)
         };
 
+        assert!(cycle_to_challenge > 1, error::invalid_argument(ECANNOT_CREATE_CHALLENGE_PROPOSAL)); 
+
         let challenge = Challenge {
             challenger,
             title,
