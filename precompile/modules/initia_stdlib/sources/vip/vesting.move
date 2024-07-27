@@ -737,10 +737,10 @@ module publisher::vip_vesting {
                 );
             } else {
                 table::add(
-            &mut vesting_store.claimed_stages,
-            table_key::encode_u64(claim_info.start_stage),
-            true
-        );
+                    &mut vesting_store.claimed_stages,
+                    table_key::encode_u64(claim_info.start_stage),
+                    true
+                );
                 // if user score is 0 emit create,finalize event and add to claimed stages
                 event::emit(
                     UserVestingCreateEvent {

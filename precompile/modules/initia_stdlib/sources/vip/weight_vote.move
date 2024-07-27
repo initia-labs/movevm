@@ -432,7 +432,7 @@ module publisher::vip_weight_vote {
 
         // verify merkle proof
         let target_hash = voting_power_hash(cycle, addr, max_voting_power);
-        if (max_voting_power > 100) { // TODO: should be removed on mainnet 
+        if (max_voting_power > 100) { // TODO: should be removed on mainnet
             assert_merkle_proofs(
                 merkle_proofs,
                 proposal.merkle_root,
@@ -581,7 +581,10 @@ module publisher::vip_weight_vote {
             abort error::invalid_state(ECANNOT_CREATE_CHALLENGE_PROPOSAL)
         };
 
-        assert!(cycle_to_challenge > 1, error::invalid_argument(ECANNOT_CREATE_CHALLENGE_PROPOSAL)); 
+        assert!(
+            cycle_to_challenge > 1,
+            error::invalid_argument(ECANNOT_CREATE_CHALLENGE_PROPOSAL)
+        );
 
         let challenge = Challenge {
             challenger,

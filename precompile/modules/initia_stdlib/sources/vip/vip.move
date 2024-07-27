@@ -5304,7 +5304,7 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer,
     ) acquires ModuleStore {
-        // reward will should be returned to vault 
+        // reward will should be returned to vault
         init_module_for_test(publisher)
 
     }
