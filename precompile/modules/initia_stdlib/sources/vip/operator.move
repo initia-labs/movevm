@@ -36,6 +36,7 @@ module publisher::vip_operator {
         commission_max_rate: Decimal256,
         commission_max_change_rate: Decimal256,
         commission_rate: Decimal256,
+
     }
 
     //

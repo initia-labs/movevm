@@ -213,4 +213,5 @@ module publisher::vip_reward {
         );
         reward_addr
     }
+
 }

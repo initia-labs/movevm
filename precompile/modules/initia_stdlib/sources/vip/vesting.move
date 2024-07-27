@@ -725,7 +725,21 @@ module publisher::vip_vesting {
             total_vested_reward = total_vested_reward + vested_reward;
             total_penalty_reward = total_penalty_reward + penalty_reward;
             let initial_reward_amount = 0;
+            // if total l2 score is 0, return all user reward to vault
+            if (claim_info.total_l2_score == 0) {
+                let user_reward_store_address = get_user_reward_store_address(bridge_id);
+                let total_user_reward_balance = vip_reward::balance(
+                    user_reward_store_address
+                );
+                if (total_user_reward_balance > 0) {
+                    vip_reward::penalty<UserVesting>(
+                        bridge_id,
+                        total_penalty_reward,
+                        vip_vault::get_vault_store_address()
+                    );
+                }
 
+            };
             // add user vesting
             if (claim_info.l2_score > 0) {
                 initial_reward_amount = batch_create_user_vesting(

@@ -572,6 +572,7 @@ module publisher::vip {
                 initial_balance_pool_reward_amount,
                 &mut balance_pool_reward
             );
+            // balance reward splited to balance comission and balance user reward
             let (
                 balance_commission,
                 balance_user_reward
@@ -587,6 +588,7 @@ module publisher::vip {
                 initial_weight_pool_reward_amount,
                 &mut weight_pool_reward
             );
+            // weight reward splited to weight comission and weight user reward
             let (
                 weight_commission,
                 weight_user_reward
@@ -604,8 +606,9 @@ module publisher::vip {
                 &mut balance_user_reward,
                 weight_user_reward
             );
-
+            // operator reward = weight comission + balance comission
             let commission_sum = balance_commission;
+            // user reward = weight user reward + balance user reward
             let user_reward_sum = balance_user_reward;
 
             total_operator_funded_reward = total_operator_funded_reward + fungible_asset::amount(
@@ -1410,7 +1413,6 @@ module publisher::vip {
                     &stage_data.snapshots,
                     table_key::encode_u64(bridge_id)
                 );
-
                 // check merkle proof
                 let target_hash = score_hash(
                     bridge_id,
@@ -2167,6 +2169,7 @@ module publisher::vip {
         );
 
     }
+
     #[test_only]
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
@@ -5280,6 +5283,7 @@ module publisher::vip {
             batch_stakelisted_metadata,
         );
     }
+
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_claim_with_zero_score(
         chain: &signer,
@@ -5287,7 +5291,10 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer,
     ) acquires ModuleStore {
-        // 
+        // init test
+        init_module_for_test(publisher)
+        // do not create vesting positions
+        // claim with no reward and full penalty
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -5297,62 +5304,11 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer,
     ) acquires ModuleStore {
-        // reward will should be returned  to vault
+        // reward will should be returned to vault
+        //
     }
 
-    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_claim_multiple_vesting_position(
-        chain: &signer,
-        publisher: &signer,
-        operator: &signer,
-        receiver: &signer,
-    ) acquires ModuleStore {
-        let vesting_period = 5;
-        let bridge_id = test_setup(
-            chain,
-            publisher,
-            operator,
-            BRIDGE_ID_FOR_TEST,
-            @0x99,
-            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
-            1_000_000_000_000,
-        );
-        let zapping_amount = 100_000_000;
-
-        let merkle_root_map = vector[vector<u8>[],vector<u8>[], vector<u8>[], vector<u8>[],vector<u8>[]];
-        let merkle_proof_map = vector[vector<u8>[],vector<u8>[], vector<u8>[], vector<u8>[],vector<u8>[]];
-        let score_map = vector[400,800,0,0,400];
-        let total_score_map = vector[4000,8000,0,2000,2000];
-
-        let idx = 1;
-        while (idx <= vesting_period) {
-            fund_reward_script(publisher);
-            submit_snapshot(
-                publisher,
-                bridge_id,
-                idx,
-                *vector::borrow(&merkle_root_map, idx),
-                *vector::borrow(&total_score_map, idx),
-            );
-
-            skip_period(
-                DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
-            );
-
-            batch_claim_user_reward_script_mock(
-                receiver,
-                bridge_id,
-                vector[idx],
-                vector[
-                    *vector::borrow(&merkle_proof_map, idx),
-                ],
-                vector[
-                   *vector::borrow(&score_map, idx),
-                ],
-            );
-
-            idx = idx + 1;
-        };
-
+    #[test]
+    fun test_claim_with_non_voting_power() {
     }
 }

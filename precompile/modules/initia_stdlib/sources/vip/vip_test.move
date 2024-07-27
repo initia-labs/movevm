@@ -6,7 +6,11 @@ module publisher::vip_test {
     use initia_std::signer;
 
     #[test_only]
-    public fun init_and_mint_coin(creator: &signer, symbol: String, amount: u64) {
+    public fun init_and_mint_coin(
+        creator: &signer,
+        symbol: String,
+        amount: u64
+    ) {
         let (init_mint_cap, _, _) = coin::initialize(
             creator,
             option::none(),
