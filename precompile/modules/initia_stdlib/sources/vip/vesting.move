@@ -424,18 +424,21 @@ module publisher::vip_vesting {
                 )
             };
 
-            if (value.remaining_reward >= value.vest_max_amount) {
+            let penalty_amount = if (value.remaining_reward >= value.vest_max_amount) {
                 vested_reward = vested_reward + vest_amount;
                 penalty_reward = penalty_reward + value.vest_max_amount - vest_amount;
                 value.remaining_reward = value.remaining_reward - value.vest_max_amount;
+                value.vest_max_amount - vest_amount
             }
             else if (value.remaining_reward > vest_amount) {
                 vested_reward = vested_reward + vest_amount;
                 penalty_reward = penalty_reward + value.remaining_reward - vest_amount;
                 value.remaining_reward = 0;
+                value.remaining_reward - vest_amount
             } else {
                 vested_reward = vested_reward + value.remaining_reward;
                 value.remaining_reward = 0;
+                0
             };
 
             if (penalty_reward > 0) {
@@ -444,8 +447,8 @@ module publisher::vip_vesting {
                     vector::push_back(penalty_keys, value.start_stage);
                 };
 
-                let penalty_amount = simple_map::borrow_mut(penalty_map, &value.start_stage);
-                *penalty_amount = *penalty_amount + penalty_reward;
+                let stage_penalty_amount = simple_map::borrow_mut(penalty_map, &value.start_stage);
+                *stage_penalty_amount = *stage_penalty_amount + penalty_amount;
             };
             // position finalized when stage is over the end stage or remaining reward is 0
             if (claim_info.start_stage >= value.end_stage || value.remaining_reward == 0) {
