@@ -1,5 +1,5 @@
 /// vip_score is the contract to provide a score for each contracts.
-module minitia_std::vip_score {
+module publisher::vip_score {
     use std::vector;
     use std::event;
 
@@ -96,13 +96,13 @@ module minitia_std::vip_score {
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
         assert!(
-            signer::address_of(chain) == @minitia_std,
+            signer::address_of(chain) == @publisher,
             error::permission_denied(EUNAUTHORIZED)
         );
     }
 
     fun check_deployer_permission(deployer: &signer) acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let found = simple_map::contains_key(
             &module_store.deployers,
             &signer::address_of(deployer)
@@ -157,7 +157,7 @@ module minitia_std::vip_score {
 
     #[view]
     public fun get_score(account: address, stage: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@minitia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         if (!table::contains(&module_store.scores, stage)) {
             return 0
         };
@@ -167,7 +167,7 @@ module minitia_std::vip_score {
 
     #[view]
     public fun get_total_score(stage: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@minitia_std);
+        let module_store = borrow_global<ModuleStore>(@publisher);
         if (!table::contains(&module_store.scores, stage)) {
             return 0
         };
@@ -181,7 +181,7 @@ module minitia_std::vip_score {
     // Check deployer permission and create a stage score table if not exists.
     public fun prepare_stage(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         if (!table::contains(&module_store.scores, stage)) {
             table::add(
@@ -205,7 +205,7 @@ module minitia_std::vip_score {
     ) acquires ModuleStore {
         check_deployer_permission(deployer);
 
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         assert!(
             table::contains(&module_store.scores, stage),
@@ -242,7 +242,7 @@ module minitia_std::vip_score {
     ) acquires ModuleStore {
         check_deployer_permission(deployer);
 
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         assert!(
             table::contains(&module_store.scores, stage),
@@ -286,7 +286,7 @@ module minitia_std::vip_score {
             error::invalid_argument(EINVALID_SCORE)
         );
 
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
@@ -307,7 +307,7 @@ module minitia_std::vip_score {
     //
     public entry fun finalize_script(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -341,7 +341,7 @@ module minitia_std::vip_score {
         // permission check is performed in prepare_stage
         prepare_stage(deployer, stage);
 
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
@@ -368,7 +368,7 @@ module minitia_std::vip_score {
 
     public entry fun add_deployer_script(chain: &signer, deployer: address,) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             !simple_map::contains_key(&module_store.deployers, &deployer),
             error::invalid_argument(EDEPLOYER_ALREADY_ADDED)
@@ -386,7 +386,7 @@ module minitia_std::vip_score {
 
     public entry fun remove_deployer_script(chain: &signer, deployer: address,) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             simple_map::contains_key(&module_store.deployers, &deployer),
             error::invalid_argument(EDEPLOYER_NOT_FOUND)

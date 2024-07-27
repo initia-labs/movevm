@@ -5307,8 +5307,4 @@ module publisher::vip {
         // reward will should be returned to vault
         //
     }
-
-    #[test]
-    fun test_claim_with_non_voting_power() {
-    }
 }
