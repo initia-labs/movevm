@@ -12,7 +12,6 @@ module publisher::vip_vesting {
     use initia_std::table_key;
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::bcs;
-    use initia_std::simple_map::{Self, SimpleMap};
     use publisher::vip_reward;
     use initia_std::type_info;
     use publisher::vip_vault;
@@ -53,6 +52,7 @@ module publisher::vip_vesting {
     struct UserVesting has copy, drop, store {
         initial_reward: u64,
         remaining_reward: u64,
+        penalty_reward: u64,
         start_stage: u64,
         end_stage: u64,
         l2_score: u64,
@@ -135,6 +135,7 @@ module publisher::vip_vesting {
         start_stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
+        penalty_reward: u64,
     }
 
     #[event]
@@ -153,14 +154,6 @@ module publisher::vip_vesting {
         start_stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
-    }
-
-    #[event]
-    struct PenaltyEvent has drop, store {
-        account: address,
-        bridge_id: u64,
-        start_stage: u64,
-        amount: u64,
     }
 
     //
@@ -405,8 +398,6 @@ module publisher::vip_vesting {
         bridge_id: u64,
         user_vestings: &mut vector<UserVesting>,
         vesting_store: &mut VestingStore<UserVesting>,
-        penalty_keys: &mut vector<u64>,
-        penalty_map: &mut SimpleMap<u64, u64>,
         claim_info: &UserVestingClaimInfo
     ): (u64, u64) {
         let vested_reward = 0u64;
@@ -424,32 +415,24 @@ module publisher::vip_vesting {
                 )
             };
 
-            let penalty_amount = if (value.remaining_reward >= value.vest_max_amount) {
+            if (value.remaining_reward >= value.vest_max_amount) {
                 vested_reward = vested_reward + vest_amount;
-                penalty_reward = penalty_reward + value.vest_max_amount - vest_amount;
+                let penalty_amount = value.vest_max_amount - vest_amount;
+                penalty_reward = penalty_reward + penalty_amount;
                 value.remaining_reward = value.remaining_reward - value.vest_max_amount;
-                value.vest_max_amount - vest_amount
+                value.penalty_reward = value.penalty_reward + penalty_amount;
             }
             else if (value.remaining_reward > vest_amount) {
                 vested_reward = vested_reward + vest_amount;
+                let penalty_amount = value.remaining_reward - vest_amount;
                 penalty_reward = penalty_reward + value.remaining_reward - vest_amount;
                 value.remaining_reward = 0;
-                value.remaining_reward - vest_amount
+                value.penalty_reward = value.penalty_reward + penalty_amount;
             } else {
                 vested_reward = vested_reward + value.remaining_reward;
                 value.remaining_reward = 0;
-                0
             };
 
-            if (penalty_reward > 0) {
-                if (!simple_map::contains_key(penalty_map, &value.start_stage)) {
-                    simple_map::add(penalty_map, value.start_stage, 0);
-                    vector::push_back(penalty_keys, value.start_stage);
-                };
-
-                let stage_penalty_amount = simple_map::borrow_mut(penalty_map, &value.start_stage);
-                *stage_penalty_amount = *stage_penalty_amount + penalty_amount;
-            };
             // position finalized when stage is over the end stage or remaining reward is 0
             if (claim_info.start_stage >= value.end_stage || value.remaining_reward == 0) {
                 event::emit(
@@ -617,6 +600,7 @@ module publisher::vip_vesting {
             UserVesting {
                 initial_reward: vesting_reward_amount,
                 remaining_reward: vesting_reward_amount,
+                penalty_reward: 0,
                 start_stage: claim_info.start_stage,
                 end_stage: claim_info.end_stage,
                 l2_score: claim_info.l2_score,
@@ -702,9 +686,6 @@ module publisher::vip_vesting {
         let total_vested_reward = 0;
         let total_penalty_reward = 0;
 
-        let penalty_keys: vector<u64> = vector[];
-        let penalty_map = simple_map::create<u64, u64>();
-
         // cache vestings
         let vesting_store_addr = get_vesting_store_address<UserVesting>(
             account_addr, bridge_id
@@ -736,8 +717,6 @@ module publisher::vip_vesting {
                 bridge_id,
                 &mut user_vestings,
                 vesting_store,
-                &mut penalty_keys,
-                &mut penalty_map,
                 claim_info
             );
 
@@ -799,22 +778,6 @@ module publisher::vip_vesting {
             );
         };
 
-        // emit penalty events
-        vector::for_each_ref(
-            &penalty_keys,
-            |key| {
-                let penalty_amount = simple_map::borrow(&penalty_map, key);
-                event::emit(
-                    PenaltyEvent {
-                        account: account_addr,
-                        bridge_id: bridge_id,
-                        start_stage: *key,
-                        amount: *penalty_amount
-                    }
-                );
-            }
-        );
-
         // update or insert user_estings cache to vesting data of vesting store
         len = vector::length(&user_vestings);
         let i = 0;
@@ -833,6 +796,7 @@ module publisher::vip_vesting {
                         start_stage: vesting.start_stage,
                         initial_reward: vesting.initial_reward,
                         remaining_reward: vesting.remaining_reward,
+                        penalty_reward: vesting.penalty_reward
                     }
                 );
             };
@@ -979,6 +943,7 @@ module publisher::vip_vesting {
                 start_stage: vesting.start_stage,
                 initial_reward: vesting.initial_reward,
                 remaining_reward: vesting.remaining_reward,
+                penalty_reward: vesting.penalty_reward
             }
         );
         let reward_store_addr = get_user_reward_store_address(bridge_id);
