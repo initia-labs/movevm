@@ -736,7 +736,12 @@ module publisher::vip_vesting {
                     claim_info
                 );
             } else {
-                // if user score is 0 emit create and finalize event
+                table::add(
+            &mut vesting_store.claimed_stages,
+            table_key::encode_u64(claim_info.start_stage),
+            true
+        );
+                // if user score is 0 emit create,finalize event and add to claimed stages
                 event::emit(
                     UserVestingCreateEvent {
                         account: account_addr,
@@ -746,6 +751,20 @@ module publisher::vip_vesting {
                         l2_score: claim_info.l2_score,
                         minimum_score: 0,
                         initial_reward: 0,
+                    }
+                );
+                table::add(
+                    &mut vesting_store.vestings_finalized,
+                    table_key::encode_u64(claim_info.start_stage),
+                    UserVesting {
+                        initial_reward: 0,
+                        remaining_reward: 0,
+                        penalty_reward: 0,
+                        start_stage: claim_info.start_stage,
+                        end_stage: claim_info.end_stage,
+                        l2_score: 0,
+                        minimum_score: 0,
+                        vest_max_amount: 0,
                     }
                 );
                 event::emit(
