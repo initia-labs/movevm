@@ -734,7 +734,7 @@ module publisher::vip_vesting {
                 if (total_user_reward_balance > 0) {
                     vip_reward::penalty<UserVesting>(
                         bridge_id,
-                        total_penalty_reward,
+                        total_user_reward_balance,
                         vip_vault::get_vault_store_address()
                     );
                 }
