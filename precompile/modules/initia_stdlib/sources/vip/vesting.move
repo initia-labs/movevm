@@ -110,6 +110,7 @@ module publisher::vip_vesting {
         account: address,
         bridge_id: u64,
         start_stage: u64,
+        penalty_reward: u64,
     }
 
     #[event]
@@ -440,6 +441,7 @@ module publisher::vip_vesting {
                         account: account_addr,
                         bridge_id,
                         start_stage: value.start_stage,
+                        penalty_reward: value.penalty_reward,
                     }
                 );
                 // give the remaining reward to vest reward
@@ -752,6 +754,7 @@ module publisher::vip_vesting {
                         account: account_addr,
                         bridge_id,
                         start_stage: claim_info.start_stage,
+                        penalty_reward: 0,
                     }
                 );
             };
@@ -965,6 +968,7 @@ module publisher::vip_vesting {
                     account: account_addr,
                     bridge_id,
                     start_stage: start_stage,
+                    penalty_reward: vesting.penalty_reward,
                 }
             );
         };

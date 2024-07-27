@@ -2,7 +2,7 @@
 module publisher::vip_test {
     use initia_std::coin;
     use initia_std::option;
-    use initia_std::string;
+    use initia_std::string::{Self, String};
     use initia_std::signer;
 
     #[test_only]
