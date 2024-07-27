@@ -44,7 +44,7 @@ module publisher::vip {
     const EINVALID_RATIO: u64 = 8;
     const EINVALID_TOTAL_SHARE: u64 = 9;
     const EINITIAILIZE: u64 = 10;
-    const EINVALID_STAGE_RANGE: u64 = 11;
+    const EINVALID_CLAIMABLE_STAGE: u64 = 11;
     const EZAPPING_STAKELISTED_NOT_ENOUGH: u64 = 12;
     const EALREADY_REGISTERED: u64 = 13;
     const EBRIDGE_NOT_FOUND: u64 = 14;
@@ -1377,7 +1377,7 @@ module publisher::vip {
         if (prev_stage >= init_stage) {
             assert!(
                 vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id) == prev_stage,
-                error::invalid_argument(EINVALID_BATCH_ARGUMENT)
+                error::invalid_argument(EINVALID_CLAIMABLE_STAGE)
             );
         };
 
@@ -2051,6 +2051,122 @@ module publisher::vip {
     #[test_only]
     const NEW_L2_TOTAL_SCORE_FOR_TEST: u64 = 1000;
 
+    #[test_only]
+    fun batch_claim_user_reward_script_mock(
+        account: &signer,
+        bridge_id: u64,
+        stages: vector<u64>, /**/
+        merkle_proofs: vector<vector<vector<u8>>>,
+        l2_scores: vector<u64>,
+    ) acquires ModuleStore {
+        let len = vector::length(&stages);
+        assert!(
+            len == vector::length(&merkle_proofs) && vector::length(&merkle_proofs) == vector::length(
+                &l2_scores
+            ) && len != 0,
+            error::invalid_argument(EINVALID_BATCH_ARGUMENT)
+        );
+        let final_stage = *vector::borrow(&mut stages, len - 1);
+        // check claimable on final stage by challenge period
+        check_claimable_period(bridge_id, final_stage);
+
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        let account_addr = signer::address_of(account);
+        // check if the claim is attempted from a position that has not been finalized.
+        let first_stage = *vector::borrow(&mut stages, 0);
+        let prev_stage = first_stage - 1;
+        let init_stage = table::borrow(
+            &module_store.bridges,
+            table_key::encode_u64(bridge_id)
+        ).init_stage;
+        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
+        // so if vesting position of prev stage is claimed, then it will be okay but if is not, make the error
+        if (prev_stage >= init_stage) {
+            assert!(
+                vip_vesting::get_user_last_claimed_stage(account_addr, bridge_id) == prev_stage,
+                error::invalid_argument(EINVALID_BATCH_ARGUMENT)
+            );
+        };
+
+        // if there is no vesting store, register it
+        if (!vip_vesting::is_user_vesting_store_registered(
+                signer::address_of(account),
+                bridge_id
+            )) {
+            vip_vesting::register_user_vesting_store(account, bridge_id);
+        };
+
+        let claimInfos: vector<UserVestingClaimInfo> = vector[];
+        // make vesting position claim info
+        vector::enumerate_ref(
+            &stages,
+            |i, stage| {
+                // check stages consecutively
+                assert!(
+                    *stage == prev_stage + 1,
+                    error::invalid_argument(EINVALID_STAGE_ORDER)
+                );
+
+                let merkle_proof = vector::borrow(&merkle_proofs, i);
+                let l2_score = vector::borrow(&l2_scores, i);
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*stage)
+                );
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
+
+                // check merkle proof
+                let target_hash = score_hash(
+                    bridge_id,
+                    *stage,
+                    account_addr,
+                    *l2_score,
+                    snapshot.total_l2_score,
+                );
+                // if (*l2_score != 0) {
+                //     assert_merkle_proofs(
+                //         *merkle_proof,
+                //         snapshot.merkle_root,
+                //         target_hash,
+                //     );
+                // };
+
+                prev_stage = *stage;
+
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*stage)
+                );
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_user_vesting_claim_infos(
+                        *stage,
+                        *stage + module_store.vesting_period,
+                        *l2_score,
+                        module_store.minimum_score_ratio,
+                        snapshot.total_l2_score,
+                    )
+                );
+            }
+        );
+        // call batch claim user reward
+        let vested_reward = vip_vesting::batch_claim_user_reward(
+            account_addr, bridge_id, claimInfos
+        );
+        coin::deposit(
+            signer::address_of(account),
+            vested_reward
+        );
+
+    }
     #[test_only]
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
@@ -5163,5 +5279,80 @@ module publisher::vip {
             batch_stakelisted_amount,
             batch_stakelisted_metadata,
         );
+    }
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_claim_with_zero_score(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+        receiver: &signer,
+    ) acquires ModuleStore {
+        // 
+    }
+
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_claim_with_zero_total_score(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+        receiver: &signer,
+    ) acquires ModuleStore {
+        // reward will should be returned  to vault
+    }
+
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun test_claim_multiple_vesting_position(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+        receiver: &signer,
+    ) acquires ModuleStore {
+        let vesting_period = 5;
+        let bridge_id = test_setup(
+            chain,
+            publisher,
+            operator,
+            BRIDGE_ID_FOR_TEST,
+            @0x99,
+            string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
+            1_000_000_000_000,
+        );
+        let zapping_amount = 100_000_000;
+
+        let merkle_root_map = vector[vector<u8>[],vector<u8>[], vector<u8>[], vector<u8>[],vector<u8>[]];
+        let merkle_proof_map = vector[vector<u8>[],vector<u8>[], vector<u8>[], vector<u8>[],vector<u8>[]];
+        let score_map = vector[400,800,0,0,400];
+        let total_score_map = vector[4000,8000,0,2000,2000];
+
+        let idx = 1;
+        while (idx <= vesting_period) {
+            fund_reward_script(publisher);
+            submit_snapshot(
+                publisher,
+                bridge_id,
+                idx,
+                *vector::borrow(&merkle_root_map, idx),
+                *vector::borrow(&total_score_map, idx),
+            );
+
+            skip_period(
+                DEFAULT_SKIPPED_CHALLENGE_PERIOD_FOR_TEST
+            );
+
+            batch_claim_user_reward_script_mock(
+                receiver,
+                bridge_id,
+                vector[idx],
+                vector[
+                    *vector::borrow(&merkle_proof_map, idx),
+                ],
+                vector[
+                   *vector::borrow(&score_map, idx),
+                ],
+            );
+
+            idx = idx + 1;
+        };
+
     }
 }

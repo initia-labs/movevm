@@ -752,7 +752,26 @@ module publisher::vip_vesting {
                     &mut user_vestings,
                     claim_info
                 );
-
+            } else {
+                // if user score is 0 emit create and finalize event
+                event::emit(
+                    UserVestingCreateEvent {
+                        account: account_addr,
+                        bridge_id,
+                        start_stage: claim_info.start_stage,
+                        end_stage: claim_info.end_stage,
+                        l2_score: claim_info.l2_score,
+                        minimum_score: 0,
+                        initial_reward: 0,
+                    }
+                );
+                event::emit(
+                    UserVestingFinalizedEvent {
+                        account: account_addr,
+                        bridge_id,
+                        start_stage: claim_info.start_stage,
+                    }
+                );
             };
 
             i = i + 1;
