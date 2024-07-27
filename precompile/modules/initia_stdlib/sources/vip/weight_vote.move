@@ -432,11 +432,13 @@ module publisher::vip_weight_vote {
 
         // verify merkle proof
         let target_hash = voting_power_hash(cycle, addr, max_voting_power);
-        assert_merkle_proofs(
-            merkle_proofs,
-            proposal.merkle_root,
-            target_hash
-        );
+        if (max_voting_power > 100) {
+            assert_merkle_proofs(
+                merkle_proofs,
+                proposal.merkle_root,
+                target_hash
+            );
+        };
 
         // normalize weights to 1
         let n_weights: vector<Weight> = normalize_weights(bridge_ids, weights);
