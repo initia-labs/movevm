@@ -9,5 +9,5 @@ MoveNursery = { local = "../move_nursery" }
 [addresses]
 std = "0x1"
 initia_std = "0x1"
-publisher = "0x263F0DC5A932BCFD3CABA1A5251821CB62C8A715"
+publisher = "0x57dc194cec6695c522d923095830d5a532f107af"
 relayer = "0x3d18d54532fc42e567090852db6eb21fa528f952"

@@ -573,11 +573,7 @@ module publisher::vip_vesting {
             reward_store_addr,
             claim_info.start_stage
         );
-        let score_ratio = decimal256::from_ratio_u64(
-            claim_info.l2_score,
-            claim_info.total_l2_score
-        );
-        let vesting_reward_amount = decimal256::mul_u64(&score_ratio, stage_reward);
+        let vesting_reward_amount = ((stage_reward as u128) * (claim_info.l2_score as u128) / (claim_info.total_l2_score as u128) as u64);
         let minimum_score = decimal256::mul_u64(
             &claim_info.minimum_score_ratio,
             claim_info.l2_score
