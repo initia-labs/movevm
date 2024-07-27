@@ -468,6 +468,7 @@ module publisher::vip_weight_vote {
                 cycle,
                 voting_power: voting_power_used,
                 weights: n_weights,
+                //TODO: max voting power
             }
         )
     }
@@ -504,10 +505,14 @@ module publisher::vip_weight_vote {
                 table_key::encode_u64(bridge_id),
                 &0
             );
-            let weight = decimal256::from_ratio(
-                (*tally as u256),
-                (proposal.total_tally as u256)
-            );
+            let weight = if (proposal.total_tally == 0) {
+                decimal256::from_ratio(1,(len as u256))
+            } else {
+                decimal256::from_ratio(
+                    (*tally as u256),
+                    (proposal.total_tally as u256)
+                )
+            };
             vector::push_back(&mut weights, weight);
             index = index + 1;
         };

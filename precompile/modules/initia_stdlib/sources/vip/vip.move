@@ -967,7 +967,7 @@ module publisher::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
-        init_stage: u64,
+        init_stage: u64, //TODO: remove this field; automatically use init stage as current stage + 1
         vip_l2_score_contract: string::String,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
