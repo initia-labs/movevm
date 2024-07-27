@@ -72,12 +72,12 @@ module publisher::vip {
     const DEFAULT_POOL_SPLIT_RATIO: vector<u8> = b"0.4";
     const DEFAULT_MIN_SCORE_RATIO: vector<u8> = b"0.5";
     const DEFAULT_VESTING_PERIOD: u64 = 52; // 52 times
-    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 60; // 1 hour
+    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 30; // 30min
     const DEFAULT_MINIMUM_ELIGIBLE_TVL: u64 = 0;
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 0;
-    const DEFAULT_CHALLENGE_PERIOD: u64 = 1200; // 20min
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 600; // 10min
 
     struct ModuleStore has key {
         // current stage
