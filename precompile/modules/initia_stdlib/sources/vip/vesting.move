@@ -949,6 +949,7 @@ module publisher::vip_vesting {
                 penalty_reward: vesting.penalty_reward
             }
         );
+        let penalty_reward = vesting.penalty_reward;
         let reward_store_addr = get_user_reward_store_address(bridge_id);
         let start_stage = vesting.start_stage;
         // handle vesting positions that have changed to zapping positions
@@ -968,7 +969,7 @@ module publisher::vip_vesting {
                     account: account_addr,
                     bridge_id,
                     start_stage: start_stage,
-                    penalty_reward: vesting.penalty_reward,
+                    penalty_reward: penalty_reward,
                 }
             );
         };
