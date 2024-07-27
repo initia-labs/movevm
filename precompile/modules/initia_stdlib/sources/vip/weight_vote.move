@@ -432,7 +432,7 @@ module publisher::vip_weight_vote {
 
         // verify merkle proof
         let target_hash = voting_power_hash(cycle, addr, max_voting_power);
-        if (max_voting_power > 100) {
+        if (max_voting_power > 100) { // TODO: should be removed on mainnet 
             assert_merkle_proofs(
                 merkle_proofs,
                 proposal.merkle_root,

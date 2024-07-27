@@ -967,7 +967,7 @@ module publisher::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
-        init_stage: u64, //TODO: remove this field; automatically use init stage as current stage + 1
+        _init_stage: u64, //TODO: remove this field; automatically use init stage as current stage + 1
         vip_l2_score_contract: string::String,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
@@ -1008,7 +1008,7 @@ module publisher::vip {
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id),
             Bridge {
-                init_stage: init_stage,
+                init_stage: module_store.stage + 1,
                 bridge_addr: bridge_address,
                 operator_addr: operator,
                 vip_l2_score_contract,
@@ -5304,7 +5304,8 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer,
     ) acquires ModuleStore {
-        // reward will should be returned to vault
-        // reward 
+        // reward will should be returned to vault 
+        init_module_for_test(publisher)
+
     }
 }
