@@ -1602,7 +1602,7 @@ module publisher::vip {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
-        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(
+        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage( //TODO: last submitted stage
             account_addr, bridge_id
         );
         let can_zap = if (last_claimed_stage == module_store.stage) {

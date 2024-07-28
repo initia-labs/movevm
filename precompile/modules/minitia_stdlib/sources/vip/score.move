@@ -139,7 +139,6 @@ module minitia_std::vip_score {
         module_store: &ModuleStore,
         stage: u64
     ) {
-        minitia_std::debug::print(&stage);
         // TODO: remove on the mainnet 
         // init stage is always finalized because it is the first stage.
         if (stage == 1 || stage == 0) { return };
