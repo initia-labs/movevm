@@ -1,5 +1,5 @@
 /// vip_score is the contract to provide a score for each contracts.
-module publisher::vip_score {
+module minitia_std::vip_score {
     use std::vector;
     use std::event;
 
@@ -96,13 +96,13 @@ module publisher::vip_score {
     /// Check signer is chain
     fun check_chain_permission(chain: &signer) {
         assert!(
-            signer::address_of(chain) == @publisher,
+            signer::address_of(chain) == @minitia_std,
             error::permission_denied(EUNAUTHORIZED)
         );
     }
 
     fun check_deployer_permission(deployer: &signer) acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         let found = simple_map::contains_key(
             &module_store.deployers,
             &signer::address_of(deployer)
@@ -139,8 +139,10 @@ module publisher::vip_score {
         module_store: &ModuleStore,
         stage: u64
     ) {
+        minitia_std::debug::print(&stage);
+        // TODO: remove on the mainnet 
         // init stage is always finalized because it is the first stage.
-        if (stage == 1) { return };
+        if (stage == 1 || stage == 0) { return };
         assert!(
             table::contains(&module_store.scores, stage - 1) && table::borrow(
                 &module_store.scores, stage - 1
@@ -157,7 +159,7 @@ module publisher::vip_score {
 
     #[view]
     public fun get_score(account: address, stage: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
+        let module_store = borrow_global<ModuleStore>(@minitia_std);
         if (!table::contains(&module_store.scores, stage)) {
             return 0
         };
@@ -167,7 +169,7 @@ module publisher::vip_score {
 
     #[view]
     public fun get_total_score(stage: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
+        let module_store = borrow_global<ModuleStore>(@minitia_std);
         if (!table::contains(&module_store.scores, stage)) {
             return 0
         };
@@ -181,7 +183,7 @@ module publisher::vip_score {
     // Check deployer permission and create a stage score table if not exists.
     public fun prepare_stage(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
 
         if (!table::contains(&module_store.scores, stage)) {
             table::add(
@@ -205,7 +207,7 @@ module publisher::vip_score {
     ) acquires ModuleStore {
         check_deployer_permission(deployer);
 
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
 
         assert!(
             table::contains(&module_store.scores, stage),
@@ -242,7 +244,7 @@ module publisher::vip_score {
     ) acquires ModuleStore {
         check_deployer_permission(deployer);
 
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
 
         assert!(
             table::contains(&module_store.scores, stage),
@@ -280,13 +282,13 @@ module publisher::vip_score {
         amount: u64
     ) acquires ModuleStore {
 
-        check_deployer_permission(deployer);
+        // permission check is performed in prepare_stage
+        prepare_stage(deployer, stage);
         assert!(
             amount >= 0,
             error::invalid_argument(EINVALID_SCORE)
         );
-
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
@@ -307,7 +309,7 @@ module publisher::vip_score {
     //
     public entry fun finalize_script(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -341,7 +343,7 @@ module publisher::vip_score {
         // permission check is performed in prepare_stage
         prepare_stage(deployer, stage);
 
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
@@ -368,7 +370,7 @@ module publisher::vip_score {
 
     public entry fun add_deployer_script(chain: &signer, deployer: address,) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(
             !simple_map::contains_key(&module_store.deployers, &deployer),
             error::invalid_argument(EDEPLOYER_ALREADY_ADDED)
@@ -386,7 +388,7 @@ module publisher::vip_score {
 
     public entry fun remove_deployer_script(chain: &signer, deployer: address,) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(
             simple_map::contains_key(&module_store.deployers, &deployer),
             error::invalid_argument(EDEPLOYER_NOT_FOUND)
@@ -627,20 +629,14 @@ module publisher::vip_score {
     }
 
     #[test(chain = @0x1, deployer = @0x2)]
-    fun test_init_stage_3_and_update_score_script(chain: &signer, deployer: &signer) acquires ModuleStore {
+    fun test_init_stage_0_and_update_score(chain: &signer, deployer: &signer) acquires ModuleStore {
         init_module_for_test(chain);
-        let init_stage = 3;
-        let scores = vector::empty<u64>();
-        let addrs = vector::empty<address>();
+        let init_stage = 0;
         add_deployer_script(chain, signer::address_of(deployer));
-        // set_init_stage(deployer, init_stage);
-        vector::push_back(&mut scores, 100);
-        vector::push_back(&mut addrs, @0x123);
-
-        update_score_script(deployer, init_stage, addrs, scores);
+        update_score(deployer, @0x123, init_stage,  100);
         finalize_script(deployer, init_stage);
-        let next_stage = 4;
-        update_score_script(deployer, next_stage, addrs, scores);
+        let next_stage = 1;
+        update_score(deployer, @0x123, next_stage,  200);
 
     }
 
