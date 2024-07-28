@@ -54,6 +54,8 @@ module publisher::vip_weight_vote {
     struct ModuleStore has key {
         // current cycle
         current_cycle: u64,
+        // cycle interval
+        cycle_interval: u64,
         // current cycle start timestamp
         cycle_start_timestamp: u64,
         // current cycle end timestamp
@@ -66,9 +68,6 @@ module publisher::vip_weight_vote {
         challenge_deposit_store: object::ExtendRef,
 
         // params
-
-        // cycle interval
-        cycle_interval: u64,
         // grace time for voting power snapshot
         //
         // If submitter do not submit merkle root after grace period,
@@ -78,6 +77,8 @@ module publisher::vip_weight_vote {
         voting_period: u64,
         // merkle root submitter
         submitter: address,
+        // challenge voting period
+        challenge_voting_period: u64,
         // minimum voting period for challenge
         min_voting_period: u64,
         // quorum = quorum_ratio * total_tally
@@ -257,11 +258,12 @@ module publisher::vip_weight_vote {
 
     public entry fun initialize(
         chain: &signer,
+        submitter: address,
         cycle_start_timestamp: u64,
         cycle_interval: u64,
         snapshot_grace_period: u64,
         voting_period: u64,
-        submitter: address,
+        challenge_voting_period: u64,
         min_voting_period: u64,
         quorum_ratio: Decimal128,
         challenge_deposit_amount: u64,
@@ -282,15 +284,16 @@ module publisher::vip_weight_vote {
             chain,
             ModuleStore {
                 current_cycle: 0,
+                cycle_interval,
                 cycle_start_timestamp,
                 cycle_end_timestamp: cycle_start_timestamp,
                 proposals: table::new(),
                 challenges: table::new(),
                 challenge_deposit_store: extend_ref,
-                cycle_interval,
+                submitter,
                 snapshot_grace_period,
                 voting_period,
-                submitter,
+                challenge_voting_period,
                 min_voting_period,
                 quorum_ratio,
                 challenge_deposit_amount,
@@ -558,7 +561,7 @@ module publisher::vip_weight_vote {
         );
 
         // set challenge configs
-        let voting_end_time = timestamp + module_store.voting_period;
+        let voting_end_time = timestamp + module_store.challenge_voting_period;
         let min_voting_end_time = timestamp + module_store.min_voting_period;
         let quorum = decimal128::mul_u64(
             &module_store.quorum_ratio,
@@ -1325,12 +1328,13 @@ module publisher::vip_weight_vote {
         let init_stage = 1;
         initialize(
             publisher,
+            @0x2,
             100,
             100,
             10,
             50,
-            @0x2,
             1,
+            100,
             decimal128::from_ratio(3, 10),
             100
         );
