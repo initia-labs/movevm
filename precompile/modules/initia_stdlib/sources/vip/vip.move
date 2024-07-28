@@ -1605,7 +1605,7 @@ module publisher::vip {
         let last_claimed_stage = vip_vesting::get_user_last_claimed_stage( 
             account_addr, bridge_id
         );
-        let last_submitted_stage = get_last_submitted_stage(account_addr, bridge_id);
+        let last_submitted_stage = get_last_submitted_stage(bridge_id);
         let can_zap = if (last_claimed_stage == last_submitted_stage) {
              true
         } else {
@@ -1769,7 +1769,7 @@ module publisher::vip {
         balance_split_amount + weight_split_amount
     }
     #[view]
-    public fun get_last_submitted_stage(account_addr: address, bridge_id: u64): u64 acquires ModuleStore {
+    public fun get_last_submitted_stage(bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         let iter = table::iter(
