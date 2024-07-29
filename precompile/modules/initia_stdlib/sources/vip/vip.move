@@ -72,12 +72,12 @@ module publisher::vip {
     const DEFAULT_POOL_SPLIT_RATIO: vector<u8> = b"0.4";
     const DEFAULT_MIN_SCORE_RATIO: vector<u8> = b"0.5";
     const DEFAULT_VESTING_PERIOD: u64 = 52; // 52 times
-    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 30; // 30min
+    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 60 * 24 * 7; // 1week
     const DEFAULT_MINIMUM_ELIGIBLE_TVL: u64 = 0;
     const DEFAULT_MAXIMUM_TVL_RATIO: vector<u8> = b"1";
     const DEFAULT_MAXIMUM_WEIGHT_RATIO: vector<u8> = b"1";
     const DEFAULT_VIP_START_STAGE: u64 = 0;
-    const DEFAULT_CHALLENGE_PERIOD: u64 = 600; // 10min
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 60 * 60 * 24; // 1day
 
     struct ModuleStore has key {
         // current stage
@@ -1493,6 +1493,7 @@ module publisher::vip {
         vesting_period: Option<u64>,
         minimum_eligible_tvl: Option<u64>,
         maximum_tvl_ratio: Option<Decimal256>,
+        maximum_weight_ratio:Option<Decimal256>,
         minimum_score_ratio: Option<Decimal256>,
         pool_split_ratio: Option<Decimal256>,
         challenge_period: Option<u64>,
@@ -1525,6 +1526,16 @@ module publisher::vip {
                     &decimal256::one()
                 ),
                 error::invalid_argument(EINVALID_MAX_TVL)
+            );
+        };
+
+        if (option::is_some(&maximum_weight_ratio)) {
+            module_store.maximum_weight_ratio = option::extract(&mut maximum_weight_ratio);
+            assert!(
+                decimal256::val(&module_store.maximum_weight_ratio) <= decimal256::val(
+                    &decimal256::one()
+                ),
+                error::invalid_argument(EINVALID_RATIO)
             );
         };
 
@@ -1600,13 +1611,11 @@ module publisher::vip {
         );
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
-        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage( 
+        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(
             account_addr, bridge_id
         );
         let last_submitted_stage = get_last_submitted_stage(bridge_id);
-        let can_zap = if (last_claimed_stage == last_submitted_stage) {
-             true
-        } else {
+        let can_zap = if (last_claimed_stage == last_submitted_stage) { true } else {
             // check is there any claimable reward
             let check_stage = last_claimed_stage + 1;
             !check_claimable(bridge_id, check_stage)
@@ -1766,6 +1775,7 @@ module publisher::vip {
         );
         balance_split_amount + weight_split_amount
     }
+
     #[view]
     public fun get_last_submitted_stage(bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
@@ -1790,6 +1800,7 @@ module publisher::vip {
 
         0
     }
+
     #[view]
     public fun get_stage_data(stage: u64): StageDataResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
@@ -5301,11 +5312,65 @@ module publisher::vip {
         receiver: &signer,
     ) acquires ModuleStore {
         // init test
-        init_module_for_test(publisher);
+        let receiver_addr = signer::address_of(receiver);
+        test_setup(
+            chain,
+            publisher,
+            operator,
+            1,
+            @0x123,
+            string::utf8(b"0x123"),
+            1_000_000_000_000
+        );
+        let stage_reward = vip_vault::reward_per_stage();
+        // stage 1
         fund_reward_script(publisher);
-        // do not create vesting positions
+        skip_period(DEFAULT_CHALLENGE_PERIOD);
+        submit_snapshot(
+            publisher,
+            1,
+            1,
+            vector[],
+            1000
+        );
+        assert(get_last_submitted_stage(1) == 1, 2);
 
+        assert!(
+            vip_reward::balance(receiver_addr) == 0,
+            1
+        );
+        batch_claim_user_reward_script_mock(
+            receiver,
+            1,
+            vector[1],
+            vector[vector[]],
+            vector[100],
+        );
+        assert!(
+            vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 1,
+            3
+        );
+        assert!(
+            vip_reward::balance(receiver_addr) == (stage_reward / 52) * 100 / 1000,
+            4
+        );
+        batch_claim_user_reward_script_mock(
+            receiver,
+            1,
+            vector[2],
+            vector[vector[]],
+            vector[0],
+        );
+        // stage 2
+        fund_reward_script(publisher);
+        skip_period(DEFAULT_CHALLENGE_PERIOD);
+        // do not create vesting positions
+        // assert!(stage_data);
         // claim with no reward and full penalty
+        assert!(
+            vip_reward::balance(receiver_addr) == 0,
+            3
+        );
 
     }
 }

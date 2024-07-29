@@ -720,10 +720,12 @@ module publisher::vip_vesting {
                 reward_store_addr,
                 claim_info.start_stage
             );
-            let initial_reward_amount = if (claim_info.total_l2_score == 0) {
-                0
-            } else {
-                ((stage_reward as u128) * (claim_info.l2_score as u128) / (claim_info.total_l2_score as u128) as u64)
+            let initial_reward_amount = if (claim_info.total_l2_score == 0) { 0 } else {
+                (
+                    (stage_reward as u128) * (claim_info.l2_score as u128) / (
+                        claim_info.total_l2_score as u128
+                    ) as u64
+                )
             };
             // add user vesting
             if (initial_reward_amount > 0) {
