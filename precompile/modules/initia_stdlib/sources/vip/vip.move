@@ -1584,12 +1584,26 @@ module publisher::vip {
         new_vip_l2_score_contract: string::String,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let bridge = load_bridge_mut(
             &mut module_store.bridges,
             bridge_id
         );
         bridge.vip_l2_score_contract = new_vip_l2_score_contract;
+    }
+    // TODO: delete this on mainnet?
+    public entry fun update_operator(
+        operator: &signer,
+        bridge_id: u64,
+        new_operator_addr: address, 
+    ) acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let bridge = load_bridge_mut(
+            &mut module_store.bridges,
+            bridge_id
+        );
+        assert!(bridge.operator_addr == signer::address_of(operator), error::permission_denied(EUNAUTHORIZED));
+        bridge.operator_addr = new_operator_addr;
     }
 
     public entry fun zapping_script(
@@ -5316,7 +5330,6 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer,
     ) acquires ModuleStore {
-        // init test
         let receiver_addr = signer::address_of(receiver);
         test_setup(
             chain,
@@ -5329,8 +5342,8 @@ module publisher::vip {
         );
         let stage_reward = vip_vault::reward_per_stage();
         // stage 1
+        
         fund_reward_script(publisher);
-        skip_period(DEFAULT_CHALLENGE_PERIOD);
         submit_snapshot(
             publisher,
             1,
@@ -5338,7 +5351,8 @@ module publisher::vip {
             vector[],
             1000
         );
-        assert(get_last_submitted_stage(1) == 1, 2);
+        skip_period(DEFAULT_CHALLENGE_PERIOD + 1);
+        assert!(get_last_submitted_stage(1) == 1, 2);
 
         assert!(
             vip_reward::balance(receiver_addr) == 0,
@@ -5355,27 +5369,160 @@ module publisher::vip {
             vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 1,
             3
         );
-        assert!(
-            vip_reward::balance(receiver_addr) == (stage_reward / 52) * 100 / 1000,
-            4
+        skip_period(DEFAULT_STAGE_INTERVAL+1);
+        // stage 2
+        fund_reward_script(publisher);
+        submit_snapshot(
+            publisher,
+            1,
+            2,
+            vector[],
+            1000
         );
+        skip_period(DEFAULT_CHALLENGE_PERIOD + 1);
         batch_claim_user_reward_script_mock(
             receiver,
             1,
             vector[2],
             vector[vector[]],
+            vector[500],
+        );
+        // vested stage 1 reward 
+        assert!(
+            vip_reward::balance(receiver_addr) == (stage_reward / 52) * 100 / 1000,
+            4
+        );
+        skip_period(DEFAULT_STAGE_INTERVAL+1);
+        fund_reward_script(publisher);
+        let vault_balance = vip_vault::balance();
+        submit_snapshot(
+            publisher,
+            1,
+            3,
+            vector[],
+            1000
+        );
+        skip_period(DEFAULT_CHALLENGE_PERIOD + 1);
+        batch_claim_user_reward_script_mock(
+            receiver,
+            1,
+            vector[3],
+            vector[vector[]],
             vector[0],
         );
-        // stage 2
+        // do not create vesting positions and finalize it
+        assert!(vip_vesting::get_user_last_claimed_stage(receiver_addr,1) == 3, 5);
+        assert!(vip_vesting::get_user_vesting_finalized_initial_reward(receiver_addr,1,3) == 0, 6);
+        assert!(vip_vesting::get_user_vesting_finalized_remaining(receiver_addr,1,3) == 0, 7);
+
+        // vested stage 1 reward((stage_reward / 52) * 100 / 1000) + vested stage 2 reward(0)
+        assert!(
+            vip_reward::balance(receiver_addr) == (stage_reward / 52) * 100 / 1000,
+            8
+        );
+        // claim with no reward and full penalty of vesting position(start stage: 1, 2)
+        assert!( vip_vault::balance() == vault_balance + (stage_reward / 52) * 100 / 1000 + (stage_reward / 52) * 500 / 1000,9)
+
+    }
+
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    fun zapping_vesting_position_in_challenge_period(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+        receiver: &signer,
+    )acquires ModuleStore {
+        let receiver_addr = signer::address_of(receiver);
+        let ( eslint_metadata, stakelisted_metadata,lp_metadata,val,mint_cap)=vip_zapping::test_setup_for_zapping(
+            chain,
+            publisher,
+            receiver,
+            1_000_000_000_000,
+            1_000_000_000_000
+        );
+        init_module_for_test(publisher);
+        coin::mint_to(&mint_cap,signer::address_of(chain),1_000_000_000_000);
+        test_register_bridge(
+            publisher,
+            operator,
+            1,
+            @0x123,
+            1,
+            string::utf8(b"0x123"),
+            1_000_000_000_000,
+            decimal256::from_string(
+                &string::utf8(
+                    DEFAULT_COMMISSION_MAX_RATE_FOR_TEST
+                )
+            ),
+            decimal256::from_string(
+                &string::utf8(
+                    DEFAULT_COMMISSION_MAX_CHANGE_RATE_FOR_TEST
+                )
+            ),
+            decimal256::from_string(
+                &string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)
+            ),
+            &mint_cap,
+        );
+
+        update_minimum_score_ratio(
+            publisher,
+            decimal256::from_string(
+                &string::utf8(DEFAULT_MIN_SCORE_RATIO_FOR_TEST)
+            ),
+        );
+
+        update_vip_weight(
+            publisher,
+            1,
+            decimal256::from_string(
+                &string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)
+            ),
+        );
+        let stage_reward = vip_vault::reward_per_stage();
+        // stage 1
+        
         fund_reward_script(publisher);
-        skip_period(DEFAULT_CHALLENGE_PERIOD);
-        // do not create vesting positions
-        // assert!(stage_data);
-        // claim with no reward and full penalty
+        submit_snapshot(
+            publisher,
+            1,
+            1,
+            vector[],
+            1000
+        );
+        skip_period(DEFAULT_CHALLENGE_PERIOD + 1);
+        assert!(get_last_submitted_stage(1) == 1, 2);
+
         assert!(
             vip_reward::balance(receiver_addr) == 0,
             3
         );
-
+        batch_claim_user_reward_script_mock(
+            receiver,
+            1,
+            vector[1],
+            vector[vector[]],
+            vector[100],
+        );
+        assert!(
+            vip_reward::balance(receiver_addr) == (stage_reward / 52) * 100 / 1000,
+            4
+        );
+        assert!(
+            vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 1,
+            5
+        );
+        skip_period(DEFAULT_STAGE_INTERVAL+1);
+        // stage 2
+        fund_reward_script(publisher);
+        submit_snapshot(
+            publisher,
+            1,
+            2,
+            vector[],
+            1000
+        );
+        zapping_script(receiver,1,lp_metadata,option::none(),val,1,(stage_reward / 52) * 100 / 1000,10000,stakelisted_metadata)
     }
 }

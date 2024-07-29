@@ -1350,6 +1350,14 @@ module publisher::vip_vesting {
         start_stage: u64,
         end_stage: u64,
     }
+    #[test_only]
+    public fun get_user_vesting_finalized_remaining(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64,
+    ): u64 acquires VestingStore {
+        get_vesting_finalized<UserVesting>(account_addr, bridge_id, stage).remaining_reward
+    }
 
     #[test_only]
     public fun initialize_coin(
@@ -1466,4 +1474,6 @@ module publisher::vip_vesting {
         register_user_reward_store(publisher, 1);
         register_user_reward_store(publisher, 1);
     }
+
+
 }
