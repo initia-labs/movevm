@@ -967,7 +967,6 @@ module publisher::vip {
         operator: address,
         bridge_id: u64,
         bridge_address: address,
-        _init_stage: u64, //TODO: remove this field; automatically use init stage as current stage + 1
         vip_l2_score_contract: string::String,
         operator_commission_max_rate: Decimal256,
         operator_commission_max_change_rate: Decimal256,
@@ -1599,7 +1598,6 @@ module publisher::vip {
             !vip_vesting::is_user_vesting_position_finalized(account_addr, bridge_id, stage),
             error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED)
         );
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         // check the last claimed stage !== current stage
         // it means there can be claimable reward not to be zapped
         let last_claimed_stage = vip_vesting::get_user_last_claimed_stage( 
@@ -1770,19 +1768,27 @@ module publisher::vip {
     }
     #[view]
     public fun get_last_submitted_stage(bridge_id: u64): u64 acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let module_store = borrow_global<ModuleStore>(@publisher);
 
         let iter = table::iter(
-            &mut module_store.stage_data,
+            &module_store.stage_data,
             option::none(),
             option::none(),
             2
         );
-        if (!table::prepare<vector<u8>, StageData>(&mut iter)) {
-            return 0
+        loop {
+            if (!table::prepare<vector<u8>, StageData>(&mut iter)) { break };
+
+            let (key, value) = table::next<vector<u8>, StageData>(&mut iter);
+            if (table::contains(
+                    &value.snapshots,
+                    table_key::encode_u64(bridge_id)
+                )) {
+                return table_key::decode_u64(key)
+            };
         };
-        let (key, _) = table::next<vector<u8>, StageData>(&mut iter);
-        table_key::decode_u64(key)
+
+        0
     }
     #[view]
     public fun get_stage_data(stage: u64): StageDataResponse acquires ModuleStore {
@@ -2275,7 +2281,6 @@ module publisher::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
-            init_stage,
             vip_l2_score_contract,
             commission_max_rate,
             commission_max_change_rate,
@@ -2732,7 +2737,6 @@ module publisher::vip {
             signer::address_of(operator),
             1,
             @0x90,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3833,7 +3837,6 @@ module publisher::vip {
             operator_addr,
             1,
             @0x90,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3855,7 +3858,6 @@ module publisher::vip {
             operator_addr,
             2,
             @0x91,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -3877,7 +3879,6 @@ module publisher::vip {
             operator_addr,
             3,
             @0x92,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4072,7 +4073,6 @@ module publisher::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4095,7 +4095,6 @@ module publisher::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4148,7 +4147,6 @@ module publisher::vip {
             operator_addr,
             bridge_id1,
             @0x999,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4840,7 +4838,6 @@ module publisher::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4863,7 +4860,6 @@ module publisher::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4918,7 +4914,6 @@ module publisher::vip {
             operator_addr,
             bridge_id1,
             bridge_address1,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -4941,7 +4936,6 @@ module publisher::vip {
             operator_addr,
             bridge_id2,
             bridge_address2,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -5042,7 +5036,6 @@ module publisher::vip {
             signer::address_of(operator),
             bridge_id,
             bridge_address,
-            init_stage,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
             decimal256::from_string(
                 &string::utf8(
@@ -5308,20 +5301,11 @@ module publisher::vip {
         receiver: &signer,
     ) acquires ModuleStore {
         // init test
-        init_module_for_test(publisher)
+        init_module_for_test(publisher);
+        fund_reward_script(publisher);
         // do not create vesting positions
-        // claim with no reward and full penalty
-    }
 
-    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun test_claim_with_zero_total_score(
-        chain: &signer,
-        publisher: &signer,
-        operator: &signer,
-        receiver: &signer,
-    ) acquires ModuleStore {
-        // reward will should be returned to vault
-        init_module_for_test(publisher)
+        // claim with no reward and full penalty
 
     }
 }

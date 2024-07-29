@@ -564,16 +564,11 @@ module publisher::vip_vesting {
     fun batch_create_user_vesting(
         account_addr: address,
         bridge_id: u64,
-        reward_store_addr: address,
         vesting_store: &mut VestingStore<UserVesting>,
         user_vestings: &mut vector<UserVesting>,
-        claim_info: &UserVestingClaimInfo
+        claim_info: &UserVestingClaimInfo,
+        vesting_reward_amount: u64
     ): u64 {
-        let stage_reward = vip_reward::get_stage_reward(
-            reward_store_addr,
-            claim_info.start_stage
-        );
-        let vesting_reward_amount = ((stage_reward as u128) * (claim_info.l2_score as u128) / (claim_info.total_l2_score as u128) as u64);
         let minimum_score = decimal256::mul_u64(
             &claim_info.minimum_score_ratio,
             claim_info.l2_score
@@ -720,16 +715,25 @@ module publisher::vip_vesting {
 
             total_vested_reward = total_vested_reward + vested_reward;
             total_penalty_reward = total_penalty_reward + penalty_reward;
-            let initial_reward_amount = 0;
+
+            let stage_reward = vip_reward::get_stage_reward(
+                reward_store_addr,
+                claim_info.start_stage
+            );
+            let initial_reward_amount = if (claim_info.total_l2_score == 0) {
+                0
+            } else {
+                ((stage_reward as u128) * (claim_info.l2_score as u128) / (claim_info.total_l2_score as u128) as u64)
+            };
             // add user vesting
-            if (claim_info.l2_score > 0) {
+            if (initial_reward_amount > 0) {
                 initial_reward_amount = batch_create_user_vesting(
                     account_addr,
                     bridge_id,
-                    reward_store_addr,
                     vesting_store,
                     &mut user_vestings,
-                    claim_info
+                    claim_info,
+                    initial_reward_amount
                 );
             } else {
                 table::add(
