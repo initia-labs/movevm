@@ -299,6 +299,10 @@ module minitia_std::primary_fungible_store {
         metadata: Object<T>,
         amount: u64
     ): FungibleAsset {
+        if (amount == 0) {
+            return fungible_asset::zero(metadata)
+        };
+
         let store = primary_store(signer::address_of(owner), metadata);
         fungible_asset::withdraw(owner, store, amount)
     }
@@ -333,6 +337,11 @@ module minitia_std::primary_fungible_store {
             recipient_store,
             amount
         );
+
+        // create cosmos side account
+        if (!account::exists_at(recipient)) {
+            let _acc_num = account::create_account(recipient);
+        };
     }
 
     /// Mint to the primary store of `owner`.
@@ -345,7 +354,13 @@ module minitia_std::primary_fungible_store {
             owner,
             fungible_asset::mint_ref_metadata(mint_ref)
         );
+
         fungible_asset::mint_to(mint_ref, primary_store, amount);
+
+        // create cosmos side account
+        if (!account::exists_at(owner)) {
+            let _acc_num = account::create_account(owner);
+        };
     }
 
     /// Burn from the primary store of `owner`.
@@ -402,6 +417,11 @@ module minitia_std::primary_fungible_store {
             fungible_asset::transfer_ref_metadata(transfer_ref)
         );
         fungible_asset::deposit_with_ref(transfer_ref, from_primary_store, fa);
+
+        // create cosmos side account
+        if (!account::exists_at(owner)) {
+            let _acc_num = account::create_account(owner);
+        };
     }
 
     /// Transfer `amount` of FA from the primary store of `from` to that of `to` ignoring frozen flag.
@@ -425,6 +445,11 @@ module minitia_std::primary_fungible_store {
             to_primary_store,
             amount
         );
+
+        // create cosmos side account
+        if (!account::exists_at(to)) {
+            let _acc_num = account::create_account(to);
+        };
     }
 
     #[test_only]
