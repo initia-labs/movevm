@@ -1004,6 +1004,7 @@ module publisher::vip_vesting {
             create_vesting_store_address<OperatorVesting>(addr, bridge_id)
         )
     }
+
     //
     // View Functions
     //
@@ -1166,7 +1167,6 @@ module publisher::vip_vesting {
 
     // <-- OPERATOR ----->
 
-
     #[view]
     public fun get_operator_last_claimed_stage(
         account_addr: address,
@@ -1325,6 +1325,7 @@ module publisher::vip_vesting {
         start_stage: u64,
         end_stage: u64,
     }
+
     #[test_only]
     public fun get_user_vesting_finalized_remaining(
         account_addr: address,
@@ -1449,6 +1450,5 @@ module publisher::vip_vesting {
         vip_reward::register_user_reward_store(publisher, 1);
         vip_reward::register_user_reward_store(publisher, 1);
     }
-
 
 }

@@ -91,11 +91,11 @@ module publisher::vip_reward {
         return seed
     }
 
-
     fun create_operator_reward_store_address(bridge_id: u64): address {
         let seed = generate_operator_reward_store_seed(bridge_id);
         object::create_object_address(@publisher, seed)
     }
+
     fun create_user_reward_store_address(bridge_id: u64): address {
         let seed = generate_user_reward_store_seed(bridge_id);
         object::create_object_address(@publisher, seed)
@@ -105,9 +105,7 @@ module publisher::vip_reward {
     // Friend Functions
     //
 
-    public(friend) fun register_operator_reward_store(
-        chain: &signer, bridge_id: u64,
-    ) {
+    public(friend) fun register_operator_reward_store(chain: &signer, bridge_id: u64,) {
         let seed = generate_operator_reward_store_seed(bridge_id);
         let reward_store_addr = object::create_object_address(
             signer::address_of(chain), seed
@@ -135,9 +133,7 @@ module publisher::vip_reward {
         );
     }
 
-    public(friend) fun register_user_reward_store(
-        chain: &signer, bridge_id: u64,
-    ) {
+    public(friend) fun register_user_reward_store(chain: &signer, bridge_id: u64,) {
         let seed = generate_user_reward_store_seed(bridge_id);
         let reward_store_addr = object::create_object_address(
             signer::address_of(chain), seed

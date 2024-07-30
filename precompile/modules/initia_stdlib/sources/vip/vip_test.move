@@ -24,7 +24,12 @@ module publisher::vip_test {
     struct TestState has key {
         last_submitted_stage: u64,
     }
-    fun init_and_mint_coin(creator: &signer, symbol: String, amount: u64): Object<Metadata> {
+
+    fun init_and_mint_coin(
+        creator: &signer,
+        symbol: String,
+        amount: u64
+    ): Object<Metadata> {
         let (init_mint_cap, _, _) = coin::initialize(
             creator,
             option::none(),
@@ -41,69 +46,167 @@ module publisher::vip_test {
         );
         coin::metadata(signer::address_of(creator), symbol)
     }
+
     fun get_validator(): String {
         string::utf8(b"validator")
     }
+
     fun get_bridge_id(): u64 {
-        1
+         1
     }
+
     fun get_bridge_address(): address {
         @0x99
     }
 
     fun get_stage(): u64 {
-        let (stage,_,_,_,_,_,_,_,_) = vip::unpack_module_store();
+        let (
+            stage,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _
+        ) = vip::unpack_module_store();
         stage
     }
-    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 60 * 24* 7;
+
+    const DEFAULT_STAGE_INTERVAL: u64 = 60 * 60 * 24 * 7;
 
     fun get_stage_interval(): u64 {
-        let (_,stage_interval,_,_,_,_,_,_,_) = vip::unpack_module_store();
+        let (
+            _,
+            stage_interval,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _
+        ) = vip::unpack_module_store();
         stage_interval
     }
-    const DEFAULT_VESTING_PERIOD:u64= 60 * 60 * 24 * 7 * 52;
+
+    const DEFAULT_VESTING_PERIOD: u64 = 60 * 60 * 24 * 7 * 52;
     fun get_vesting_period(): u64 {
-        let (_,_,vesting_period,_,_,_,_,_,_) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            vesting_period,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _
+        ) = vip::unpack_module_store();
         vesting_period
     }
 
-    const DEFAULT_CHALLENGE_PERIOD:u64= 60 * 60 * 24 * 3;
+    const DEFAULT_CHALLENGE_PERIOD: u64 = 60 * 60 * 24 * 3;
     fun get_challenge_period(): u64 {
-        let (_,_,_,challenge_period,_,_,_,_,_) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            _,
+            challenge_period,
+            _,
+            _,
+            _,
+            _,
+            _
+        ) = vip::unpack_module_store();
         challenge_period
     }
+
     fun get_minimum_score_ratio(): Decimal256 {
-       let (_,_,_,_,minimum_score_ratio,_,_,_,_) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            _,
+            _,
+            minimum_score_ratio,
+            _,
+            _,
+            _,
+            _
+        ) = vip::unpack_module_store();
         minimum_score_ratio
     }
 
     fun get_pool_split_ratio(): Decimal256 {
-        let (_,_,_,_,_,pool_split_ratio,_,_,_) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            _,
+            _,
+            _,
+            pool_split_ratio,
+            _,
+            _,
+            _
+        ) = vip::unpack_module_store();
         pool_split_ratio
     }
 
     fun get_maximum_tvl_ratio(): Decimal256 {
-        let (_,_,_,_,_,_,maximum_tvl_ratio,_,_) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            maximum_tvl_ratio,
+            _,
+            _
+        ) = vip::unpack_module_store();
         maximum_tvl_ratio
     }
 
     fun get_minimum_eligible_tvl(): u64 {
-        let (_,_,_,_,_,_,_,minimum_eligible_tvl,_) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            minimum_eligible_tvl,
+            _
+        ) = vip::unpack_module_store();
         minimum_eligible_tvl
     }
-    
+
     fun get_maximum_weight_ratio(): Decimal256 {
-        let (_,_,_,_,_,_,_,_,maximum_weight_ratio) = vip::unpack_module_store();
+        let (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            maximum_weight_ratio
+        ) = vip::unpack_module_store();
         maximum_weight_ratio
     }
-    
+
     fun get_reward_per_stage(bridge_id: u64): u64 {
         vip_vault::reward_per_stage()
     }
+
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
         block::set_block_info(height, curr_time + period);
     }
+
     fun submit_snapshot(
         agent: &signer,
         user: address,
@@ -117,19 +220,48 @@ module publisher::vip_test {
         let test_state = borrow_global_mut<TestState>(@publisher);
         test_state.last_submitted_stage = test_state.last_submitted_stage + 1;
         let stage = test_state.last_submitted_stage;
-        let (merkle_root, merkle_proof) = get_merkle_root_and_proof(stage, user, l2_score, total_l2_score);
-        vip::submit_snapshot(agent, get_bridge_id(), stage, merkle_root, total_l2_score);
+        let (merkle_root, merkle_proof) = get_merkle_root_and_proof(
+            stage, user, l2_score, total_l2_score
+        );
+        vip::submit_snapshot(
+            agent,
+            get_bridge_id(),
+            stage,
+            merkle_root,
+            total_l2_score
+        );
         update_timestamp(get_stage_interval(), true);
         vector::push_back(stages, stage);
         vector::push_back(merkle_proofs, merkle_proof);
         vector::push_back(l2_scores, l2_score);
     }
-    fun get_merkle_root_and_proof(stage: u64, user: address, l2_score: u64, total_l2_score: u64): (vector<u8>, vector<vector<u8>>) {
-        let user_hash = score_hash(get_bridge_id(), stage, user, l2_score, total_l2_score);
-        let dummpy_hash = score_hash(get_bridge_id(), stage, @0xff, total_l2_score - l2_score, total_l2_score);
-        
+
+    fun get_merkle_root_and_proof(
+        stage: u64,
+        user: address,
+        l2_score: u64,
+        total_l2_score: u64
+    ): (
+        vector<u8>,
+        vector<vector<u8>>
+    ) {
+        let user_hash = score_hash(
+            get_bridge_id(),
+            stage,
+            user,
+            l2_score,
+            total_l2_score
+        );
+        let dummpy_hash = score_hash(
+            get_bridge_id(),
+            stage,
+            @0xff,
+            total_l2_score - l2_score,
+            total_l2_score
+        );
+
         let cmp = bytes_cmp(&user_hash, &dummpy_hash);
-        let merkle_root =  if (cmp == 2 /* less */) {
+        let merkle_root = if (cmp == 2 /* less */) {
             let tmp = user_hash;
             vector::append(&mut tmp, dummpy_hash);
             sha3_256(tmp)
@@ -140,6 +272,7 @@ module publisher::vip_test {
         };
         (merkle_root, vector[dummpy_hash])
     }
+
     fun bytes_cmp(v1: &vector<u8>, v2: &vector<u8>): u8 {
         let i = 0;
         while (i <32) {
@@ -151,11 +284,24 @@ module publisher::vip_test {
         };
         0
     }
-    public fun initialize(chain: &signer, publisher: &signer, operator: &signer) {
+
+    public fun initialize(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer
+    ) {
         primary_fungible_store::init_module_for_test(chain);
         dex::init_module_for_test(chain);
-        let init_metadata = init_and_mint_coin(chain, string::utf8(b"uinit"), 10000000000000000);
-        let usdc_metadata = init_and_mint_coin(chain, string::utf8(b"uusdc"), 10000000000000000);
+        let init_metadata = init_and_mint_coin(
+            chain,
+            string::utf8(b"uinit"),
+            10000000000000000
+        );
+        let usdc_metadata = init_and_mint_coin(
+            chain,
+            string::utf8(b"uusdc"),
+            10000000000000000
+        );
         vip_zapping::init_module_for_test(publisher);
         vip_tvl_manager::init_module_for_test(publisher);
         vip::init_module_for_test(publisher);
@@ -172,7 +318,12 @@ module publisher::vip_test {
         );
         vip_vault::deposit(chain, 9_000_000_000_000_000);
         vip_vault::update_reward_per_stage(publisher, 100_000_000);
-        coin::transfer(chain, get_bridge_address(), init_metadata, 1);
+        coin::transfer(
+            chain,
+            get_bridge_address(),
+            init_metadata,
+            1
+        );
         vip::register(
             publisher,
             signer::address_of(operator),
@@ -183,7 +334,10 @@ module publisher::vip_test {
             decimal256::from_ratio(1, 2),
             decimal256::from_ratio(1, 2),
         );
-        move_to(publisher, TestState { last_submitted_stage: 0 });
+        move_to(
+            publisher,
+            TestState {last_submitted_stage: 0}
+        );
         dex::create_pair_script(
             chain,
             string::utf8(b"pair"),
@@ -209,6 +363,7 @@ module publisher::vip_test {
             1
         );
     }
+
     fun score_hash(
         bridge_id: u64,
         stage: u64,
@@ -242,79 +397,324 @@ module publisher::vip_test {
         };
         target_hash
     }
+
     fun get_lp_metadata(): Object<Metadata> {
-        coin::metadata(
-            @0x1,
-            string::utf8(b"INIT-USDC")
-        )
+        coin::metadata(@0x1, string::utf8(b"INIT-USDC"))
     }
+
     fun usdc_metadata(): Object<Metadata> {
-        coin::metadata(
-            @0x1,
-            string::utf8(b"uusdc")
-        )
+        coin::metadata(@0x1, string::utf8(b"uusdc"))
     }
+
     fun init_metadata(): Object<Metadata> {
-        coin::metadata(
-            @0x1,
-            string::utf8(b"uinit")
-        )
+        coin::metadata(@0x1, string::utf8(b"uinit"))
     }
+
     fun update_timestamp(diff: u64, increase: bool) {
         let (height, curr_time) = block::get_block_info();
-        let updated_time = if (increase) { curr_time + diff } else { curr_time - diff };
+        let updated_time = if (increase) {curr_time + diff} else {curr_time - diff};
         block::set_block_info(height, updated_time);
     }
-    fun reset_claim_args(): (vector<u64>, vector<vector<vector<u8>>>, vector<u64>) {
+
+    fun reset_claim_args()
+        : (
+        vector<u64>,
+        vector<vector<vector<u8>>>,
+        vector<u64>
+    ) {
         let stages: vector<u64> = vector[];
         let merkle_proofs: vector<vector<vector<u8>>> = vector[];
         let l2_scores: vector<u64> = vector[];
         (stages, merkle_proofs, l2_scores)
     }
+
     #[test(chain = @initia_std, publisher = @publisher, operator = @0x2, user = @0x3)]
-    fun e2e(chain: &signer, publisher: &signer, operator: &signer, user: &signer) acquires TestState {
+    fun e2e(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+        user: &signer
+    ) acquires TestState {
         initialize(chain, publisher, operator);
         let user_addr = signer::address_of(user);
-        coin::transfer(chain, user_addr, usdc_metadata(), 1000000);
+        coin::transfer(
+            chain,
+            user_addr,
+            usdc_metadata(),
+            1000000
+        );
         let (stages, merkle_proofs, l2_scores) = reset_claim_args();
-        submit_snapshot(publisher, user_addr, 10, 100, &mut stages, &mut merkle_proofs, &mut l2_scores);
-        submit_snapshot(publisher, user_addr, 20, 100, &mut stages, &mut merkle_proofs, &mut l2_scores);
-        submit_snapshot(publisher, user_addr, 0, 100, &mut stages, &mut merkle_proofs, &mut l2_scores);
-        submit_snapshot(publisher, user_addr, 40, 100, &mut stages, &mut merkle_proofs, &mut l2_scores);
+        submit_snapshot(
+            publisher,
+            user_addr,
+            10,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        );
+        submit_snapshot(
+            publisher,
+            user_addr,
+            20,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        );
+        submit_snapshot(
+            publisher,
+            user_addr,
+            0,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        );
+        submit_snapshot(
+            publisher,
+            user_addr,
+            40,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        );
         *vector::borrow_mut(&mut merkle_proofs, 2) = vector[];
-        vip::batch_claim_user_reward_script(user, get_bridge_id(), stages, merkle_proofs, l2_scores);
+        vip::batch_claim_user_reward_script(
+            user,
+            get_bridge_id(),
+            stages,
+            merkle_proofs,
+            l2_scores
+        );
         let (stages, merkle_proofs, l2_scores) = reset_claim_args();
-        submit_snapshot(publisher, user_addr, 40, 100, &mut stages, &mut merkle_proofs, &mut l2_scores);
-        vip::batch_claim_user_reward_script(user, get_bridge_id(), stages, merkle_proofs, l2_scores);
+        submit_snapshot(
+            publisher,
+            user_addr,
+            40,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        );
+        vip::batch_claim_user_reward_script(
+            user,
+            get_bridge_id(),
+            stages,
+            merkle_proofs,
+            l2_scores
+        );
         let stage = *vector::borrow(&stages, 0);
-        vip::zapping_script(user, get_bridge_id(), get_lp_metadata(), option::none(), get_validator(), stage, 1000, 1000, usdc_metadata());
+        vip::zapping_script(
+            user,
+            get_bridge_id(),
+            get_lp_metadata(),
+            option::none(),
+            get_validator(),
+            stage,
+            1000,
+            1000,
+            usdc_metadata()
+        );
     }
+
     #[test(chain = @initia_std, publisher = @publisher, operator = @0x2, user = @0x3)]
-    fun claim_amount_test(chain: &signer, publisher: &signer, operator: &signer, user: &signer) acquires TestState {
+    fun claim_amount_test(
+        chain: &signer,
+        publisher: &signer,
+        operator: &signer,
+        user: &signer
+    ) acquires TestState {
         initialize(chain, publisher, operator);
         let user_addr = signer::address_of(user);
-        coin::transfer(chain, user_addr, usdc_metadata(), 1000000);
+        coin::transfer(
+            chain,
+            user_addr,
+            usdc_metadata(),
+            1000000
+        );
         let (stages, merkle_proofs, l2_scores) = reset_claim_args();
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 75%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 100%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 75%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 100%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 75%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 100%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 75%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 100%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 75%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 100%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 65%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 80%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 50%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 50, 60%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 35%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 40%
-        submit_snapshot(publisher, user_addr, 100, 200, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 20%
-        submit_snapshot(publisher, user_addr, 50, 100, &mut stages, &mut merkle_proofs, &mut l2_scores); // min score: 100, 20%
-        submit_snapshot(publisher, @0x1, 0, 0, &mut stages, &mut vector[], &mut vector[]); // min score: 100, 5%
-        submit_snapshot(publisher, @0x1, 0, 0, &mut stages, &mut vector[], &mut vector[]); // min score: 100, 0%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 75%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 100%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 75%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 100%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 75%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 100%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 75%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 100%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 75%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 100%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 65%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 80%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 50%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 50, 60%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 35%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 40%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            100,
+            200,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 20%
+        submit_snapshot(
+            publisher,
+            user_addr,
+            50,
+            100,
+            &mut stages,
+            &mut merkle_proofs,
+            &mut l2_scores
+        ); // min score: 100, 20%
+        submit_snapshot(
+            publisher,
+            @0x1,
+            0,
+            0,
+            &mut stages,
+            &mut vector[],
+            &mut vector[]
+        ); // min score: 100, 5%
+        submit_snapshot(
+            publisher,
+            @0x1,
+            0,
+            0,
+            &mut stages,
+            &mut vector[],
+            &mut vector[]
+        ); // min score: 100, 0%
         vector::push_back(&mut merkle_proofs, vector[]);
         vector::push_back(&mut l2_scores, 0);
         vector::push_back(&mut merkle_proofs, vector[]);
@@ -331,9 +731,19 @@ module publisher::vip_test {
         // reward amount per each stage (05 penalty): 125
         // reward amount per each stage (50% penalty): 63 (round down for penalty)
         let init_balance_before = coin::balance(user_addr, init_metadata());
-        vip::batch_claim_user_reward_script(user, get_bridge_id(), stages, merkle_proofs, l2_scores);
+        vip::batch_claim_user_reward_script(
+            user,
+            get_bridge_id(),
+            stages,
+            merkle_proofs,
+            l2_scores
+        );
         let init_balance_after = coin::balance(user_addr, init_metadata());
-        std::debug::print(&(init_balance_after - init_balance_before));
+        std::debug::print(
+            &(
+                init_balance_after - init_balance_before
+            )
+        );
         // vip::zapping_script(user, get_bridge_id(), get_lp_metadata(), option::none(), get_validator(), 20, 1000, 1000, usdc_metadata());
         // std::debug::print(&(1250 * get_reward_per_stage() / 2  / 2 / 2 / 100));
         // assert!(init_balance_after - init_balance_before == 12 * get_reward_per_stage() / 2 / 2, 0);
@@ -351,7 +761,10 @@ module publisher::vip_test {
         let stage_reward = vip_vault::reward_per_stage();
         // stage 1
         // total score: 1000, receiver's score : 100
-        let (stage1_merkle_root,stage1_merkle_proof) = get_merkle_root_and_proof(1,receiver_addr,100,1000);
+        let (
+            stage1_merkle_root,
+            stage1_merkle_proof
+        ) = get_merkle_root_and_proof(1, receiver_addr, 100, 1000);
         vip::fund_reward_script(publisher);
         vip::submit_snapshot(
             publisher,
@@ -361,7 +774,10 @@ module publisher::vip_test {
             1000
         );
         skip_period(DEFAULT_CHALLENGE_PERIOD + 1);
-        assert!(vip::get_last_submitted_stage(1) == 1, 2);
+        assert!(
+            vip::get_last_submitted_stage(1) == 1,
+            2
+        );
 
         assert!(
             vip_reward::balance(receiver_addr) == 0,
@@ -378,11 +794,15 @@ module publisher::vip_test {
             vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 1,
             3
         );
-        vip_vesting::get_user_vesting_initial_reward(receiver_addr, get_bridge_id(), 1);
-        skip_period(DEFAULT_STAGE_INTERVAL+1);
+        vip_vesting::get_user_vesting_initial_reward(receiver_addr, get_bridge_id(), 1
+        );
+        skip_period(DEFAULT_STAGE_INTERVAL + 1);
         // stage 2
         // total score: 1000, receiver's score : 500
-        let (stage2_merkle_root,stage2_merkle_proof) = get_merkle_root_and_proof(2,receiver_addr,500,1000);
+        let (
+            stage2_merkle_root,
+            stage2_merkle_proof
+        ) = get_merkle_root_and_proof(2, receiver_addr, 500, 1000);
         vip::fund_reward_script(publisher);
         vip::submit_snapshot(
             publisher,
@@ -400,20 +820,24 @@ module publisher::vip_test {
             vector[500],
         );
         // check vested stage 1 reward claimed; no missed INIT
-        initia_std::debug::print(&vip_reward::balance(receiver_addr));
+        initia_std::debug::print(
+            &vip_reward::balance(receiver_addr)
+        );
         initia_std::debug::print(&((stage_reward / 52) * 100 / 1000));
-        
 
         assert!(
             vip_reward::balance(receiver_addr) == (stage_reward / 52) * 100 / 1000,
             4
         );
-        skip_period(DEFAULT_STAGE_INTERVAL+1);
+        skip_period(DEFAULT_STAGE_INTERVAL + 1);
         vip::fund_reward_script(publisher);
         let vault_balance = vip_vault::balance();
         // stage 3
         // total score: 1000, receiver's score : 0
-        let (stage3_merkle_root,stage3_merkle_proof) = get_merkle_root_and_proof(3,receiver_addr,0,1000);
+        let (
+            stage3_merkle_root,
+            stage3_merkle_proof
+        ) = get_merkle_root_and_proof(3, receiver_addr, 0, 1000);
         vip::submit_snapshot(
             publisher,
             get_bridge_id(),
@@ -430,9 +854,20 @@ module publisher::vip_test {
             vector[0],
         );
         // do not create vesting positions and finalize it
-        assert!(vip_vesting::get_user_last_claimed_stage(receiver_addr,1) == 3, 5);
-        assert!(vip_vesting::get_user_vesting_finalized_initial_reward(receiver_addr,1,3) == 0, 6);
-        assert!(vip_vesting::get_user_vesting_finalized_remaining(receiver_addr,1,3) == 0, 7);
+        assert!(
+            vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 3,
+            5
+        );
+        assert!(
+            vip_vesting::get_user_vesting_finalized_initial_reward(receiver_addr, 1, 3
+            ) == 0,
+            6
+        );
+        assert!(
+            vip_vesting::get_user_vesting_finalized_remaining(receiver_addr, 1, 3) ==
+                0,
+            7
+        );
 
         // vested stage 1 reward((stage_reward / 52) * 100 / 1000) + vested stage 2 reward(0)
         assert!(
@@ -440,7 +875,12 @@ module publisher::vip_test {
             8
         );
         // claim with no reward and full penalty of vesting position(start stage: 1, 2)
-        assert!( vip_vault::balance() == vault_balance + (stage_reward / 52) * 100 / 1000 + (stage_reward / 52) * 500 / 1000,9)
+        assert!(
+            vip_vault::balance() == vault_balance + (stage_reward / 52) * 100 / 1000 + (
+                stage_reward / 52
+            ) * 500 / 1000,
+            9
+        )
 
     }
 
@@ -452,13 +892,16 @@ module publisher::vip_test {
         receiver: &signer,
     ) {
         let receiver_addr = signer::address_of(receiver);
-        initialize(chain,publisher,operator);
+        initialize(chain, publisher, operator);
         let vesting_period = get_vesting_period();
         let stage_reward = vip_vault::reward_per_stage();
         // stage 1
         vip::fund_reward_script(publisher);
         // stage 1 total score: 1000, receiver's score : 100
-        let (stage1_merkle_root,stage1_merkle_proof) = get_merkle_root_and_proof(1,receiver_addr,100,1000);
+        let (
+            stage1_merkle_root,
+            stage1_merkle_proof
+        ) = get_merkle_root_and_proof(1, receiver_addr, 100, 1000);
         vip::submit_snapshot(
             publisher,
             get_bridge_id(),
@@ -467,7 +910,10 @@ module publisher::vip_test {
             1000
         );
         skip_period(DEFAULT_CHALLENGE_PERIOD + 1);
-        assert!(vip::get_last_submitted_stage(1) == 1, 2);
+        assert!(
+            vip::get_last_submitted_stage(1) == 1,
+            2
+        );
         assert!(
             vip_reward::balance(receiver_addr) == 0,
             3
@@ -484,15 +930,21 @@ module publisher::vip_test {
             vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 1,
             4
         );
-        let initial_reward = vip_vesting::get_user_vesting_initial_reward(receiver_addr,get_bridge_id(),1);
+        let initial_reward = vip_vesting::get_user_vesting_initial_reward(
+            receiver_addr, get_bridge_id(), 1
+        );
         initia_std::debug::print(&initial_reward);
         assert!(
-            initial_reward ==  100 * stage_reward / 1000, 5
+            initial_reward == 100 * stage_reward / 1000,
+            5
         );
-        skip_period(DEFAULT_STAGE_INTERVAL+1);
+        skip_period(DEFAULT_STAGE_INTERVAL + 1);
         // stage 2
         vip::fund_reward_script(publisher);
-        let (stage2_merkle_root,stage2_merkle_proof) = get_merkle_root_and_proof(1,receiver_addr,100,1000);
+        let (
+            stage2_merkle_root,
+            stage2_merkle_proof
+        ) = get_merkle_root_and_proof(1, receiver_addr, 100, 1000);
         vip::submit_snapshot(
             publisher,
             1,
@@ -502,16 +954,16 @@ module publisher::vip_test {
         );
         // zapping stage 1 vesting position; remaining reward: (stage_reward) * 100 / 1000
         // without waiting the challenge period
-        vip::zapping_script(receiver,1,get_lp_metadata(),option::none(),get_validator(),1,(stage_reward) * 100 / 1000,10000,usdc_metadata())
+        vip::zapping_script(
+            receiver,
+            1,
+            get_lp_metadata(),
+            option::none(),
+            get_validator(),
+            1,
+            (stage_reward) * 100 / 1000,
+            10000,
+            usdc_metadata()
+        )
     }
 }
-
-
-
-
-
-
-
-
-
-

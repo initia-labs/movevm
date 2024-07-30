@@ -1167,8 +1167,11 @@ module publisher::vip {
     ) acquires ModuleStore {
         check_agent_permission(agent);
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        // submitted snapshot under current stage 
-        assert!(stage < module_store.stage, error::invalid_argument(EINVALID_STAGE_SNAPSHOT));
+        // submitted snapshot under current stage
+        assert!(
+            stage < module_store.stage,
+            error::invalid_argument(EINVALID_STAGE_SNAPSHOT)
+        );
         assert!(
             table::contains(
                 &module_store.stage_data,
@@ -1495,7 +1498,7 @@ module publisher::vip {
         vesting_period: Option<u64>,
         minimum_eligible_tvl: Option<u64>,
         maximum_tvl_ratio: Option<Decimal256>,
-        maximum_weight_ratio:Option<Decimal256>,
+        maximum_weight_ratio: Option<Decimal256>,
         minimum_score_ratio: Option<Decimal256>,
         pool_split_ratio: Option<Decimal256>,
         challenge_period: Option<u64>,
@@ -1593,18 +1596,22 @@ module publisher::vip {
         );
         bridge.vip_l2_score_contract = new_vip_l2_score_contract;
     }
+
     // TODO: delete this on mainnet?
     public entry fun update_operator(
         operator: &signer,
         bridge_id: u64,
-        new_operator_addr: address, 
+        new_operator_addr: address,
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let bridge = load_bridge_mut(
             &mut module_store.bridges,
             bridge_id
         );
-        assert!(bridge.operator_addr == signer::address_of(operator), error::permission_denied(EUNAUTHORIZED));
+        assert!(
+            bridge.operator_addr == signer::address_of(operator),
+            error::permission_denied(EUNAUTHORIZED)
+        );
         bridge.operator_addr = new_operator_addr;
     }
 
@@ -2102,7 +2109,8 @@ module publisher::vip {
     #[test_only]
     const NEW_L2_TOTAL_SCORE_FOR_TEST: u64 = 1000;
     #[test_only]
-    public fun unpack_module_store():(
+    public fun unpack_module_store()
+        : (
         u64, // stage
         u64, // stage_interval
         u64, // vesting_period
@@ -2110,7 +2118,7 @@ module publisher::vip {
         Decimal256, // minimum_score_ratio
         Decimal256, // pool_split_ratio
         Decimal256, // maximum_tvl_ratio
-        u64,//minimum_eligible_tvl
+        u64, //minimum_eligible_tvl
         Decimal256, //maximum_weight_ratio
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
@@ -2126,6 +2134,7 @@ module publisher::vip {
             module_store.maximum_weight_ratio,
         )
     }
+
     #[test_only]
     fun skip_period(period: u64) {
         let (height, curr_time) = block::get_block_info();
@@ -2604,15 +2613,23 @@ module publisher::vip {
             _,
             total_score_map
         ) = merkle_root_and_proof_scene1();
-
         while (
             idx <= simple_map::length(&merkle_root_map)
         ) {
-            let total_l2_score = *simple_map::borrow(&total_score_map, &idx);
-            let merkle_root = *simple_map::borrow(&merkle_root_map, &idx);
-
             fund_reward_script(agent);
             skip_period(DEFAULT_STAGE_INTERVAL);
+            idx = idx + 1;
+        };
+        // stage 11
+        fund_reward_script(agent);
+        skip_period(DEFAULT_STAGE_INTERVAL);
+        idx = 1;
+        // submit snapshot stage 1 ~ 10 
+        while(
+            idx <= simple_map::length(&merkle_root_map)
+        ) {
+            let total_l2_score = *simple_map::borrow(&total_score_map, &(idx));
+            let merkle_root = *simple_map::borrow(&merkle_root_map, &(idx));
             submit_snapshot(
                 agent,
                 bridge_id,
@@ -2620,8 +2637,7 @@ module publisher::vip {
                 merkle_root,
                 total_l2_score
             );
-            idx = idx + 1;
-        };
+        }
     }
 
     #[test_only]
@@ -5233,6 +5249,4 @@ module publisher::vip {
         );
     }
 
-    
-    
 }
