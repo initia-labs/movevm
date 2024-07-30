@@ -238,12 +238,23 @@ module initia_std::primary_fungible_store {
         let sender_store = ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
         fungible_asset::transfer(sender, sender_store, recipient_store, amount);
+
+        // create cosmos side account
+        if (!account::exists_at(recipient)) {
+            let _acc_num = account::create_account(recipient);
+        };
     }
 
     /// Mint to the primary store of `owner`.
     public fun mint(mint_ref: &MintRef, owner: address, amount: u64) acquires DeriveRefPod, ModuleStore {
         let primary_store = ensure_primary_store_exists(owner, fungible_asset::mint_ref_metadata(mint_ref));
         fungible_asset::mint_to(mint_ref, primary_store, amount);
+
+
+        // create cosmos side account
+        if (!account::exists_at(owner)) {
+            let _acc_num = account::create_account(owner);
+        };
     }
 
     /// Burn from the primary store of `owner`.
