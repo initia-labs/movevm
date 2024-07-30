@@ -39,7 +39,7 @@ module publisher::vip_zapping {
     // Constants
     //
 
-    const DEFAULT_LOCK_PERIOD: u64 = 60 * 60; // 1hour
+    const DEFAULT_LOCK_PERIOD: u64 = 60 * 60 * 24 * 7 * 26; // 26 weeks
 
     //
     // Resources
