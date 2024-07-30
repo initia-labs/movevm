@@ -16,7 +16,6 @@ module publisher::vip_reward {
     use initia_std::coin;
     use initia_std::bcs;
     use initia_std::fungible_asset;
-    use initia_std::type_info;
     friend publisher::vip_weight_vote;
     friend publisher::vip_vesting;
     friend publisher::vip_zapping;
@@ -64,12 +63,8 @@ module publisher::vip_reward {
     // Helper Functions
     //
 
-    fun generate_reward_store_seed<Vesting: copy + drop + store>(bridge_id: u64): vector<u8> {
-        let vesting_type = type_info::type_of<Vesting>();
-        let seed = if (type_info::struct_name(&vesting_type) == b"OperatorVesting") {
-            vector[OPERATOR_REWARD_PREFIX]
-        } else {vector[USER_REWARD_PREFIX]};
-
+    fun generate_operator_reward_store_seed(bridge_id: u64): vector<u8> {
+        let seed = vector[OPERATOR_REWARD_PREFIX];
         vector::append(
             &mut seed,
             bcs::to_bytes(&@publisher)
@@ -82,8 +77,27 @@ module publisher::vip_reward {
         return seed
     }
 
-    fun create_reward_store_address<Vesting: copy + drop + store>(bridge_id: u64): address {
-        let seed = generate_reward_store_seed<Vesting>(bridge_id);
+    fun generate_user_reward_store_seed(bridge_id: u64): vector<u8> {
+        let seed = vector[USER_REWARD_PREFIX];
+        vector::append(
+            &mut seed,
+            bcs::to_bytes(&@publisher)
+        );
+
+        vector::append(
+            &mut seed,
+            bcs::to_bytes(&bridge_id)
+        );
+        return seed
+    }
+
+
+    fun create_operator_reward_store_address(bridge_id: u64): address {
+        let seed = generate_operator_reward_store_seed(bridge_id);
+        object::create_object_address(@publisher, seed)
+    }
+    fun create_user_reward_store_address(bridge_id: u64): address {
+        let seed = generate_user_reward_store_seed(bridge_id);
         object::create_object_address(@publisher, seed)
     }
 
@@ -91,10 +105,40 @@ module publisher::vip_reward {
     // Friend Functions
     //
 
-    public(friend) fun register_reward_store<Vesting: copy + drop + store>(
+    public(friend) fun register_operator_reward_store(
         chain: &signer, bridge_id: u64,
     ) {
-        let seed = generate_reward_store_seed<Vesting>(bridge_id);
+        let seed = generate_operator_reward_store_seed(bridge_id);
+        let reward_store_addr = object::create_object_address(
+            signer::address_of(chain), seed
+        );
+        assert!(
+            !exists<RewardStore>(reward_store_addr),
+            error::already_exists(EREWARD_STORE_ALREADY_EXISTS)
+        );
+
+        let constructor_ref = object::create_named_object(chain, seed, false);
+        let object = object::generate_signer(&constructor_ref);
+        let extend_ref = object::generate_extend_ref(&constructor_ref);
+        let reward_store = primary_fungible_store::ensure_primary_store_exists(
+            reward_store_addr,
+            reward_metadata()
+        );
+
+        move_to(
+            &object,
+            RewardStore {
+                extend_ref,
+                reward_store,
+                reward_per_stage: table::new<vector<u8>, u64>(),
+            }
+        );
+    }
+
+    public(friend) fun register_user_reward_store(
+        chain: &signer, bridge_id: u64,
+    ) {
+        let seed = generate_user_reward_store_seed(bridge_id);
         let reward_store_addr = object::create_object_address(
             signer::address_of(chain), seed
         );
@@ -149,12 +193,12 @@ module publisher::vip_reward {
         )
     }
 
-    public(friend) fun penalty<Vesting: copy + drop + store>(
+    public(friend) fun penalty(
         bridge_id: u64,
         penalty_amount: u64,
         vault_store_addr: address
     ) acquires RewardStore {
-        let reward_store_addr = get_reward_store_address<Vesting>(bridge_id);
+        let reward_store_addr = get_user_reward_store_address(bridge_id);
         let reward_store = borrow_global<RewardStore>(reward_store_addr);
         let reward_signer = object::generate_signer_for_extending(&reward_store.extend_ref);
         assert!(
@@ -198,15 +242,31 @@ module publisher::vip_reward {
     }
 
     #[view]
-    public fun is_reward_store_registered<Vesting: copy + drop + store>(bridge_id: u64): bool {
+    public fun is_operator_reward_store_registered(bridge_id: u64): bool {
         exists<RewardStore>(
-            create_reward_store_address<Vesting>(bridge_id)
+            create_operator_reward_store_address(bridge_id)
+        )
+    }
+
+    public fun is_user_reward_store_registered(bridge_id: u64): bool {
+        exists<RewardStore>(
+            create_user_reward_store_address(bridge_id)
         )
     }
 
     #[view]
-    public fun get_reward_store_address<Vesting: copy + drop + store>(bridge_id: u64): address {
-        let reward_addr = create_reward_store_address<Vesting>(bridge_id);
+    public fun get_operator_reward_store_address(bridge_id: u64): address {
+        let reward_addr = create_operator_reward_store_address(bridge_id);
+        assert!(
+            exists<RewardStore>(reward_addr),
+            error::not_found(EREWARD_STORE_NOT_FOUND)
+        );
+        reward_addr
+    }
+
+    #[view]
+    public fun get_user_reward_store_address(bridge_id: u64): address {
+        let reward_addr = create_user_reward_store_address(bridge_id);
         assert!(
             exists<RewardStore>(reward_addr),
             error::not_found(EREWARD_STORE_NOT_FOUND)
