@@ -63,6 +63,7 @@ module publisher::vip {
     const EALREADY_FINALIZED_OR_ZAPPED: u64 = 27;
     const ETOO_EARLY_FUND: u64 = 28;
     const EINVALID_STAGE_INTERVAL: u64 = 29;
+    const EINVALID_STAGE_SNAPSHOT: u64 = 30;
     //
     //  Constants
     //
@@ -1166,7 +1167,8 @@ module publisher::vip {
     ) acquires ModuleStore {
         check_agent_permission(agent);
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-
+        // submitted snapshot under current stage 
+        assert!(stage < module_store.stage, error::invalid_argument(EINVALID_STAGE_SNAPSHOT));
         assert!(
             table::contains(
                 &module_store.stage_data,
