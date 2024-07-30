@@ -274,7 +274,7 @@ module minitia_std::primary_fungible_store {
     /// Transfer `amount` of fungible asset from sender's primary store to receiver's primary store.
     ///
     /// This function is only callable by the chain.
-    public(friend) entry fun sudo_transfer<T: key>(
+    public(friend) fun sudo_transfer<T: key>(
         sender: &signer,
         metadata: Object<T>,
         recipient: address,
