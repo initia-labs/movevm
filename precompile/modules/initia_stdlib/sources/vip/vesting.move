@@ -918,8 +918,6 @@ module publisher::vip_vesting {
             &mut vesting_store.vestings,
             table_key::encode_u64(stage)
         );
-        initia_std::debug::print(&vesting.remaining_reward);
-        initia_std::debug::print(&zapping_amount);
 
         assert!(
             vesting.remaining_reward >= zapping_amount,

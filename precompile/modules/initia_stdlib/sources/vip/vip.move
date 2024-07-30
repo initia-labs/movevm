@@ -2217,7 +2217,6 @@ module publisher::vip {
             bridge_address,
             mint_amount
         );
-        initia_std::debug::print(&mint_amount);
         vip_vault::deposit(chain, mint_amount);
 
         register(
