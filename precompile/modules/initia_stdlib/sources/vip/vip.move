@@ -213,6 +213,11 @@ module publisher::vip {
         new_merkle_root: vector<u8>,
     }
 
+    struct TotalL2ScoreResponse has drop {
+        bridge_id: u64,
+        total_l2_score: u64
+    }
+
     //
     // Events
     //
@@ -1427,6 +1432,7 @@ module publisher::vip {
                 );
                 if (*l2_score != 0) {
                     assert_merkle_proofs(
+
                         *merkle_proof,
                         snapshot.merkle_root,
                         target_hash,
@@ -1719,7 +1725,6 @@ module publisher::vip {
     //
     // View Functions
     //
-
     #[view]
     public fun get_snapshot(bridge_id: u64, stage: u64): SnapshotResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
@@ -1927,6 +1932,29 @@ module publisher::vip {
             );
         };
         bridge_ids
+    }
+    #[view]
+    public fun get_total_l2_scores(stage: u64): vector<TotalL2ScoreResponse> acquires ModuleStore {
+
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        let stage_key = table_key::encode_u64(stage);
+        let stage_data= table::borrow(&module_store.stage_data,stage_key);
+
+        let total_l2_scores: vector<TotalL2ScoreResponse> = vector[];
+
+        let iter = table::iter(&stage_data.snapshots, option::none(), option::none(), 1);
+        loop {
+            if(!table::prepare<vector<u8>,Snapshot>(&mut iter)){break};
+            let(bridge_id_key, snapshot) = table::next<vector<u8>,Snapshot>(&mut iter);
+            vector::push_back(
+                &mut total_l2_scores,
+                TotalL2ScoreResponse {
+                    bridge_id: table_key::decode_u64(bridge_id_key),
+                    total_l2_score: snapshot.total_l2_score
+                }
+            )
+        };
+        total_l2_scores
     }
 
     #[view]

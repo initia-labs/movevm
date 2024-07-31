@@ -195,6 +195,13 @@ module publisher::vip_weight_vote {
         weights: vector<Weight>,
     }
 
+    
+    struct TallyResponse has drop {
+        bridge_id: u64,
+        tally: u64
+    }
+
+
     // events
 
     #[event]
@@ -1186,6 +1193,34 @@ module publisher::vip_weight_vote {
             table_key::encode_u64(bridge_id),
             &0
         )
+    }
+
+    #[view]
+    public fun get_tally_infos(cycle: u64): vector<TallyResponse> acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        let cycle_key = table_key::encode_u64(cycle);
+        assert!(
+            table::contains(&module_store.proposals, cycle_key),
+            error::not_found(ECYCLE_NOT_FOUND)
+        );
+        let proposal = table::borrow(&module_store.proposals, cycle_key);
+
+        let tally_responses:vector<TallyResponse> = vector[];
+        
+        let iter = table::iter(&proposal.tally,option::none(),option::none(),1);
+        loop {
+            if(!table::prepare<vector<u8>, u64>(&mut iter)) { break };
+            let (bridge_id_key, tally) = table::next<vector<u8>,u64>(&mut iter);
+            vector::push_back(
+                &mut tally_responses,
+                TallyResponse {
+                    bridge_id: table_key::decode_u64(bridge_id_key),
+                    tally: *tally
+                }
+            )
+        };
+        return tally_responses
+
     }
 
     #[view]
