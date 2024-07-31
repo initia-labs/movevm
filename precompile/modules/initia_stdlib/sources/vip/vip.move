@@ -2610,6 +2610,7 @@ module publisher::vip {
             _,
             total_score_map
         ) = merkle_root_and_proof_scene1();
+        // fund reward stage 1 ~ 10
         while (
             idx <= simple_map::length(&merkle_root_map)
         ) {
