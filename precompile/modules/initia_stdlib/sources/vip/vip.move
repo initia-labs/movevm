@@ -2194,7 +2194,6 @@ module publisher::vip {
         operator: &signer,
         bridge_id: u64,
         bridge_address: address,
-        init_stage: u64,
         vip_l2_score_contract: string::String,
         mint_amount: u64,
         commission_max_rate: Decimal256,
@@ -2254,7 +2253,6 @@ module publisher::vip {
             operator,
             bridge_id,
             bridge_address,
-            1,
             vip_l2_score_contract,
             mint_amount,
             decimal256::from_string(
@@ -2604,7 +2602,7 @@ module publisher::vip {
 
     #[test_only]
     public fun test_setup_scene1(agent: &signer, bridge_id: u64,) acquires ModuleStore {
-
+        
         let idx = 1;
         let (
             merkle_root_map,
@@ -2674,7 +2672,6 @@ module publisher::vip {
         publisher: &signer,
         operator: &signer
     ) acquires ModuleStore {
-        let init_stage = 1;
         let mint_amount = 1_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
@@ -3338,7 +3335,7 @@ module publisher::vip {
             BRIDGE_ID_FOR_TEST,
             @0x99,
             string::utf8(DEFAULT_VIP_L2_CONTRACT_FOR_TEST),
-            1_000_000_000_000,
+            1_100_000_000_000,
         );
 
         skip_period(1);
@@ -3768,7 +3765,6 @@ module publisher::vip {
         publisher: &signer,
         operator: &signer,
     ) acquires ModuleStore {
-        let init_stage = 1;
         let mint_amount = 100_000_000_000_000;
         primary_fungible_store::init_module_for_test(chain);
         vip_tvl_manager::init_module_for_test(publisher);
@@ -3982,7 +3978,6 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore, TestCapability {
-        let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         vip_tvl_manager::init_module_for_test(publisher);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
@@ -4772,7 +4767,6 @@ module publisher::vip {
         publisher: &signer,
         operator: &signer
     ) acquires ModuleStore {
-        let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
@@ -4848,7 +4842,6 @@ module publisher::vip {
         publisher: &signer,
         operator: &signer
     ) acquires ModuleStore {
-        let init_stage = 1;
         primary_fungible_store::init_module_for_test(chain);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
@@ -4938,7 +4931,6 @@ module publisher::vip {
         Object<Metadata>,
         string::String
     ) acquires ModuleStore {
-        let init_stage = 1;
         dex::init_module_for_test(chain);
         staking::init_module_for_test(chain);
         primary_fungible_store::init_module_for_test(chain);

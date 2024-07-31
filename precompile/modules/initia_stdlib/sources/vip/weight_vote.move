@@ -1325,7 +1325,6 @@ module publisher::vip_weight_vote {
 
     #[test_only]
     fun init_test(chain: &signer, publisher: &signer): coin::MintCapability {
-        let init_stage = 1;
         initialize(
             publisher,
             @0x2,
