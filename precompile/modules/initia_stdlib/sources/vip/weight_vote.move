@@ -195,12 +195,10 @@ module publisher::vip_weight_vote {
         weights: vector<Weight>,
     }
 
-    
     struct TallyResponse has drop {
         bridge_id: u64,
         tally: u64
     }
-
 
     // events
 
@@ -436,8 +434,8 @@ module publisher::vip_weight_vote {
 
         // remove former vote
         if (table::contains(&proposal.votes, addr)) {
-            let WeightVote {voting_power, weights} = table::remove(&mut proposal.votes, addr);
-            apply_vote(proposal, voting_power, weights, true);
+            let WeightVote {voting_power:_, weights} = table::remove(&mut proposal.votes, addr);
+            remove_vote(proposal, max_voting_power, weights);
         };
 
         // verify merkle proof
@@ -450,15 +448,26 @@ module publisher::vip_weight_vote {
             );
         };
 
-        // normalize weights to 1
-        let n_weights: vector<Weight> = normalize_weights(bridge_ids, weights);
+        let weight_vector = vector[];
+        vector::zip_reverse(
+            bridge_ids,
+            weights,
+            |bridge_id, weight| {
+                vector::push_back(
+                    &mut weight_vector,
+                    Weight {
+                        bridge_id: bridge_id,
+                        weight: weight,
+                    }
+                );
+            },
+        );
 
         // apply vote
         apply_vote(
             proposal,
-            voting_power_used,
-            n_weights,
-            false
+            max_voting_power,
+            weight_vector,
         );
 
         // store user votes
@@ -467,7 +476,7 @@ module publisher::vip_weight_vote {
             addr,
             WeightVote {
                 voting_power: voting_power_used,
-                weights: n_weights
+                weights: weight_vector
             }
         );
 
@@ -476,9 +485,8 @@ module publisher::vip_weight_vote {
             VoteEvent {
                 account: addr,
                 cycle,
-                voting_power: voting_power_used,
-                weights: n_weights,
-                //TODO: max voting power
+                voting_power: voting_power_used, //TODO: max voting power
+                weights: weight_vector,
             }
         )
     }
@@ -966,37 +974,56 @@ module publisher::vip_weight_vote {
         )
     }
 
-    fun apply_vote(
+    fun remove_vote(
         proposal: &mut Proposal,
-        voting_power: u64,
-        weights: vector<Weight>,
-        remove: bool
+        max_voting_power: u64,
+        weights: vector<Weight>
     ) {
-        let len = vector::length(&weights);
 
         let i = 0;
-        let remain = voting_power;
+        let len = vector::length(&weights);
+        let voting_power_removed = 0;
         while (i < len) {
             let w = vector::borrow(&weights, i);
-            let bridge_vp = if (i == len - 1) { remain } else {
-                decimal128::mul_u64(&w.weight, voting_power)
-            };
-
-            remain = remain - bridge_vp;
+            // bridge_vp
+            let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
+            voting_power_removed = voting_power_removed + bridge_vp;
             let tally = table::borrow_mut_with_default(
                 &mut proposal.tally,
                 table_key::encode_u64(w.bridge_id),
                 0
             );
-            *tally = if (remove) {*tally - (bridge_vp as u64)} else {*tally + (bridge_vp as u64)};
+            *tally = *tally - (bridge_vp as u64);
+            i = i + 1;
+        };
+        proposal.total_tally = proposal.total_tally - voting_power_removed;
+
+    }
+
+    fun apply_vote(
+        proposal: &mut Proposal,
+        max_voting_power: u64,
+        weights: vector<Weight>
+    ) {
+        let voting_power_used = 0;
+
+        let len = vector::length(&weights);
+        let i = 0;
+        while (i < len) {
+            let w = vector::borrow(&weights, i);
+            let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
+            voting_power_used = voting_power_used + bridge_vp;
+            let tally = table::borrow_mut_with_default(
+                &mut proposal.tally,
+                table_key::encode_u64(w.bridge_id),
+                0
+            );
+            *tally = *tally + (bridge_vp as u64);
             i = i + 1;
         };
 
-        proposal.total_tally = if (remove) {
-            proposal.total_tally - voting_power
-        } else {
-            proposal.total_tally + voting_power
-        };
+        proposal.total_tally = proposal.total_tally + voting_power_used
+
     }
 
     fun apply_challenge_vote(
@@ -1205,12 +1232,17 @@ module publisher::vip_weight_vote {
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
 
-        let tally_responses:vector<TallyResponse> = vector[];
-        
-        let iter = table::iter(&proposal.tally,option::none(),option::none(),1);
+        let tally_responses: vector<TallyResponse> = vector[];
+
+        let iter = table::iter(
+            &proposal.tally,
+            option::none(),
+            option::none(),
+            1
+        );
         loop {
-            if(!table::prepare<vector<u8>, u64>(&mut iter)) { break };
-            let (bridge_id_key, tally) = table::next<vector<u8>,u64>(&mut iter);
+            if (!table::prepare<vector<u8>, u64>(&mut iter)) { break };
+            let (bridge_id_key, tally) = table::next<vector<u8>, u64>(&mut iter);
             vector::push_back(
                 &mut tally_responses,
                 TallyResponse {
@@ -1575,7 +1607,6 @@ module publisher::vip_weight_vote {
 
         let proposal = get_proposal(1);
         assert!(proposal.total_tally == 86, 0);
-
         let vote1 = get_tally(1, 1);
         let vote2 = get_tally(1, 2);
         let total_tally = get_total_tally(1);
@@ -1601,6 +1632,7 @@ module publisher::vip_weight_vote {
                 decimal128::from_ratio(1, 5)
             ], // 32, 8 // user can vote with
         );
+        
         vote1 = get_tally(1, 1);
         vote2 = get_tally(1, 2);
         total_tally = get_total_tally(1);
@@ -1608,12 +1640,34 @@ module publisher::vip_weight_vote {
         assert!(vote2 == 40, 7);
         assert!(total_tally == 94, 8);
 
+        // update vote of u3
+        vote(
+            u3,
+            cycle,
+            get_proofs(tree, 2),
+            30,
+            vector[1, 2],
+            vector[
+                decimal128::zero(),
+                decimal128::zero()
+            ], // 0, 0 
+        );
+
+        vote1 = get_tally(1, 1);
+        vote2 = get_tally(1, 2);
+        total_tally = get_total_tally(1);
+        assert!(vote1 == 42, 9);
+        assert!(vote2 == 28, 10);
+        assert!(total_tally == 70, 11);
         let weight_vote = get_weight_vote(1, signer::address_of(u1));
-        assert!(weight_vote.voting_power == 10, 9);
+        assert!(weight_vote.voting_power == 10, 12);
         assert!(
             vector::length(&weight_vote.weights) == 2,
-            10
+            13
         );
+
+        
+
         skip_period(60);
         execute_proposal();
     }

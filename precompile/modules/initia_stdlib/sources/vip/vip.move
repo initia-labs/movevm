@@ -1933,19 +1933,25 @@ module publisher::vip {
         };
         bridge_ids
     }
+
     #[view]
     public fun get_total_l2_scores(stage: u64): vector<TotalL2ScoreResponse> acquires ModuleStore {
 
         let module_store = borrow_global<ModuleStore>(@publisher);
         let stage_key = table_key::encode_u64(stage);
-        let stage_data= table::borrow(&module_store.stage_data,stage_key);
+        let stage_data = table::borrow(&module_store.stage_data, stage_key);
 
         let total_l2_scores: vector<TotalL2ScoreResponse> = vector[];
 
-        let iter = table::iter(&stage_data.snapshots, option::none(), option::none(), 1);
+        let iter = table::iter(
+            &stage_data.snapshots,
+            option::none(),
+            option::none(),
+            1
+        );
         loop {
-            if(!table::prepare<vector<u8>,Snapshot>(&mut iter)){break};
-            let(bridge_id_key, snapshot) = table::next<vector<u8>,Snapshot>(&mut iter);
+            if (!table::prepare<vector<u8>, Snapshot>(&mut iter)) { break };
+            let (bridge_id_key, snapshot) = table::next<vector<u8>, Snapshot>(&mut iter);
             vector::push_back(
                 &mut total_l2_scores,
                 TotalL2ScoreResponse {
@@ -2630,7 +2636,7 @@ module publisher::vip {
 
     #[test_only]
     public fun test_setup_scene1(agent: &signer, bridge_id: u64,) acquires ModuleStore {
-        
+
         let idx = 1;
         let (
             merkle_root_map,
@@ -2650,8 +2656,8 @@ module publisher::vip {
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
         idx = 1;
-        // submit snapshot stage 1 ~ 10 
-        while(
+        // submit snapshot stage 1 ~ 10
+        while (
             idx <= simple_map::length(&merkle_root_map)
         ) {
             let total_l2_score = *simple_map::borrow(&total_score_map, &(idx));
