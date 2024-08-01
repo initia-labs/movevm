@@ -441,7 +441,7 @@ module publisher::vip_weight_vote {
 
         // remove former vote
         if (table::contains(&proposal.votes, addr)) {
-            let WeightVote {voting_power:_, weights} = table::remove(&mut proposal.votes, addr);
+            let WeightVote {voting_power: _, weights} = table::remove(&mut proposal.votes, addr);
             remove_vote(proposal, max_voting_power, weights);
         };
 
@@ -1638,7 +1638,7 @@ module publisher::vip_weight_vote {
                 decimal128::from_ratio(1, 5)
             ], // 32, 8 // user can vote with
         );
-        
+
         vote1 = get_tally(1, 1);
         vote2 = get_tally(1, 2);
         total_tally = get_total_tally(1);
@@ -1656,7 +1656,7 @@ module publisher::vip_weight_vote {
             vector[
                 decimal128::zero(),
                 decimal128::zero()
-            ], // 0, 0 
+            ], // 0, 0
         );
 
         vote1 = get_tally(1, 1);
@@ -1671,8 +1671,6 @@ module publisher::vip_weight_vote {
             vector::length(&weight_vote.weights) == 2,
             13
         );
-
-        
 
         skip_period(60);
         execute_proposal();

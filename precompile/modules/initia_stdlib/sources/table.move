@@ -224,6 +224,19 @@ module initia_std::table {
         (key, &mut box.val)
     }
 
+    public fun get_last_element<K: copy + drop, V>(table: &mut Table<K,V>): (K,&V) {
+        let iter = iter(
+            table,
+            option::none(),
+            option::none(),
+            2
+        );
+        if(!prepare<K, V>(&mut iter)) {
+            abort(error::invalid_argument(ENOT_FOUND));
+        };
+        next<K,V>(&mut iter)
+    }
+
     // ======================================================================================================
     // Internal API
 
