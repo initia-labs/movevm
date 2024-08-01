@@ -1,13 +1,11 @@
 module publisher::vip_operator {
     use std::error;
     use std::signer;
-    use std::vector;
     use std::event;
 
-    use initia_std::object;
     use initia_std::decimal256::{Self, Decimal256};
-    use initia_std::bcs;
-
+    use initia_std::table::{Self, Table};
+    use initia_std::table_key;
     friend publisher::vip;
     //
     // Errors
@@ -30,20 +28,24 @@ module publisher::vip_operator {
     //
     // Resources
     //
+    struct ModuleStore has key {
+        operator_data: Table<vector<u8> /*bridge id key*/, OperatorInfo>
+    }
 
-    struct OperatorStore has key {
+    struct OperatorInfo has store {
+        operator_addr: address,
         last_changed_stage: u64,
         commission_max_rate: Decimal256,
         commission_max_change_rate: Decimal256,
         commission_rate: Decimal256,
-
     }
 
     //
     // Responses
     //
 
-    struct OperatorStoreResponse has drop {
+    struct OperatorInfoResponse has drop {
+        operator_addr: address,
         last_changed_stage: u64,
         commission_max_rate: Decimal256,
         commission_max_change_rate: Decimal256,
@@ -100,18 +102,21 @@ module publisher::vip_operator {
 
     public(friend) fun register_operator_store(
         chain: &signer,
-        operator: address,
+        operator_addr: address,
         bridge_id: u64,
         stage: u64,
         commission_max_rate: Decimal256,
         commission_max_change_rate: Decimal256,
         commission_rate: Decimal256
-    ) {
+    ) acquires ModuleStore {
         check_chain_permission(chain);
-        let seed = generate_operator_store_seed(operator, bridge_id);
-        let operator_addr = object::create_object_address(signer::address_of(chain), seed);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let bridge_id_key = table_key::encode_u64(bridge_id);
         assert!(
-            !exists<OperatorStore>(operator_addr),
+            table::contains(
+                &module_store.operator_data,
+                bridge_id_key
+            ),
             error::already_exists(EOPERATOR_STORE_ALREADY_EXISTS)
         );
 
@@ -121,18 +126,18 @@ module publisher::vip_operator {
             &commission_rate
         );
 
-        let constructor_ref = object::create_named_object(chain, seed, false);
-        let transfer_ref = object::generate_transfer_ref(&constructor_ref);
-        object::disable_ungated_transfer(&transfer_ref);
-        let object = object::generate_signer(&constructor_ref);
+        table::add<vector<u8>, OperatorInfo>(
+            &mut module_store.operator_data,
+            bridge_id_key,
+            OperatorInfo {
+                operator_addr: operator_addr,
+                last_changed_stage: stage,
+                commission_max_rate,
+                commission_max_change_rate,
+                commission_rate,
+            }
+        );
 
-        let operator_store = OperatorStore {
-            last_changed_stage: stage,
-            commission_max_rate,
-            commission_max_change_rate,
-            commission_rate,
-        };
-        move_to(&object, operator_store);
     }
 
     public(friend) fun update_operator_commission(
@@ -140,31 +145,38 @@ module publisher::vip_operator {
         bridge_id: u64,
         stage: u64,
         commission_rate: Decimal256
-    ) acquires OperatorStore {
+    ) acquires ModuleStore {
         let operator_addr = signer::address_of(operator);
-        let operator_store_addr = get_operator_store_address(operator_addr, bridge_id);
-        let operator_store = borrow_global_mut<OperatorStore>(operator_store_addr);
+        let bridge_id_key = table_key::encode_u64(bridge_id);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
+        let operator_info = table::borrow_mut(
+            &mut module_store.operator_data,
+            bridge_id_key
+        );
+        assert!(
+            operator_addr == operator_info.operator_addr,
+            error::permission_denied(EUNAUTHORIZED)
+        );
         // commission can be updated once per a stage.
         assert!(
-            stage > operator_store.last_changed_stage,
+            stage > operator_info.last_changed_stage,
             error::invalid_argument(EINVALID_STAGE)
         );
 
-        let old_commission_rate = decimal256::val(&operator_store.commission_rate);
+        let old_commission_rate = decimal256::val(&operator_info.commission_rate);
         let new_commission_rate = decimal256::val(&commission_rate);
         let max_commission_change_rate = decimal256::val(
-            &operator_store.commission_max_change_rate
+            &operator_info.commission_max_change_rate
         );
-        let max_commission_rate = decimal256::val(
-            &operator_store.commission_max_rate
-        );
+        let max_commission_rate = decimal256::val(&operator_info.commission_max_rate);
 
         assert!(
             new_commission_rate <= max_commission_rate,
             error::invalid_argument(EOVER_MAX_COMMISSION_RATE)
         );
 
+        // operator max change rate limits
         let change = if (old_commission_rate > new_commission_rate) {
             old_commission_rate - new_commission_rate
         } else {
@@ -176,39 +188,34 @@ module publisher::vip_operator {
             error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE)
         );
 
-        operator_store.commission_rate = commission_rate;
-        operator_store.last_changed_stage = stage;
+        operator_info.commission_rate = commission_rate;
+        operator_info.last_changed_stage = stage;
 
         event::emit(
             UpdateCommissionEvent {
                 operator: operator_addr,
                 bridge_id: bridge_id,
-                stage: operator_store.last_changed_stage,
+                stage: operator_info.last_changed_stage,
                 commission_rate
             }
         );
     }
 
-    //
-    // Helper Functions
-    //
-
-    fun generate_operator_store_seed(operator: address, bridge_id: u64): vector<u8> {
-        let seed = vector[OPERATOR_STORE_PREFIX];
-        vector::append(&mut seed, bcs::to_bytes(&operator));
-        vector::append(
-            &mut seed,
-            bcs::to_bytes(&bridge_id)
+    entry public fun update_operator_addr(
+        old_operator: &signer,
+        bridge_id: u64,
+        new_operator_addr: address,
+    ) acquires ModuleStore {
+        let bridge_id_key = table_key::encode_u64(bridge_id);
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let operator_info = table::borrow(
+            &module_store.operator_data,
+            bridge_id_key
         );
-        return seed
-    }
-
-    fun create_operator_store_address(
-        operator_addr: address,
-        bridge_id: u64
-    ): address {
-        let seed = generate_operator_store_seed(operator_addr, bridge_id);
-        object::create_object_address(@publisher, seed)
+        assert!(
+            operator_info.operator_addr == signer::address_of(old_operator),
+            error::permission_denied(EUNAUTHORIZED)
+        );
     }
 
     //
@@ -216,45 +223,39 @@ module publisher::vip_operator {
     //
 
     #[view]
-    public fun is_operator_store_registered(
-        operator_addr: address,
-        bridge_id: u64
-    ): bool {
-        exists<OperatorStore>(
-            create_operator_store_address(operator_addr, bridge_id)
+    public fun is_bridge_registered(bridge_id: u64): bool acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        table::contains(
+            &module_store.operator_data,
+            table_key::encode_u64(bridge_id)
         )
     }
 
     #[view]
-    public fun get_operator_store_address(
-        operator_addr: address,
-        bridge_id: u64
-    ): address {
-        let operator_store_addr = create_operator_store_address(operator_addr, bridge_id);
-        assert!(
-            exists<OperatorStore>(operator_store_addr),
-            error::not_found(EOPERATOR_STORE_NOT_FOUND)
+    public fun get_operator_commission(operator: address, bridge_id: u64): Decimal256 acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let operator_info = table::borrow(
+            &module_store.operator_data,
+            table_key::encode_u64(bridge_id)
         );
-        operator_store_addr
+        operator_info.commission_rate
     }
 
     #[view]
-    public fun get_operator_store(operator: address, bridge_id: u64): OperatorStoreResponse acquires OperatorStore {
-        let operator_store_addr = get_operator_store_address(operator, bridge_id);
-        let operator_store = borrow_global<OperatorStore>(operator_store_addr);
-        OperatorStoreResponse {
-            last_changed_stage: operator_store.last_changed_stage,
-            commission_max_rate: operator_store.commission_max_rate,
-            commission_max_change_rate: operator_store.commission_max_change_rate,
-            commission_rate: operator_store.commission_rate,
+    public fun get_operator_info(bridge_id: u64): OperatorInfoResponse acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let operator_info = table::borrow(
+            &module_store.operator_data,
+            table_key::encode_u64(bridge_id)
+        );
+
+        OperatorInfoResponse {
+            operator_addr: operator_info.operator_addr,
+            last_changed_stage: operator_info.last_changed_stage,
+            commission_max_rate: operator_info.commission_max_rate,
+            commission_max_change_rate: operator_info.commission_max_change_rate,
+            commission_rate: operator_info.commission_rate
         }
-    }
-
-    #[view]
-    public fun get_operator_commission(operator: address, bridge_id: u64): Decimal256 acquires OperatorStore {
-        let operator_store_addr = get_operator_store_address(operator, bridge_id);
-        let operator_store = borrow_global<OperatorStore>(operator_store_addr);
-        operator_store.commission_rate
     }
 
     //
@@ -265,7 +266,7 @@ module publisher::vip_operator {
     use std::string;
 
     #[test(publisher = @publisher, operator = @0x999)]
-    fun test_update_operator_commission(publisher: &signer, operator: &signer) acquires OperatorStore {
+    fun test_update_operator_commission(publisher: &signer, operator: &signer) {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -280,7 +281,8 @@ module publisher::vip_operator {
         );
 
         assert!(
-            get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
+            get_operator_info(bridge_id) == OperatorInfoResponse {
+                operator_addr: operator_addr,
                 last_changed_stage: 10,
                 commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
                 commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
@@ -297,7 +299,8 @@ module publisher::vip_operator {
         );
 
         assert!(
-            get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
+            get_operator_info(bridge_id) == OperatorInfoResponse {
+                operator_addr: operator_addr,
                 last_changed_stage: 11,
                 commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
                 commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
@@ -314,7 +317,8 @@ module publisher::vip_operator {
         );
 
         assert!(
-            get_operator_store(operator_addr, bridge_id) == OperatorStoreResponse {
+            get_operator_info(bridge_id) == OperatorInfoResponse {
+                operator_addr: operator_addr,
                 last_changed_stage: 12,
                 commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
                 commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
@@ -326,7 +330,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10003, location = Self)]
-    fun failed_invalid_change_rate(publisher: &signer, operator: &signer) acquires OperatorStore {
+    fun failed_invalid_change_rate(publisher: &signer, operator: &signer) {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -350,7 +354,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
-    fun failed_over_max_rate(publisher: &signer, operator: &signer) acquires OperatorStore {
+    fun failed_over_max_rate(publisher: &signer, operator: &signer) {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -374,7 +378,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
-    fun failed_not_valid_stage(publisher: &signer, operator: &signer) acquires OperatorStore {
+    fun failed_not_valid_stage(publisher: &signer, operator: &signer) {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 

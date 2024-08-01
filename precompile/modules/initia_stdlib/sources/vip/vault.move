@@ -8,7 +8,7 @@ module publisher::vip_vault {
     use initia_std::fungible_asset;
     use publisher::vip_reward;
 
-    friend publisher::vip;
+    // friend publisher::vip;
     friend publisher::vip_vesting;
     //
     // Errors
@@ -79,6 +79,7 @@ module publisher::vip_vault {
         borrow_global<ModuleStore>(@publisher).vault_store_addr
     }
 
+    // IS IT NEED?
     public(friend) fun claim(stage: u64,): FungibleAsset acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
@@ -101,6 +102,20 @@ module publisher::vip_vault {
             vault_store,
             module_store.reward_per_stage
         )
+    }
+
+    public(friend) fun withdraw(account_addr: address, amount: u64): FungibleAsset acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        assert!(
+            module_store.reward_per_stage > 0,
+            error::invalid_state(EINVALID_REWARD_PER_STAGE)
+        );
+        let vault_signer = object::generate_signer_for_extending(&module_store.extend_ref);
+        let vault_store = primary_fungible_store::ensure_primary_store_exists(
+            module_store.vault_store_addr,
+            vip_reward::reward_metadata()
+        );
+        fungible_asset::withdraw(&vault_signer, vault_store, amount)
     }
 
     //

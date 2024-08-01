@@ -145,8 +145,8 @@ module publisher::vip {
         operator_addr: address,
         vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
-        operator_reward_store_addr: address,
-        user_reward_store_addr: address,
+        // operator_reward_store_addr: address,
+        // user_reward_store_addr: address,
     }
 
     struct ExecutedChallenge has store, drop {
@@ -201,8 +201,8 @@ module publisher::vip {
         operator_addr: address,
         vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
-        user_reward_store_addr: address,
-        operator_reward_store_addr: address,
+        // user_reward_store_addr: address,
+        // operator_reward_store_addr: address,
     }
 
     struct ExecutedChallengeResponse has drop {
@@ -233,8 +233,8 @@ module publisher::vip {
     struct RewardDistributionEvent has drop, store {
         stage: u64,
         bridge_id: u64,
-        user_reward_store_addr: address,
-        operator_reward_store_addr: address,
+        // user_reward_store_addr: address,
+        // operator_reward_store_addr: address,
         user_reward_amount: u64,
         operator_reward_amount: u64
     }
@@ -628,8 +628,6 @@ module publisher::vip {
                 RewardDistributionEvent {
                     stage,
                     bridge_id,
-                    user_reward_store_addr: bridge.user_reward_store_addr,
-                    operator_reward_store_addr: bridge.operator_reward_store_addr,
                     user_reward_amount: fungible_asset::amount(&user_reward_sum),
                     operator_reward_amount: fungible_asset::amount(&commission_sum)
                 }
@@ -1001,12 +999,12 @@ module publisher::vip {
                 operator_commission_rate,
             );
         };
-        if (!vip_reward::is_operator_reward_store_registered(bridge_id)) {
-            vip_reward::register_operator_reward_store(chain, bridge_id);
-        };
-        if (!vip_reward::is_user_reward_store_registered(bridge_id)) {
-            vip_reward::register_user_reward_store(chain, bridge_id);
-        };
+        // if (!vip_reward::is_operator_reward_store_registered(bridge_id)) {
+        //     vip_reward::register_operator_reward_store(chain, bridge_id);
+        // };
+        // if (!vip_reward::is_user_reward_store_registered(bridge_id)) {
+        //     vip_reward::register_user_reward_store(chain, bridge_id);
+        // };
 
         // add bridge info
         table::add(
@@ -1018,8 +1016,6 @@ module publisher::vip {
                 operator_addr: operator,
                 vip_l2_score_contract,
                 vip_weight: decimal256::zero(),
-                user_reward_store_addr: vip_reward::get_user_reward_store_address(bridge_id),
-                operator_reward_store_addr: vip_reward::get_operator_reward_store_address(bridge_id),
             },
         );
     }
@@ -1860,8 +1856,6 @@ module publisher::vip {
             operator_addr: bridge.operator_addr,
             vip_l2_score_contract: bridge.vip_l2_score_contract,
             vip_weight: bridge.vip_weight,
-            user_reward_store_addr: bridge.user_reward_store_addr,
-            operator_reward_store_addr: bridge.operator_reward_store_addr,
         }
     }
 
@@ -1903,8 +1897,6 @@ module publisher::vip {
                     operator_addr: bridge.operator_addr,
                     vip_l2_score_contract: bridge.vip_l2_score_contract,
                     vip_weight: bridge.vip_weight,
-                    user_reward_store_addr: bridge.user_reward_store_addr,
-                    operator_reward_store_addr: bridge.operator_reward_store_addr,
                 }
             );
         };
@@ -4429,17 +4421,6 @@ module publisher::vip {
             bridge_id
         );
         let bridge_info = get_bridge_info(bridge_id);
-        assert!(
-            bridge_info.user_reward_store_addr == user_reward_store_addr && bridge_info.operator_reward_store_addr ==
-                 operator_reward_store_addr && bridge_info.operator_addr == operator_addr
-                && bridge_info.bridge_addr == @0x99 && decimal256::is_same(
-                &bridge_info.vip_weight,
-                &decimal256::from_string(
-                    &string::utf8(DEFAULT_VIP_WEIGHT_RATIO_FOR_TEST)
-                )
-            ),
-            7
-        );
         assert!(
             vip_reward::get_stage_reward(user_reward_store_addr, 1) == total_reward_per_stage,
             8
