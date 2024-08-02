@@ -41,7 +41,7 @@ module publisher::vip_weight_vote {
     const ECHALLENGE_IN_PROGRESS: u64 = 15;
     const ECHALLENGE_ALREADY_EXECUTED: u64 = 16;
     const EINVALID_PARAMETER: u64 = 17;
-
+    const EINVALID_BRIDGE:u64 = 18;
     //
     //  Constants
     //
@@ -407,6 +407,13 @@ module publisher::vip_weight_vote {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
 
+        // check bridge valid
+        vector::for_each(
+            bridge_ids,
+            |bridge_id| {
+                assert!(vip::is_registered(bridge_id),error::invalid_argument(EINVALID_BRIDGE));
+            }
+        );
         let weight_sum = decimal128::new(0);
         vector::for_each_ref(
             &weights,
