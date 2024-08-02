@@ -201,7 +201,7 @@ module publisher::vip_operator {
         );
     }
 
-    entry public fun update_operator_addr(
+    public entry fun update_operator_addr(
         old_operator: &signer,
         bridge_id: u64,
         new_operator_addr: address,

@@ -32,7 +32,6 @@ module publisher::vip_vault {
 
     struct ModuleStore has key {
         extend_ref: ExtendRef,
-        claimable_stage: u64,
         reward_per_stage: u64,
         vault_store_addr: address,
     }
@@ -52,7 +51,6 @@ module publisher::vip_vault {
             chain,
             ModuleStore {
                 extend_ref,
-                claimable_stage: 1,
                 reward_per_stage: 0, // set zero for safety
                 vault_store_addr
             }
@@ -74,35 +72,6 @@ module publisher::vip_vault {
     //
     // Friend Functions
     //
-
-    public(friend) fun get_vault_store_address(): address acquires ModuleStore {
-        borrow_global<ModuleStore>(@publisher).vault_store_addr
-    }
-
-    // IS IT NEED?
-    public(friend) fun claim(stage: u64,): FungibleAsset acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        assert!(
-            stage == module_store.claimable_stage,
-            error::invalid_argument(EINVALID_STAGE)
-        );
-        assert!(
-            module_store.reward_per_stage > 0,
-            error::invalid_state(EINVALID_REWARD_PER_STAGE)
-        );
-
-        module_store.claimable_stage = stage + 1;
-        let vault_signer = object::generate_signer_for_extending(&module_store.extend_ref);
-        let vault_store = primary_fungible_store::ensure_primary_store_exists(
-            module_store.vault_store_addr,
-            vip_reward::reward_metadata()
-        );
-        fungible_asset::withdraw(
-            &vault_signer,
-            vault_store,
-            module_store.reward_per_stage
-        )
-    }
 
     public(friend) fun withdraw(account_addr: address, amount: u64): FungibleAsset acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
@@ -150,6 +119,18 @@ module publisher::vip_vault {
     //
     // View Functions
     //
+
+    #[view]
+    public fun get_total_reward_per_stage(): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        module_store.reward_per_stage
+
+    }
+
+    #[view]
+    public fun get_vault_store_address(): address acquires ModuleStore {
+        borrow_global<ModuleStore>(@publisher).vault_store_addr
+    }
 
     #[view]
     public fun balance(): u64 acquires ModuleStore {
@@ -204,46 +185,46 @@ module publisher::vip_vault {
         (burn_cap, freeze_cap, mint_cap,)
     }
 
-    #[test(chain = @0x1, publisher = @publisher, funder = @0x2)]
-    fun e2e(
-        chain: &signer,
-        publisher: &signer,
-        funder: &signer
-    ) acquires ModuleStore {
-        primary_fungible_store::init_module_for_test(chain);
-        init_module(publisher);
-        let (_, _, mint_cap) = initialize_coin(chain, string::utf8(b"uinit"));
-        coin::mint_to(
-            &mint_cap,
-            signer::address_of(funder),
-            1000000
-        );
+    // #[test(chain = @0x1, publisher = @publisher, funder = @0x2)]
+    // fun e2e(
+    //     chain: &signer,
+    //     publisher: &signer,
+    //     funder: &signer
+    // ) acquires ModuleStore {
+    //     primary_fungible_store::init_module_for_test(chain);
+    //     init_module(publisher);
+    //     let (_, _, mint_cap) = initialize_coin(chain, string::utf8(b"uinit"));
+    //     coin::mint_to(
+    //         &mint_cap,
+    //         signer::address_of(funder),
+    //         1000000
+    //     );
 
-        // udpate reward_per_stage
-        update_reward_per_stage(publisher, 1000);
-        assert!(reward_per_stage() == 1000, 1);
+    //     // udpate reward_per_stage
+    //     update_reward_per_stage(publisher, 1000);
+    //     assert!(reward_per_stage() == 1000, 1);
 
-        // deposit
-        deposit(funder, 1000);
-        assert!(balance() == 1000, 2);
-        let vault_addr = get_vault_store_address();
-        assert!(
-            coin::balance(
-                vault_addr,
-                coin::metadata(@0x1, string::utf8(b"uinit"))
-            ) == balance(),
-            3
-        );
+    //     // deposit
+    //     deposit(funder, 1000);
+    //     assert!(balance() == 1000, 2);
+    //     let vault_addr = get_vault_store_address();
+    //     assert!(
+    //         coin::balance(
+    //             vault_addr,
+    //             coin::metadata(@0x1, string::utf8(b"uinit"))
+    //         ) == balance(),
+    //         3
+    //     );
 
-        // claim
-        let fa = claim(1);
-        assert!(
-            fungible_asset::amount(&fa) == 1000,
-            4
-        );
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        assert!(module_store.claimable_stage == 2, 5);
+    //     // claim
+    //     let fa = claim(1);
+    //     assert!(
+    //         fungible_asset::amount(&fa) == 1000,
+    //         4
+    //     );
+    //     let module_store = borrow_global<ModuleStore>(@publisher);
+    //     assert!(module_store.claimable_stage == 2, 5);
 
-        coin::deposit(@0x1, fa);
-    }
+    //     coin::deposit(@0x1, fa);
+    // }
 }

@@ -9,7 +9,7 @@ module publisher::vip {
     use std::block;
 
     use initia_std::object::{ Object };
-    use initia_std::fungible_asset::{Self, Metadata, FungibleAsset};
+    use initia_std::fungible_asset::{Self, Metadata};
     use initia_std::primary_fungible_store;
     use initia_std::table;
     use initia_std::table_key;
@@ -201,8 +201,6 @@ module publisher::vip {
         operator_addr: address,
         vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
-        // user_reward_store_addr: address,
-        // operator_reward_store_addr: address,
     }
 
     struct ExecutedChallengeResponse has drop {
@@ -233,8 +231,6 @@ module publisher::vip {
     struct RewardDistributionEvent has drop, store {
         stage: u64,
         bridge_id: u64,
-        // user_reward_store_addr: address,
-        // operator_reward_store_addr: address,
         user_reward_amount: u64,
         operator_reward_amount: u64
     }
@@ -531,18 +527,18 @@ module publisher::vip {
         );
     }
 
-    fun extract_commission(
+    fun calc_operator_and_user_reward_amount(
         operator_addr: address,
         bridge_id: u64,
-        reward: FungibleAsset,
-    ): (FungibleAsset, FungibleAsset) {
+        reward_amount: u64,
+    ): (u64, u64) {
         let commission_rate = vip_operator::get_operator_commission(operator_addr, bridge_id);
-        let commission_amount = decimal256::mul_u64(
-            &commission_rate,
-            fungible_asset::amount(&reward)
-        );
-        let commission = fungible_asset::extract(&mut reward, commission_amount);
-        (commission, reward)
+        let operator_reward_amount = decimal256::mul_u64(&commission_rate, reward_amount);
+        let user_reward_amount = reward_amount - operator_reward_amount;
+        (
+            operator_reward_amount,
+            user_reward_amount
+        )
     }
 
     fun split_reward(
@@ -550,17 +546,12 @@ module publisher::vip {
         stage: u64,
         balance_shares: &SimpleMap<u64, Decimal256>,
         weight_shares: &SimpleMap<u64, Decimal256>,
-        balance_pool_reward: FungibleAsset,
-        weight_pool_reward: FungibleAsset,
+        initial_balance_pool_reward_amount: u64,
+        initial_weight_pool_reward_amount: u64,
     ): (u64, u64) {
-        let initial_balance_pool_reward_amount = fungible_asset::amount(
-            &balance_pool_reward
-        );
-        let initial_weight_pool_reward_amount = fungible_asset::amount(&weight_pool_reward);
         let total_user_funded_reward = 0;
         let total_operator_funded_reward = 0;
 
-        let index = 0;
         let iter = table::iter(
             &module_store.bridges,
             option::none(),
@@ -572,83 +563,45 @@ module publisher::vip {
 
             let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
-            let balance_reward = split_reward_with_share(
+            // split the reward of balance pool
+            let balance_reward_amount = split_reward_with_share_internal(
                 balance_shares,
                 bridge_id,
                 initial_balance_pool_reward_amount,
-                &mut balance_pool_reward
-            );
-            // balance reward splited to balance comission and balance user reward
-            let (
-                balance_commission,
-                balance_user_reward
-            ) = extract_commission(
-                bridge.operator_addr,
-                bridge_id,
-                balance_reward
             );
 
-            let weight_reward = split_reward_with_share(
+            // split the reward of weight pool
+            let weight_reward_amount = split_reward_with_share_internal(
                 weight_shares,
                 bridge_id,
                 initial_weight_pool_reward_amount,
-                &mut weight_pool_reward
             );
-            // weight reward splited to weight comission and weight user reward
+            // (weight + balance) reward splited to total_operator_ and weight user reward
             let (
-                weight_commission,
-                weight_user_reward
-            ) = extract_commission(
+                total_operator_funded_reward,
+                total_user_funded_reward
+            ) = calc_operator_and_user_reward_amount(
                 bridge.operator_addr,
                 bridge_id,
-                weight_reward
-            );
-
-            fungible_asset::merge(
-                &mut balance_commission,
-                weight_commission
-            );
-            fungible_asset::merge(
-                &mut balance_user_reward,
-                weight_user_reward
-            );
-            // operator reward = weight comission + balance comission
-            let commission_sum = balance_commission;
-            // user reward = weight user reward + balance user reward
-            let user_reward_sum = balance_user_reward;
-
-            total_operator_funded_reward = total_operator_funded_reward + fungible_asset::amount(
-                &commission_sum
-            );
-            total_user_funded_reward = total_user_funded_reward + fungible_asset::amount(
-                &user_reward_sum
+                balance_reward_amount + weight_reward_amount
             );
 
             event::emit(
                 RewardDistributionEvent {
                     stage,
                     bridge_id,
-                    user_reward_amount: fungible_asset::amount(&user_reward_sum),
-                    operator_reward_amount: fungible_asset::amount(&commission_sum)
+                    user_reward_amount: total_user_funded_reward,
+                    operator_reward_amount: total_operator_funded_reward
                 }
             );
-
-            vip_vesting::supply_reward_on_operator(bridge_id, stage, commission_sum,);
-
-            vip_vesting::supply_reward_on_user(bridge_id, stage, user_reward_sum,);
-
-            index = index + 1;
+            // record the distributed reward
+            vip_reward::record_distributed_reward(
+                bridge_id,
+                stage,
+                total_operator_funded_reward,
+                total_user_funded_reward
+            );
         };
-
-        let vault_store_addr = vip_vault::get_vault_store_address();
-        primary_fungible_store::deposit(
-            vault_store_addr,
-            balance_pool_reward
-        );
-        primary_fungible_store::deposit(
-            vault_store_addr,
-            weight_pool_reward
-        );
 
         event::emit(
             FundEvent {
@@ -662,20 +615,6 @@ module publisher::vip {
             total_operator_funded_reward,
             total_user_funded_reward
         )
-    }
-
-    fun split_reward_with_share(
-        shares: &SimpleMap<u64, Decimal256>,
-        bridge_id: u64,
-        total_reward_amount: u64,
-        reward: &mut FungibleAsset,
-    ): FungibleAsset {
-        let split_amount = split_reward_with_share_internal(
-            shares,
-            bridge_id,
-            total_reward_amount
-        );
-        fungible_asset::extract(reward, split_amount)
     }
 
     fun split_reward_with_share_internal(
@@ -692,28 +631,18 @@ module publisher::vip {
     fun fund_reward(
         module_store: &mut ModuleStore,
         stage: u64,
-        initial_reward: FungibleAsset
+        initial_reward_amount: u64
     ): (u64, u64) {
-        let initial_amount = fungible_asset::amount(&initial_reward);
+        // fill the balance shares of bridges
+        let balance_shares = calculate_balance_share(module_store);
+        let weight_shares = calculate_weight_share(module_store);
 
-        let balance_shares = simple_map::create<u64, Decimal256>();
-        let weight_shares = simple_map::create<u64, Decimal256>();
-
-        let total_balance = calculate_balance_share(module_store, &mut balance_shares);
-        assert!(
-            total_balance > 0,
-            error::invalid_state(EINVALID_TOTAL_SHARE)
-        );
-        calculate_weight_share(module_store, &mut weight_shares);
+        // fill the weight shares of bridges
         let balance_pool_reward_amount = decimal256::mul_u64(
             &module_store.pool_split_ratio,
-            initial_amount
+            initial_reward_amount
         );
-        let balance_pool_reward = fungible_asset::extract(
-            &mut initial_reward,
-            balance_pool_reward_amount
-        );
-        let weight_pool_reward = initial_reward;
+        let weight_pool_reward_amount = initial_reward_amount - balance_pool_reward_amount;
 
         let (
             total_operator_funded_reward,
@@ -723,8 +652,8 @@ module publisher::vip {
             stage,
             &balance_shares,
             &weight_shares,
-            balance_pool_reward,
-            weight_pool_reward,
+            balance_pool_reward_amount,
+            weight_pool_reward_amount,
         );
 
         (
@@ -734,10 +663,8 @@ module publisher::vip {
     }
 
     // calculate balance share and return total balance
-    fun calculate_balance_share(
-        module_store: &ModuleStore,
-        balance_shares: &mut SimpleMap<u64, Decimal256>
-    ): u64 {
+    fun calculate_balance_share(module_store: &ModuleStore): SimpleMap<u64, Decimal256> {
+        let balance_shares = simple_map::create<u64, Decimal256>();
         let bridge_balances: SimpleMap<u64, u64> = simple_map::create();
         let total_balance = 0;
 
@@ -794,19 +721,23 @@ module publisher::vip {
                 total_balance
             );
             simple_map::add(
-                balance_shares,
+                &mut balance_shares,
                 table_key::decode_u64(bridge_id_vec),
                 share
             );
         };
 
-        (total_balance)
+        assert!(
+            total_balance > 0,
+            error::invalid_state(EINVALID_TOTAL_SHARE)
+        );
+
+        balance_shares
+
     }
 
-    fun calculate_weight_share(
-        module_store: &ModuleStore,
-        weight_shares: &mut SimpleMap<u64, Decimal256>
-    ) {
+    fun calculate_weight_share(module_store: &ModuleStore): SimpleMap<u64, Decimal256> {
+        let weight_shares: SimpleMap<u64, Decimal256> = simple_map::create<u64, Decimal256>();
         let iter = table::iter(
             &module_store.bridges,
             option::none(),
@@ -824,8 +755,15 @@ module publisher::vip {
                 )) {
                 module_store.maximum_weight_ratio
             } else {bridge.vip_weight};
-            simple_map::add(weight_shares, bridge_id, weight);
+            simple_map::add(
+                &mut weight_shares,
+                bridge_id,
+                weight
+            );
         };
+
+        weight_shares
+
     }
 
     fun validate_vip_weights(module_store: &ModuleStore) {
@@ -986,9 +924,9 @@ module publisher::vip {
             ),
             error::already_exists(EALREADY_REGISTERED)
         );
-
+        // TODO: generate bridge address only by bridge id
         // register chain stores
-        if (!vip_operator::is_operator_store_registered(operator, bridge_id)) {
+        if (!vip_operator::is_bridge_registered(bridge_id)) {
             vip_operator::register_operator_store(
                 chain,
                 operator,
@@ -1097,6 +1035,7 @@ module publisher::vip {
 
     }
 
+    // update reward data of module store in reward module
     public entry fun fund_reward_script(agent: &signer) acquires ModuleStore {
         let (_, fund_time) = block::get_block_info();
         check_agent_permission(agent);
@@ -1120,14 +1059,14 @@ module publisher::vip {
         // update stage start_time
         module_store.stage_start_time = stage_end_time;
         module_store.stage_end_time = stage_end_time + stage_interval;
-        let total_reward = vip_vault::claim(fund_stage);
+        let initial_reward_amount = vip_vault::get_total_reward_per_stage();
         let (
             total_operator_funded_reward,
             total_user_funded_reward
         ) = fund_reward(
             module_store,
             fund_stage,
-            total_reward
+            initial_reward_amount
         );
 
         table::add(
@@ -1397,8 +1336,8 @@ module publisher::vip {
             vip_vesting::register_user_vesting_store(account, bridge_id);
         };
 
-        let claimInfos: vector<UserVestingClaimInfo> = vector[];
         // make vesting position claim info
+        let claimInfos: vector<UserVestingClaimInfo> = vector[];
         vector::enumerate_ref(
             &stages,
             |i, stage| {
@@ -1639,8 +1578,7 @@ module publisher::vip {
         let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(
             account_addr, bridge_id
         );
-        let last_submitted_stage = get_last_submitted_stage(bridge_id);
-        let can_zap = if (last_claimed_stage == last_submitted_stage) { true } else {
+        let can_zap = if (last_claimed_stage == get_last_submitted_stage(bridge_id)) { true } else {
             // check is there any claimable reward
             let check_stage = last_claimed_stage + 1;
             !check_claimable(bridge_id, check_stage)
@@ -1762,18 +1700,12 @@ module publisher::vip {
         fund_reward_amount: u64
     ): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-        let balance_shares = simple_map::create<u64, Decimal256>();
-        let weight_shares = simple_map::create<u64, Decimal256>();
 
-        let total_balance = calculate_balance_share(module_store, &mut balance_shares);
-        calculate_weight_share(module_store, &mut weight_shares);
+        let balance_shares = calculate_balance_share(module_store);
+        let weight_shares = calculate_weight_share(module_store);
         assert!(
             fund_reward_amount > 0,
             error::invalid_argument(EINVALID_TOTAL_REWARD)
-        );
-        assert!(
-            total_balance > 0,
-            error::invalid_state(EINVALID_TOTAL_SHARE)
         );
 
         let weight_ratio = decimal256::sub(

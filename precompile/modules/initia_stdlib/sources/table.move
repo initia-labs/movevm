@@ -224,7 +224,7 @@ module initia_std::table {
         (key, &mut box.val)
     }
 
-    public fun get_last_element<K: copy + drop, V>(table: &mut Table<K,V>): (K,&V) {
+    public fun get_last_key_and_value<K: copy + drop, V>(table: &mut Table<K,V>): (K,&V) {
         let iter = iter(
             table,
             option::none(),

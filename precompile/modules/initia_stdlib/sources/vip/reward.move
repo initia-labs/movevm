@@ -1,21 +1,12 @@
 module publisher::vip_reward {
-    use std::error;
     use std::string;
-    use std::signer;
     use std::vector;
-
-    use initia_std::object::{Self, Object, ExtendRef};
-    use initia_std::fungible_asset::{
-        Metadata,
-        FungibleAsset,
-        FungibleStore
-    };
+    use initia_std::object::{ Object };
+    use initia_std::fungible_asset::{Metadata,};
     use initia_std::primary_fungible_store;
     use initia_std::table;
     use initia_std::table_key;
     use initia_std::coin;
-    use initia_std::bcs;
-    use initia_std::fungible_asset;
     friend publisher::vip_weight_vote;
     friend publisher::vip_vesting;
     friend publisher::vip_zapping;
@@ -43,7 +34,25 @@ module publisher::vip_reward {
     //
 
     struct ModuleStore has key {
-        reward_per_stage: table::Table<vector<u8> /* stage */, u64>,
+        // sort by bridge id then. sort by stage
+        distributed_reward: table::Table<vector<u8> /*bridge id + stage key*/, RewardRecord>,
+    }
+
+    struct RewardRecord has store {
+        user_reward: u64,
+        operator_reward: u64,
+    }
+
+    fun get_distrubuted_reward_table_key(bridge_id: u64, stage: u64): vector<u8> {
+        let key = vector::empty<u8>();
+        vector::append(
+            &mut key,
+            table_key::encode_u64(bridge_id)
+        );
+        vector::append(
+            &mut key,
+            table_key::encode_u64(stage)
+        );key
     }
 
     //
@@ -57,156 +66,20 @@ module publisher::vip_reward {
         )
     }
 
-    //
-    // Helper Functions
-    //
-
-    // fun generate_operator_reward_store_seed(bridge_id: u64): vector<u8> {
-    //     let seed = vector[OPERATOR_REWARD_PREFIX];
-    //     vector::append(
-    //         &mut seed,
-    //         bcs::to_bytes(&@publisher)
-    //     );
-
-    //     vector::append(
-    //         &mut seed,
-    //         bcs::to_bytes(&bridge_id)
-    //     );
-    //     return seed
-    // }
-
-    // fun generate_user_reward_store_seed(bridge_id: u64): vector<u8> {
-    //     let seed = vector[USER_REWARD_PREFIX];
-    //     vector::append(
-    //         &mut seed,
-    //         bcs::to_bytes(&@publisher)
-    //     );
-
-    //     vector::append(
-    //         &mut seed,
-    //         bcs::to_bytes(&bridge_id)
-    //     );
-    //     return seed
-    // }
-
-    // fun create_operator_reward_store_address(bridge_id: u64): address {
-    //     let seed = generate_operator_reward_store_seed(bridge_id);
-    //     object::create_object_address(@publisher, seed)
-    // }
-
-    // fun create_user_reward_store_address(bridge_id: u64): address {
-    //     let seed = generate_user_reward_store_seed(bridge_id);
-    //     object::create_object_address(@publisher, seed)
-    // }
-
-    // //
-    // // Friend Functions
-    // //
-
-    // public(friend) fun register_operator_reward_store(chain: &signer, bridge_id: u64,) {
-    //     let seed = generate_operator_reward_store_seed(bridge_id);
-    //     let reward_store_addr = object::create_object_address(
-    //         signer::address_of(chain), seed
-    //     );
-    //     assert!(
-    //         !exists<RewardStore>(reward_store_addr),
-    //         error::already_exists(EREWARD_STORE_ALREADY_EXISTS)
-    //     );
-
-    //     let constructor_ref = object::create_named_object(chain, seed, false);
-    //     let object = object::generate_signer(&constructor_ref);
-    //     let extend_ref = object::generate_extend_ref(&constructor_ref);
-    //     let reward_store = primary_fungible_store::ensure_primary_store_exists(
-    //         reward_store_addr,
-    //         reward_metadata()
-    //     );
-
-    //     move_to(
-    //         &object,
-    //         RewardStore {
-    //             extend_ref,
-    //             reward_store,
-    //             reward_per_stage: table::new<vector<u8>, u64>(),
-    //         }
-    //     );
-    // }
-
-    // public(friend) fun register_user_reward_store(chain: &signer, bridge_id: u64,) {
-    //     let seed = generate_user_reward_store_seed(bridge_id);
-    //     let reward_store_addr = object::create_object_address(
-    //         signer::address_of(chain), seed
-    //     );
-    //     assert!(
-    //         !exists<RewardStore>(reward_store_addr),
-    //         error::already_exists(EREWARD_STORE_ALREADY_EXISTS)
-    //     );
-
-    //     let constructor_ref = object::create_named_object(chain, seed, false);
-    //     let object = object::generate_signer(&constructor_ref);
-    //     let extend_ref = object::generate_extend_ref(&constructor_ref);
-    //     let reward_store = primary_fungible_store::ensure_primary_store_exists(
-    //         reward_store_addr,
-    //         reward_metadata()
-    //     );
-
-    //     move_to(
-    //         &object,
-    //         RewardStore {
-    //             extend_ref,
-    //             reward_store,
-    //             reward_per_stage: table::new<vector<u8>, u64>(),
-    //         }
-    //     );
-    // }
-
-    // public(friend) fun add_reward_per_stage(
-    //     reward_store_addr: address,
-    //     stage: u64,
-    //     reward: u64
-    // ) acquires RewardStore {
-    //     let reward_store = borrow_global_mut<RewardStore>(reward_store_addr);
-    //     let stage_reward = table::borrow_mut_with_default(
-    //         &mut reward_store.reward_per_stage,
-    //         table_key::encode_u64(stage),
-    //         0
-    //     );
-    //     *stage_reward = *stage_reward + reward;
-    // }
-
-    // public(friend) fun withdraw(
-    //     reward_store_addr: address,
-    //     amount: u64,
-    // ): FungibleAsset acquires RewardStore {
-    //     let reward_store = borrow_global<RewardStore>(reward_store_addr);
-    //     let reward_signer = object::generate_signer_for_extending(&reward_store.extend_ref);
-
-    //     fungible_asset::withdraw(
-    //         &reward_signer,
-    //         reward_store.reward_store,
-    //         amount
-    //     )
-    // }
-
-    // public(friend) fun penalty(
-    //     bridge_id: u64,
-    //     penalty_amount: u64,
-    //     vault_store_addr: address
-    // ) acquires RewardStore {
-    //     let reward_store_addr = get_user_reward_store_address(bridge_id);
-    //     let reward_store = borrow_global<RewardStore>(reward_store_addr);
-    //     let reward_signer = object::generate_signer_for_extending(&reward_store.extend_ref);
-    //     assert!(
-    //         penalty_amount > 0,
-    //         error::invalid_argument(EPENALTY_AMOUNT)
-    //     );
-
-    //     primary_fungible_store::transfer(
-    //         &reward_signer,
-    //         reward_metadata(),
-    //         vault_store_addr,
-    //         penalty_amount
-    //     );
-    // }
+    public(friend) fun record_distributed_reward(
+        bridge_id: u64,
+        stage: u64,
+        user_reward: u64,
+        operator_reward: u64
+    ) acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let reward_record = table::borrow_mut(
+            &mut module_store.distributed_reward,
+            get_distrubuted_reward_table_key(bridge_id, stage)
+        );
+        reward_record.user_reward = user_reward;
+        reward_record.operator_reward = operator_reward;
+    }
 
     //
     // View Functions
@@ -221,48 +94,39 @@ module publisher::vip_reward {
     }
 
     #[view]
-    public fun get_stage_reward(stage: u64): u64 acquires ModuleStore {
+    public fun get_user_distrubuted_reward(bridge_id: u64, stage: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
 
-        let stage_reward = table::borrow_with_default(
-            &module_store.reward_per_stage,
-            table_key::encode_u64(stage),
-            &0
-        );
-        *stage_reward
+        if (
+            table::contains(
+                &module_store.distributed_reward,
+                get_distrubuted_reward_table_key(bridge_id, stage)
+            )) {
+            let reward_data = table::borrow(
+                &module_store.distributed_reward,
+                get_distrubuted_reward_table_key(bridge_id, stage),
+            );
+            return reward_data.user_reward;
+        };
+
+        0
     }
 
-    // #[view]
-    // public fun is_operator_reward_store_registered(bridge_id: u64): bool {
-    //     exists<RewardStore>(
-    //         create_operator_reward_store_address(bridge_id)
-    //     )
-    // }
+    public fun get_operator_distrubuted_reward(bridge_id: u64, stage: u64): u64 acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@publisher);
 
-    // public fun is_user_reward_store_registered(bridge_id: u64): bool {
-    //     exists<RewardStore>(
-    //         create_user_reward_store_address(bridge_id)
-    //     )
-    // }
+        if (
+            table::contains(
+                &module_store.distributed_reward,
+                get_distrubuted_reward_table_key(bridge_id, stage)
+            )) {
+            let reward_data = table::borrow(
+                &module_store.distributed_reward,
+                get_distrubuted_reward_table_key(bridge_id, stage),
+            );
+            return reward_data.operator_reward;
+        };
 
-    // #[view]
-    // public fun get_operator_reward_store_address(bridge_id: u64): address {
-    //     let reward_addr = create_operator_reward_store_address(bridge_id);
-    //     assert!(
-    //         exists<RewardStore>(reward_addr),
-    //         error::not_found(EREWARD_STORE_NOT_FOUND)
-    //     );
-    //     reward_addr
-    // }
-
-    // #[view]
-    // public fun get_user_reward_store_address(bridge_id: u64): address {
-    //     let reward_addr = create_user_reward_store_address(bridge_id);
-    //     assert!(
-    //         exists<RewardStore>(reward_addr),
-    //         error::not_found(EREWARD_STORE_NOT_FOUND)
-    //     );
-    //     reward_addr
-    // }
-
+        0
+    }
 }
