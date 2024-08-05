@@ -39,7 +39,7 @@ module publisher::vip_zapping {
     // Constants
     //
 
-    const DEFAULT_LOCK_PERIOD: u64 = 60 * 60; // 1hour
+    const DEFAULT_LOCK_PERIOD: u64 = 60 * 60 * 24 * 7 * 26; // 26 weeks
 
     //
     // Resources
@@ -656,9 +656,7 @@ module publisher::vip_zapping {
     // Test Functions
     //
     #[test_only]
-    use initia_std::coin::{
-        MintCapability
-    };
+    use initia_std::coin::{ MintCapability };
     #[test_only]
     use std::decimal128;
 
@@ -809,8 +807,8 @@ module publisher::vip_zapping {
             esinit_metadata,
             stakelisted_metadata,
             lp_metadata,
-            val
-            ,_
+            val,
+            _
         ) = test_setup_for_zapping(
             chain,
             publisher,
@@ -947,7 +945,7 @@ module publisher::vip_zapping {
         publisher: &signer,
         account: &signer,
     ) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val,_) = test_setup_for_zapping(
+        let (e_m, s_m, l_m, val, _) = test_setup_for_zapping(
             chain,
             publisher,
             account,
@@ -980,7 +978,7 @@ module publisher::vip_zapping {
         account: &signer,
         relayer: &signer,
     ) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val,_) = test_setup_for_zapping(
+        let (e_m, s_m, l_m, val, _) = test_setup_for_zapping(
             chain,
             publisher,
             account,
@@ -1039,7 +1037,7 @@ module publisher::vip_zapping {
         user_b: &signer,
         relayer: &signer,
     ) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val,_) = test_setup_for_zapping(
+        let (e_m, s_m, l_m, val, _) = test_setup_for_zapping(
             chain,
             publisher,
             user_a,
@@ -1128,7 +1126,7 @@ module publisher::vip_zapping {
         publisher: &signer,
         account: &signer,
     ) acquires ModuleStore, LSStore {
-        let (e_m, s_m, l_m, val,_) = test_setup_for_zapping(
+        let (e_m, s_m, l_m, val, _) = test_setup_for_zapping(
             chain,
             publisher,
             account,

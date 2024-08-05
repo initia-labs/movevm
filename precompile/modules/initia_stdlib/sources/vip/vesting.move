@@ -288,34 +288,6 @@ module publisher::vip_vesting {
     // Public Functions
     //
 
-    public fun register_user_vesting_store(account: &signer, bridge_id: u64) {
-        register_vesting_store<UserVesting>(account, bridge_id);
-    }
-
-    public fun register_operator_vesting_store(account: &signer, bridge_id: u64) {
-        register_vesting_store<OperatorVesting>(account, bridge_id);
-    }
-
-    public fun is_user_vesting_store_registered(addr: address, bridge_id: u64): bool {
-        exists<VestingStore<UserVesting>>(
-            create_vesting_store_address<UserVesting>(addr, bridge_id)
-        )
-    }
-
-    public fun is_operator_vesting_store_registered(addr: address, bridge_id: u64): bool {
-        exists<VestingStore<OperatorVesting>>(
-            create_vesting_store_address<OperatorVesting>(addr, bridge_id)
-        )
-    }
-
-    public fun is_user_reward_store_registered(bridge_id: u64): bool {
-        vip_reward::is_reward_store_registered<UserVesting>(bridge_id)
-    }
-
-    public fun is_operator_reward_store_registered(bridge_id: u64): bool {
-        vip_reward::is_reward_store_registered<OperatorVesting>(bridge_id)
-    }
-
     public fun is_user_vesting_position_finalized(
         account_addr: address,
         bridge_id: u64,
@@ -357,20 +329,12 @@ module publisher::vip_vesting {
     // Friends Functions
     //
 
-    public(friend) fun register_user_reward_store(chain: &signer, bridge_id: u64,) {
-        vip_reward::register_reward_store<UserVesting>(chain, bridge_id)
-    }
-
-    public(friend) fun register_operator_reward_store(chain: &signer, bridge_id: u64,) {
-        vip_reward::register_reward_store<OperatorVesting>(chain, bridge_id)
-    }
-
     public(friend) fun supply_reward_on_user(
         bridge_id: u64,
         stage: u64,
         reward: FungibleAsset,
     ) {
-        let reward_store_addr = get_user_reward_store_address(bridge_id);
+        let reward_store_addr = vip_reward::get_user_reward_store_address(bridge_id);
         vip_reward::add_reward_per_stage(
             reward_store_addr,
             stage,
@@ -384,7 +348,7 @@ module publisher::vip_vesting {
         stage: u64,
         reward: FungibleAsset,
     ) {
-        let reward_store_addr = get_operator_reward_store_address(bridge_id);
+        let reward_store_addr = vip_reward::get_operator_reward_store_address(bridge_id);
         vip_reward::add_reward_per_stage(
             reward_store_addr,
             stage,
@@ -697,7 +661,7 @@ module publisher::vip_vesting {
             vector::push_back(&mut user_vestings, *value);
         };
         // claim
-        let reward_store_addr = get_user_reward_store_address(bridge_id);
+        let reward_store_addr = vip_reward::get_user_reward_store_address(bridge_id);
         let len = vector::length(&claim_infos);
         let i = 0;
         while (i < len) {
@@ -794,7 +758,7 @@ module publisher::vip_vesting {
         };
         // give total penalty amount from reward_store to vault
         if (total_penalty_reward > 0) {
-            vip_reward::penalty<UserVesting>(
+            vip_reward::penalty(
                 bridge_id,
                 total_penalty_reward,
                 vip_vault::get_vault_store_address()
@@ -861,7 +825,7 @@ module publisher::vip_vesting {
             vector::push_back(&mut operator_vestings, *value);
         };
         // claim
-        let reward_store_addr = get_operator_reward_store_address(bridge_id);
+        let reward_store_addr = vip_reward::get_operator_reward_store_address(bridge_id);
         let len = vector::length(&claim_infos);
         let i = 0;
         while (i < len) {
@@ -954,6 +918,7 @@ module publisher::vip_vesting {
             &mut vesting_store.vestings,
             table_key::encode_u64(stage)
         );
+
         assert!(
             vesting.remaining_reward >= zapping_amount,
             error::invalid_argument(EREWARD_NOT_ENOUGH)
@@ -970,7 +935,7 @@ module publisher::vip_vesting {
             }
         );
         let penalty_reward = vesting.penalty_reward;
-        let reward_store_addr = get_user_reward_store_address(bridge_id);
+        let reward_store_addr = vip_reward::get_user_reward_store_address(bridge_id);
         let start_stage = vesting.start_stage;
         // handle vesting positions that have changed to zapping positions
         if (vesting.remaining_reward == 0) {
@@ -1018,16 +983,29 @@ module publisher::vip_vesting {
         OperatorVestingClaimInfo {start_stage, end_stage}
     }
 
+    public fun register_user_vesting_store(account: &signer, bridge_id: u64) {
+        register_vesting_store<UserVesting>(account, bridge_id);
+    }
+
+    public fun register_operator_vesting_store(account: &signer, bridge_id: u64) {
+        register_vesting_store<OperatorVesting>(account, bridge_id);
+    }
+
+    public fun is_user_vesting_store_registered(addr: address, bridge_id: u64): bool {
+        exists<VestingStore<UserVesting>>(
+            create_vesting_store_address<UserVesting>(addr, bridge_id)
+        )
+    }
+
+    public fun is_operator_vesting_store_registered(addr: address, bridge_id: u64): bool {
+        exists<VestingStore<OperatorVesting>>(
+            create_vesting_store_address<OperatorVesting>(addr, bridge_id)
+        )
+    }
+
     //
     // View Functions
     //
-
-    // <-- USER ----->
-
-    #[view]
-    public fun get_user_reward_store_address(bridge_id: u64): address {
-        vip_reward::get_reward_store_address<UserVesting>(bridge_id)
-    }
 
     #[view]
     public fun get_user_last_claimed_stage(
@@ -1188,11 +1166,6 @@ module publisher::vip_vesting {
     // <-- OPERATOR ----->
 
     #[view]
-    public fun get_operator_reward_store_address(bridge_id: u64): address {
-        vip_reward::get_reward_store_address<OperatorVesting>(bridge_id)
-    }
-
-    #[view]
     public fun get_operator_last_claimed_stage(
         account_addr: address,
         bridge_id: u64,
@@ -1350,6 +1323,7 @@ module publisher::vip_vesting {
         start_stage: u64,
         end_stage: u64,
     }
+
     #[test_only]
     public fun get_user_vesting_finalized_remaining(
         account_addr: address,
@@ -1420,27 +1394,27 @@ module publisher::vip_vesting {
         initialize_coin(chain, string::utf8(b"uinit"));
 
         assert!(
-            !is_user_reward_store_registered(1),
+            !vip_reward::is_user_reward_store_registered(1),
             1
         );
-        register_user_reward_store(publisher, 1);
+        vip_reward::register_user_reward_store(publisher, 1);
         assert!(
-            is_user_reward_store_registered(1),
+            vip_reward::is_user_reward_store_registered(1),
             2
         );
 
         assert!(
-            !is_operator_reward_store_registered(1),
+            !vip_reward::is_operator_reward_store_registered(1),
             3
         );
-        register_operator_reward_store(publisher, 1);
+        vip_reward::register_operator_reward_store(publisher, 1);
         assert!(
-            is_operator_reward_store_registered(1),
+            vip_reward::is_operator_reward_store_registered(1),
             4
         );
 
-        register_user_reward_store(publisher, 2);
-        register_operator_reward_store(publisher, 2);
+        vip_reward::register_user_reward_store(publisher, 2);
+        vip_reward::register_operator_reward_store(publisher, 2);
     }
 
     #[test(chain = @0x1, publisher = @publisher)]
@@ -1448,16 +1422,16 @@ module publisher::vip_vesting {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));
 
-        register_user_reward_store(publisher, 1);
-        let reward_store_addr = get_user_reward_store_address(1);
+        vip_reward::register_user_reward_store(publisher, 1);
+        let reward_store_addr = vip_reward::get_user_reward_store_address(1);
         vip_reward::add_reward_per_stage(reward_store_addr, 1, 100);
         assert!(
             vip_reward::get_stage_reward(reward_store_addr, 1) == 100,
             1
         );
 
-        register_operator_reward_store(publisher, 1);
-        let reward_store_addr = get_operator_reward_store_address(1);
+        vip_reward::register_operator_reward_store(publisher, 1);
+        let reward_store_addr = vip_reward::get_operator_reward_store_address(1);
         vip_reward::add_reward_per_stage(reward_store_addr, 1, 200);
         assert!(
             vip_reward::get_stage_reward(reward_store_addr, 1) == 200,
@@ -1471,9 +1445,8 @@ module publisher::vip_vesting {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));
 
-        register_user_reward_store(publisher, 1);
-        register_user_reward_store(publisher, 1);
+        vip_reward::register_user_reward_store(publisher, 1);
+        vip_reward::register_user_reward_store(publisher, 1);
     }
-
 
 }
