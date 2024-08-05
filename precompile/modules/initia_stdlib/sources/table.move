@@ -224,7 +224,7 @@ module initia_std::table {
         (key, &mut box.val)
     }
 
-    public fun get_last_key_and_value<K: copy + drop, V>(table: &mut Table<K,V>): (K,&V) {
+    public inline fun get_last_key_and_value<K: copy + drop, V>(table: &mut Table<K,V>): (K,&V) {
         let iter = iter(
             table,
             option::none(),
@@ -232,9 +232,11 @@ module initia_std::table {
             2
         );
         if(!prepare<K, V>(&mut iter)) {
-            abort(error::invalid_argument(ENOT_FOUND));
+            abort(error::invalid_argument(ENOT_FOUND))
         };
-        next<K,V>(&mut iter)
+        let(key, value) = next<K,V>(&mut iter);
+
+        (key, value)
     }
 
     // ======================================================================================================

@@ -1018,14 +1018,18 @@ module publisher::vip_test {
             5
         );
         assert!(
-            vip_vesting::get_user_vesting_finalized_initial_reward(receiver_addr, 1, 3
-            ) == 0,
+            vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 3),
             6
         );
         assert!(
-            vip_vesting::get_user_vesting_finalized_remaining(receiver_addr, 1, 3) ==
-                0,
+            vip_vesting::get_user_vesting_initial_reward(receiver_addr, 1, 3) == 0,
             7
+        );
+        assert!(
+            vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 3) && vip_vesting::get_user_vesting_remaining(
+                receiver_addr, 1, 3
+            ) == 0,
+            8
         );
 
         // vested stage 1 reward((stage_reward  + vested stage 2 reward(0)
@@ -1033,7 +1037,7 @@ module publisher::vip_test {
             vip_reward::balance(receiver_addr) == (
                 vesting1_initial_reward / vesting_period
             ),
-            8
+            9
         );
         // claim with no reward and full penalty of vesting2 position
         assert!(
@@ -1042,7 +1046,7 @@ module publisher::vip_test {
             ) + (
                 vesting2_initial_reward / vesting_period
             ),
-            9
+            10
         )
 
     }
@@ -1174,13 +1178,11 @@ module publisher::vip_test {
             5
         );
         assert!(
-            vip_vesting::get_user_vesting_finalized_initial_reward(receiver_addr, 1, 3
-            ) == 0,
+            vip_vesting::get_user_vesting_initial_reward(receiver_addr, 1, 3) == 0,
             6
         );
         assert!(
-            vip_vesting::get_user_vesting_finalized_remaining(receiver_addr, 1, 3) ==
-                0,
+            vip_vesting::get_user_vesting_remaining(receiver_addr, 1, 3) == 0,
             7
         );
 
@@ -1280,7 +1282,7 @@ module publisher::vip_test {
             vector[stage2_merkle_proof],
             vector[100],
         );
-        let remaining_reward = vip_vesting::get_user_vesting_remaining_reward(
+        let remaining_reward = vip_vesting::get_user_vesting_remaining(
             receiver_addr, get_bridge_id(), 1
         );
         // zapping stage 1 vesting position; remaining reward: (stage_reward) * 100 / 1000
@@ -1297,9 +1299,8 @@ module publisher::vip_test {
             usdc_metadata()
         );
         assert!(
-            vip_vesting::get_user_vesting_finalized_remaining(
-                receiver_addr, get_bridge_id(), 1
-            ) == 0,
+            vip_vesting::get_user_vesting_remaining(receiver_addr, get_bridge_id(), 1) ==
+                0,
             5
         );
 
@@ -1387,12 +1388,15 @@ module publisher::vip_test {
             1_000_000,
             usdc_metadata()
         );
+        assert!(
+            vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 3),
+            5
+        );
 
         assert!(
-            vip_vesting::get_user_vesting_finalized_remaining(
-                receiver_addr, get_bridge_id(), 1
-            ) == 0,
-            5
+            vip_vesting::get_user_vesting_remaining(receiver_addr, get_bridge_id(), 1) ==
+                0,
+            6
         );
     }
 
@@ -1451,7 +1455,7 @@ module publisher::vip_test {
             vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 1,
             4
         );
-        let remaining_reward = vip_vesting::get_user_vesting_remaining_reward(
+        let remaining_reward = vip_vesting::get_user_vesting_remaining(
             receiver_addr, get_bridge_id(), 1
         );
         skip_period(TEST_STAGE_INTERVAL + 1);

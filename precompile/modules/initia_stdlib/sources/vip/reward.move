@@ -43,6 +43,15 @@ module publisher::vip_reward {
         operator_reward: u64,
     }
 
+    fun init_module(chain: &signer) {
+        move_to(
+            chain,
+            ModuleStore {
+                distributed_reward: table::new<vector<u8>, RewardRecord>()
+            }
+        );
+    }
+
     fun get_distrubuted_reward_table_key(bridge_id: u64, stage: u64): vector<u8> {
         let key = vector::empty<u8>();
         vector::append(
@@ -73,12 +82,15 @@ module publisher::vip_reward {
         operator_reward: u64
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let reward_record = table::borrow_mut(
+        let table_key = get_distrubuted_reward_table_key(bridge_id, stage);
+        table::add(
             &mut module_store.distributed_reward,
-            get_distrubuted_reward_table_key(bridge_id, stage)
+            get_distrubuted_reward_table_key(bridge_id, stage),
+            RewardRecord {
+                user_reward: user_reward,
+                operator_reward: operator_reward
+            }
         );
-        reward_record.user_reward = user_reward;
-        reward_record.operator_reward = operator_reward;
     }
 
     //
@@ -106,12 +118,13 @@ module publisher::vip_reward {
                 &module_store.distributed_reward,
                 get_distrubuted_reward_table_key(bridge_id, stage),
             );
-            return reward_data.user_reward;
+            return reward_data.user_reward
         };
 
         0
     }
 
+    #[view]
     public fun get_operator_distrubuted_reward(bridge_id: u64, stage: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
 
@@ -124,9 +137,14 @@ module publisher::vip_reward {
                 &module_store.distributed_reward,
                 get_distrubuted_reward_table_key(bridge_id, stage),
             );
-            return reward_data.operator_reward;
+            return reward_data.operator_reward
         };
 
         0
+    }
+
+    #[test_only]
+    public fun init_module_for_test(chain: &signer) {
+        init_module(chain);
     }
 }

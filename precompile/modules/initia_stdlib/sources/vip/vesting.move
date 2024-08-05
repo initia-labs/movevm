@@ -27,7 +27,9 @@ module publisher::vip_vesting {
     const EREWARD_NOT_ENOUGH: u64 = 7;
     const EINVALID_VESTING_TYPE: u64 = 8;
     const EINVALID_BRIDGE: u64 = 9;
+    const EINVALID_STAGE: u64 = 10;
 
+    const ENOT_FOUND: u64 = 101;
     //
     // Constants
     //
@@ -95,6 +97,27 @@ module publisher::vip_vesting {
         end_stage: u64,
     }
 
+    struct UserVestingResponse has drop {
+        finalized: bool,
+        initial_reward: u64,
+        remaining_reward: u64,
+        penalty_reward: u64,
+        start_stage: u64,
+        vest_max_amount: u64,
+        end_stage: u64,
+        l2_score: u64,
+        minimum_score: u64,
+    }
+
+    struct OperatorVestingResponse has drop {
+        finalized: bool,
+        initial_reward: u64,
+        remaining_reward: u64,
+        start_stage: u64,
+        end_stage: u64,
+        vest_max_amount: u64
+    }
+
     //
     // Events
     //
@@ -144,6 +167,15 @@ module publisher::vip_vesting {
     }
 
     #[event]
+    struct OperatorVestingClaimEvent has drop, store {
+        account: address,
+        bridge_id: u64,
+        stage: u64,
+        vesting_reward_amount: u64,
+        vested_reward_amount: u64,
+    }
+
+    #[event]
     struct UserVestingChangedEvent has drop, store {
         account: address,
         bridge_id: u64,
@@ -154,21 +186,28 @@ module publisher::vip_vesting {
     }
 
     #[event]
-    struct OperatorVestingClaimEvent has drop, store {
-        account: address,
-        bridge_id: u64,
-        stage: u64,
-        vesting_reward_amount: u64,
-        vested_reward_amount: u64,
-    }
-
-    #[event]
     struct OperatorVestingChangedEvent has drop, store {
         account: address,
         bridge_id: u64,
         start_stage: u64,
         initial_reward: u64,
         remaining_reward: u64,
+    }
+
+    fun init_module(chain: &signer) {
+        move_to(
+            chain,
+            ModuleStore {
+                user_vestings: table::new<
+                    vector<u8> /*table key*/,
+                    Table<vector<u8> /*vesting start stage*/, UserVesting>
+                >(),
+                operator_vestings: table::new<
+                    vector<u8> /*table key*/,
+                    Table<vector<u8> /*vesting start stage*/, OperatorVesting>
+                >()
+            }
+        )
     }
 
     //
@@ -230,7 +269,35 @@ module publisher::vip_vesting {
         operator_vestings_cache
     }
 
-    fun load_user_vestings(bridge_id:u64, account_addr:address): &mut Table<vector<u8>,UserVesting> {
+    fun get_last_claimed_stage<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64)
+        : u64 acquires ModuleStore {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let table_key = get_vesting_table_key(bridge_id, account_addr);
+        if (type_info::type_name<Vesting>() == type_info::type_name<OperatorVesting>()) {
+            let operator_vestings = table::borrow_mut(
+                &mut module_store.operator_vestings,
+                table_key
+            );
+            let (stage_key, _) = table::get_last_key_and_value(operator_vestings);
+            table_key::decode_u64(stage_key)
+        }
+        else if (type_info::type_name<Vesting>() == type_info::type_name<UserVesting>()) {
+            let user_vestings = table::borrow_mut(
+                &mut module_store.user_vestings,
+                table_key
+            );
+            let (stage_key, _) = table::get_last_key_and_value(user_vestings);
+            table_key::decode_u64(stage_key)
+        }
+        else {
+            abort(
+                error::invalid_argument(EINVALID_VESTING_TYPE)
+            )
+        }
+    }
+
+    inline fun load_user_vestings_mut(bridge_id: u64, account_addr: address)
+        : &mut Table<vector<u8>, UserVesting> {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let vesting_table_key = get_vesting_table_key(bridge_id, account_addr);
         assert!(
@@ -247,15 +314,27 @@ module publisher::vip_vesting {
         user_vestings
     }
 
-    fun load_user_vesting(bridge_id:u64, account_addr:address,stage:u64): &mut UserVesting {
-        let user_vestings = load_user_vestings(bridge_id,account_addr);
+    inline fun load_user_vesting_mut(
+        bridge_id: u64,
+        account_addr: address,
+        stage: u64
+    ): &mut UserVesting {
+        let user_vestings = load_user_vestings_mut(bridge_id, account_addr);
+        assert!(
+            table::contains(
+                user_vestings,
+                table_key::encode_u64(stage)
+            ),
+            error::not_found(EINVALID_STAGE)
+        );
         table::borrow_mut(
             user_vestings,
             table_key::encode_u64(stage)
         )
     }
 
-    fun load_operator_vestings(bridge_id:u64, account_addr:address): &mut Table<vector<u8>,OperatorVesting> {
+    inline fun load_operator_vestings_mut(bridge_id: u64, account_addr: address)
+        : &mut Table<vector<u8>, OperatorVesting> {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let vesting_table_key = get_vesting_table_key(bridge_id, account_addr);
         assert!(
@@ -272,31 +351,54 @@ module publisher::vip_vesting {
         operator_vestings
     }
 
-    fun load_operator_vesting(bridge_id:u64, account_addr:address,stage:u64): &mut OperatorVesting {
-        let operator_vestings = load_operator_vestings(bridge_id,account_addr);
+    inline fun load_operator_vesting_mut(
+        bridge_id: u64,
+        account_addr: address,
+        stage: u64
+    ): &mut OperatorVesting {
+        let operator_vestings = load_operator_vestings_mut(bridge_id, account_addr);
         table::borrow_mut(
             operator_vestings,
             table_key::encode_u64(stage)
         )
     }
 
-    inline fun user_vestings_for_each(user_vestings: &mut Table<vector<u8>,UserVesting> ,f:|&mut UserVesting|) {
-        let iter = table::iter_mut(user_vestings, option::none(),option::none(),1);
-        loop {
-            if (!table::prepare_mut<vector<u8>, UserVesting>(&mut iter)) { break };
-            let (_, user_vesting) = table::next_mut<vector<u8>, UserVesting>(&mut iter);
-            f(user_vesting)
-        }
-    }
+    // inline fun user_vestings_for_each(
+    //     user_vestings: &mut Table<vector<u8>, UserVesting>,
+    //     f: |&mut UserVesting|
+    // ) {
+    //     let iter = table::iter_mut(
+    //         user_vestings,
+    //         option::none(),
+    //         option::none(),
+    //         1
+    //     );
+    //     loop {
+    //         if (!table::prepare_mut<vector<u8>, UserVesting>(&mut iter)) { break };
+    //         let (_, user_vesting) = table::next_mut<vector<u8>, UserVesting>(&mut iter);
+    //         f(user_vesting)
+    //     }
+    // }
 
-    inline fun operator_vestings_for_each(operator_vestings: &mut Table<vector<u8>,OperatorVesting> ,f:|&mut OperatorVesting|) {
-        let iter = table::iter_mut(operator_vestings, option::none(),option::none(),1);
-        loop {
-            if (!table::prepare_mut<vector<u8>, OperatorVesting>(&mut iter)) { break };
-            let (_, operator_vesting) = table::next_mut<vector<u8>, OperatorVesting>(&mut iter);
-            f(operator_vesting)
-        }
-    }
+    // inline fun operator_vestings_for_each(
+    //     operator_vestings: &mut Table<vector<u8>, OperatorVesting>,
+    //     f: |&mut OperatorVesting|
+    // ) {
+    //     let iter = table::iter_mut(
+    //         operator_vestings,
+    //         option::none(),
+    //         option::none(),
+    //         1
+    //     );
+    //     loop {
+    //         if (!table::prepare_mut<vector<u8>, OperatorVesting>(&mut iter)) { break };
+    //         let (_, operator_vesting) = table::next_mut<vector<u8>, OperatorVesting>(
+    //             &mut iter
+    //         );
+    //         f(operator_vesting)
+    //     }
+    // }
+
     //
     // Implementations
     //
@@ -336,60 +438,297 @@ module publisher::vip_vesting {
         );
     }
 
-    fun get_user_vesting<Vesting: copy + drop + store>(
+    public(friend) fun batch_claim_user_reward(
         account_addr: address,
         bridge_id: u64,
-        stage: u64
-    ): UserVesting acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let table_key = get_vesting_table_key(bridge_id, account_addr);
-        assert!(
-            table::contains(
-                &module_store.user_vestings,
-                table_key
-            ),
-            error::not_found(EINVALID_BRIDGE)
+        claim_infos: vector<UserVestingClaimInfo>, /*asc sorted claim info*/
+    ): FungibleAsset acquires ModuleStore {
+        let total_vested_reward = 0;
+        let total_penalty_reward = 0;
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let vesting_table_key = get_vesting_table_key(bridge_id, account_addr);
+        let user_vestings = table::borrow_mut(
+            &mut module_store.user_vestings,
+            vesting_table_key
         );
-        let user_vestings = table::borrow(
-            &module_store.user_vestings,
-            table_key
+        // make cache from user vesting without finalized
+        let user_vestings_cache = make_user_vestings_cache(user_vestings);
+        // claim
+        vector::for_each_ref<UserVestingClaimInfo>(
+            &claim_infos,
+            |claim_info| {
+                // claim previous user vestings position
+                let (vested_reward, penalty_reward) = batch_claim_previous_user_vestings(
+                    account_addr,
+                    bridge_id,
+                    &mut user_vestings_cache,
+                    user_vestings,
+                    claim_info
+                );
+
+                total_vested_reward = total_vested_reward + vested_reward;
+                total_penalty_reward = total_penalty_reward + penalty_reward;
+
+                let initial_reward_amount = if (claim_info.total_l2_score == 0) { 0 } else {
+                    let initial_reward = vip_reward::get_user_distrubuted_reward(
+                        bridge_id, claim_info.start_stage
+                    );
+                    (
+                        (initial_reward as u128) * (claim_info.l2_score as u128) / (
+                            claim_info.total_l2_score as u128
+                        ) as u64
+                    )
+                };
+                // create user vesting
+                if (initial_reward_amount > 0) {
+                    batch_create_user_vesting(
+                        account_addr,
+                        bridge_id,
+                        user_vestings,
+                        &mut user_vestings_cache,
+                        claim_info,
+                        initial_reward_amount
+                    );
+                } else {
+                    // if user score is 0 emit create,finalize event and add to user vestings marked finalized true
+                    table::add(
+                        user_vestings,
+                        table_key::encode_u64(claim_info.start_stage),
+                        UserVesting {
+                            finalized: true,
+                            initial_reward: 0,
+                            remaining_reward: 0,
+                            penalty_reward: 0,
+                            start_stage: claim_info.start_stage,
+                            end_stage: claim_info.end_stage,
+                            l2_score: 0,
+                            minimum_score: 0,
+                            vest_max_amount: 0,
+                        }
+                    );
+                    event::emit(
+                        UserVestingCreateEvent {
+                            account: account_addr,
+                            bridge_id,
+                            start_stage: claim_info.start_stage,
+                            end_stage: claim_info.end_stage,
+                            l2_score: claim_info.l2_score,
+                            minimum_score: 0,
+                            initial_reward: 0,
+                        }
+                    );
+                    event::emit(
+                        UserVestingFinalizedEvent {
+                            account: account_addr,
+                            bridge_id,
+                            start_stage: claim_info.start_stage,
+                            penalty_reward: 0,
+                        }
+                    );
+                };
+
+                event::emit(
+                    UserVestingClaimEvent {
+                        account: account_addr,
+                        bridge_id,
+                        stage: claim_info.start_stage,
+                        vesting_reward_amount: initial_reward_amount,
+                        vested_reward_amount: vested_reward,
+                    }
+                );
+            }
         );
-        let stage_key = table_key::encode_u64(stage);
-        assert!(
-            table::contains(user_vestings, stage_key),
-            error::not_found(EVESTING_NOT_FOUND)
-        );
-        *table::borrow(
-            user_vestings,
-            table_key::encode_u64(stage)
+
+        // update or insert from user vestings cache to vesting data of module store
+        let len = vector::length(&user_vestings_cache);
+        let i = 0;
+        while (i < len) {
+            let vesting = *vector::borrow(&user_vestings_cache, i);
+            table::upsert(
+                user_vestings,
+                table_key::encode_u64(vesting.start_stage),
+                vesting
+            );
+            // emit only user vesting happen
+            if (vesting.initial_reward != vesting.remaining_reward) {
+                event::emit(
+                    UserVestingChangedEvent {
+                        account: account_addr,
+                        bridge_id: bridge_id,
+                        start_stage: vesting.start_stage,
+                        initial_reward: vesting.initial_reward,
+                        remaining_reward: vesting.remaining_reward,
+                        penalty_reward: vesting.penalty_reward
+                    }
+                );
+            };
+            i = i + 1;
+        };
+
+        // withdraw net reward from vault
+        vip_vault::withdraw(
+            total_vested_reward - total_penalty_reward
         )
+
     }
 
-    fun get_last_claimed_stage<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64)
-        : u64 acquires ModuleStore {
+    public(friend) fun batch_claim_operator_reward(
+        operator_addr: address,
+        bridge_id: u64,
+        claim_infos: vector<OperatorVestingClaimInfo>, /*asc sorted claim info*/
+    ): FungibleAsset acquires ModuleStore {
+        let total_vested_reward = 0;
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let table_key = get_vesting_table_key(bridge_id, account_addr);
-        if (type_info::type_name<Vesting>() == type_info::type_name<OperatorVesting>()) {
-            let operator_vestings = table::borrow_mut(
-                &mut module_store.operator_vestings,
-                table_key
+        let vesting_table_key = get_vesting_table_key(bridge_id, operator_addr);
+        let operator_vestings = table::borrow_mut(
+            &mut module_store.operator_vestings,
+            vesting_table_key
+        );
+        // make cache from operator vesting without finalized
+        let operator_vestings_cache = make_operator_vestings_cache(operator_vestings);
+
+        vector::for_each_ref<OperatorVestingClaimInfo>(
+            &claim_infos,
+            |claim_info| {
+                // claim previous operator vestings
+                // vest operator reward
+                let (vested_reward) = batch_claim_previous_operator_vestings(
+                    operator_addr,
+                    bridge_id,
+                    &mut operator_vestings_cache,
+                    operator_vestings,
+                    claim_info
+                );
+
+                total_vested_reward = total_vested_reward + vested_reward;
+                let initial_reward = vip_reward::get_operator_distrubuted_reward(
+                    bridge_id, claim_info.start_stage
+                );
+                // create operator vesting position
+                batch_create_operator_vesting(
+                    operator_addr,
+                    bridge_id,
+                    operator_vestings,
+                    &mut operator_vestings_cache,
+                    claim_info,
+                    initial_reward
+                );
+                event::emit(
+                    OperatorVestingClaimEvent {
+                        account: operator_addr,
+                        bridge_id,
+                        stage: claim_info.start_stage,
+                        vesting_reward_amount: initial_reward,
+                        vested_reward_amount: vested_reward,
+                    }
+                );
+            }
+        );
+        // update or insert operator_vestings cache to vesting data of vesting store
+        let len = vector::length(&operator_vestings_cache);
+        let i = 0;
+        while (i < len) {
+            let vesting = *vector::borrow(&operator_vestings_cache, i);
+            table::upsert(
+                operator_vestings,
+                table_key::encode_u64(vesting.start_stage),
+                vesting
             );
-            let (stage_key, _) = table::get_last_key_and_value(operator_vestings);
-            table_key::decode_u64(stage_key)
-        }
-        else if (type_info::type_name<Vesting>() == type_info::type_name<UserVesting>()) {
-            let user_vestings = table::borrow_mut(
-                &mut module_store.user_vestings,
-                table_key
+            if (vesting.initial_reward != vesting.remaining_reward) {
+                event::emit(
+                    OperatorVestingChangedEvent {
+                        account: operator_addr,
+                        bridge_id: bridge_id,
+                        start_stage: vesting.start_stage,
+                        initial_reward: vesting.initial_reward,
+                        remaining_reward: vesting.remaining_reward,
+                    }
+                );
+            };
+            i = i + 1;
+        };
+
+        // withdraw total vested reward from reward store
+        vip_vault::withdraw(total_vested_reward)
+    }
+
+    public(friend) fun zapping_vesting(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64,
+        zapping_amount: u64
+    ): FungibleAsset acquires ModuleStore {
+
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let user_vestings = table::borrow_mut(
+            &mut module_store.user_vestings,
+            get_vesting_table_key(bridge_id, account_addr)
+        );
+        // force claim_vesting
+        assert!(
+            table::contains(
+                user_vestings,
+                table_key::encode_u64(stage)
+            ),
+            error::not_found(EVESTING_NOT_FOUND)
+        );
+
+        let user_vesting = table::borrow_mut(
+            user_vestings,
+            table_key::encode_u64(stage)
+        );
+
+        assert!(
+            user_vesting.remaining_reward >= zapping_amount,
+            error::invalid_argument(EREWARD_NOT_ENOUGH)
+        );
+        user_vesting.remaining_reward = user_vesting.remaining_reward - zapping_amount;
+        event::emit(
+            UserVestingChangedEvent {
+                account: account_addr,
+                bridge_id,
+                start_stage: user_vesting.start_stage,
+                initial_reward: user_vesting.initial_reward,
+                remaining_reward: user_vesting.remaining_reward,
+                penalty_reward: user_vesting.penalty_reward
+            }
+        );
+        // handle vesting positions that have changed to zapping positions
+        if (user_vesting.remaining_reward == 0) {
+            // mark vesting positions finalized and emit event.
+            user_vesting.finalized = true;
+            event::emit(
+                UserVestingFinalizedEvent {
+                    account: account_addr,
+                    bridge_id,
+                    start_stage: user_vesting.start_stage,
+                    penalty_reward: user_vesting.penalty_reward,
+                }
             );
-            let (stage_key, _) = table::get_last_key_and_value(user_vestings);
-            table_key::decode_u64(stage_key)
+        };
+
+        vip_vault::withdraw(zapping_amount)
+    }
+
+    public(friend) fun build_user_vesting_claim_infos(
+        start_stage: u64,
+        end_stage: u64,
+        l2_score: u64,
+        minimum_score_ratio: Decimal256,
+        total_l2_score: u64
+    ): UserVestingClaimInfo {
+        UserVestingClaimInfo {
+            start_stage,
+            end_stage,
+            l2_score,
+            minimum_score_ratio,
+            total_l2_score
         }
-        else {
-            abort(
-                error::invalid_argument(EINVALID_VESTING_TYPE)
-            )
-        }
+    }
+
+    public(friend) fun build_operator_vesting_claim_infos(start_stage: u64, end_stage: u64)
+        : OperatorVestingClaimInfo {
+        OperatorVestingClaimInfo {start_stage, end_stage}
     }
 
     //
@@ -417,21 +756,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         stage: u64,
     ): bool acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let table_key = get_vesting_table_key(bridge_id, account_addr);
-        assert!(
-            table::contains(
-                &module_store.user_vestings,
-                table_key
-            ),
-            error::not_found(EINVALID_BRIDGE)
-        );
-        let user_vestings = table::borrow(
-            &module_store.user_vestings,
-            table_key
-        );
-        let stage_key = table_key::encode_u64(stage);
-        let user_vesting = table::borrow(user_vestings, stage_key);
+        let user_vesting = load_user_vesting_mut(bridge_id, account_addr, stage);
         user_vesting.finalized
     }
 
@@ -440,21 +765,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         stage: u64,
     ): bool acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let table_key = get_vesting_table_key(bridge_id, account_addr);
-        assert!(
-            table::contains(
-                &module_store.operator_vestings,
-                table_key
-            ),
-            error::not_found(EINVALID_BRIDGE)
-        );
-        let operator_vestings = table::borrow(
-            &module_store.operator_vestings,
-            table_key
-        );
-        let stage_key = table_key::encode_u64(stage);
-        let operator_vesting = table::borrow(operator_vestings, stage_key);
+        let operator_vesting = load_operator_vesting_mut(bridge_id, account_addr, stage);
         operator_vesting.finalized
     }
 
@@ -467,7 +778,7 @@ module publisher::vip_vesting {
         user_vestings_cache: &mut vector<UserVesting>,
         user_vestings: &mut Table<vector<u8> /*stage key*/, UserVesting>,
         claim_info: &UserVestingClaimInfo
-    ): (u64, u64, vector<u64>) {
+    ): (u64, u64) {
         let vested_reward = 0u64;
         let penalty_reward = 0u64;
         let finalized_vestings_idx: vector<u64> = vector[]; // finalized index to delete on vestings cache
@@ -536,11 +847,7 @@ module publisher::vip_vesting {
             }
         );
 
-        (
-            vested_reward,
-            penalty_reward,
-            finalized_vestings_idx
-        )
+        (vested_reward, penalty_reward)
     }
 
     // calculate operator vesting reward til current stage
@@ -550,7 +857,7 @@ module publisher::vip_vesting {
         operator_vestings_cache: &mut vector<OperatorVesting>,
         operator_vestings: &mut Table<vector<u8> /*stage key*/, OperatorVesting>,
         claim_info: &OperatorVestingClaimInfo
-    ): (u64, vector<u64>) {
+    ): u64 {
         let vested_reward = 0u64;
         let finalized_vestings_idx: vector<u64> = vector[]; // vector index
         let idx = 0;
@@ -591,10 +898,9 @@ module publisher::vip_vesting {
                 ).finalized = true;
             }
         );
-        (
-            vested_reward,
-            finalized_vestings_idx
-        )
+
+        vested_reward
+
     }
 
     fun batch_create_user_vesting(
@@ -722,327 +1028,14 @@ module publisher::vip_vesting {
         );
     }
 
-    public(friend) fun batch_claim_user_reward(
-        account_addr: address,
-        bridge_id: u64,
-        claim_infos: vector<UserVestingClaimInfo>, /*asc sorted claim info*/
-    ): FungibleAsset acquires ModuleStore {
-        let total_vested_reward = 0;
-        let total_penalty_reward = 0;
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let vesting_table_key = get_vesting_table_key(bridge_id, account_addr);
-        let user_vestings = table::borrow_mut(
-            &mut module_store.user_vestings,
-            vesting_table_key
-        );
-        // make cache from user vesting without finalized
-        let user_vestings_cache = make_user_vestings_cache(user_vestings);
-        // claim
-        let len = vector::length(&claim_infos);
-        let i = 0;
-        while (i < len) {
-            let claim_info = vector::borrow(&claim_infos, i);
-            // claim previous user vestings position
-            // vest user reward
-            let (
-                vested_reward,
-                penalty_reward,
-                finalized_vestings_cache_idx
-            ) = batch_claim_previous_user_vestings(
-                account_addr,
-                bridge_id,
-                &mut user_vestings_cache,
-                user_vestings,
-                claim_info
-            );
-
-            total_vested_reward = total_vested_reward + vested_reward;
-            total_penalty_reward = total_penalty_reward + penalty_reward;
-
-            let initial_reward_amount = if (claim_info.total_l2_score == 0) { 0 } else {
-                let initial_reward = vip_reward::get_user_distrubuted_reward(
-                    bridge_id, claim_info.start_stage
-                );
-                (
-                    (initial_reward as u128) * (claim_info.l2_score as u128) / (
-                        claim_info.total_l2_score as u128
-                    ) as u64
-                )
-            };
-            // create user vesting
-            if (initial_reward_amount > 0) {
-                batch_create_user_vesting(
-                    account_addr,
-                    bridge_id,
-                    user_vestings,
-                    &mut user_vestings_cache,
-                    claim_info,
-                    initial_reward_amount
-                );
-            } else {
-                // if user score is 0 emit create,finalize event and add to user vestings marked finalized true
-                table::add(
-                    user_vestings,
-                    table_key::encode_u64(claim_info.start_stage),
-                    UserVesting {
-                        finalized: true,
-                        initial_reward: 0,
-                        remaining_reward: 0,
-                        penalty_reward: 0,
-                        start_stage: claim_info.start_stage,
-                        end_stage: claim_info.end_stage,
-                        l2_score: 0,
-                        minimum_score: 0,
-                        vest_max_amount: 0,
-                    }
-                );
-                event::emit(
-                    UserVestingCreateEvent {
-                        account: account_addr,
-                        bridge_id,
-                        start_stage: claim_info.start_stage,
-                        end_stage: claim_info.end_stage,
-                        l2_score: claim_info.l2_score,
-                        minimum_score: 0,
-                        initial_reward: 0,
-                    }
-                );
-                event::emit(
-                    UserVestingFinalizedEvent {
-                        account: account_addr,
-                        bridge_id,
-                        start_stage: claim_info.start_stage,
-                        penalty_reward: 0,
-                    }
-                );
-            };
-
-            i = i + 1;
-
-            event::emit(
-                UserVestingClaimEvent {
-                    account: account_addr,
-                    bridge_id,
-                    stage: claim_info.start_stage,
-                    vesting_reward_amount: initial_reward_amount,
-                    vested_reward_amount: vested_reward,
-                }
-            );
-
-        };
-
-        // update or insert from user vestings cache to vesting data of module store
-        len = vector::length(&user_vestings_cache);
-        let i = 0;
-        while (i < len) {
-            let vesting = *vector::borrow(&user_vestings_cache, i);
-            table::upsert(
-                user_vestings,
-                table_key::encode_u64(vesting.start_stage),
-                vesting
-            );
-            // emit only user vesting happen
-            if (vesting.initial_reward != vesting.remaining_reward) {
-                event::emit(
-                    UserVestingChangedEvent {
-                        account: account_addr,
-                        bridge_id: bridge_id,
-                        start_stage: vesting.start_stage,
-                        initial_reward: vesting.initial_reward,
-                        remaining_reward: vesting.remaining_reward,
-                        penalty_reward: vesting.penalty_reward
-                    }
-                );
-            };
-            i = i + 1;
-        };
-
-        // withdraw net reward from vault
-        vip_vault::withdraw(
-            account_addr,
-            total_vested_reward - total_penalty_reward
-        )
-
-    }
-
-    public(friend) fun batch_claim_operator_reward(
-        operator_addr: address,
-        bridge_id: u64,
-        claim_infos: vector<OperatorVestingClaimInfo>, /*asc sorted claim info*/
-    ): FungibleAsset acquires ModuleStore {
-        let total_vested_reward = 0;
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let vesting_table_key = get_vesting_table_key(bridge_id, operator_addr);
-        let operator_vestings = table::borrow_mut(
-            &mut module_store.operator_vestings,
-            vesting_table_key
-        );
-        // make cache from operator vesting without finalized
-        let operator_vestings_cache = make_operator_vestings_cache(operator_vestings);
-        // claim
-        let len = vector::length(&claim_infos);
-        let i = 0;
-        while (i < len) {
-            let claim_info = vector::borrow(&claim_infos, i);
-
-            // claim previous operator vestings
-            // vest operator reward
-            let (
-                vested_reward,
-                finalized_vestings_cache_idx
-            ) = batch_claim_previous_operator_vestings(
-                operator_addr,
-                bridge_id,
-                &mut operator_vestings_cache,
-                operator_vestings,
-                claim_info
-            );
-
-            total_vested_reward = total_vested_reward + vested_reward;
-            let initial_reward = vip_reward::get_operator_distrubuted_reward(
-                bridge_id, claim_info.start_stage
-            );
-            // create operator vesting position
-            batch_create_operator_vesting(
-                operator_addr,
-                bridge_id,
-                operator_vestings,
-                &mut operator_vestings_cache,
-                claim_info,
-                initial_reward
-            );
-
-            i = i + 1;
-            event::emit(
-                OperatorVestingClaimEvent {
-                    account: operator_addr,
-                    bridge_id,
-                    stage: claim_info.start_stage,
-                    vesting_reward_amount: initial_reward,
-                    vested_reward_amount: vested_reward,
-                }
-            );
-        };
-        // update or insert operator_vestings cache to vesting data of vesting store
-        len = vector::length(&operator_vestings_cache);
-        let i = 0;
-        while (i < len) {
-            let vesting = *vector::borrow(&operator_vestings_cache, i);
-            table::upsert(
-                operator_vestings,
-                table_key::encode_u64(vesting.start_stage),
-                vesting
-            );
-            if (vesting.initial_reward != vesting.remaining_reward) {
-                event::emit(
-                    OperatorVestingChangedEvent {
-                        account: operator_addr,
-                        bridge_id: bridge_id,
-                        start_stage: vesting.start_stage,
-                        initial_reward: vesting.initial_reward,
-                        remaining_reward: vesting.remaining_reward,
-                    }
-                );
-            };
-            i = i + 1;
-        };
-
-        // withdraw total vested reward from reward store
-        vip_vault::withdraw(operator_addr, total_vested_reward)
-    }
-
-    public(friend) fun zapping_vesting(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64,
-        zapping_amount: u64
-    ): FungibleAsset acquires ModuleStore {
-
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let user_vestings = table::borrow_mut(
-            &mut module_store.user_vestings,
-            get_vesting_table_key(bridge_id, account_addr)
-        );
-        // force claim_vesting
-        assert!(
-            table::contains(
-                user_vestings,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(EVESTING_NOT_FOUND)
-        );
-
-        let user_vesting = table::borrow_mut(
-            user_vestings,
-            table_key::encode_u64(stage)
-        );
-
-        assert!(
-            user_vesting.remaining_reward >= zapping_amount,
-            error::invalid_argument(EREWARD_NOT_ENOUGH)
-        );
-        user_vesting.remaining_reward = user_vesting.remaining_reward - zapping_amount;
-        event::emit(
-            UserVestingChangedEvent {
-                account: account_addr,
-                bridge_id,
-                start_stage: user_vesting.start_stage,
-                initial_reward: user_vesting.initial_reward,
-                remaining_reward: user_vesting.remaining_reward,
-                penalty_reward: user_vesting.penalty_reward
-            }
-        );
-        // handle vesting positions that have changed to zapping positions
-        if (user_vesting.remaining_reward == 0) {
-            // mark vesting positions finalized and emit event.
-            user_vesting.finalized = true;
-            event::emit(
-                UserVestingFinalizedEvent {
-                    account: account_addr,
-                    bridge_id,
-                    start_stage: user_vesting.start_stage,
-                    penalty_reward: user_vesting.penalty_reward,
-                }
-            );
-        };
-
-        vip_vault::withdraw(account_addr, zapping_amount)
-    }
-
-    public(friend) fun build_user_vesting_claim_infos(
-        start_stage: u64,
-        end_stage: u64,
-        l2_score: u64,
-        minimum_score_ratio: Decimal256,
-        total_l2_score: u64
-    ): UserVestingClaimInfo {
-        UserVestingClaimInfo {
-            start_stage,
-            end_stage,
-            l2_score,
-            minimum_score_ratio,
-            total_l2_score
-        }
-    }
-
-    public(friend) fun build_operator_vesting_claim_infos(start_stage: u64, end_stage: u64)
-        : OperatorVestingClaimInfo {
-        OperatorVestingClaimInfo {start_stage, end_stage}
-    }
-
-    
     //
     // View Functions
     //
     // <----- USER ----->
     #[view]
-    public fun get_user_unlocked_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64,
-    ):u64 acquires ModuleStore {
+    public fun get_user_unlocked_reward(account_addr: address, bridge_id: u64): u64 acquires ModuleStore {
         let total_unlocked_reward = 0;
-        let user_vestings = load_user_vestings(bridge_id,account_addr);
+        let user_vestings = load_user_vestings_mut(bridge_id, account_addr);
         let iter = table::iter(
             user_vestings,
             option::none(),
@@ -1052,16 +1045,36 @@ module publisher::vip_vesting {
         loop {
             if (!table::prepare<vector<u8>, UserVesting>(&mut iter)) { break };
             let (_, user_vesting) = table::next<vector<u8>, UserVesting>(&mut iter);
-            total_unlocked_reward = total_unlocked_reward + (user_vesting.initial_reward - user_vesting.remaining_reward)
+            total_unlocked_reward = total_unlocked_reward + (
+                user_vesting.initial_reward - user_vesting.remaining_reward
+            )
         };
         total_unlocked_reward
+    }
+
+    #[view]
+    public fun get_user_locked_reward(account_addr: address, bridge_id: u64): u64 acquires ModuleStore {
+        let total_locked_reward = 0;
+        let user_vestings = load_user_vestings_mut(bridge_id, account_addr);
+        let iter = table::iter(
+            user_vestings,
+            option::none(),
+            option::none(),
+            1
+        );
+        loop {
+            if (!table::prepare<vector<u8>, UserVesting>(&mut iter)) { break };
+            let (_, user_vesting) = table::next<vector<u8>, UserVesting>(&mut iter);
+            total_locked_reward = total_locked_reward + user_vesting.remaining_reward;
+        };
+        total_locked_reward
     }
 
     #[view]
     public fun get_user_last_claimed_stage(
         account_addr: address,
         bridge_id: u64,
-    ): u64 {
+    ): u64 acquires ModuleStore {
         get_last_claimed_stage<UserVesting>(account_addr, bridge_id)
     }
 
@@ -1107,10 +1120,9 @@ module publisher::vip_vesting {
     public fun get_operator_unlocked_reward(
         account_addr: address,
         bridge_id: u64,
-        stage: u64,
-    ):u64 acquires ModuleStore {
+    ): u64 acquires ModuleStore {
         let total_unlocked_reward = 0;
-        let operator_vestings = load_operator_vestings(bridge_id,account_addr);
+        let operator_vestings = load_operator_vestings_mut(bridge_id, account_addr);
         let iter = table::iter(
             operator_vestings,
             option::none(),
@@ -1120,15 +1132,18 @@ module publisher::vip_vesting {
         loop {
             if (!table::prepare<vector<u8>, OperatorVesting>(&mut iter)) { break };
             let (_, operator_vesting) = table::next<vector<u8>, OperatorVesting>(&mut iter);
-            total_unlocked_reward = total_unlocked_reward + (operator_vesting.initial_reward - operator_vesting.remaining_reward)
+            total_unlocked_reward = total_unlocked_reward + (
+                operator_vesting.initial_reward - operator_vesting.remaining_reward
+            )
         };
         total_unlocked_reward
     }
+
     #[view]
     public fun get_operator_last_claimed_stage(
         account_addr: address,
         bridge_id: u64,
-    ): u64 {
+    ): u64 acquires ModuleStore {
         get_last_claimed_stage<OperatorVesting>(account_addr, bridge_id)
     }
 
@@ -1169,6 +1184,43 @@ module publisher::vip_vesting {
         claimed_stages
     }
 
+    #[view]
+    public fun get_user_vesting(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): UserVestingResponse acquires ModuleStore {
+        let user_vesting = load_user_vesting_mut(bridge_id, account_addr, stage);
+        UserVestingResponse {
+            finalized: user_vesting.finalized,
+            initial_reward: user_vesting.initial_reward,
+            remaining_reward: user_vesting.remaining_reward,
+            penalty_reward: user_vesting.penalty_reward,
+            start_stage: user_vesting.start_stage,
+            vest_max_amount: user_vesting.vest_max_amount,
+            end_stage: user_vesting.end_stage,
+            l2_score: user_vesting.l2_score,
+            minimum_score: user_vesting.minimum_score
+        }
+    }
+
+    #[view]
+    public fun get_operator_vesting(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): OperatorVestingResponse acquires ModuleStore {
+        let operator_vesting = load_operator_vesting_mut(bridge_id, account_addr, stage);
+        OperatorVestingResponse {
+            finalized: operator_vesting.finalized,
+            initial_reward: operator_vesting.initial_reward,
+            remaining_reward: operator_vesting.remaining_reward,
+            start_stage: operator_vesting.start_stage,
+            vest_max_amount: operator_vesting.vest_max_amount,
+            end_stage: operator_vesting.end_stage,
+        }
+    }
+
     //
     // Tests
     //
@@ -1191,6 +1243,42 @@ module publisher::vip_vesting {
         remaining_reward: u64,
         start_stage: u64,
         end_stage: u64,
+    }
+
+    #[test_only]
+    public fun get_user_vesting_minimum_score(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_user_vesting(account_addr, bridge_id, stage).minimum_score
+    }
+
+    #[test_only]
+    public fun get_user_vesting_initial_reward(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_user_vesting(account_addr, bridge_id, stage).initial_reward
+    }
+
+    #[test_only]
+    public fun get_user_vesting_remaining(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_operator_vesting(account_addr, bridge_id, stage).remaining_reward
+    }
+
+    #[test_only]
+    public fun get_operator_vesting_initial_reward(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_operator_vesting(account_addr, bridge_id, stage).initial_reward
     }
 
     #[test_only]
@@ -1225,7 +1313,7 @@ module publisher::vip_vesting {
     // <-- VESTING ----->
 
     #[test(account = @0x99)]
-    fun test_register_vesting_store(account: &signer,) {
+    fun test_register_vesting_store(account: &signer) acquires ModuleStore {
         let account_addr = signer::address_of(account);
         assert!(
             !is_user_vesting_store_registered(account_addr, 1),
@@ -1241,7 +1329,7 @@ module publisher::vip_vesting {
 
     #[test(account = @0x99)]
     #[expected_failure(abort_code = 0x80001, location = Self)]
-    fun failed_register_vesting_store_twice(account: &signer,) {
+    fun failed_register_vesting_store_twice(account: &signer) acquires ModuleStore {
         register_user_vesting_store(account, 1);
         register_user_vesting_store(account, 1);
     }

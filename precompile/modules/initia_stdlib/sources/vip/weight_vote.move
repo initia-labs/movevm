@@ -41,7 +41,7 @@ module publisher::vip_weight_vote {
     const ECHALLENGE_IN_PROGRESS: u64 = 15;
     const ECHALLENGE_ALREADY_EXECUTED: u64 = 16;
     const EINVALID_PARAMETER: u64 = 17;
-    const EINVALID_BRIDGE:u64 = 18;
+    const EINVALID_BRIDGE: u64 = 18;
     //
     //  Constants
     //
@@ -409,7 +409,10 @@ module publisher::vip_weight_vote {
         vector::for_each(
             bridge_ids,
             |bridge_id| {
-                assert!(vip::is_registered(bridge_id),error::invalid_argument(EINVALID_BRIDGE));
+                assert!(
+                    vip::is_registered(bridge_id),
+                    error::invalid_argument(EINVALID_BRIDGE)
+                );
             }
         );
         let weight_sum = decimal128::new(0);
@@ -1239,20 +1242,21 @@ module publisher::vip_weight_vote {
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
 
-        let tally_responses:vector<TallyResponse> = vector[];
+        let tally_responses: vector<TallyResponse> = vector[];
 
         let bridge_ids = vip::get_whitelisted_bridge_ids();
 
         vector::for_each(
             bridge_ids,
             |bridge_id| {
-                let tally = table::borrow_with_default(&proposal.tally, table_key::encode_u64(bridge_id), &0);
+                let tally = table::borrow_with_default(
+                    &proposal.tally,
+                    table_key::encode_u64(bridge_id),
+                    &0
+                );
                 vector::push_back(
                     &mut tally_responses,
-                    TallyResponse {
-                        bridge_id,
-                        tally: *tally
-                    }
+                    TallyResponse {bridge_id, tally: *tally}
                 )
             }
         );
@@ -1381,12 +1385,13 @@ module publisher::vip_weight_vote {
 
     #[test_only]
     use initia_std::coin;
-
     #[test_only]
     use initia_std::string;
 
     #[test_only]
     use initia_std::block;
+    #[test_only]
+    use publisher::vip_operator;
     #[test_only]
     const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
 
@@ -1421,6 +1426,7 @@ module publisher::vip_weight_vote {
             string::utf8(b""),
             string::utf8(b""),
         );
+        vip_operator::init_module_for_test(publisher);
         vip::init_module_for_test(publisher);
         vip::register(
             publisher,

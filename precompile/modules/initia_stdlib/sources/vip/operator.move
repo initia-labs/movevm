@@ -64,6 +64,15 @@ module publisher::vip_operator {
         commission_rate: Decimal256,
     }
 
+    fun init_module(chain: &signer) {
+        move_to(
+            chain,
+            ModuleStore {
+                operator_data: table::new<vector<u8>, OperatorInfo>()
+            }
+        );
+    }
+
     //
     // Helper Functions
     //
@@ -113,7 +122,7 @@ module publisher::vip_operator {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let bridge_id_key = table_key::encode_u64(bridge_id);
         assert!(
-            table::contains(
+            !table::contains(
                 &module_store.operator_data,
                 bridge_id_key
             ),
@@ -208,14 +217,16 @@ module publisher::vip_operator {
     ) acquires ModuleStore {
         let bridge_id_key = table_key::encode_u64(bridge_id);
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let operator_info = table::borrow(
-            &module_store.operator_data,
+        let operator_info = table::borrow_mut(
+            &mut module_store.operator_data,
             bridge_id_key
         );
         assert!(
             operator_info.operator_addr == signer::address_of(old_operator),
             error::permission_denied(EUNAUTHORIZED)
         );
+
+        operator_info.operator_addr = new_operator_addr;
     }
 
     //
@@ -232,7 +243,7 @@ module publisher::vip_operator {
     }
 
     #[view]
-    public fun get_operator_commission(operator: address, bridge_id: u64): Decimal256 acquires ModuleStore {
+    public fun get_operator_commission(bridge_id: u64): Decimal256 acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let operator_info = table::borrow(
             &module_store.operator_data,
@@ -264,9 +275,13 @@ module publisher::vip_operator {
 
     #[test_only]
     use std::string;
+    #[test_only]
+    public fun init_module_for_test(chain: &signer) {
+        init_module(chain);
+    }
 
     #[test(publisher = @publisher, operator = @0x999)]
-    fun test_update_operator_commission(publisher: &signer, operator: &signer) {
+    fun test_update_operator_commission(publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -330,7 +345,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10003, location = Self)]
-    fun failed_invalid_change_rate(publisher: &signer, operator: &signer) {
+    fun failed_invalid_change_rate(publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -354,7 +369,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
-    fun failed_over_max_rate(publisher: &signer, operator: &signer) {
+    fun failed_over_max_rate(publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -378,7 +393,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
-    fun failed_not_valid_stage(publisher: &signer, operator: &signer) {
+    fun failed_not_valid_stage(publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -402,7 +417,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10006, location = Self)]
-    fun failed_invalid_commission_rate(publisher: &signer, operator: &signer) {
+    fun failed_invalid_commission_rate(publisher: &signer, operator: &signer) acquires ModuleStore {
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 

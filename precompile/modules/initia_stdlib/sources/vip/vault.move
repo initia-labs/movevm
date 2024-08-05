@@ -73,7 +73,7 @@ module publisher::vip_vault {
     // Friend Functions
     //
 
-    public(friend) fun withdraw(account_addr: address, amount: u64): FungibleAsset acquires ModuleStore {
+    public(friend) fun withdraw(amount: u64): FungibleAsset acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         assert!(
             module_store.reward_per_stage > 0,

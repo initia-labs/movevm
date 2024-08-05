@@ -9,7 +9,7 @@ module publisher::vip {
     use std::block;
 
     use initia_std::object::{ Object };
-    use initia_std::fungible_asset::{Self, Metadata};
+    use initia_std::fungible_asset::{ Metadata };
     use initia_std::primary_fungible_store;
     use initia_std::table;
     use initia_std::table_key;
@@ -145,8 +145,6 @@ module publisher::vip {
         operator_addr: address,
         vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
-        // operator_reward_store_addr: address,
-        // user_reward_store_addr: address,
     }
 
     struct ExecutedChallenge has store, drop {
@@ -527,12 +525,8 @@ module publisher::vip {
         );
     }
 
-    fun calc_operator_and_user_reward_amount(
-        operator_addr: address,
-        bridge_id: u64,
-        reward_amount: u64,
-    ): (u64, u64) {
-        let commission_rate = vip_operator::get_operator_commission(operator_addr, bridge_id);
+    fun calc_operator_and_user_reward_amount(bridge_id: u64, reward_amount: u64,): (u64, u64) {
+        let commission_rate = vip_operator::get_operator_commission(bridge_id);
         let operator_reward_amount = decimal256::mul_u64(&commission_rate, reward_amount);
         let user_reward_amount = reward_amount - operator_reward_amount;
         (
@@ -561,7 +555,7 @@ module publisher::vip {
         loop {
             if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
 
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
+            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(&mut iter);
             let bridge_id = table_key::decode_u64(bridge_id_vec);
             // split the reward of balance pool
             let balance_reward_amount = split_reward_with_share_internal(
@@ -581,7 +575,6 @@ module publisher::vip {
                 total_operator_funded_reward,
                 total_user_funded_reward
             ) = calc_operator_and_user_reward_amount(
-                bridge.operator_addr,
                 bridge_id,
                 balance_reward_amount + weight_reward_amount
             );
@@ -1107,7 +1100,7 @@ module publisher::vip {
     ) acquires ModuleStore {
         check_agent_permission(agent);
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        // submitted snapshot under current stage
+        // submitted snapshot under the current stage
         assert!(
             stage < module_store.stage,
             error::invalid_argument(EINVALID_STAGE_SNAPSHOT)
@@ -1120,7 +1113,7 @@ module publisher::vip {
             error::not_found(ESTAGE_DATA_NOT_FOUND)
         );
 
-        // check previous stage snapshot is exist for preventing skipping stage
+        // check previous stage snapshot for preventing skipping stage
         check_previous_stage_snapshot(module_store, bridge_id, stage);
 
         let stage_data = table::borrow_mut(
@@ -1211,87 +1204,6 @@ module publisher::vip {
         curr_time > snapshot_create_time + module_store.challenge_period
     }
 
-    fun check_claimable_period(bridge_id: u64, stage: u64) acquires ModuleStore {
-        assert!(
-            check_claimable(bridge_id, stage),
-            error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
-        );
-    }
-
-    public entry fun batch_claim_operator_reward_script(
-        operator: &signer,
-        bridge_id: u64,
-        stages: vector<u64>,
-    ) acquires ModuleStore {
-        if (
-            !vip_vesting::is_operator_vesting_store_registered(
-                signer::address_of(operator),
-                bridge_id
-            )) {
-            vip_vesting::register_operator_vesting_store(operator, bridge_id);
-        };
-        let account_addr = signer::address_of(operator);
-        let len = vector::length(&stages);
-        let final_stage = *vector::borrow(&mut stages, len - 1);
-        // check claimable on final stage by challenge period
-        check_claimable_period(bridge_id, final_stage);
-        // check if the claim is attempted from a position that has not been finalized.
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let first_stage = *vector::borrow(&mut stages, 0);
-        let prev_stage = first_stage - 1;
-        let init_stage = table::borrow(
-            &module_store.bridges,
-            table_key::encode_u64(bridge_id)
-        ).init_stage;
-        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
-        // so if vesting position of prev stage is claimed, then it will be okay but if is not, make the error
-        if (prev_stage >= init_stage) {
-            assert!(
-                vip_vesting::get_operator_last_claimed_stage(account_addr, bridge_id) == prev_stage,
-                error::invalid_argument(EINVALID_BATCH_ARGUMENT)
-            );
-        };
-        // check if the claim is attempted from a position that has not been claimed.
-        // if an attempt is made to claim from a vesting position of the next stage without finalizing the current one, an error should be raised
-        let claimInfos: vector<OperatorVestingClaimInfo> = vector[];
-        // make vesting position claim info
-        vector::enumerate_ref(
-            &stages,
-            |i, s| {
-                // check stages consecutively
-                assert!(
-                    *s == prev_stage + 1,
-                    error::invalid_argument(EINVALID_STAGE_ORDER)
-                );
-
-                // if there is no vesting store, register it
-                if (!vip_vesting::is_user_vesting_store_registered(
-                        signer::address_of(operator),
-                        bridge_id
-                    )) {
-                    vip_vesting::register_user_vesting_store(operator, bridge_id);
-                };
-
-                prev_stage = *s;
-
-                vector::push_back(
-                    &mut claimInfos,
-                    vip_vesting::build_operator_vesting_claim_infos(
-                        *s, *s + module_store.vesting_period,
-                    )
-                );
-            }
-        );
-        // call batch claim user reward
-        let vested_reward = vip_vesting::batch_claim_operator_reward(
-            account_addr, bridge_id, claimInfos
-        );
-        coin::deposit(
-            signer::address_of(operator),
-            vested_reward
-        );
-    }
-
     public entry fun batch_claim_user_reward_script(
         account: &signer,
         bridge_id: u64,
@@ -1308,7 +1220,10 @@ module publisher::vip {
         );
         let final_stage = *vector::borrow(&mut stages, len - 1);
         // check claimable on final stage by challenge period
-        check_claimable_period(bridge_id, final_stage);
+        assert!(
+            check_claimable(bridge_id, final_stage),
+            error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
+        );
 
         let module_store = borrow_global<ModuleStore>(@publisher);
         let account_addr = signer::address_of(account);
@@ -1397,15 +1312,92 @@ module publisher::vip {
                 );
             }
         );
-        // call batch claim user reward
-        let vested_reward = vip_vesting::batch_claim_user_reward(
+        // call batch claim user reward; return net reward(total vested reward - total penalty reward)
+        let net_reward = vip_vesting::batch_claim_user_reward(
             account_addr, bridge_id, claimInfos
         );
         coin::deposit(
             signer::address_of(account),
-            vested_reward
+            net_reward
         );
 
+    }
+
+    public entry fun batch_claim_operator_reward_script(
+        operator: &signer,
+        bridge_id: u64,
+        stages: vector<u64>,
+    ) acquires ModuleStore {
+        if (
+            !vip_vesting::is_operator_vesting_store_registered(
+                signer::address_of(operator),
+                bridge_id
+            )) {
+            vip_vesting::register_operator_vesting_store(operator, bridge_id);
+        };
+        let account_addr = signer::address_of(operator);
+        let len = vector::length(&stages);
+        let final_stage = *vector::borrow(&mut stages, len - 1);
+        // check claimable on final stage by challenge period
+        assert!(
+            check_claimable(bridge_id, final_stage),
+            error::permission_denied(EINVALID_CLAIMABLE_PERIOD)
+        );
+        // check if the claim is attempted from a position that has not been finalized.
+        let module_store = borrow_global<ModuleStore>(@publisher);
+        let first_stage = *vector::borrow(&mut stages, 0);
+        let prev_stage = first_stage - 1;
+        let init_stage = table::borrow(
+            &module_store.bridges,
+            table_key::encode_u64(bridge_id)
+        ).init_stage;
+        // hypothesis: for a claimed vesting position, all its previous stages must also be claimed.
+        // so if vesting position of previous stage is claimed, then it will be okay but if is not, make the error
+        if (prev_stage >= init_stage) {
+            assert!(
+                vip_vesting::get_operator_last_claimed_stage(account_addr, bridge_id) == prev_stage,
+                error::invalid_argument(EINVALID_BATCH_ARGUMENT)
+            );
+        };
+        // check if the claim is attempted from a position that has not been claimed.
+        // if an attempt is made to claim from a vesting position of the next stage without finalizing the current one, an error should be raised
+        let claimInfos: vector<OperatorVestingClaimInfo> = vector[];
+        // make vesting position claim info
+        vector::enumerate_ref(
+            &stages,
+            |i, s| {
+                // check stages consecutively
+                assert!(
+                    *s == prev_stage + 1,
+                    error::invalid_argument(EINVALID_STAGE_ORDER)
+                );
+
+                // if there is no vesting store, register it
+                if (!vip_vesting::is_user_vesting_store_registered(
+                        signer::address_of(operator),
+                        bridge_id
+                    )) {
+                    vip_vesting::register_user_vesting_store(operator, bridge_id);
+                };
+
+                prev_stage = *s;
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_operator_vesting_claim_infos(
+                        *s, *s + module_store.vesting_period,
+                    )
+                );
+            }
+        );
+        // call batch claim user reward; return net reward(total vested reward - total penalty reward)
+        let net_reward = vip_vesting::batch_claim_operator_reward(
+            account_addr, bridge_id, claimInfos
+        );
+        coin::deposit(
+            signer::address_of(operator),
+            net_reward
+        );
     }
 
     public entry fun update_vip_weights(
@@ -1538,7 +1530,6 @@ module publisher::vip {
         bridge.vip_l2_score_contract = new_vip_l2_score_contract;
     }
 
-    // TODO: delete this on mainnet?
     public entry fun update_operator(
         operator: &signer,
         bridge_id: u64,
@@ -2102,6 +2093,7 @@ module publisher::vip {
     #[test_only]
     public fun init_module_for_test(publisher: &signer) {
         vip_vault::init_module_for_test(publisher);
+        vip_operator::init_module_for_test(publisher);
         vip_vault::update_reward_per_stage(
             publisher,
             DEFAULT_REWARD_PER_STAGE_FOR_TEST
@@ -2202,6 +2194,7 @@ module publisher::vip {
     ): u64 acquires ModuleStore {
         primary_fungible_store::init_module_for_test(chain);
         vip_tvl_manager::init_module_for_test(publisher);
+        vip_reward::init_module_for_test(publisher);
         let (burn_cap, freeze_cap, mint_cap, _) = initialize_coin(
             chain, string::utf8(b"uinit")
         );
@@ -2568,6 +2561,7 @@ module publisher::vip {
             _,
             total_score_map
         ) = merkle_root_and_proof_scene1();
+
         // fund reward stage 1 ~ 10
         while (
             idx <= simple_map::length(&merkle_root_map)
@@ -2593,6 +2587,8 @@ module publisher::vip {
                 merkle_root,
                 total_l2_score
             );
+            idx = idx + 1;
+
         }
     }
 
@@ -3144,12 +3140,12 @@ module publisher::vip {
             ], // vesting 2 finalized
         );
 
-        vip_vesting::get_user_vesting_finalized(
+        vip_vesting::get_user_vesting(
             signer::address_of(receiver),
             bridge_id,
             1
         );
-        vip_vesting::get_user_vesting_finalized(
+        vip_vesting::get_user_vesting(
             signer::address_of(receiver),
             bridge_id,
             2
@@ -3643,7 +3639,7 @@ module publisher::vip {
             ],
         );
 
-        let initial_reward_vesting_finalized = vip_vesting::get_user_vesting_finalized_initial_reward(
+        let initial_reward_vesting_finalized = vip_vesting::get_user_vesting_initial_reward(
             signer::address_of(receiver),
             bridge_id,
             1
@@ -3839,54 +3835,9 @@ module publisher::vip {
             0
         ); // 0.7 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * (1/4) + 0.3 * DEFAULT_REWARD_PER_STAGE_FOR_TEST * 0
 
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_user_reward_store_address(1)
-            ) == get_expected_reward(
-                1,
-                DEFAULT_REWARD_PER_STAGE_FOR_TEST
-            ),
-            0
-        );
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_user_reward_store_address(2)
-            ) == get_expected_reward(
-                2,
-                DEFAULT_REWARD_PER_STAGE_FOR_TEST
-            ),
-            0
-        );
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_user_reward_store_address(3)
-            ) == get_expected_reward(
-                3,
-                DEFAULT_REWARD_PER_STAGE_FOR_TEST
-            ),
-            0
-        );
         add_tvl_snapshot(publisher);
         fund_reward_script(publisher);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_operator_reward_store_address(1)
-            ) == 0,
-            0
-        );
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_operator_reward_store_address(2)
-            ) == 0,
-            0
-        );
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_operator_reward_store_address(3)
-            ) == 0,
-            0
-        );
 
         update_operator_commission(
             operator,
@@ -3901,31 +3852,6 @@ module publisher::vip {
         add_tvl_snapshot(publisher);
         fund_reward_script(publisher);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_operator_reward_store_address(1)
-            ) == get_expected_reward(
-                1,
-                DEFAULT_REWARD_PER_STAGE_FOR_TEST
-            ) / 2,
-            0
-        );
-
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_operator_reward_store_address(2)
-            ) == get_expected_reward(
-                2,
-                DEFAULT_REWARD_PER_STAGE_FOR_TEST
-            ) / 2,
-            0
-        );
-        assert!(
-            vip_reward::balance(
-                vip_reward::get_operator_reward_store_address(3)
-            ) == 0,
-            0
-        );
 
     }
 
@@ -4160,7 +4086,6 @@ module publisher::vip {
         operator: &signer,
         receiver: &signer
     ) acquires ModuleStore {
-        let operator_addr = signer::address_of(operator);
         let vesting_period = DEFAULT_USER_VESTING_PERIOD_FOR_TEST;
         let bridge_id = test_setup(
             chain,
@@ -4347,20 +4272,6 @@ module publisher::vip {
             ),
             0
         );
-
-        let user_reward_store_addr = vip_reward::get_user_reward_store_address(bridge_id);
-        let operator_reward_store_addr = vip_reward::get_operator_reward_store_address(
-            bridge_id
-        );
-        let bridge_info = get_bridge_info(bridge_id);
-        assert!(
-            vip_reward::get_stage_reward(user_reward_store_addr, 1) == total_reward_per_stage,
-            8
-        );
-        assert!(
-            vip_reward::get_stage_reward(user_reward_store_addr, 100) == 0,
-            9
-        ); // not exists
     }
 
     #[test(chain = @0x1, publisher = @publisher, agent = @0x2, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
@@ -4474,17 +4385,14 @@ module publisher::vip {
         assert!(
             vip_vesting::get_user_locked_reward(
                 signer::address_of(receiver),
-                bridge_id,
-                1
+                bridge_id
             ) == reward_per_stage,
             0
         );
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
-                bridge_id,
-                1,
-                *simple_map::borrow(&score_map, &1),
+                bridge_id
             ) == 0,
             0
         );
@@ -4503,9 +4411,7 @@ module publisher::vip {
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
-                bridge_id,
-                2,
-                *simple_map::borrow(&score_map, &2),
+                bridge_id
             ) == (reward_per_stage_by_vesting),
             0
         );
@@ -4524,9 +4430,7 @@ module publisher::vip {
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
-                bridge_id,
-                3,
-                *simple_map::borrow(&score_map, &3),
+                bridge_id
             ) == (
                 reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2)
             ),
@@ -4550,8 +4454,6 @@ module publisher::vip {
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
                 bridge_id,
-                4,
-                *simple_map::borrow(&score_map, &4),
             ) == (
                 reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2) + reward_per_stage_by_vesting
             ),
@@ -4571,7 +4473,6 @@ module publisher::vip {
             vip_vesting::get_operator_unlocked_reward(
                 signer::address_of(operator),
                 bridge_id,
-                4
             ) == 0,
             0
         );
@@ -4604,9 +4505,7 @@ module publisher::vip {
         assert!(
             vip_vesting::get_user_unlocked_reward(
                 signer::address_of(receiver),
-                bridge_id,
-                5,
-                *simple_map::borrow(&score_map, &5),
+                bridge_id
             ) == (
                 reward_per_stage_by_vesting + (reward_per_stage_by_vesting / 2) + reward_per_stage_by_vesting
                     + decimal256::mul_u64(
@@ -4619,8 +4518,7 @@ module publisher::vip {
         assert!(
             vip_vesting::get_operator_unlocked_reward(
                 signer::address_of(operator),
-                bridge_id,
-                5
+                bridge_id
             ) == (
                 decimal256::mul_u64(
                     &commission_rate,
@@ -5065,7 +4963,7 @@ module publisher::vip {
 
         skip_period(100);
         vip_zapping::update_lock_period_script(chain, lock_period);
-        let zapping_amount = vip_vesting::get_user_locked_reward(
+        let zapping_amount = vip_vesting::get_user_vesting_remaining(
             signer::address_of(receiver),
             bridge_id,
             stage
@@ -5083,7 +4981,6 @@ module publisher::vip {
             zapping_amount,
             stakelisted_metadata,
         );
-        // TODO: staking reward distribution test
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
