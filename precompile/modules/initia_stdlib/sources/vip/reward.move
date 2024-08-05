@@ -82,7 +82,6 @@ module publisher::vip_reward {
         operator_reward: u64
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let table_key = get_distrubuted_reward_table_key(bridge_id, stage);
         table::add(
             &mut module_store.distributed_reward,
             get_distrubuted_reward_table_key(bridge_id, stage),

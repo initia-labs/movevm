@@ -407,7 +407,7 @@ module publisher::vip_vesting {
         let account_addr = signer::address_of(account);
         let table_key = get_vesting_table_key(bridge_id, account_addr);
         assert!(
-            table::contains(
+            !table::contains(
                 &mut module_store.user_vestings,
                 table_key
             ),
@@ -425,7 +425,7 @@ module publisher::vip_vesting {
         let account_addr = signer::address_of(account);
         let table_key = get_vesting_table_key(bridge_id, account_addr);
         assert!(
-            table::contains(
+            !table::contains(
                 &mut module_store.operator_vestings,
                 table_key
             ),
@@ -443,7 +443,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         claim_infos: vector<UserVestingClaimInfo>, /*asc sorted claim info*/
     ): FungibleAsset acquires ModuleStore {
-        let total_vested_reward = 0;
+        let total_vested_reward = 0; // net reward vested to user
         let total_penalty_reward = 0;
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let vesting_table_key = get_vesting_table_key(bridge_id, account_addr);
@@ -465,7 +465,6 @@ module publisher::vip_vesting {
                     user_vestings,
                     claim_info
                 );
-
                 total_vested_reward = total_vested_reward + vested_reward;
                 total_penalty_reward = total_penalty_reward + penalty_reward;
 
@@ -479,6 +478,14 @@ module publisher::vip_vesting {
                         ) as u64
                     )
                 };
+                assert!(
+                    !table::contains(
+                        user_vestings,
+                        table_key::encode_u64(claim_info.start_stage)
+                    ),
+                    error::already_exists(EVESTING_ALREADY_CLAIMED)
+                );
+                
                 // create user vesting
                 if (initial_reward_amount > 0) {
                     batch_create_user_vesting(
@@ -567,7 +574,7 @@ module publisher::vip_vesting {
 
         // withdraw net reward from vault
         vip_vault::withdraw(
-            total_vested_reward - total_penalty_reward
+            total_vested_reward
         )
 
     }
@@ -604,6 +611,15 @@ module publisher::vip_vesting {
                 let initial_reward = vip_reward::get_operator_distrubuted_reward(
                     bridge_id, claim_info.start_stage
                 );
+
+                assert!(
+                    !table::contains(
+                        operator_vestings,
+                        table_key::encode_u64(claim_info.start_stage)
+                    ),
+                    error::already_exists(EVESTING_ALREADY_CLAIMED)
+                );
+
                 // create operator vesting position
                 batch_create_operator_vesting(
                     operator_addr,
@@ -915,13 +931,6 @@ module publisher::vip_vesting {
             &claim_info.minimum_score_ratio,
             claim_info.l2_score
         );
-        assert!(
-            !table::contains(
-                user_vestings,
-                table_key::encode_u64(claim_info.start_stage)
-            ),
-            error::already_exists(EVESTING_ALREADY_CLAIMED)
-        );
         // create user vesting position
         table::add(
             user_vestings,
@@ -979,14 +988,6 @@ module publisher::vip_vesting {
         claim_info: &OperatorVestingClaimInfo,
         initial_reward: u64,
     ) {
-
-        assert!(
-            !table::contains(
-                operator_vestings,
-                table_key::encode_u64(claim_info.start_stage)
-            ),
-            error::already_exists(EVESTING_ALREADY_CLAIMED)
-        );
 
         table::add(
             operator_vestings,
@@ -1246,6 +1247,12 @@ module publisher::vip_vesting {
     }
 
     #[test_only]
+    public fun init_module_for_test(
+        chain: &signer
+    ) {
+        init_module(chain);
+    }
+    #[test_only]
     public fun get_user_vesting_minimum_score(
         account_addr: address,
         bridge_id: u64,
@@ -1269,7 +1276,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         stage: u64
     ): u64 acquires ModuleStore {
-        get_operator_vesting(account_addr, bridge_id, stage).remaining_reward
+        get_user_vesting(account_addr, bridge_id, stage).remaining_reward
     }
 
     #[test_only]
@@ -1312,8 +1319,9 @@ module publisher::vip_vesting {
 
     // <-- VESTING ----->
 
-    #[test(account = @0x99)]
-    fun test_register_vesting_store(account: &signer) acquires ModuleStore {
+    #[test(publisher = @publisher, account = @0x99)]
+    fun test_register_vesting_store(publisher: &signer, account: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let account_addr = signer::address_of(account);
         assert!(
             !is_user_vesting_store_registered(account_addr, 1),
@@ -1327,9 +1335,10 @@ module publisher::vip_vesting {
         register_user_vesting_store(account, 2);
     }
 
-    #[test(account = @0x99)]
+    #[test(publisher = @publisher, account = @0x99)]
     #[expected_failure(abort_code = 0x80001, location = Self)]
-    fun failed_register_vesting_store_twice(account: &signer) acquires ModuleStore {
+    fun failed_register_vesting_store_twice(publisher: &signer, account: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         register_user_vesting_store(account, 1);
         register_user_vesting_store(account, 1);
     }

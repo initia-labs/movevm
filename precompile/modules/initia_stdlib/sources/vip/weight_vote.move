@@ -1426,7 +1426,6 @@ module publisher::vip_weight_vote {
             string::utf8(b""),
             string::utf8(b""),
         );
-        vip_operator::init_module_for_test(publisher);
         vip::init_module_for_test(publisher);
         vip::register(
             publisher,
@@ -1770,7 +1769,7 @@ module publisher::vip_weight_vote {
         vote_challenge(u1, 1, true);
 
         // after min_voting_period
-        skip_period(1);
+        skip_period(10);
 
         // execute challenge
         execute_challenge(1);
@@ -1810,7 +1809,7 @@ module publisher::vip_weight_vote {
         vote_challenge(u2, 2, true);
 
         // after min_voting_period
-        set_block_info(100, 252);
+        skip_period(10);
 
         // execute proposal
         execute_challenge(2);

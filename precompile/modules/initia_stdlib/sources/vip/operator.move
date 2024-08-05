@@ -282,6 +282,7 @@ module publisher::vip_operator {
 
     #[test(publisher = @publisher, operator = @0x999)]
     fun test_update_operator_commission(publisher: &signer, operator: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -346,6 +347,7 @@ module publisher::vip_operator {
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10003, location = Self)]
     fun failed_invalid_change_rate(publisher: &signer, operator: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -370,6 +372,7 @@ module publisher::vip_operator {
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
     fun failed_over_max_rate(publisher: &signer, operator: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -394,6 +397,7 @@ module publisher::vip_operator {
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
     fun failed_not_valid_stage(publisher: &signer, operator: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
@@ -418,6 +422,7 @@ module publisher::vip_operator {
     #[test(publisher = @publisher, operator = @0x999)]
     #[expected_failure(abort_code = 0x10006, location = Self)]
     fun failed_invalid_commission_rate(publisher: &signer, operator: &signer) acquires ModuleStore {
+        init_module_for_test(publisher);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
 
