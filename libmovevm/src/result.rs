@@ -12,22 +12,14 @@ where
 }
 
 pub fn generate_result(output: MessageOutput) -> Result<ExecutionResult, Error> {
-    let (
-        events,
-        _write_set,
-        staking_change_set,
-        cosmos_messages,
-        new_accounts,
-        gas_used,
-        gas_usage_set,
-    ) = output.into_inner();
+    let (events, _write_set, staking_change_set, cosmos_messages, new_accounts, gas_usage_set) =
+        output.into_inner();
 
     Ok(ExecutionResult::new(
         events.into_inner(),
         staking_change_set.into_inner(),
         cosmos_messages.into_inner(),
         new_accounts.into_inner(),
-        gas_used,
         gas_usage_set.into_inner(),
     ))
 }

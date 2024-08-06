@@ -93,9 +93,6 @@ pub struct MessageOutput {
     staking_change_set: StakingChangeSet,
     cosmos_messages: CosmosMessages,
     new_accounts: Accounts,
-
-    /// The amount of gas used during execution.
-    gas_used: u64,
     gas_usage_set: GasUsageSet,
 }
 
@@ -107,7 +104,6 @@ impl MessageOutput {
         staking_change_set: StakingChangeSet,
         cosmos_messages: CosmosMessages,
         new_accounts: Accounts,
-        gas_used: u64,
         gas_usage_set: GasUsageSet,
     ) -> Self {
         MessageOutput {
@@ -116,7 +112,6 @@ impl MessageOutput {
             staking_change_set,
             cosmos_messages,
             new_accounts,
-            gas_used,
             gas_usage_set,
         }
     }
@@ -141,10 +136,6 @@ impl MessageOutput {
         &self.new_accounts
     }
 
-    pub fn gas_used(&self) -> u64 {
-        self.gas_used
-    }
-
     pub fn gas_usage_set(&self) -> &GasUsageSet {
         &self.gas_usage_set
     }
@@ -157,7 +148,6 @@ impl MessageOutput {
         StakingChangeSet,
         CosmosMessages,
         Accounts,
-        u64,
         GasUsageSet,
     ) {
         let Self {
@@ -166,7 +156,6 @@ impl MessageOutput {
             staking_change_set,
             cosmos_messages,
             new_accounts,
-            gas_used,
             gas_usage_set,
         } = self;
 
@@ -176,7 +165,6 @@ impl MessageOutput {
             staking_change_set,
             cosmos_messages,
             new_accounts,
-            gas_used,
             gas_usage_set,
         )
     }

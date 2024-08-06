@@ -543,7 +543,6 @@ type ExecutionResult struct {
 	StakingDeltas []StakingDelta
 	CosmosMessages []CosmosMessage
 	NewAccounts []Account
-	GasUsed uint64
 	GasUsages []GasUsage
 }
 
@@ -553,7 +552,6 @@ func (obj *ExecutionResult) Serialize(serializer serde.Serializer) error {
 	if err := serialize_vector_StakingDelta(obj.StakingDeltas, serializer); err != nil { return err }
 	if err := serialize_vector_CosmosMessage(obj.CosmosMessages, serializer); err != nil { return err }
 	if err := serialize_vector_Account(obj.NewAccounts, serializer); err != nil { return err }
-	if err := serializer.SerializeU64(obj.GasUsed); err != nil { return err }
 	if err := serialize_vector_GasUsage(obj.GasUsages, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
@@ -575,7 +573,6 @@ func DeserializeExecutionResult(deserializer serde.Deserializer) (ExecutionResul
 	if val, err := deserialize_vector_StakingDelta(deserializer); err == nil { obj.StakingDeltas = val } else { return obj, err }
 	if val, err := deserialize_vector_CosmosMessage(deserializer); err == nil { obj.CosmosMessages = val } else { return obj, err }
 	if val, err := deserialize_vector_Account(deserializer); err == nil { obj.NewAccounts = val } else { return obj, err }
-	if val, err := deserializer.DeserializeU64(); err == nil { obj.GasUsed = val } else { return obj, err }
 	if val, err := deserialize_vector_GasUsage(deserializer); err == nil { obj.GasUsages = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
@@ -2101,14 +2098,12 @@ func BcsDeserializeViewFunction(input []byte) (ViewFunction, error) {
 type ViewOutput struct {
 	Ret string
 	Events []JsonEvent
-	GasUsed uint64
 }
 
 func (obj *ViewOutput) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := serializer.SerializeStr(obj.Ret); err != nil { return err }
 	if err := serialize_vector_JsonEvent(obj.Events, serializer); err != nil { return err }
-	if err := serializer.SerializeU64(obj.GasUsed); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -2127,7 +2122,6 @@ func DeserializeViewOutput(deserializer serde.Deserializer) (ViewOutput, error) 
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := deserializer.DeserializeStr(); err == nil { obj.Ret = val } else { return obj, err }
 	if val, err := deserialize_vector_JsonEvent(deserializer); err == nil { obj.Events = val } else { return obj, err }
-	if val, err := deserializer.DeserializeU64(); err == nil { obj.GasUsed = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

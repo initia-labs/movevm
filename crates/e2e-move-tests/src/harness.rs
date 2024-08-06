@@ -168,6 +168,7 @@ impl MoveHarness {
         let mut table_resolver = TableViewImpl::new(&mut table_state);
 
         let gas_limit = Gas::new(100_000_000u64);
+        let mut gas_meter = self.vm.create_gas_meter(gas_limit);
 
         let env = Env::new(
             0,
@@ -178,12 +179,12 @@ impl MoveHarness {
         );
 
         self.vm.execute_view_function(
+            &mut gas_meter,
             &self.api,
             &env,
             &resolver,
             &mut table_resolver,
             &view_fn,
-            gas_limit,
         )
     }
 
@@ -333,12 +334,13 @@ impl MoveHarness {
 
         let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> =
             Gas::new(100_000_000u64);
+        let mut gas_meter = self.vm.create_gas_meter(gas_limit);
         self.vm.execute_message(
+            &mut gas_meter,
             &self.api,
             &env,
             &resolver,
             &mut table_resolver,
-            gas_limit,
             message,
         )
     }
@@ -362,12 +364,13 @@ impl MoveHarness {
         let mut table_resolver = TableViewImpl::new(&mut table_state);
 
         let gas_limit = Gas::new(100_000_000u64);
+        let mut gas_meter = self.vm.create_gas_meter(gas_limit);
         self.vm.execute_message(
+            &mut gas_meter,
             &self.api,
             &env,
             &resolver,
             &mut table_resolver,
-            gas_limit,
             message,
         )
     }
@@ -418,7 +421,7 @@ impl MoveHarness {
     // commit only module checksum to test module cache
     pub fn commit_module_checksum(&mut self, output: MessageOutput, should_commit: bool) {
         let mut state = self.chain.create_state();
-        let (_, write_set, _, _, _, _, _) = output.into_inner();
+        let (_, write_set, _, _, _, _) = output.into_inner();
         let write_set = write_set
             .into_iter()
             .filter(|v| {

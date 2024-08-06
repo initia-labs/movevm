@@ -119,6 +119,10 @@ impl MoveVM {
         }
     }
 
+    pub fn create_gas_meter(&self, balance: impl Into<Gas>) -> InitiaGasMeter {
+        InitiaGasMeter::new(self.gas_params.clone(), balance)
+    }
+
     fn create_session<
         'r,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
@@ -235,15 +239,14 @@ impl MoveVM {
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &mut self,
+        gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
         state_view_impl: &StateViewImpl<'_, S>,
         table_view_impl: &mut TableViewImpl<'_, T>,
-        gas_limit: Gas,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
         let senders = msg.senders().to_vec();
-        let mut gas_meter = InitiaGasMeter::new(self.gas_params.clone(), gas_limit);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
@@ -257,7 +260,7 @@ impl MoveVM {
             table_view_impl,
             senders,
             msg.payload(),
-            &mut gas_meter,
+            gas_meter,
             &mut traversal_context,
         );
 
@@ -270,12 +273,12 @@ impl MoveVM {
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &self,
+        gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
         state_view_impl: &StateViewImpl<'_, S>,
         table_view_impl: &mut TableViewImpl<'_, T>,
         view_fn: &ViewFunction,
-        gas_limit: Gas,
     ) -> Result<ViewOutput, VMStatus> {
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
@@ -294,7 +297,6 @@ impl MoveVM {
         )?;
 
         // first execution does not execute `charge_call`, so need to record call here
-        let mut gas_meter = InitiaGasMeter::new(self.gas_params.clone(), gas_limit);
         gas_meter.record_call(view_fn.module());
 
         let res = session.execute_function_bypass_visibility(
@@ -302,23 +304,15 @@ impl MoveVM {
             view_fn.function(),
             view_fn.ty_args().to_vec(),
             args,
-            &mut gas_meter,
+            gas_meter,
         )?;
 
         let session_output = session.finish()?;
         let (events, _, _, _, _, session_cache) = session_output;
         let json_events = self.serialize_events_to_json(events, &session_cache)?;
         let ret = serialize_response_to_json(res)?.expect("view function must return value");
-        let gas_used = gas_meter
-            .gas_limit()
-            .checked_sub(gas_meter.balance())
-            .unwrap();
 
-        Ok(ViewOutput::new(
-            ret,
-            json_events.into_inner(),
-            gas_used.into(),
-        ))
+        Ok(ViewOutput::new(ret, json_events.into_inner()))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -624,13 +618,10 @@ impl MoveVM {
         session_output: SessionOutput,
         gas_meter: &mut InitiaGasMeter,
     ) -> VMResult<MessageOutput> {
-        let gas_limit = gas_meter.gas_limit();
-        let gas_used = gas_limit.checked_sub(gas_meter.balance()).unwrap();
-        let gas_usage_set = gas_meter.into_usage_set();
-
         let (events, write_set, staking_change_set, cosmos_messages, new_accounts, session_cache) =
             session_output;
         let json_events = self.serialize_events_to_json(events, &session_cache)?;
+        let gas_usage_set = gas_meter.into_usage_set();
 
         Ok(get_message_output(
             json_events,
@@ -638,7 +629,6 @@ impl MoveVM {
             staking_change_set,
             cosmos_messages,
             new_accounts,
-            gas_used,
             gas_usage_set,
         ))
     }
@@ -717,7 +707,6 @@ pub(crate) fn get_message_output(
     staking_change_set: StakingChangeSet,
     cosmos_messages: CosmosMessages,
     new_accounts: Accounts,
-    gas_used: Gas,
     gas_usage_set: GasUsageSet,
 ) -> MessageOutput {
     MessageOutput::new(
@@ -726,7 +715,6 @@ pub(crate) fn get_message_output(
         staking_change_set,
         cosmos_messages,
         new_accounts,
-        gas_used.into(),
         gas_usage_set,
     )
 }

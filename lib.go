@@ -63,10 +63,10 @@ func (vm *VM) Destroy() {
 
 // ExecuteViewFunction is to execute #[view] function
 func (vm *VM) ExecuteViewFunction(
+	gasBalance *uint64,
 	kvStore api.KVStore,
 	goApi api.GoAPI,
 	env types.Env,
-	gasLimit uint64,
 	payload types.ViewFunction,
 ) (types.ViewOutput, error) {
 	envBz, err := env.BcsSerialize()
@@ -81,10 +81,10 @@ func (vm *VM) ExecuteViewFunction(
 
 	res, err := api.ExecuteViewFunction(
 		vm.inner,
+		gasBalance,
 		kvStore,
 		goApi,
 		envBz,
-		gasLimit,
 		bz,
 	)
 	if err != nil {
@@ -97,10 +97,10 @@ func (vm *VM) ExecuteViewFunction(
 // Execute calls a given contract.
 // TODO: add params and returns
 func (vm *VM) ExecuteEntryFunction(
+	gasBalance *uint64,
 	kvStore api.KVStore,
 	goApi api.GoAPI,
 	env types.Env,
-	gasLimit uint64,
 	senders []types.AccountAddress,
 	payload types.EntryFunction,
 ) (types.ExecutionResult, error) {
@@ -121,10 +121,10 @@ func (vm *VM) ExecuteEntryFunction(
 
 	res, err := api.ExecuteContract(
 		vm.inner,
+		gasBalance,
 		kvStore,
 		goApi,
 		envBz,
-		gasLimit,
 		sendersBz,
 		bz,
 	)
@@ -139,10 +139,10 @@ func (vm *VM) ExecuteEntryFunction(
 // Execute calls a given contract.
 // TODO: add params and returns
 func (vm *VM) ExecuteScript(
+	gasBalance *uint64,
 	kvStore api.KVStore,
 	goApi api.GoAPI,
 	env types.Env,
-	gasLimit uint64,
 	senders []types.AccountAddress,
 	payload types.Script,
 ) (types.ExecutionResult, error) {
@@ -163,10 +163,10 @@ func (vm *VM) ExecuteScript(
 
 	res, err := api.ExecuteScript(
 		vm.inner,
+		gasBalance,
 		kvStore,
 		goApi,
 		envBz,
-		gasLimit,
 		sendersBz,
 		bz,
 	)
