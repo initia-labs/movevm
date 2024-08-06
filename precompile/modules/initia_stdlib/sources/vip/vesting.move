@@ -194,20 +194,6 @@ module publisher::vip_vesting {
         remaining_reward: u64,
     }
 
-    // Table key
-    // get table key by bridge_id, account address,vesting start stage
-    fun get_vesting_table_key(bridge_id: u64, account_addr: address): vector<u8> {
-        let key = vector::empty<u8>();
-        vector::append(
-            &mut key,
-            table_key::encode_u64(bridge_id)
-        );
-        vector::append(
-            &mut key,
-            bcs::to_bytes(&account_addr)
-        );key
-    }
-
     fun init_module(chain: &signer) {
         move_to(
             chain,

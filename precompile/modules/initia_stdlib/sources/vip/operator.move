@@ -31,12 +31,7 @@ module publisher::vip_operator {
     struct ModuleStore has key {
         operator_data: Table<vector<u8> /*bridge id key*/, OperatorInfo>
     }
-    struct ModuleStore has key {
-        operator_data: Table<vector<u8> /*bridge id key*/, OperatorInfo>
-    }
 
-    struct OperatorInfo has store {
-        operator_addr: address,
     struct OperatorInfo has store {
         operator_addr: address,
         last_changed_stage: u64,
@@ -49,8 +44,6 @@ module publisher::vip_operator {
     // Responses
     //
 
-    struct OperatorInfoResponse has drop {
-        operator_addr: address,
     struct OperatorInfoResponse has drop {
         operator_addr: address,
         last_changed_stage: u64,
@@ -140,18 +133,6 @@ module publisher::vip_operator {
             &commission_max_rate,
             &commission_max_change_rate,
             &commission_rate
-        );
-
-        table::add<vector<u8>, OperatorInfo>(
-            &mut module_store.operator_data,
-            bridge_id_key,
-            OperatorInfo {
-                operator_addr: operator_addr,
-                last_changed_stage: stage,
-                commission_max_rate,
-                commission_max_change_rate,
-                commission_rate,
-            }
         );
 
         table::add<vector<u8>, OperatorInfo>(
