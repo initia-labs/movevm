@@ -828,7 +828,7 @@ module publisher::vip_vesting {
             };
 
             // position finalized when stage is over the end stage or remaining reward is 0
-            if (claim_info.start_stage >= value.end_stage || value.remaining_reward == 0) {
+            if (claim_info.start_stage == value.end_stage || value.remaining_reward == 0) {
                 event::emit(
                     UserVestingFinalizedEvent {
                         account: account_addr,
@@ -883,7 +883,7 @@ module publisher::vip_vesting {
             vested_reward = vested_reward + value.vest_max_amount;
             value.remaining_reward = value.remaining_reward - value.vest_max_amount;
 
-            if (claim_info.start_stage >= value.end_stage) {
+            if (claim_info.start_stage == value.end_stage) {
                 event::emit(
                     OperatorVestingFinalizedEvent {
                         account: account_addr,

@@ -1391,8 +1391,6 @@ module publisher::vip_weight_vote {
     #[test_only]
     use initia_std::block;
     #[test_only]
-    use publisher::vip_operator;
-    #[test_only]
     const DEFAULT_VIP_L2_CONTRACT_FOR_TEST: vector<u8> = (b"vip_l2_contract");
 
     #[test_only]

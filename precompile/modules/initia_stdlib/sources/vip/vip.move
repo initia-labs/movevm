@@ -11,7 +11,7 @@ module publisher::vip {
     use initia_std::object::{ Object };
     use initia_std::fungible_asset::{ Metadata };
     use initia_std::primary_fungible_store;
-    use initia_std::table;
+    use initia_std::table::{Self, Table};
     use initia_std::table_key;
     use initia_std::coin;
     use initia_std::decimal256::{Self, Decimal256};
@@ -64,6 +64,7 @@ module publisher::vip {
     const ETOO_EARLY_FUND: u64 = 28;
     const EINVALID_STAGE_INTERVAL: u64 = 29;
     const EINVALID_STAGE_SNAPSHOT: u64 = 30;
+    const EINVALID_REGISTERD_BRIDGE: u64 = 31;
     //
     //  Constants
     //
@@ -109,11 +110,11 @@ module publisher::vip {
         // maximum weight of VIP reward
         maximum_weight_ratio: Decimal256,
         // a set of stage data
-        stage_data: table::Table<vector<u8> /* stage */, StageData>,
+        stage_data: Table<vector<u8> /* stage */, StageData>,
         // a set of bridge info
-        bridges: table::Table<vector<u8> /* bridge id */, Bridge>,
+        bridges: Table<vector<u8> /* bridge id */, Bridge>,
 
-        challenges: table::Table<vector<u8>, ExecutedChallenge>,
+        challenges: Table<vector<u8>, ExecutedChallenge>,
     }
 
     struct AgentData has store, drop {
@@ -129,7 +130,7 @@ module publisher::vip {
         total_user_funded_reward: u64,
         vesting_period: u64,
         minimum_score_ratio: Decimal256,
-        snapshots: table::Table<vector<u8> /* bridge id */, Snapshot>
+        snapshots: Table<vector<u8> /* bridge id */, Snapshot>
     }
 
     struct Snapshot has store, drop {
@@ -145,6 +146,7 @@ module publisher::vip {
         operator_addr: address,
         vip_l2_score_contract: string::String,
         vip_weight: Decimal256,
+        is_registered: bool,
     }
 
     struct ExecutedChallenge has store, drop {
@@ -452,7 +454,7 @@ module publisher::vip {
     }
 
     fun load_bridge(
-        bridges: &table::Table<vector<u8>, Bridge>,
+        bridges: &Table<vector<u8>, Bridge>,
         bridge_id: u64
     ): &Bridge {
         assert!(
@@ -469,7 +471,7 @@ module publisher::vip {
     }
 
     fun load_bridge_mut(
-        bridges: &mut table::Table<vector<u8>, Bridge>,
+        bridges: &mut Table<vector<u8>, Bridge>,
         bridge_id: u64
     ): &mut Bridge {
         assert!(
@@ -782,10 +784,15 @@ module publisher::vip {
 
     public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-        table::contains(
+        let is_registered  = table::contains(
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
-        )
+        );
+        if (is_registered) {
+            return table::borrow(&module_store.bridges,table_key::encode_u64(bridge_id)).is_registered
+        };
+
+        is_registered
     }
 
     public(friend) fun update_vip_weights_for_friend(
@@ -909,14 +916,11 @@ module publisher::vip {
     ) acquires ModuleStore {
         check_chain_permission(chain);
 
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         assert!(
-            !table::contains(
-                &module_store.bridges,
-                table_key::encode_u64(bridge_id)
-            ),
+            !is_registered(bridge_id),
             error::already_exists(EALREADY_REGISTERED)
         );
+        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
         // TODO: generate bridge address only by bridge id
         // register chain stores
         if (!vip_operator::is_bridge_registered(bridge_id)) {
@@ -930,15 +934,9 @@ module publisher::vip {
                 operator_commission_rate,
             );
         };
-        // if (!vip_reward::is_operator_reward_store_registered(bridge_id)) {
-        //     vip_reward::register_operator_reward_store(chain, bridge_id);
-        // };
-        // if (!vip_reward::is_user_reward_store_registered(bridge_id)) {
-        //     vip_reward::register_user_reward_store(chain, bridge_id);
-        // };
 
         // add bridge info
-        table::add(
+        table::upsert(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id),
             Bridge {
@@ -947,6 +945,7 @@ module publisher::vip {
                 operator_addr: operator,
                 vip_l2_score_contract,
                 vip_weight: decimal256::zero(),
+                is_registered: true,
             },
         );
     }
@@ -961,11 +960,24 @@ module publisher::vip {
             ),
             error::not_found(EBRIDGE_NOT_FOUND)
         );
-
-        table::remove(
+        
+        let bridge_data = table::remove(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id)
         );
+
+        table::add(
+            &mut module_store.bridges,
+            table_key::encode_u64(bridge_id),
+            Bridge {
+                init_stage: bridge_data.init_stage,
+                bridge_addr: bridge_data.bridge_addr,
+                operator_addr: bridge_data.operator_addr,
+                vip_l2_score_contract : bridge_data.vip_l2_score_contract,
+                vip_weight: decimal256::zero(),
+                is_registered: false,
+            }
+        )
     }
 
     public entry fun update_agent(
@@ -1028,7 +1040,7 @@ module publisher::vip {
 
     }
 
-    // update reward data of module store in reward module
+    // update reward record data of module store in reward module
     public entry fun fund_reward_script(agent: &signer) acquires ModuleStore {
         let (_, fund_time) = block::get_block_info();
         check_agent_permission(agent);
@@ -1098,7 +1110,12 @@ module publisher::vip {
         total_l2_score: u64,
     ) acquires ModuleStore {
         check_agent_permission(agent);
+        assert!(
+            is_registered(bridge_id),
+            error::unavailable(EINVALID_REGISTERD_BRIDGE)
+        );
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
+
         // submitted snapshot under the current stage
         assert!(
             stage < module_store.stage,
