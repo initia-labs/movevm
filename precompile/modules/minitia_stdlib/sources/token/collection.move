@@ -42,6 +42,8 @@ module minitia_std::collection {
     const EDESCRIPTION_TOO_LONG: u64 = 5;
     /// The max supply must be positive
     const EMAX_SUPPLY_CANNOT_BE_ZERO: u64 = 6;
+    /// The collection name is invalid
+    const EINVALID_COLLECTION_NAME: u64 = 7;
 
     const MAX_COLLECTION_NAME_LENGTH: u64 = 128;
     const MAX_URI_LENGTH: u64 = 512;
@@ -208,6 +210,18 @@ module minitia_std::collection {
         )
     }
 
+    fun assert_collection_name(name: &String) {
+        let len = string::length(name);
+        assert!(
+            len <= MAX_COLLECTION_NAME_LENGTH,
+            error::out_of_range(ECOLLECTION_NAME_TOO_LONG)
+        );
+        assert!(
+            string::index_of(name, &string::utf8(b"::")) == len, 
+            error::invalid_argument(EINVALID_COLLECTION_NAME),
+        );
+    }
+
     inline fun create_collection_internal<Supply: key>(
         creator: &signer,
         constructor_ref: ConstructorRef,
@@ -217,10 +231,8 @@ module minitia_std::collection {
         uri: String,
         supply: Option<Supply>,
     ): ConstructorRef {
-        assert!(
-            string::length(&name) <= MAX_COLLECTION_NAME_LENGTH,
-            error::out_of_range(ECOLLECTION_NAME_TOO_LONG)
-        );
+        assert_collection_name(&name);
+
         assert!(
             string::length(&uri) <= MAX_URI_LENGTH,
             error::out_of_range(EURI_TOO_LONG)
@@ -588,6 +600,13 @@ module minitia_std::collection {
             count(collection) == option::some(0),
             0
         );
+    }
+
+
+    #[test(creator = @0x123)]
+    #[expected_failure(abort_code = 0x10007, location = Self)]
+    fun test_create_collection_with_invalid_name(creator: &signer) {
+        create_collection_helper(creator, string::utf8(b"collection::hello"),);
     }
 
     #[test(creator = @0x123, trader = @0x456)]
