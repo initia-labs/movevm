@@ -250,6 +250,8 @@ module publisher::vip_vesting {
         operator_vestings: &mut Table<vector<u8>, OperatorVesting>
     ): vector<OperatorVesting> {
         let operator_vestings_cache: vector<OperatorVesting> = vector[];
+
+        
         let iter = table::iter_mut(
             operator_vestings,
             option::none(),
@@ -363,42 +365,6 @@ module publisher::vip_vesting {
         )
     }
 
-    // inline fun user_vestings_for_each(
-    //     user_vestings: &mut Table<vector<u8>, UserVesting>,
-    //     f: |&mut UserVesting|
-    // ) {
-    //     let iter = table::iter_mut(
-    //         user_vestings,
-    //         option::none(),
-    //         option::none(),
-    //         1
-    //     );
-    //     loop {
-    //         if (!table::prepare_mut<vector<u8>, UserVesting>(&mut iter)) { break };
-    //         let (_, user_vesting) = table::next_mut<vector<u8>, UserVesting>(&mut iter);
-    //         f(user_vesting)
-    //     }
-    // }
-
-    // inline fun operator_vestings_for_each(
-    //     operator_vestings: &mut Table<vector<u8>, OperatorVesting>,
-    //     f: |&mut OperatorVesting|
-    // ) {
-    //     let iter = table::iter_mut(
-    //         operator_vestings,
-    //         option::none(),
-    //         option::none(),
-    //         1
-    //     );
-    //     loop {
-    //         if (!table::prepare_mut<vector<u8>, OperatorVesting>(&mut iter)) { break };
-    //         let (_, operator_vesting) = table::next_mut<vector<u8>, OperatorVesting>(
-    //             &mut iter
-    //         );
-    //         f(operator_vesting)
-    //     }
-    // }
-
     //
     // Implementations
     //
@@ -445,12 +411,7 @@ module publisher::vip_vesting {
     ): FungibleAsset acquires ModuleStore {
         let total_vested_reward = 0; // net reward vested to user
         let total_penalty_reward = 0;
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let vesting_table_key = get_vesting_table_key(bridge_id, account_addr);
-        let user_vestings = table::borrow_mut(
-            &mut module_store.user_vestings,
-            vesting_table_key
-        );
+        let user_vestings = load_user_vestings_mut(bridge_id,account_addr);
         // make cache from user vesting without finalized
         let user_vestings_cache = make_user_vestings_cache(user_vestings);
         // claim
@@ -585,12 +546,7 @@ module publisher::vip_vesting {
         claim_infos: vector<OperatorVestingClaimInfo>, /*asc sorted claim info*/
     ): FungibleAsset acquires ModuleStore {
         let total_vested_reward = 0;
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let vesting_table_key = get_vesting_table_key(bridge_id, operator_addr);
-        let operator_vestings = table::borrow_mut(
-            &mut module_store.operator_vestings,
-            vesting_table_key
-        );
+        let operator_vestings = load_operator_vestings_mut(bridge_id,operator_addr);
         // make cache from operator vesting without finalized
         let operator_vestings_cache = make_operator_vestings_cache(operator_vestings);
 
@@ -599,7 +555,7 @@ module publisher::vip_vesting {
             |claim_info| {
                 // claim previous operator vestings
                 // vest operator reward
-                let (vested_reward) = batch_claim_previous_operator_vestings(
+                let vested_reward= batch_claim_previous_operator_vestings(
                     operator_addr,
                     bridge_id,
                     &mut operator_vestings_cache,
@@ -837,7 +793,7 @@ module publisher::vip_vesting {
                         penalty_reward: value.penalty_reward,
                     }
                 );
-                // give the remaining reward to user occured by rounding error
+                // give the remaining reward occured by rounding error to user 
                 if (value.remaining_reward > 0) {
                     vested_reward = vested_reward + value.remaining_reward;
                     value.remaining_reward = 0;
@@ -891,7 +847,7 @@ module publisher::vip_vesting {
                         start_stage: value.start_stage,
                     }
                 );
-                // give the remaining reward to vest reward
+                //  give the remaining reward occured by rounding error to user 
                 if (value.remaining_reward > 0) {
                     vested_reward = vested_reward + value.remaining_reward;
                     value.remaining_reward = 0;
@@ -949,7 +905,7 @@ module publisher::vip_vesting {
                 )
             }
         );
-        // add user vestings
+        // add user vestings on vesting cache
         vector::push_back(
             user_vestings_cache,
             UserVesting {

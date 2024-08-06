@@ -5,7 +5,6 @@ module publisher::vip_tvl_manager {
     use initia_std::table_key;
     use initia_std::table;
     use initia_std::block;
-    use initia_std::decimal256;
     friend publisher::vip;
     const EINVALID_EPOCH: u64 = 1;
     ///
@@ -119,20 +118,17 @@ module publisher::vip_tvl_manager {
         );
 
         // update the average tvl of the bridge at the stage
-        let average_tvl = table::borrow_mut(
+        let average_tvl = table::borrow(
             average_tvl_table,
             table_key::encode_u64(bridge_id)
         );
         // new average tvl = (snapshot_count * average_tvl + balance) / (snapshot_count + 1)
-        let new_average_tvl = decimal256::mul_u64(
-            &decimal256::from_ratio_u64(*average_tvl,(snapshot_count + 1)),
-            snapshot_count
-        ) + balance / (snapshot_count + 1);
+        let new_average_tvl =  (((snapshot_count as u128) * (*average_tvl as u128) + (balance as u128) ) / ((snapshot_count + 1) as u128));
 
         table::upsert(
             average_tvl_table,
             table_key::encode_u64(bridge_id),
-            (new_average_tvl)
+            (new_average_tvl as u64)
         )
     }
 
