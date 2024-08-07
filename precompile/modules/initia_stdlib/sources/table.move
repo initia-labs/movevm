@@ -239,7 +239,7 @@ module initia_std::table {
         (key, value)
     }
 
-    public inline fun loop_table_mut<K: copy + drop, V>(mut_table: &mut Table<K, V>, f: |K, &mut V|) {
+    public inline fun loop_table_mut<K: copy + drop, V>(mut_table: &mut Table<K, V>, f: |K, &mut V| bool) {
         let iter = iter_mut(
             mut_table,
             option::none(),
@@ -249,11 +249,12 @@ module initia_std::table {
         loop {
             if (!prepare_mut<K, V>(&mut iter)) { break };
             let (key, value) = next_mut<K, V>(&mut iter);
-            f(key, value)
+            let stop = f(key, value);
+            if (stop) {break}
         }
     }
 
-    public inline fun loop_table<K: copy + drop, V>(mut_table: &Table<K, V>, f: |K, &V|) {
+    public inline fun loop_table<K: copy + drop, V>(mut_table: &Table<K, V>, f: |K, &V| bool) {
         let iter = iter(
             mut_table,
             option::none(),
@@ -263,7 +264,8 @@ module initia_std::table {
         loop {
             if (!prepare<K, V>(&mut iter)) { break };
             let (key, value) = next<K, V>(&mut iter);
-            f(key, value)
+            let stop =  f(key, value);
+            if (stop) {break}
         }
     }
     // ======================================================================================================

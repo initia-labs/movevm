@@ -29,7 +29,7 @@ module publisher::vip_operator {
     // Resources
     //
     struct ModuleStore has key {
-        operator_data: Table<vector<u8> /*bridge id key*/, OperatorInfo>
+        operator_infos: Table<vector<u8> /*bridge id key*/, OperatorInfo>
     }
 
     struct OperatorInfo has store {
@@ -64,11 +64,11 @@ module publisher::vip_operator {
         commission_rate: Decimal256,
     }
 
-    fun init_module(chain: &signer) {
+    fun init_module(publisher: &signer) {
         move_to(
-            chain,
+            publisher,
             ModuleStore {
-                operator_data: table::new<vector<u8>, OperatorInfo>()
+                operator_infos: table::new<vector<u8>, OperatorInfo>()
             }
         );
     }
@@ -123,7 +123,7 @@ module publisher::vip_operator {
         let bridge_id_key = table_key::encode_u64(bridge_id);
         assert!(
             !table::contains(
-                &module_store.operator_data,
+                &module_store.operator_infos,
                 bridge_id_key
             ),
             error::already_exists(EOPERATOR_STORE_ALREADY_EXISTS)
@@ -136,7 +136,7 @@ module publisher::vip_operator {
         );
 
         table::add<vector<u8>, OperatorInfo>(
-            &mut module_store.operator_data,
+            &mut module_store.operator_infos,
             bridge_id_key,
             OperatorInfo {
                 operator_addr: operator_addr,
@@ -160,7 +160,7 @@ module publisher::vip_operator {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
         let operator_info = table::borrow_mut(
-            &mut module_store.operator_data,
+            &mut module_store.operator_infos,
             bridge_id_key
         );
         assert!(
@@ -218,7 +218,7 @@ module publisher::vip_operator {
         let bridge_id_key = table_key::encode_u64(bridge_id);
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let operator_info = table::borrow_mut(
-            &mut module_store.operator_data,
+            &mut module_store.operator_infos,
             bridge_id_key
         );
         assert!(
@@ -237,7 +237,7 @@ module publisher::vip_operator {
     public fun is_bridge_registered(bridge_id: u64): bool acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         table::contains(
-            &module_store.operator_data,
+            &module_store.operator_infos,
             table_key::encode_u64(bridge_id)
         )
     }
@@ -245,8 +245,15 @@ module publisher::vip_operator {
     #[view]
     public fun get_operator_commission(bridge_id: u64): Decimal256 acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        assert!(
+            table::contains(
+                &module_store.operator_infos,
+                table_key::encode_u64(bridge_id)
+            ),
+            error::not_found(EOPERATOR_STORE_NOT_FOUND)
+        );
         let operator_info = table::borrow(
-            &module_store.operator_data,
+            &module_store.operator_infos,
             table_key::encode_u64(bridge_id)
         );
         operator_info.commission_rate
@@ -255,8 +262,15 @@ module publisher::vip_operator {
     #[view]
     public fun get_operator_info(bridge_id: u64): OperatorInfoResponse acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        assert!(
+            table::contains(
+                &module_store.operator_infos,
+                table_key::encode_u64(bridge_id)
+            ),
+            error::not_found(EOPERATOR_STORE_NOT_FOUND)
+        );
         let operator_info = table::borrow(
-            &module_store.operator_data,
+            &module_store.operator_infos,
             table_key::encode_u64(bridge_id)
         );
 

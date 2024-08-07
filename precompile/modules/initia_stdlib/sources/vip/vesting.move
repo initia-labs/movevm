@@ -34,9 +34,6 @@ module publisher::vip_vesting {
     // Constants
     //
 
-    const USER_VESTING_PREFIX: u8 = 0xf4;
-    const OPERATOR_VESTING_PREFIX: u8 = 0xf5;
-
     const REWARD_SYMBOL: vector<u8> = b"uinit";
 
     //
@@ -206,11 +203,7 @@ module publisher::vip_vesting {
     //
     // get table key by bridge_id, account address,vesting start stage
     fun get_vesting_table_key(bridge_id: u64, account_addr: address): vector<u8> {
-        let key = vector::empty<u8>();
-        vector::append(
-            &mut key,
-            table_key::encode_u64(bridge_id)
-        );
+        let key = table_key::encode_u64(bridge_id);
         vector::append(
             &mut key,
             bcs::to_bytes(&account_addr)
@@ -232,6 +225,7 @@ module publisher::vip_vesting {
                         *user_vesting
                     );
                 };
+                false
             }
         );
         user_vestings_cache
@@ -252,6 +246,7 @@ module publisher::vip_vesting {
                         *operator_vesting
                     );
                 };
+                false
             }
         );
         operator_vestings_cache
@@ -1007,7 +1002,8 @@ module publisher::vip_vesting {
             |_k, user_vesting| {
                 use_user_vesting_ref(user_vesting);
                 total_unlocked_reward = total_unlocked_reward + user_vesting.initial_reward
-                    - user_vesting.remaining_reward
+                    - user_vesting.remaining_reward;
+                false
             }
         );
         total_unlocked_reward
@@ -1022,6 +1018,7 @@ module publisher::vip_vesting {
             |_k, user_vesting| {
                 use_user_vesting_ref(user_vesting);
                 total_locked_reward = total_locked_reward + user_vesting.remaining_reward;
+                false
             }
         );
         total_locked_reward
@@ -1049,6 +1046,7 @@ module publisher::vip_vesting {
                     &mut claimed_stages,
                     table_key::decode_u64(stage_key)
                 );
+                false
             }
         );
         claimed_stages
@@ -1068,8 +1066,8 @@ module publisher::vip_vesting {
                 use_operator_vesting_ref(operator_vesting);
                 total_unlocked_reward = total_unlocked_reward + (
                     operator_vesting.initial_reward - operator_vesting.remaining_reward
-
-                )
+                );
+                false
             }
         );
         total_unlocked_reward
@@ -1097,6 +1095,7 @@ module publisher::vip_vesting {
                     &mut claimed_stages,
                     table_key::decode_u64(stage_key)
                 );
+                false
             }
         );
         claimed_stages

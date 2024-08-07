@@ -122,7 +122,11 @@ module publisher::vip_tvl_manager {
             table_key::encode_u64(bridge_id)
         );
         // new average tvl = (snapshot_count * average_tvl + balance) / (snapshot_count + 1)
-        let new_average_tvl =  (((snapshot_count as u128) * (*average_tvl as u128) + (balance as u128) ) / ((snapshot_count + 1) as u128));
+        let new_average_tvl = (
+            (
+                (snapshot_count as u128) * (*average_tvl as u128) + (balance as u128)
+            ) / ((snapshot_count + 1) as u128)
+        );
 
         table::upsert(
             average_tvl_table,
@@ -202,6 +206,7 @@ module publisher::vip_tvl_manager {
                         tvl: *snapshot_tvl,
                     }
                 );
+                false
             }
         );
         snapshot_responses

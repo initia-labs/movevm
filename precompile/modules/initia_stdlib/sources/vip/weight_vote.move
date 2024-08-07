@@ -1291,6 +1291,7 @@ module publisher::vip_weight_vote {
                         }
                     );
                 };
+                false
             }
         );
         challenge_responses
@@ -1333,8 +1334,10 @@ module publisher::vip_weight_vote {
         }
     }
 
-    inline fun use_challenge(_v: &Challenge){}
-    inline fun use_weight(_v: Weight){}
+    inline fun use_challenge(_v: &Challenge) {
+    } inline fun use_weight(_v: Weight) {
+    }
+
     #[test_only]
     use initia_std::block::set_block_info;
 

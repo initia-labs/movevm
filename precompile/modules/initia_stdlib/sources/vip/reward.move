@@ -1,6 +1,7 @@
 module publisher::vip_reward {
     use std::string;
     use std::vector;
+    use std::error;
     use initia_std::object::{ Object };
     use initia_std::fungible_asset::{Metadata,};
     use initia_std::primary_fungible_store;
@@ -24,9 +25,6 @@ module publisher::vip_reward {
     //
     //  Constants
     //
-
-    const OPERATOR_REWARD_PREFIX: u8 = 0xf2;
-    const USER_REWARD_PREFIX: u8 = 0xf3;
     const REWARD_SYMBOL: vector<u8> = b"uinit";
 
     //
@@ -43,9 +41,9 @@ module publisher::vip_reward {
         operator_reward: u64,
     }
 
-    fun init_module(chain: &signer) {
+    fun init_module(publisher: &signer) {
         move_to(
-            chain,
+            publisher,
             ModuleStore {
                 distributed_reward: table::new<vector<u8>, RewardRecord>()
             }
@@ -53,11 +51,7 @@ module publisher::vip_reward {
     }
 
     fun get_distrubuted_reward_table_key(bridge_id: u64, stage: u64): vector<u8> {
-        let key = vector::empty<u8>();
-        vector::append(
-            &mut key,
-            table_key::encode_u64(bridge_id)
-        );
+        let key = table_key::encode_u64(bridge_id);
         vector::append(
             &mut key,
             table_key::encode_u64(stage)
@@ -82,6 +76,13 @@ module publisher::vip_reward {
         operator_reward: u64
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let key = get_distrubuted_reward_table_key(bridge_id, stage);
+        assert!(
+            !table::contains(
+                &module_store.distributed_reward, key
+            ),
+            error::unavailable(EREWARD_STORE_ALREADY_EXISTS)
+        );
         table::add(
             &mut module_store.distributed_reward,
             get_distrubuted_reward_table_key(bridge_id, stage),

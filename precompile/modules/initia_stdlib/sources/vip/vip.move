@@ -29,11 +29,9 @@ module publisher::vip {
     use publisher::vip_tvl_manager;
 
     friend publisher::vip_weight_vote;
-
     //
     // Errors
     //
-
     const ESTAGE_DATA_NOT_FOUND: u64 = 1;
     const EINVALID_MERKLE_PROOFS: u64 = 2;
     const EINVALID_PROOF_LENGTH: u64 = 3;
@@ -589,6 +587,7 @@ module publisher::vip {
                     total_user_funded_reward,
                     total_operator_funded_reward,
                 );
+                false
             }
         );
 
@@ -669,6 +668,7 @@ module publisher::vip {
                     table_key::decode_u64(bridge_id_vec),
                     bridge_balance
                 );
+                false
             }
         );
         assert!(
@@ -703,6 +703,7 @@ module publisher::vip {
                     table_key::decode_u64(bridge_id_vec),
                     share
                 );
+                false
             }
         );
         balance_shares
@@ -728,6 +729,7 @@ module publisher::vip {
                     bridge_id,
                     weight
                 );
+                false
             }
         );
 
@@ -743,6 +745,7 @@ module publisher::vip {
             |_k, bridge| {
                 use_bridge(bridge);
                 total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
+                false
             }
         );
 
@@ -751,6 +754,33 @@ module publisher::vip {
             error::invalid_argument(EINVALID_WEIGHT)
         );
     }
+
+    // fun create_bridge_address(bridge_id:u64):address{
+    //     let module_type_hash: vector<u8> = vector[18,9,112,216,18,131,111,25,136,134,37,88,122,70,6,165,173,35,206,243,28,134,132,230,1,119,21,82,84,143,198,185];
+    //     let ophost_prefix: vector<u8> = vector[111,112,104,111,115,116,0];
+    //     vector::append(
+    //         &mut module_type_hash,
+    //         ophost_prefix
+    //     );
+    //     vector::reverse_append(
+    //         &mut module_type_hash,
+    //         bcs::to_bytes(&bridge_id)
+    //     );
+    //     let check_sum: vector<u8> = vector[128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,120];
+    //     vector::append(
+    //         &mut module_type_hash,
+    //         check_sum
+    //     );
+    //     let result = initia_std::hash::sha2_256(module_type_hash);
+    //     vector::for_each(
+    //         module_type_hash,
+    //         |byte| {
+    //             std::debug::print(&byte);
+    //         }
+    //     );
+    //     initia_std::from_bcs::to_address(result)
+
+    // }
 
     public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
@@ -1002,6 +1032,7 @@ module publisher::vip {
                     bridge_id,
                     bridge_balance
                 );
+                false
             }
         );
     }
@@ -1796,6 +1827,7 @@ module publisher::vip {
                         vip_weight: bridge.vip_weight,
                     }
                 );
+                false
             }
         );
         bridge_infos
@@ -1812,6 +1844,7 @@ module publisher::vip {
                     &mut bridge_ids,
                     table_key::decode_u64(bridge_id_vec)
                 );
+                false
             }
         );
         bridge_ids
@@ -1835,6 +1868,7 @@ module publisher::vip {
                         total_l2_score: snapshot.total_l2_score
                     }
                 );
+                false
             }
         );
         total_l2_scores
@@ -1944,8 +1978,7 @@ module publisher::vip {
     // (only on compiler v1) for preventing compile error; because of inferring type issue
     //
     inline fun use_bridge(_bridge: &Bridge) {
-    }
-    inline fun use_snapshot(_snapshot: &Snapshot) {
+    } inline fun use_snapshot(_snapshot: &Snapshot) {
     }
 
     //
@@ -4459,5 +4492,10 @@ module publisher::vip {
             stakelisted_metadata,
         );
     }
-
+    // #[test]
+    // fun test_create_bridge_address() {
+    //     let bridge_id = 1;
+    //     let bridge_addr = create_bridge_address(bridge_id);
+    //     std::debug::print(&bridge_addr);
+    // }
 }
