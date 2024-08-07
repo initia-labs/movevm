@@ -486,7 +486,7 @@ module publisher::vip {
             table_key::encode_u64(bridge_id)
         )
     }
-    
+
     fun zapping(
         account: &signer,
         bridge_id: u64,
@@ -547,57 +547,50 @@ module publisher::vip {
     ): (u64, u64) {
         let total_user_funded_reward = 0;
         let total_operator_funded_reward = 0;
-
-        let iter = table::iter(
+        table::loop_table(
             &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
-        );
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-
-            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(&mut iter);
-            let bridge_id = table_key::decode_u64(bridge_id_vec);
-            // split the reward of balance pool
-            let balance_reward_amount = split_reward_with_share_internal(
-                balance_shares,
-                bridge_id,
-                initial_balance_pool_reward_amount,
-            );
-
-            // split the reward of weight pool
-            let weight_reward_amount = split_reward_with_share_internal(
-                weight_shares,
-                bridge_id,
-                initial_weight_pool_reward_amount,
-            );
-            // (weight + balance) reward splited to operator and user reward
-            let(
-                operator_funded_reward,
-                user_funded_reward
-            ) = calc_operator_and_user_reward_amount(
-                bridge_id,
-                balance_reward_amount + weight_reward_amount
-            );
-            total_operator_funded_reward  = total_operator_funded_reward + operator_funded_reward;
-            total_user_funded_reward = total_user_funded_reward + user_funded_reward;
-            event::emit(
-                RewardDistributionEvent {
-                    stage,
+            |bridge_id_vec, _v| {
+                let bridge_id = table_key::decode_u64(bridge_id_vec);
+                // split the reward of balance pool
+                let balance_reward_amount = split_reward_with_share_internal(
+                    balance_shares,
                     bridge_id,
-                    user_reward_amount: total_user_funded_reward,
-                    operator_reward_amount: total_operator_funded_reward
-                }
-            );
-            // record the distributed reward
-            vip_reward::record_distributed_reward(
-                bridge_id,
-                stage,
-                total_user_funded_reward,
-                total_operator_funded_reward,
-            );
-        };
+                    initial_balance_pool_reward_amount,
+                );
+
+                // split the reward of weight pool
+                let weight_reward_amount = split_reward_with_share_internal(
+                    weight_shares,
+                    bridge_id,
+                    initial_weight_pool_reward_amount,
+                );
+                // (weight + balance) reward splited to operator and user reward
+                let (
+                    operator_funded_reward,
+                    user_funded_reward
+                ) = calc_operator_and_user_reward_amount(
+                    bridge_id,
+                    balance_reward_amount + weight_reward_amount
+                );
+                total_operator_funded_reward = total_operator_funded_reward + operator_funded_reward;
+                total_user_funded_reward = total_user_funded_reward + user_funded_reward;
+                event::emit(
+                    RewardDistributionEvent {
+                        stage,
+                        bridge_id,
+                        user_reward_amount: total_user_funded_reward,
+                        operator_reward_amount: total_operator_funded_reward
+                    }
+                );
+                // record the distributed reward
+                vip_reward::record_distributed_reward(
+                    bridge_id,
+                    stage,
+                    total_user_funded_reward,
+                    total_operator_funded_reward,
+                );
+            }
+        );
 
         event::emit(
             FundEvent {
@@ -631,7 +624,6 @@ module publisher::vip {
         // fill the balance shares of bridges
         let balance_shares = calculate_balance_share(module_store);
         let weight_shares = calculate_weight_share(module_store);
-        
 
         // fill the weight shares of bridges
         let balance_pool_reward_amount = decimal256::mul_u64(
@@ -657,105 +649,87 @@ module publisher::vip {
         )
     }
 
-    // calculate balance share and return total balance
+    // calculate balance share
     fun calculate_balance_share(module_store: &ModuleStore): SimpleMap<u64, Decimal256> {
         let balance_shares = simple_map::create<u64, Decimal256>();
         let bridge_balances: SimpleMap<u64, u64> = simple_map::create();
         let total_balance = 0;
-
-        let iter = table::iter(
+        // sum total balance for calculating shares
+        table::loop_table(
             &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
+            |bridge_id_vec, _v| {
+                // bridge balance from tvl manager
+                let bridge_balance = vip_tvl_manager::get_average_tvl(
+                    module_store.stage,
+                    table_key::decode_u64(bridge_id_vec)
+                );
+                total_balance = total_balance + bridge_balance;
+                simple_map::add(
+                    &mut bridge_balances,
+                    table_key::decode_u64(bridge_id_vec),
+                    bridge_balance
+                );
+            }
         );
-        // calculate total balance and bridge balance
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(&mut iter);
-            // bridge balance from tvl manager
-            let bridge_balance = vip_tvl_manager::get_average_tvl(
-                module_store.stage,
-                table_key::decode_u64(bridge_id_vec)
-            );
-            total_balance = total_balance + bridge_balance;
-            simple_map::add(
-                &mut bridge_balances,
-                table_key::decode_u64(bridge_id_vec),
-                bridge_balance
-            );
-        };
-
-        let max_effective_balance = decimal256::mul_u64(
-            &module_store.maximum_tvl_ratio,
-            total_balance
-        );
-
-        iter = table::iter(
-            &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
-        );
-        // calculate balance share
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (bridge_id_vec, _) = table::next<vector<u8>, Bridge>(&mut iter);
-            let bridge_balance = simple_map::borrow(
-                &bridge_balances,
-                &table_key::decode_u64(bridge_id_vec)
-            );
-
-            let effective_bridge_balance = if (*bridge_balance > max_effective_balance) { max_effective_balance }
-            else if (*bridge_balance < module_store.minimum_eligible_tvl) {
-                 0
-            } else {*bridge_balance};
-
-            let share = decimal256::from_ratio_u64(
-                effective_bridge_balance,
-                total_balance
-            );
-            simple_map::add(
-                &mut balance_shares,
-                table_key::decode_u64(bridge_id_vec),
-                share
-            );
-        };
-
         assert!(
             total_balance > 0,
             error::invalid_state(EINVALID_TOTAL_SHARE)
         );
+        let max_effective_balance = decimal256::mul_u64(
+            &module_store.maximum_tvl_ratio,
+            total_balance
+        );
+        // calculate balance share by total balance
+        table::loop_table(
+            &module_store.bridges,
+            |bridge_id_vec, _v| {
 
+                let bridge_balance = simple_map::borrow(
+                    &bridge_balances,
+                    &table_key::decode_u64(bridge_id_vec)
+                );
+
+                let effective_bridge_balance = if (*bridge_balance > max_effective_balance) { max_effective_balance }
+                else if (*bridge_balance < module_store.minimum_eligible_tvl) {
+                     0
+                } else {*bridge_balance};
+
+                let share = decimal256::from_ratio_u64(
+                    effective_bridge_balance,
+                    total_balance
+                );
+                simple_map::add(
+                    &mut balance_shares,
+                    table_key::decode_u64(bridge_id_vec),
+                    share
+                );
+            }
+        );
         balance_shares
 
     }
 
     fun calculate_weight_share(module_store: &ModuleStore): SimpleMap<u64, Decimal256> {
         let weight_shares: SimpleMap<u64, Decimal256> = simple_map::create<u64, Decimal256>();
-        let iter = table::iter(
+        table::loop_table(
             &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
-        );
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
-            let bridge_id = table_key::decode_u64(bridge_id_vec);
+            |bridge_id_vec, bridge| {
+                use_bridge(bridge);
+                let bridge_id = table_key::decode_u64(bridge_id_vec);
 
-            let weight = if (
-                decimal256::val(&bridge.vip_weight) > decimal256::val(
-                    &module_store.maximum_weight_ratio
-                )) {
-                module_store.maximum_weight_ratio
-            } else {bridge.vip_weight};
-            simple_map::add(
-                &mut weight_shares,
-                bridge_id,
-                weight
-            );
-        };
+                let weight = if (
+                    decimal256::val(&bridge.vip_weight) > decimal256::val(
+                        &module_store.maximum_weight_ratio
+                    )) {
+                    module_store.maximum_weight_ratio
+                } else {bridge.vip_weight};
+                simple_map::add(
+                    &mut weight_shares,
+                    bridge_id,
+                    weight
+                );
+            }
+        );
 
         weight_shares
 
@@ -764,17 +738,13 @@ module publisher::vip {
     fun validate_vip_weights(module_store: &ModuleStore) {
         let total_weight = decimal256::zero();
 
-        let iter = table::iter(
+        table::loop_table(
             &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
+            |_k, bridge| {
+                use_bridge(bridge);
+                total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
+            }
         );
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (_, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
-            total_weight = decimal256::add(&total_weight, &bridge.vip_weight);
-        };
 
         assert!(
             decimal256::val(&total_weight) <= decimal256::val(&decimal256::one()),
@@ -784,15 +754,17 @@ module publisher::vip {
 
     public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-        let is_registered  = table::contains(
+        if (!table::contains(
+                &module_store.bridges,
+                table_key::encode_u64(bridge_id)
+            )) {
+            return false;
+        };
+        table::borrow(
             &module_store.bridges,
             table_key::encode_u64(bridge_id)
-        );
-        if (is_registered) {
-            return table::borrow(&module_store.bridges,table_key::encode_u64(bridge_id)).is_registered
-        };
+        ).is_registered
 
-        is_registered
     }
 
     public(friend) fun update_vip_weights_for_friend(
@@ -960,7 +932,7 @@ module publisher::vip {
             ),
             error::not_found(EBRIDGE_NOT_FOUND)
         );
-        
+
         let bridge_data = table::remove(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id)
@@ -973,7 +945,7 @@ module publisher::vip {
                 init_stage: bridge_data.init_stage,
                 bridge_addr: bridge_data.bridge_addr,
                 operator_addr: bridge_data.operator_addr,
-                vip_l2_score_contract : bridge_data.vip_l2_score_contract,
+                vip_l2_score_contract: bridge_data.vip_l2_score_contract,
                 vip_weight: decimal256::zero(),
                 is_registered: false,
             }
@@ -1016,28 +988,23 @@ module publisher::vip {
     fun add_tvl_snapshot_internal(module_store: &ModuleStore) {
         let bridges = &module_store.bridges;
         let current_stage = module_store.stage;
-        let iter = table::iter(
-            bridges,
-            option::none(),
-            option::none(),
-            1
+        table::loop_table(
+            &module_store.bridges,
+            |bridge_id_vec, bridge| {
+                use_bridge(bridge);
+                let bridge_id = table_key::decode_u64(bridge_id_vec);
+
+                let bridge_balance = primary_fungible_store::balance(
+                    bridge.bridge_addr,
+                    vip_reward::reward_metadata()
+                );
+                vip_tvl_manager::add_snapshot(
+                    current_stage,
+                    bridge_id,
+                    bridge_balance
+                );
+            }
         );
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
-            let bridge_id = table_key::decode_u64(bridge_id_vec);
-
-            let bridge_balance = primary_fungible_store::balance(
-                bridge.bridge_addr,
-                vip_reward::reward_metadata()
-            );
-            vip_tvl_manager::add_snapshot(
-                current_stage,
-                bridge_id,
-                bridge_balance
-            );
-        };
-
     }
 
     // update reward record data of module store in reward module
@@ -1741,7 +1708,6 @@ module publisher::vip {
     #[view]
     public fun get_last_submitted_stage(bridge_id: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-
         let iter = table::iter(
             &module_store.stage_data,
             option::none(),
@@ -1815,30 +1781,24 @@ module publisher::vip {
     #[view]
     public fun get_bridge_infos(): vector<BridgeResponse> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-        let iter = table::iter(
-            &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
-        );
-
         let bridge_infos = vector::empty<BridgeResponse>();
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (bridge_id_vec, bridge) = table::next<vector<u8>, Bridge>(&mut iter);
-            vector::push_back(
-                &mut bridge_infos,
-                BridgeResponse {
-                    init_stage: bridge.init_stage,
-                    bridge_id: table_key::decode_u64(bridge_id_vec),
-                    bridge_addr: bridge.bridge_addr,
-                    operator_addr: bridge.operator_addr,
-                    vip_l2_score_contract: bridge.vip_l2_score_contract,
-                    vip_weight: bridge.vip_weight,
-                }
-            );
-        };
-
+        table::loop_table(
+            &module_store.bridges,
+            |bridge_id_vec, bridge| {
+                use_bridge(bridge);
+                vector::push_back(
+                    &mut bridge_infos,
+                    BridgeResponse {
+                        init_stage: bridge.init_stage,
+                        bridge_id: table_key::decode_u64(bridge_id_vec),
+                        bridge_addr: bridge.bridge_addr,
+                        operator_addr: bridge.operator_addr,
+                        vip_l2_score_contract: bridge.vip_l2_score_contract,
+                        vip_weight: bridge.vip_weight,
+                    }
+                );
+            }
+        );
         bridge_infos
     }
 
@@ -1846,21 +1806,15 @@ module publisher::vip {
     public fun get_whitelisted_bridge_ids(): vector<u64> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
         let bridge_ids = vector::empty<u64>();
-
-        let iter = table::iter(
+        table::loop_table(
             &module_store.bridges,
-            option::none(),
-            option::none(),
-            1
+            |bridge_id_vec, _v| {
+                vector::push_back(
+                    &mut bridge_ids,
+                    table_key::decode_u64(bridge_id_vec)
+                );
+            }
         );
-        loop {
-            if (!table::prepare<vector<u8>, Bridge>(&mut iter)) { break };
-            let (key, _) = table::next<vector<u8>, Bridge>(&mut iter);
-            vector::push_back(
-                &mut bridge_ids,
-                table_key::decode_u64(key)
-            );
-        };
         bridge_ids
     }
 
@@ -1870,26 +1824,20 @@ module publisher::vip {
         let module_store = borrow_global<ModuleStore>(@publisher);
         let stage_key = table_key::encode_u64(stage);
         let stage_data = table::borrow(&module_store.stage_data, stage_key);
-
         let total_l2_scores: vector<TotalL2ScoreResponse> = vector[];
-
-        let iter = table::iter(
+        table::loop_table(
             &stage_data.snapshots,
-            option::none(),
-            option::none(),
-            1
+            |bridge_id_vec, snapshot| {
+                use_snapshot(snapshot);
+                vector::push_back(
+                    &mut total_l2_scores,
+                    TotalL2ScoreResponse {
+                        bridge_id: table_key::decode_u64(bridge_id_vec),
+                        total_l2_score: snapshot.total_l2_score
+                    }
+                );
+            }
         );
-        loop {
-            if (!table::prepare<vector<u8>, Snapshot>(&mut iter)) { break };
-            let (bridge_id_key, snapshot) = table::next<vector<u8>, Snapshot>(&mut iter);
-            vector::push_back(
-                &mut total_l2_scores,
-                TotalL2ScoreResponse {
-                    bridge_id: table_key::decode_u64(bridge_id_key),
-                    total_l2_score: snapshot.total_l2_score
-                }
-            )
-        };
         total_l2_scores
     }
 
@@ -1991,6 +1939,14 @@ module publisher::vip {
             total_claimed_reward,
             remaining_reward
         )
+    }
+
+    //
+    // (only on compiler v1) for preventing compile error; because of inferring type issue
+    //
+    inline fun use_bridge(bridge: &Bridge) {
+    }
+    inline fun use_snapshot(snapshot: &Snapshot) {
     }
 
     //
@@ -2771,7 +2727,7 @@ module publisher::vip {
                 signer::address_of(receiver),
                 bridge_id,
                 1
-            ) == *simple_map::borrow(&score_map, &1) ,
+            ) == *simple_map::borrow(&score_map, &1),
             1
         );
         assert!(
@@ -3606,7 +3562,7 @@ module publisher::vip {
         batch_claim_user_reward_script(
             receiver,
             bridge_id,
-            vector[1,2,3,4,5,6],
+            vector[1, 2, 3, 4, 5, 6],
             vector[
                 *simple_map::borrow(&merkle_proof_map, &1),
                 *simple_map::borrow(&merkle_proof_map, &2),
@@ -3699,11 +3655,13 @@ module publisher::vip {
             1
         );
     }
+
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
-    fun test_submit_snapshot(){
+    fun test_submit_snapshot() {
         // submit_snapshot() TODO:
         // assert( last_submitted_stage ...)
     }
+
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573)]
     fun test_fund_reward_script(
         chain: &signer,
@@ -3979,7 +3937,7 @@ module publisher::vip {
             *simple_map::borrow(&total_score_map, &1),
         );
         skip_period(DEFAULT_STAGE_INTERVAL);
-        
+
         // deregister bridge_id 1
         deregister(publisher, bridge_id1);
 
@@ -3987,7 +3945,7 @@ module publisher::vip {
         // stage 3
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
-        // stage 4 
+        // stage 4
         fund_reward_script(agent);
         skip_period(DEFAULT_STAGE_INTERVAL);
 

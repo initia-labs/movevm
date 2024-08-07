@@ -193,24 +193,18 @@ module publisher::vip_tvl_manager {
             table_key::encode_u64(bridge_id)
         );
         let snapshot_responses = vector::empty<TVLSnapshotResponse>();
-        let iter = table::iter(
+        table::loop_table(
             snapshots_table,
-            option::none(),
-            option::none(),
-            1
+            |time_vec, snapshot_tvl| {
+                vector::push_back(
+                    &mut snapshot_responses,
+                    TVLSnapshotResponse {
+                        time: table_key::decode_u64(time_vec),
+                        tvl: *snapshot_tvl,
+                    }
+                );
+            }
         );
-        loop {
-            if (!table::prepare<vector<u8>, u64>(&mut iter)) { break };
-            let (time_vec, snapshot_tvl) = table::next<vector<u8>, u64>(&mut iter);
-
-            vector::push_back(
-                &mut snapshot_responses,
-                TVLSnapshotResponse {
-                    time: table_key::decode_u64(time_vec),
-                    tvl: *snapshot_tvl,
-                }
-            );
-        };
         snapshot_responses
     }
 

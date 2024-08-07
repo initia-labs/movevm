@@ -754,16 +754,8 @@ module publisher::vip_weight_vote {
     // helper functions
 
     fun next_challenge_id(module_store: &ModuleStore): u64 {
-        let iter = table::iter(
-            &module_store.challenges,
-            option::none(),
-            option::none(),
-            2
-        );
-        if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { 1 } else {
-            let (challenge_id, _) = table::next<vector<u8>, Challenge>(&mut iter);
-            table_key::decode_u64(challenge_id) + 1
-        }
+        let (last_challenge_id_vec, _) = table::get_last_key_and_value(&module_store.challenges);
+        table_key::decode_u64(last_challenge_id_vec) + 1
     }
 
     fun last_finalized_proposal(
@@ -1129,45 +1121,6 @@ module publisher::vip_weight_vote {
         0
     }
 
-    fun normalize_weights(
-        bridge_ids: vector<u64>,
-        weights: vector<Decimal128>
-    ): vector<Weight> {
-        let len = vector::length(&bridge_ids);
-        assert!(
-            len == vector::length(&weights),
-            error::invalid_argument(EVECTOR_LENGTH)
-        );
-
-        let weight_sum = 0;
-        vector::for_each_ref(
-            &weights,
-            |weight| {
-                weight_sum = weight_sum + decimal128::val(weight);
-            }
-        );
-
-        let n_weights = vector[];
-        vector::zip_reverse(
-            bridge_ids,
-            weights,
-            |bridge_id, weight| {
-                vector::push_back(
-                    &mut n_weights,
-                    Weight {
-                        bridge_id: bridge_id,
-                        weight: decimal128::from_ratio(
-                            decimal128::val(&weight),
-                            weight_sum
-                        ),
-                    }
-                );
-            },
-        );
-
-        n_weights
-    }
-
     // if submitter submit merkle root after grace period, set voting end time to current timestamp + voting period
     // else set it to former cycle end time + grace period + voting period
     fun calculate_voting_end_time(
@@ -1304,42 +1257,36 @@ module publisher::vip_weight_vote {
     #[view]
     public fun get_challenge_by_cycle(cycle: u64): vector<ChallengeResponse> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-        let iter = table::iter(
-            &module_store.challenges,
-            option::none(),
-            option::none(),
-            1
-        );
-
         let challenge_responses = vector::empty<ChallengeResponse>();
-        loop {
-            if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { break };
-            let (_, challenge) = table::next<vector<u8>, Challenge>(&mut iter);
-            if (challenge.cycle == cycle) {
-                vector::push_back(
-                    &mut challenge_responses,
-                    ChallengeResponse {
-                        title: challenge.title,
-                        summary: challenge.summary,
-                        api_uri: challenge.api_uri,
-                        cycle: challenge.cycle,
-                        challenger: challenge.challenger,
-                        voting_power_cycle: challenge.voting_power_cycle,
-                        new_submitter: challenge.new_submitter,
-                        merkle_root: challenge.merkle_root,
-                        snapshot_height: challenge.snapshot_height,
-                        yes_tally: challenge.yes_tally,
-                        no_tally: challenge.no_tally,
-                        quorum: challenge.quorum,
-                        voting_end_time: challenge.voting_end_time,
-                        min_voting_end_time: challenge.min_voting_end_time,
-                        deposit_amount: challenge.deposit_amount,
-                        is_executed: challenge.is_executed,
-                    }
-                );
-            };
-        };
-
+        table::loop_table(
+            &module_store.challenges,
+            |_k, challenge| {
+                use_challenge(challenge);
+                if (challenge.cycle == cycle) {
+                    vector::push_back(
+                        &mut challenge_responses,
+                        ChallengeResponse {
+                            title: challenge.title,
+                            summary: challenge.summary,
+                            api_uri: challenge.api_uri,
+                            cycle: challenge.cycle,
+                            challenger: challenge.challenger,
+                            voting_power_cycle: challenge.voting_power_cycle,
+                            new_submitter: challenge.new_submitter,
+                            merkle_root: challenge.merkle_root,
+                            snapshot_height: challenge.snapshot_height,
+                            yes_tally: challenge.yes_tally,
+                            no_tally: challenge.no_tally,
+                            quorum: challenge.quorum,
+                            voting_end_time: challenge.voting_end_time,
+                            min_voting_end_time: challenge.min_voting_end_time,
+                            deposit_amount: challenge.deposit_amount,
+                            is_executed: challenge.is_executed,
+                        }
+                    );
+                };
+            }
+        );
         challenge_responses
     }
 
@@ -1379,6 +1326,8 @@ module publisher::vip_weight_vote {
             weights: vote.weights,
         }
     }
+    
+    inline fun use_challenge(_value: &Challenge){}
 
     #[test_only]
     use initia_std::block::set_block_info;
