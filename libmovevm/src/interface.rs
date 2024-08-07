@@ -31,7 +31,7 @@ pub fn to_gas_balance(ptr: *mut u64) -> Option<&'static mut u64> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut u64) };
+        let c = unsafe { &mut *ptr };
         Some(c)
     }
 }
@@ -110,7 +110,7 @@ pub extern "C" fn execute_contract(
                 .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
                 .and_then(|gas_balance| {
                     catch_unwind(AssertUnwindSafe(move || {
-                        let mut gas_meter = vm.create_gas_meter(gas_balance.clone());
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
                         let res = vm::execute_contract(vm, &mut gas_meter, db, api, env, message);
 
                         // update gas balance
@@ -150,7 +150,7 @@ pub extern "C" fn execute_script(
                 .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
                 .and_then(|gas_balance| {
                     catch_unwind(AssertUnwindSafe(move || {
-                        let mut gas_meter = vm.create_gas_meter(gas_balance.clone());
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
                         let res = vm::execute_script(vm, &mut gas_meter, db, api, env, message);
 
                         // update gas balance
@@ -188,7 +188,7 @@ pub extern "C" fn execute_view_function(
                 .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
                 .and_then(|gas_balance| {
                     catch_unwind(AssertUnwindSafe(move || {
-                        let mut gas_meter = vm.create_gas_meter(gas_balance.clone());
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
                         let res = vm::execute_view_function(
                             vm,
                             &mut gas_meter,
