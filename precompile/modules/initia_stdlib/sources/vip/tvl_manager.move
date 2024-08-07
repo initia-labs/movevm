@@ -1,7 +1,6 @@
 module publisher::vip_tvl_manager {
     use std::error;
     use initia_std::vector;
-    use initia_std::option;
     use initia_std::table_key;
     use initia_std::table;
     use initia_std::block;

@@ -42,6 +42,8 @@ module publisher::vip_weight_vote {
     const ECHALLENGE_ALREADY_EXECUTED: u64 = 16;
     const EINVALID_PARAMETER: u64 = 17;
     const EINVALID_BRIDGE: u64 = 18;
+
+    const ENOT_FOUND: u64 = 101;
     //
     //  Constants
     //
@@ -754,8 +756,16 @@ module publisher::vip_weight_vote {
     // helper functions
 
     fun next_challenge_id(module_store: &ModuleStore): u64 {
-        let (last_challenge_id_vec, _) = table::get_last_key_and_value(&module_store.challenges);
-        table_key::decode_u64(last_challenge_id_vec) + 1
+        let iter = table::iter(
+            &module_store.challenges,
+            option::none(),
+            option::none(),
+            2
+        );
+        if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { 1 } else {
+            let (challenge_id, _) = table::next<vector<u8>, Challenge>(&mut iter);
+            table_key::decode_u64(challenge_id) + 1
+        }
     }
 
     fun last_finalized_proposal(
@@ -1326,7 +1336,7 @@ module publisher::vip_weight_vote {
             weights: vote.weights,
         }
     }
-    
+
     inline fun use_challenge(_value: &Challenge){}
 
     #[test_only]

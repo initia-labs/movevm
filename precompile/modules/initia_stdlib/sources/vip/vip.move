@@ -758,7 +758,7 @@ module publisher::vip {
                 &module_store.bridges,
                 table_key::encode_u64(bridge_id)
             )) {
-            return false;
+            return false
         };
         table::borrow(
             &module_store.bridges,
@@ -986,7 +986,6 @@ module publisher::vip {
     }
 
     fun add_tvl_snapshot_internal(module_store: &ModuleStore) {
-        let bridges = &module_store.bridges;
         let current_stage = module_store.stage;
         table::loop_table(
             &module_store.bridges,
@@ -1944,9 +1943,9 @@ module publisher::vip {
     //
     // (only on compiler v1) for preventing compile error; because of inferring type issue
     //
-    inline fun use_bridge(bridge: &Bridge) {
+    inline fun use_bridge(_bridge: &Bridge) {
     }
-    inline fun use_snapshot(snapshot: &Snapshot) {
+    inline fun use_snapshot(_snapshot: &Snapshot) {
     }
 
     //
