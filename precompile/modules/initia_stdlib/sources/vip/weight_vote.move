@@ -991,23 +991,21 @@ module publisher::vip_weight_vote {
         max_voting_power: u64,
         weights: vector<Weight>
     ) {
-
-        let i = 0;
-        let len = vector::length(&weights);
         let voting_power_removed = 0;
-        while (i < len) {
-            let w = vector::borrow(&weights, i);
-            // bridge_vp
-            let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
-            voting_power_removed = voting_power_removed + bridge_vp;
-            let tally = table::borrow_mut_with_default(
-                &mut proposal.tally,
-                table_key::encode_u64(w.bridge_id),
-                0
-            );
-            *tally = *tally - (bridge_vp as u64);
-            i = i + 1;
-        };
+        vector::for_each(
+            weights,
+            |w| {
+                use_weight(w);
+                let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
+                voting_power_removed = voting_power_removed + bridge_vp;
+                let tally = table::borrow_mut_with_default(
+                    &mut proposal.tally,
+                    table_key::encode_u64(w.bridge_id),
+                    0
+                );
+                *tally = *tally - (bridge_vp as u64);
+            }
+        );
         proposal.total_tally = proposal.total_tally - voting_power_removed;
 
     }
@@ -1018,22 +1016,20 @@ module publisher::vip_weight_vote {
         weights: vector<Weight>
     ) {
         let voting_power_used = 0;
-
-        let len = vector::length(&weights);
-        let i = 0;
-        while (i < len) {
-            let w = vector::borrow(&weights, i);
-            let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
-            voting_power_used = voting_power_used + bridge_vp;
-            let tally = table::borrow_mut_with_default(
-                &mut proposal.tally,
-                table_key::encode_u64(w.bridge_id),
-                0
-            );
-            *tally = *tally + (bridge_vp as u64);
-            i = i + 1;
-        };
-
+        vector::for_each(
+            weights,
+            |w| {
+                use_weight(w);
+                let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
+                voting_power_used = voting_power_used + bridge_vp;
+                let tally = table::borrow_mut_with_default(
+                    &mut proposal.tally,
+                    table_key::encode_u64(w.bridge_id),
+                    0
+                );
+                *tally = *tally + (bridge_vp as u64);
+            }
+        );
         proposal.total_tally = proposal.total_tally + voting_power_used
 
     }
@@ -1337,8 +1333,8 @@ module publisher::vip_weight_vote {
         }
     }
 
-    inline fun use_challenge(_value: &Challenge){}
-
+    inline fun use_challenge(_v: &Challenge){}
+    inline fun use_weight(_v: Weight){}
     #[test_only]
     use initia_std::block::set_block_info;
 

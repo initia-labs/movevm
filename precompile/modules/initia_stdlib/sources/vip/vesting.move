@@ -416,11 +416,11 @@ module publisher::vip_vesting {
                 total_penalty_reward = total_penalty_reward + penalty_reward;
 
                 let initial_reward_amount = if (claim_info.total_l2_score == 0) { 0 } else {
-                    let initial_reward = vip_reward::get_user_distrubuted_reward(
+                    let total_user_reward = vip_reward::get_user_distrubuted_reward(
                         bridge_id, claim_info.start_stage
                     );
                     (
-                        (initial_reward as u128) * (claim_info.l2_score as u128) / (
+                        (total_user_reward as u128) * (claim_info.l2_score as u128) / (
                             claim_info.total_l2_score as u128
                         ) as u64
                     )
