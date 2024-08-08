@@ -373,7 +373,7 @@ module publisher::vip_weight_vote {
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
-
+        
         assert!(
             signer::address_of(submitter) == module_store.submitter,
             error::permission_denied(EUNAUTHORIZED)
@@ -382,7 +382,15 @@ module publisher::vip_weight_vote {
             module_store.cycle_end_timestamp < timestamp,
             error::invalid_state(ECYCLE_NOT_END)
         );
-
+        // get the last voted proposal 
+        // execute proposal not executed
+        let proposal = table::borrow_mut(
+            &mut module_store.proposals,
+            table_key::encode_u64(module_store.current_cycle),
+        );
+        if(!proposal.executed&& proposal.voting_end_time < timestamp){
+            execute_proposal_internal(proposal,module_store.current_cycle);
+        };
         let voting_end_time = calculate_voting_end_time(timestamp, module_store);
         submit_snapshot_internal(
             module_store,
@@ -503,6 +511,7 @@ module publisher::vip_weight_vote {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
 
+        // get the last voting proposal 
         // check vote state
         let proposal = table::borrow_mut(
             &mut module_store.proposals,
@@ -517,6 +526,10 @@ module publisher::vip_weight_vote {
             error::invalid_state(EPROPOSAL_ALREADY_EXECUTED)
         );
 
+        execute_proposal_internal(proposal, module_store.current_cycle);
+    }
+
+    fun execute_proposal_internal(proposal: &mut Proposal,current_cycle: u64) {
         // update vip weights
         let bridge_ids = vip::get_whitelisted_bridge_ids();
 
@@ -547,7 +560,7 @@ module publisher::vip_weight_vote {
         // emit event
         event::emit(
             ExecuteProposalEvent {
-                cycle: module_store.current_cycle,
+                cycle: current_cycle,
                 bridge_ids,
                 weights,
             }
@@ -556,7 +569,6 @@ module publisher::vip_weight_vote {
         // update proposal state
         proposal.executed = true;
     }
-
     // challenge
 
     public entry fun create_challenge(
@@ -933,7 +945,6 @@ module publisher::vip_weight_vote {
         snapshot_height: u64,
         voting_end_time: u64
     ) {
-
         // update cycle
         module_store.current_cycle = module_store.current_cycle + 1;
 
