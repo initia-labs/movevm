@@ -99,10 +99,7 @@ module publisher::vip_reward {
 
     #[view]
     public fun balance(addr: address): u64 {
-        primary_fungible_store::balance(
-            addr,
-            reward_metadata()
-        )
+        primary_fungible_store::balance(addr, reward_metadata())
     }
 
     #[view]

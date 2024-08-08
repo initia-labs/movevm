@@ -1281,7 +1281,10 @@ module publisher::vip {
                     table_key::encode_u64(*stage)
                 );
                 // handle to re-registered minitia (ref. vip_test::claim_re_registered_bridge_reward)
-                if(table::contains(&stage_data.snapshots,table_key::encode_u64(bridge_id))){ 
+                if (table::contains(
+                        &stage_data.snapshots,
+                        table_key::encode_u64(bridge_id)
+                    )) {
                     let snapshot = table::borrow(
                         &stage_data.snapshots,
                         table_key::encode_u64(bridge_id)
@@ -1302,7 +1305,7 @@ module publisher::vip {
                             target_hash,
                         );
                     };
-                    
+
                     vector::push_back(
                         &mut claimInfos,
                         vip_vesting::build_user_vesting_claim_infos(
@@ -1317,7 +1320,6 @@ module publisher::vip {
 
                 prev_stage = *stage;
 
-                
             }
         );
         // call batch claim user reward; return net reward(total vested reward)

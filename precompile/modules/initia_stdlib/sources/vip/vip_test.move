@@ -213,7 +213,8 @@ module publisher::vip_test {
         let (height, curr_time) = block::get_block_info();
         block::set_block_info(height, curr_time + period);
     }
-    // only do fund reward not 
+
+    // only do fund reward not
     fun only_fund_reward(
         agent: &signer,
         stages: &mut vector<u64>,
@@ -229,6 +230,7 @@ module publisher::vip_test {
         vector::push_back(merkle_proofs, vector[vector[]]);
         vector::push_back(l2_scores, 0);
     }
+
     fun submit_snapshot_and_fund_reward(
         agent: &signer,
         user: address,
@@ -1152,7 +1154,7 @@ module publisher::vip_test {
             &mut l2_scores
         );
         // deregister bridge
-        vip::deregister(publisher,get_bridge_id());
+        vip::deregister(publisher, get_bridge_id());
         // stage3 distributed
         only_fund_reward(
             publisher,
@@ -1178,7 +1180,7 @@ module publisher::vip_test {
             &mut merkle_proofs,
             &mut l2_scores
         );
-        
+
         // stage 5
         // total score: 1000, receiver's score : 100
         submit_snapshot_and_fund_reward(
@@ -1221,7 +1223,8 @@ module publisher::vip_test {
         // stage 1 vested reward(2,5;twice) + stage 2 vested reward(5;one time)
         assert!(
             vip_reward::balance(receiver_addr) == (
-                2 * vesting1_initial_reward / vesting_period + (2 * vesting2_initial_reward) / (5 * vesting_period)
+                2 * vesting1_initial_reward / vesting_period + (2 * vesting2_initial_reward)
+                    / (5 * vesting_period)
             ),
             8
         );
@@ -1234,7 +1237,7 @@ module publisher::vip_test {
     }
 
     // after zapping, remaining reward < vesting reward per stage
-    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)] 
+    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun partial_zapping_scene1(
         chain: &signer,
         publisher: &signer,
@@ -1285,15 +1288,18 @@ module publisher::vip_test {
         let vesting2_initial_reward = vip_vesting::get_user_vesting_initial_reward(
             receiver_addr, get_bridge_id(), 2
         );
-        assert!(vip_reward::balance(receiver_addr) == vesting1_initial_reward / get_vesting_period(),1);
+        assert!(
+            vip_reward::balance(receiver_addr) == vesting1_initial_reward / get_vesting_period(),
+            1
+        );
         // stage 1 clean up
         vector::remove(&mut stages, 0);
         vector::remove(&mut merkle_proofs, 0);
-        vector::remove(&mut l2_scores,0);
+        vector::remove(&mut l2_scores, 0);
         // stage 2 clean up
         vector::remove(&mut stages, 0);
         vector::remove(&mut merkle_proofs, 0);
-        vector::remove(&mut l2_scores,0);
+        vector::remove(&mut l2_scores, 0);
 
         let extra = 1000;
         let zapping_amount = 8 * vesting1_initial_reward / get_vesting_period() + extra;
@@ -1311,12 +1317,16 @@ module publisher::vip_test {
         );
         // stage 1 vesting position zapped but not finalized yet
         assert!(
-            !vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(), 1),
+            !vip_vesting::is_user_vesting_position_finalized(
+                receiver_addr, get_bridge_id(), 1
+            ),
             2
         );
         // stage 2 vesting position zapped
         assert!(
-            !vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(), 1),
+            !vip_vesting::is_user_vesting_position_finalized(
+                receiver_addr, get_bridge_id(), 1
+            ),
             3
         );
         // stage 3 distributed
@@ -1336,17 +1346,26 @@ module publisher::vip_test {
             merkle_proofs,
             l2_scores
         );
-        assert!(vip_reward::balance(receiver_addr) == 2 * vesting1_initial_reward / get_vesting_period() - extra + vesting2_initial_reward / get_vesting_period(),4);
+        assert!(
+            vip_reward::balance(receiver_addr) == 2 * vesting1_initial_reward / get_vesting_period()
+                - extra + vesting2_initial_reward / get_vesting_period(),
+            4
+        );
         // stage 1 vesting position finalized
         assert!(
-            vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(), 1),
+            vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(),
+                    1),
             5
         );
         assert!(
-            vip_vault::balance() == vault_balance_before - ( vesting1_initial_reward + vesting2_initial_reward / get_vesting_period()), 6
+            vip_vault::balance() == vault_balance_before - (
+                vesting1_initial_reward + vesting2_initial_reward / get_vesting_period()
+            ),
+            6
         )
-        
+
     }
+
     // after zapping, remaining reward >= vesting reward per stage
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun partial_zapping_scene2(
@@ -1354,7 +1373,7 @@ module publisher::vip_test {
         publisher: &signer,
         operator: &signer,
         receiver: &signer
-    ) acquires TestState{
+    ) acquires TestState {
         initialize(chain, publisher, operator);
         let receiver_addr = signer::address_of(receiver);
         coin::transfer(
@@ -1395,11 +1414,11 @@ module publisher::vip_test {
         // stage 1 clean up
         vector::remove(&mut stages, 0);
         vector::remove(&mut merkle_proofs, 0);
-        vector::remove(&mut l2_scores,0);
+        vector::remove(&mut l2_scores, 0);
         // stage 2 clean up
         vector::remove(&mut stages, 0);
         vector::remove(&mut merkle_proofs, 0);
-        vector::remove(&mut l2_scores,0);
+        vector::remove(&mut l2_scores, 0);
 
         let vesting1_initial_reward = vip_vesting::get_user_vesting_initial_reward(
             receiver_addr, get_bridge_id(), 1
@@ -1419,7 +1438,9 @@ module publisher::vip_test {
         );
         // stage 1 vesting position zapped but not finalized yet
         assert!(
-            !vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(), 1),
+            !vip_vesting::is_user_vesting_position_finalized(
+                receiver_addr, get_bridge_id(), 1
+            ),
             1
         );
         // stage 3 distributed
@@ -1443,11 +1464,13 @@ module publisher::vip_test {
         // stage 3 clean up
         vector::remove(&mut stages, 0);
         vector::remove(&mut merkle_proofs, 0);
-        vector::remove(&mut l2_scores,0);
+        vector::remove(&mut l2_scores, 0);
 
         // stage 1 vesting position finalized not yet
         assert!(
-            !vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(), 1),
+            !vip_vesting::is_user_vesting_position_finalized(
+                receiver_addr, get_bridge_id(), 1
+            ),
             2
         );
         // stage 4 distributed
@@ -1470,11 +1493,12 @@ module publisher::vip_test {
         );
         // stage 1 vesting position finalized
         assert!(
-            vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(), 1),
+            vip_vesting::is_user_vesting_position_finalized(receiver_addr, get_bridge_id(),
+                    1),
             3
         );
     }
-    
+
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun zapping_deregistered_bridge_vesting_positions(
         chain: &signer,
@@ -1552,7 +1576,7 @@ module publisher::vip_test {
             1_000_000_00
         );
         let (stages, merkle_proofs, l2_scores) = reset_claim_args();
-        
+
         // submit snapshot of stage 1; total score: 1000, receiver's score : 100
         // stage 1 snapshot submitted
         submit_snapshot_and_fund_reward(
@@ -1565,13 +1589,17 @@ module publisher::vip_test {
             &mut l2_scores
         );
 
-        // stage 1 claim & zapping 
+        // stage 1 claim & zapping
         vip::batch_claim_user_reward_script(
             receiver,
             get_bridge_id(),
             vector[vector::remove(&mut stages, 0)],
-            vector[vector::remove(&mut merkle_proofs, 0)],
-            vector[vector::remove(&mut l2_scores,0)],
+            vector[
+                vector::remove(&mut merkle_proofs, 0)
+            ],
+            vector[
+                vector::remove(&mut l2_scores, 0)
+            ],
         );
         let vesting1_initial_reward = vip_vesting::get_user_vesting_initial_reward(
             receiver_addr, get_bridge_id(), 1
@@ -1600,7 +1628,7 @@ module publisher::vip_test {
             &mut l2_scores
         );
         // deregister bridge
-        vip::deregister(publisher,get_bridge_id());
+        vip::deregister(publisher, get_bridge_id());
         // stage3 distributed
         only_fund_reward(
             publisher,
@@ -1626,7 +1654,7 @@ module publisher::vip_test {
             &mut merkle_proofs,
             &mut l2_scores
         );
-        
+
         // stage 5
         // total score: 1000, receiver's score : 100
         submit_snapshot_and_fund_reward(
@@ -1639,7 +1667,7 @@ module publisher::vip_test {
             &mut l2_scores
         );
         let vault_balance_before = vip_vault::balance();
-        
+
         // stage 2,3,4,5 claim
         vip::batch_claim_user_reward_script(
             receiver,
@@ -1657,7 +1685,7 @@ module publisher::vip_test {
             vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 1),
             6
         );
-        
+
         let vesting2_initial_reward = vip_vesting::get_user_vesting_initial_reward(
             receiver_addr, get_bridge_id(), 2
         );
@@ -1677,6 +1705,7 @@ module publisher::vip_test {
         )
 
     }
+
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_batch_zapping(
         chain: &signer,
