@@ -755,33 +755,6 @@ module publisher::vip {
         );
     }
 
-    // fun create_bridge_address(bridge_id:u64):address{
-    //     let module_type_hash: vector<u8> = vector[18,9,112,216,18,131,111,25,136,134,37,88,122,70,6,165,173,35,206,243,28,134,132,230,1,119,21,82,84,143,198,185];
-    //     let ophost_prefix: vector<u8> = vector[111,112,104,111,115,116,0];
-    //     vector::append(
-    //         &mut module_type_hash,
-    //         ophost_prefix
-    //     );
-    //     vector::reverse_append(
-    //         &mut module_type_hash,
-    //         bcs::to_bytes(&bridge_id)
-    //     );
-    //     let check_sum: vector<u8> = vector[128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,120];
-    //     vector::append(
-    //         &mut module_type_hash,
-    //         check_sum
-    //     );
-    //     let result = initia_std::hash::sha2_256(module_type_hash);
-    //     vector::for_each(
-    //         module_type_hash,
-    //         |byte| {
-    //             std::debug::print(&byte);
-    //         }
-    //     );
-    //     initia_std::from_bcs::to_address(result)
-
-    // }
-
     public fun is_registered(bridge_id: u64): bool acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
         if (!table::contains(
@@ -4491,10 +4464,4 @@ module publisher::vip {
             stakelisted_metadata,
         );
     }
-    // #[test]
-    // fun test_create_bridge_address() {
-    //     let bridge_id = 1;
-    //     let bridge_addr = create_bridge_address(bridge_id);
-    //     std::debug::print(&bridge_addr);
-    // }
 }
