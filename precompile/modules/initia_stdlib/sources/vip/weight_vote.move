@@ -42,7 +42,6 @@ module publisher::vip_weight_vote {
     const ECHALLENGE_ALREADY_EXECUTED: u64 = 16;
     const EINVALID_PARAMETER: u64 = 17;
     const EINVALID_BRIDGE: u64 = 18;
-
     const ENOT_FOUND: u64 = 101;
     //
     //  Constants
