@@ -384,12 +384,14 @@ module publisher::vip_weight_vote {
         );
         // get the last voted proposal 
         // execute proposal not executed
-        let proposal = table::borrow_mut(
-            &mut module_store.proposals,
-            table_key::encode_u64(module_store.current_cycle),
-        );
-        if(!proposal.executed&& proposal.voting_end_time < timestamp){
-            execute_proposal_internal(proposal,module_store.current_cycle);
+       if (module_store.current_cycle != 0 ){
+            let proposal = table::borrow_mut(
+                &mut module_store.proposals,
+                table_key::encode_u64(module_store.current_cycle),
+            );
+            if(!proposal.executed&& proposal.voting_end_time < timestamp){
+                execute_proposal_internal(proposal,module_store.current_cycle);
+            };
         };
         let voting_end_time = calculate_voting_end_time(timestamp, module_store);
         submit_snapshot_internal(
