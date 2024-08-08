@@ -896,7 +896,6 @@ module publisher::vip {
             error::already_exists(EALREADY_REGISTERED)
         );
         let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
-        // TODO: generate bridge address only by bridge id
         // register chain stores
         if (!vip_operator::is_bridge_registered(bridge_id)) {
             vip_operator::register_operator_store(
@@ -936,12 +935,12 @@ module publisher::vip {
             error::not_found(EBRIDGE_NOT_FOUND)
         );
 
-        let bridge_data = table::remove(
+        let bridge_data = table::borrow_mut(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id)
         );
 
-        table::add(
+        table::upsert(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id),
             Bridge {
@@ -982,7 +981,7 @@ module publisher::vip {
     }
 
     // add tvl snapshot of all bridges on this stage
-    public entry fun add_tvl_snapshot(agent: &signer,) acquires ModuleStore {
+    public entry fun add_tvl_snapshot(agent: &signer) acquires ModuleStore {
         check_agent_permission(agent);
         let module_store = borrow_global<ModuleStore>(@publisher);
         add_tvl_snapshot_internal(module_store);
@@ -1017,7 +1016,7 @@ module publisher::vip {
 
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
 
-        // add tvl snapshot for this stage before fund reward to final snapshot of current stage
+        // add tvl snapshot for this stage before funding reward to final snapshot of current stage
         add_tvl_snapshot_internal(module_store);
         // update stage
         module_store.stage = module_store.stage + 1;

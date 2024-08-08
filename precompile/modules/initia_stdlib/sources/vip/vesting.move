@@ -681,7 +681,7 @@ module publisher::vip_vesting {
                 }
             );
         };
-
+        
         vip_vault::withdraw(zapping_amount)
     }
 
@@ -814,10 +814,21 @@ module publisher::vip_vesting {
                 let vesting = vector::remove(user_vestings_cache, index);
                 let start_stage = vesting.start_stage;
                 // make user vesting position finalized
-                table::borrow_mut(
+                table::upsert(
                     user_vestings,
-                    table_key::encode_u64(start_stage)
-                ).finalized = true
+                    table_key::encode_u64(start_stage),
+                    UserVesting {
+                        finalized: true,
+                        initial_reward: vesting.initial_reward,
+                        remaining_reward: vesting.remaining_reward,
+                        penalty_reward: vesting.penalty_reward,
+                        start_stage: vesting.start_stage,
+                        end_stage: vesting.end_stage,
+                        vest_max_amount: vesting.vest_max_amount,
+                        l2_score: vesting.l2_score,
+                        minimum_score: vesting.minimum_score
+                    }
+                )
             }
         );
         (
@@ -868,10 +879,18 @@ module publisher::vip_vesting {
                 // remove vesting position is finalized from cache
                 let vesting = vector::remove(operator_vestings_cache, index);
                 // make user vesting position finalized
-                table::borrow_mut(
+                table::upsert(
                     operator_vestings,
-                    table_key::encode_u64(vesting.start_stage)
-                ).finalized = true;
+                    table_key::encode_u64(vesting.start_stage),
+                    OperatorVesting {
+                        finalized: true,
+                        initial_reward: vesting.initial_reward,
+                        remaining_reward: vesting.remaining_reward,
+                        start_stage: vesting.start_stage,
+                        end_stage: vesting.end_stage,
+                        vest_max_amount: vesting.vest_max_amount,
+                    }
+                )
             }
         );
 
@@ -1198,6 +1217,24 @@ module publisher::vip_vesting {
         stage: u64
     ): u64 acquires ModuleStore {
         get_user_vesting(account_addr, bridge_id, stage).initial_reward
+    }
+
+    #[test_only]
+    public fun get_user_vesting_remaining_reward(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_user_vesting(account_addr, bridge_id, stage).remaining_reward
+    }
+
+    #[test_only]
+    public fun get_user_vesting_penalty_reward(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_user_vesting(account_addr, bridge_id, stage).penalty_reward
     }
 
     #[test_only]
