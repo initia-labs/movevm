@@ -1139,7 +1139,7 @@ module publisher::vip_vesting {
     }
 
     //
-    // (only on compiler v1) for preventing compile error; because of inferring type issue
+    // (only on compiler v1) for preventing compile error; because of inferring type error
     //
     inline fun use_mut_user_vesting(_value: &mut UserVesting) {
     } inline fun use_mut_operator_vesting(_value: &mut OperatorVesting) {
