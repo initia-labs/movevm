@@ -962,7 +962,6 @@ module publisher::vip_weight_vote {
         snapshot_height: u64,
         voting_end_time: u64
     ) {
-
         // update cycle
         module_store.current_cycle = module_store.current_cycle + 1;
 
