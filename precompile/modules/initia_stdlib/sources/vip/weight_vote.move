@@ -41,7 +41,7 @@ module publisher::vip_weight_vote {
     const ECHALLENGE_IN_PROGRESS: u64 = 15;
     const ECHALLENGE_ALREADY_EXECUTED: u64 = 16;
     const EINVALID_PARAMETER: u64 = 17;
-    const EINVALID_BRIDGE:u64 = 18;
+    const EINVALID_BRIDGE: u64 = 18;
     //
     //  Constants
     //
@@ -373,7 +373,7 @@ module publisher::vip_weight_vote {
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
-        
+
         assert!(
             signer::address_of(submitter) == module_store.submitter,
             error::permission_denied(EUNAUTHORIZED)
@@ -382,15 +382,18 @@ module publisher::vip_weight_vote {
             module_store.cycle_end_timestamp < timestamp,
             error::invalid_state(ECYCLE_NOT_END)
         );
-        // get the last voted proposal 
+        // get the last voted proposal
         // execute proposal not executed
-       if (module_store.current_cycle != 0 ){
+        if (module_store.current_cycle != 0) {
             let proposal = table::borrow_mut(
                 &mut module_store.proposals,
                 table_key::encode_u64(module_store.current_cycle),
             );
-            if(!proposal.executed&& proposal.voting_end_time < timestamp){
-                execute_proposal_internal(proposal,module_store.current_cycle);
+            if (!proposal.executed && proposal.voting_end_time < timestamp) {
+                execute_proposal_internal(
+                    proposal,
+                    module_store.current_cycle
+                );
             };
         };
         let voting_end_time = calculate_voting_end_time(timestamp, module_store);
@@ -419,7 +422,10 @@ module publisher::vip_weight_vote {
         vector::for_each(
             bridge_ids,
             |bridge_id| {
-                assert!(vip::is_registered(bridge_id),error::invalid_argument(EINVALID_BRIDGE));
+                assert!(
+                    vip::is_registered(bridge_id),
+                    error::invalid_argument(EINVALID_BRIDGE)
+                );
             }
         );
         let weight_sum = decimal128::new(0);
@@ -451,7 +457,7 @@ module publisher::vip_weight_vote {
 
         // remove former vote
         if (table::contains(&proposal.votes, addr)) {
-            let WeightVote {voting_power:_, weights} = table::remove(&mut proposal.votes, addr);
+            let WeightVote {voting_power: _, weights} = table::remove(&mut proposal.votes, addr);
             remove_vote(proposal, max_voting_power, weights);
         };
 
@@ -513,7 +519,7 @@ module publisher::vip_weight_vote {
         let module_store = borrow_global_mut<ModuleStore>(@publisher);
         let (_, timestamp) = get_block_info();
 
-        // get the last voting proposal 
+        // get the last voting proposal
         // check vote state
         let proposal = table::borrow_mut(
             &mut module_store.proposals,
@@ -528,10 +534,16 @@ module publisher::vip_weight_vote {
             error::invalid_state(EPROPOSAL_ALREADY_EXECUTED)
         );
 
-        execute_proposal_internal(proposal, module_store.current_cycle);
+        execute_proposal_internal(
+            proposal,
+            module_store.current_cycle
+        );
     }
 
-    fun execute_proposal_internal(proposal: &mut Proposal,current_cycle: u64) {
+    fun execute_proposal_internal(
+        proposal: &mut Proposal,
+        current_cycle: u64
+    ) {
         // update vip weights
         let bridge_ids = vip::get_whitelisted_bridge_ids();
 
@@ -571,6 +583,7 @@ module publisher::vip_weight_vote {
         // update proposal state
         proposal.executed = true;
     }
+
     // challenge
 
     public entry fun create_challenge(
@@ -1252,20 +1265,21 @@ module publisher::vip_weight_vote {
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
 
-        let tally_responses:vector<TallyResponse> = vector[];
+        let tally_responses: vector<TallyResponse> = vector[];
 
         let bridge_ids = vip::get_whitelisted_bridge_ids();
 
         vector::for_each(
             bridge_ids,
             |bridge_id| {
-                let tally = table::borrow_with_default(&proposal.tally, table_key::encode_u64(bridge_id), &0);
+                let tally = table::borrow_with_default(
+                    &proposal.tally,
+                    table_key::encode_u64(bridge_id),
+                    &0
+                );
                 vector::push_back(
                     &mut tally_responses,
-                    TallyResponse {
-                        bridge_id,
-                        tally: *tally
-                    }
+                    TallyResponse {bridge_id, tally: *tally}
                 )
             }
         );
@@ -1651,7 +1665,7 @@ module publisher::vip_weight_vote {
                 decimal128::from_ratio(1, 5)
             ], // 32, 8 // user can vote with
         );
-        
+
         vote1 = get_tally(1, 1);
         vote2 = get_tally(1, 2);
         total_tally = get_total_tally(1);
@@ -1669,7 +1683,7 @@ module publisher::vip_weight_vote {
             vector[
                 decimal128::zero(),
                 decimal128::zero()
-            ], // 0, 0 
+            ], // 0, 0
         );
 
         vote1 = get_tally(1, 1);
@@ -1684,8 +1698,6 @@ module publisher::vip_weight_vote {
             vector::length(&weight_vote.weights) == 2,
             13
         );
-
-        
 
         skip_period(60);
         execute_proposal();
