@@ -7,7 +7,7 @@ use crate::table_storage::GoTableStorage;
 use crate::Db;
 use crate::GoStorage;
 
-use initia_move_gas::Gas;
+use initia_move_gas::InitiaGasMeter;
 use initia_move_storage::state_view_impl::StateViewImpl;
 use initia_move_storage::table_view_impl::TableViewImpl;
 use initia_move_types::access_path::AccessPath;
@@ -52,25 +52,24 @@ pub(crate) fn initialize_vm(
 
 pub(crate) fn execute_contract(
     vm: &mut MoveVM,
+    gas_meter: &mut InitiaGasMeter,
     db_handle: Db,
     api: GoApi,
     env: Env,
-    gas: u64,
     message: Message,
 ) -> Result<Vec<u8>, Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
-    let gas_limit = Gas::new(gas);
 
     let state_view_impl = StateViewImpl::new(&storage);
     let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
     let output = vm.execute_message(
+        gas_meter,
         &api,
         &env,
         &state_view_impl,
         &mut table_view_impl,
-        gas_limit,
         message,
     )?;
 
@@ -83,27 +82,25 @@ pub(crate) fn execute_contract(
 
 pub(crate) fn execute_script(
     vm: &mut MoveVM,
+    gas_meter: &mut InitiaGasMeter,
     db_handle: Db,
     api: GoApi,
     env: Env,
-    gas: u64,
     message: Message,
 ) -> Result<Vec<u8>, Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
-
-    let gas_limit = Gas::new(gas);
 
     // NOTE - storage passed as mut for iterator implementation
     let state_view_impl = StateViewImpl::new(&storage);
     let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
     let output = vm.execute_message(
+        gas_meter,
         &api,
         &env,
         &state_view_impl,
         &mut table_view_impl,
-        gas_limit,
         message,
     )?;
 
@@ -117,26 +114,25 @@ pub(crate) fn execute_script(
 // execute view function
 pub(crate) fn execute_view_function(
     vm: &mut MoveVM,
+    gas_meter: &mut InitiaGasMeter,
     db_handle: Db,
     api: GoApi,
     env: Env,
-    gas: u64,
     view_fn: ViewFunction,
 ) -> Result<Vec<u8>, Error> {
     let storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
-    let gas_limit = Gas::new(gas);
 
     let state_view_impl = StateViewImpl::new(&storage);
     let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
     let output = vm.execute_view_function(
+        gas_meter,
         &api,
         &env,
         &state_view_impl,
         &mut table_view_impl,
         &view_fn,
-        gas_limit,
     )?;
 
     to_vec(&output)

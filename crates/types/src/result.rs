@@ -10,7 +10,6 @@ pub struct ExecutionResult {
     staking_deltas: Vec<StakingDelta>,
     cosmos_messages: Vec<CosmosMessage>,
     new_accounts: Vec<Account>,
-    gas_used: u64,
     gas_usages: Vec<GasUsage>,
 }
 
@@ -20,7 +19,6 @@ impl ExecutionResult {
         staking_deltas: Vec<StakingDelta>,
         cosmos_messages: Vec<CosmosMessage>,
         new_accounts: Vec<Account>,
-        gas_used: u64,
         gas_usages: Vec<GasUsage>,
     ) -> Self {
         Self {
@@ -28,7 +26,6 @@ impl ExecutionResult {
             staking_deltas,
             cosmos_messages,
             new_accounts,
-            gas_used,
             gas_usages,
         }
     }

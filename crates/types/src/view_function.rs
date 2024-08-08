@@ -65,18 +65,11 @@ impl ViewFunction {
 pub struct ViewOutput {
     ret: String,
     events: Vec<JsonEvent>,
-
-    /// The amount of gas used during execution.
-    gas_used: u64,
 }
 
 impl ViewOutput {
-    pub fn new(ret: String, events: Vec<JsonEvent>, gas_used: u64) -> Self {
-        ViewOutput {
-            ret,
-            events,
-            gas_used,
-        }
+    pub fn new(ret: String, events: Vec<JsonEvent>) -> Self {
+        ViewOutput { ret, events }
     }
 
     pub fn ret(&self) -> &String {
@@ -85,9 +78,5 @@ impl ViewOutput {
 
     pub fn events(&self) -> &Vec<JsonEvent> {
         &self.events
-    }
-
-    pub fn gas_used(&self) -> u64 {
-        self.gas_used
     }
 }

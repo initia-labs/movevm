@@ -29,6 +29,8 @@ module minitia_std::nft {
     const EDESCRIPTION_TOO_LONG: u64 = 7;
     /// The query length is over the maximum length
     const EQUERY_LENGTH_TOO_LONG: u64 = 8;
+    /// The provided token id is invalid
+    const EINVALID_TOKEN_ID: u64 = 9;
 
     const MAX_NFT_TOKEN_ID_LENGTH: u64 = 128;
     const MAX_URI_LENGTH: u64 = 512;
@@ -79,6 +81,18 @@ module minitia_std::nft {
         uri: String,
     }
 
+    fun assert_token_id(token_id: &String) {
+        let len = string::length(token_id);
+        assert!(
+            len <= MAX_NFT_TOKEN_ID_LENGTH,
+            error::out_of_range(ENFT_TOKEN_ID_TOO_LONG)
+        );
+        assert!(
+            string::index_of(token_id, &string::utf8(b"::")) == len, 
+            error::invalid_argument(EINVALID_TOKEN_ID),
+        );
+    }
+
     inline fun create_common(
         constructor_ref: &ConstructorRef,
         creator_address: address,
@@ -88,10 +102,7 @@ module minitia_std::nft {
         royalty: Option<Royalty>,
         uri: String,
     ) {
-        assert!(
-            string::length(&token_id) <= MAX_NFT_TOKEN_ID_LENGTH,
-            error::out_of_range(ENFT_TOKEN_ID_TOO_LONG)
-        );
+        assert_token_id(&token_id);
         assert!(
             string::length(&description) <= MAX_DESCRIPTION_LENGTH,
             error::out_of_range(EDESCRIPTION_TOO_LONG)
@@ -468,6 +479,16 @@ module minitia_std::nft {
         );
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(option::none() == royalty(nft), 0);
+    }
+
+
+    #[test(creator = @0x123)]
+    #[expected_failure(abort_code = 0x10009, location = Self)]
+    fun test_create_nft_with_invalid_token_id(creator: &signer) {
+        let collection_name = string::utf8(b"collection name");
+        let token_id = string::utf8(b"nft token_id::hello");
+        create_collection_helper(creator, collection_name, 1);
+        create_nft_helper(creator, collection_name, token_id);
     }
 
     #[test(creator = @0x123)]

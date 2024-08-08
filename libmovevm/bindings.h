@@ -243,28 +243,28 @@ UnmanagedVector decode_script_bytes(UnmanagedVector *errmsg, ByteSliceView scrip
 void destroy_unmanaged_vector(UnmanagedVector v);
 
 UnmanagedVector execute_contract(vm_t *vm_ptr,
+                                 uint64_t *gas_balance_ptr,
                                  Db db,
                                  GoApi api,
                                  ByteSliceView env_payload,
-                                 uint64_t gas_limit,
                                  ByteSliceView senders,
                                  ByteSliceView entry_function_payload,
                                  UnmanagedVector *errmsg);
 
 UnmanagedVector execute_script(vm_t *vm_ptr,
+                               uint64_t *gas_balance_ptr,
                                Db db,
                                GoApi api,
                                ByteSliceView env_payload,
-                               uint64_t gas_limit,
                                ByteSliceView senders,
                                ByteSliceView script_payload,
                                UnmanagedVector *errmsg);
 
 UnmanagedVector execute_view_function(vm_t *vm_ptr,
+                                      uint64_t *gas_balance_ptr,
                                       Db db,
                                       GoApi api,
                                       ByteSliceView env_payload,
-                                      uint64_t gas_limit,
                                       ByteSliceView view_function_payload,
                                       UnmanagedVector *errmsg);
 

@@ -71,10 +71,10 @@ func Initialize(
 // script with write_op reflection
 func ExecuteContract(
 	vm VM,
+	gasBalance *uint64,
 	store KVStore,
 	api GoAPI,
 	env []byte,
-	gasLimit uint64,
 	senders []byte,
 	message []byte,
 ) ([]byte, error) {
@@ -95,8 +95,7 @@ func ExecuteContract(
 	defer runtime.KeepAlive(msg)
 
 	errmsg := uninitializedUnmanagedVector()
-
-	res, err := C.execute_contract(vm.ptr, db, _api, e, cu64(gasLimit), sendersView, msg, &errmsg)
+	res, err := C.execute_contract(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -108,10 +107,10 @@ func ExecuteContract(
 // entry function with write_op reflection
 func ExecuteScript(
 	vm VM,
+	gasBalance *uint64,
 	store KVStore,
 	api GoAPI,
 	env []byte,
-	gasLimit uint64,
 	senders []byte,
 	message []byte,
 ) ([]byte, error) {
@@ -133,7 +132,7 @@ func ExecuteScript(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute_script(vm.ptr, db, _api, e, cu64(gasLimit), sendersView, msg, &errmsg)
+	res, err := C.execute_script(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -145,10 +144,10 @@ func ExecuteScript(
 // #[view] function execution result
 func ExecuteViewFunction(
 	vm VM,
+	gasBalance *uint64,
 	store KVStore,
 	api GoAPI,
 	env []byte,
-	gasLimit uint64,
 	message []byte,
 ) ([]byte, error) {
 	var err error
@@ -168,7 +167,7 @@ func ExecuteViewFunction(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute_view_function(vm.ptr, db, _api, e, cu64(gasLimit), msg, &errmsg)
+	res, err := C.execute_view_function(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, msg, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)

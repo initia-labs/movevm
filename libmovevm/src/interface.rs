@@ -1,6 +1,6 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use crate::args::VM_ARG;
+use crate::args::{GAS_BALANCE_ARG, VM_ARG};
 use crate::error::{handle_c_error_binary, Error};
 use crate::move_api::handler as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
@@ -23,6 +23,15 @@ pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut MoveVM> {
         None
     } else {
         let c = unsafe { &mut *(ptr as *mut MoveVM) };
+        Some(c)
+    }
+}
+
+pub fn to_gas_balance(ptr: *mut u64) -> Option<&'static mut u64> {
+    if ptr.is_null() {
+        None
+    } else {
+        let c = unsafe { &mut *ptr };
         Some(c)
     }
 }
@@ -80,10 +89,10 @@ pub extern "C" fn initialize(
 #[no_mangle]
 pub extern "C" fn execute_contract(
     vm_ptr: *mut vm_t,
+    gas_balance_ptr: *mut u64,
     db: Db,
     api: GoApi,
     env_payload: ByteSliceView,
-    gas_limit: u64,
     senders: ByteSliceView,
     entry_function_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
@@ -94,13 +103,24 @@ pub extern "C" fn execute_contract(
         bcs::from_bytes(entry_function_payload.read().unwrap()).unwrap();
     let message: Message = Message::execute(senders, entry_function);
 
-    let res = match to_vm(vm_ptr) {
-        Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::execute_contract(vm, db, api, env, gas_limit, message)
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::unset_arg(VM_ARG)),
-    };
+    let res = to_vm(vm_ptr)
+        .ok_or(Error::unset_arg(VM_ARG))
+        .and_then(|vm| {
+            to_gas_balance(gas_balance_ptr)
+                .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
+                .and_then(|gas_balance| {
+                    catch_unwind(AssertUnwindSafe(move || {
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
+                        let res = vm::execute_contract(vm, &mut gas_meter, db, api, env, message);
+
+                        // update gas balance
+                        *gas_balance = gas_meter.balance().into();
+
+                        res
+                    }))
+                    .unwrap_or_else(|_| Err(Error::panic()))
+                })
+        });
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -110,10 +130,10 @@ pub extern "C" fn execute_contract(
 #[no_mangle]
 pub extern "C" fn execute_script(
     vm_ptr: *mut vm_t,
+    gas_balance_ptr: *mut u64,
     db: Db,
     api: GoApi,
     env_payload: ByteSliceView,
-    gas_limit: u64,
     senders: ByteSliceView,
     script_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
@@ -123,13 +143,24 @@ pub extern "C" fn execute_script(
     let senders: Vec<AccountAddress> = bcs::from_bytes(senders.read().unwrap()).unwrap();
     let message: Message = Message::script(senders, script);
 
-    let res = match to_vm(vm_ptr) {
-        Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::execute_script(vm, db, api, env, gas_limit, message)
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::unset_arg(VM_ARG)),
-    };
+    let res = to_vm(vm_ptr)
+        .ok_or(Error::unset_arg(VM_ARG))
+        .and_then(|vm| {
+            to_gas_balance(gas_balance_ptr)
+                .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
+                .and_then(|gas_balance| {
+                    catch_unwind(AssertUnwindSafe(move || {
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
+                        let res = vm::execute_script(vm, &mut gas_meter, db, api, env, message);
+
+                        // update gas balance
+                        *gas_balance = gas_meter.balance().into();
+
+                        res
+                    }))
+                    .unwrap_or_else(|_| Err(Error::panic()))
+                })
+        });
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
@@ -139,10 +170,10 @@ pub extern "C" fn execute_script(
 #[no_mangle]
 pub extern "C" fn execute_view_function(
     vm_ptr: *mut vm_t,
+    gas_balance_ptr: *mut u64,
     db: Db,
     api: GoApi,
     env_payload: ByteSliceView,
-    gas_limit: u64,
     view_function_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
@@ -150,13 +181,31 @@ pub extern "C" fn execute_view_function(
     let view_function: ViewFunction =
         bcs::from_bytes(view_function_payload.read().unwrap()).unwrap();
 
-    let res = match to_vm(vm_ptr) {
-        Some(vm) => catch_unwind(AssertUnwindSafe(move || {
-            vm::execute_view_function(vm, db, api, env, gas_limit, view_function)
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::unset_arg(VM_ARG)),
-    };
+    let res = to_vm(vm_ptr)
+        .ok_or(Error::unset_arg(VM_ARG))
+        .and_then(|vm| {
+            to_gas_balance(gas_balance_ptr)
+                .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
+                .and_then(|gas_balance| {
+                    catch_unwind(AssertUnwindSafe(move || {
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
+                        let res = vm::execute_view_function(
+                            vm,
+                            &mut gas_meter,
+                            db,
+                            api,
+                            env,
+                            view_function,
+                        );
+
+                        // update gas balance
+                        *gas_balance = gas_meter.balance().into();
+
+                        res
+                    }))
+                    .unwrap_or_else(|_| Err(Error::panic()))
+                })
+        });
 
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))

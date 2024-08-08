@@ -112,7 +112,9 @@ func publishModuleBundle(
 	require.NoError(t, err)
 
 	blockTime := uint64(time.Now().Unix())
+	gasBalance := uint64(100000000)
 	res, err := vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),
 		types.Env{
@@ -122,7 +124,6 @@ func publishModuleBundle(
 			TxHash:            [32]uint8(generateRandomHash()),
 			SessionId:         [32]uint8(generateRandomHash()),
 		},
-		100000000,
 		[]types.AccountAddress{testAccount},
 		types.EntryFunction{
 			Module: types.ModuleId{
@@ -140,7 +141,7 @@ func publishModuleBundle(
 		},
 	)
 	require.NoError(t, err)
-	require.NotZero(t, res.GasUsed)
+	require.Less(t, gasBalance, uint64(100000000))
 
 	// no gas usage report for publish module
 	require.NotEmpty(t, res.GasUsages)
@@ -171,7 +172,9 @@ func mintCoin(
 
 	blockTime := uint64(time.Now().Unix())
 
+	gasBalance := uint64(100000000)
 	res, err := vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),
 		types.Env{
@@ -181,7 +184,6 @@ func mintCoin(
 			TxHash:            [32]uint8(generateRandomHash()),
 			SessionId:         [32]uint8(generateRandomHash()),
 		},
-		100000000,
 		[]types.AccountAddress{minter},
 		payload,
 	)
@@ -195,7 +197,7 @@ func mintCoin(
 
 	eventDataJson := string(res.Events[0].EventData)
 	require.Equal(t, "{\"amount\":\"100\"}", eventDataJson)
-	require.NotZero(t, res.GasUsed)
+	require.Less(t, gasBalance, uint64(100000000))
 	require.NotEmpty(t, res.GasUsages)
 
 	addr, _ := types.NewAccountAddress("0x2")
@@ -254,6 +256,7 @@ func Test_FailOnExecute(t *testing.T) {
 	}
 
 	blockTime := uint64(time.Now().Unix())
+	gasBalance := uint64(100000000)
 	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
@@ -264,15 +267,16 @@ func Test_FailOnExecute(t *testing.T) {
 	}
 
 	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		100000000,
 		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "FUNCTION_RESOLUTION_FAILURE")
+	require.Less(t, gasBalance, uint64(100000000))
 }
 
 func Test_OutOfGas(t *testing.T) {
@@ -300,6 +304,7 @@ func Test_OutOfGas(t *testing.T) {
 	}
 
 	blockTime := uint64(time.Now().Unix())
+	gasBalance := uint64(1)
 	_api := api.NewEmptyMockAPI(blockTime)
 	env := types.Env{
 		BlockHeight:       100,
@@ -310,15 +315,16 @@ func Test_OutOfGas(t *testing.T) {
 	}
 
 	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		1,
 		[]types.AccountAddress{testAccount},
 		payload,
 	)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "OUT_OF_GAS")
+	require.Zero(t, gasBalance)
 }
 
 func Test_QueryContract(t *testing.T) {
@@ -358,15 +364,17 @@ func Test_QueryContract(t *testing.T) {
 		SessionId:         [32]uint8(generateRandomHash()),
 	}
 
+	gasBalance := uint64(10000)
 	res, err := vm.ExecuteViewFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		10000,
 		payload,
 	)
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("\"%d\"", mintAmount), res.Ret)
+	require.Less(t, gasBalance, uint64(10000))
 }
 
 func Test_DecodeResource(t *testing.T) {
@@ -446,11 +454,12 @@ func Test_ExecuteScript(t *testing.T) {
 		SessionId:         [32]uint8(generateRandomHash()),
 	}
 
+	gasBalance := uint64(200000)
 	res, err := vm.ExecuteScript(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		200000,
 		[]types.AccountAddress{testAccount},
 		payload,
 	)
@@ -465,7 +474,7 @@ func Test_ExecuteScript(t *testing.T) {
 	eventDataJson := res.Events[0].EventData
 
 	require.Equal(t, "{\"amount\":\"300\",\"coin_type\":\"0x2::TestCoin::Initia\"}", eventDataJson)
-	require.NotZero(t, res.GasUsed)
+	require.Less(t, gasBalance, uint64(200000))
 	require.NotEmpty(t, res.GasUsages)
 }
 
@@ -501,11 +510,12 @@ func Test_TableIterator(t *testing.T) {
 		SessionId:         [32]uint8(generateRandomHash()),
 	}
 
+	gasBalance := uint64(100000000)
 	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		100000000,
 		[]types.AccountAddress{testAccount},
 		payload,
 	)
@@ -522,11 +532,12 @@ func Test_TableIterator(t *testing.T) {
 		Args:     [][]byte{serializedTestAccount},
 	}
 
+	gasBalance = 100000000
 	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		100000000,
 		[]types.AccountAddress{testAccount},
 		payload,
 	)
@@ -543,11 +554,12 @@ func Test_TableIterator(t *testing.T) {
 		Args:     [][]byte{serializedTestAccount},
 	}
 
+	gasBalance = 100000000
 	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		100000000,
 		[]types.AccountAddress{testAccount},
 		payload,
 	)
@@ -586,11 +598,12 @@ func Test_OracleAPI(t *testing.T) {
 		SessionId:         [32]uint8(generateRandomHash()),
 	}
 
+	gasBalance := uint64(10000)
 	res, err := vm.ExecuteViewFunction(
+		&gasBalance,
 		kvStore,
 		_api,
 		env,
-		10000,
 		payload,
 	)
 	require.NoError(t, err)
