@@ -302,16 +302,17 @@ module publisher::vip_vesting {
         stage: u64
     ): &mut UserVesting {
         let user_vestings = load_user_vestings_mut(bridge_id, account_addr);
+        let stage_key = table_key::encode_u64(stage);
         assert!(
             table::contains(
                 user_vestings,
-                table_key::encode_u64(stage)
+                stage_key
             ),
             error::not_found(EINVALID_STAGE)
         );
         table::borrow_mut(
             user_vestings,
-            table_key::encode_u64(stage)
+            stage_key
         )
     }
 
@@ -339,9 +340,17 @@ module publisher::vip_vesting {
         stage: u64
     ): &mut OperatorVesting {
         let operator_vestings = load_operator_vestings_mut(bridge_id, account_addr);
+        let stage_key = table_key::encode_u64(stage);
+        assert!(
+            table::contains(
+                operator_vestings,
+                stage_key
+            ),
+            error::not_found(EINVALID_STAGE)
+        );
         table::borrow_mut(
             operator_vestings,
-            table_key::encode_u64(stage)
+            stage_key
         )
     }
 
@@ -638,18 +647,19 @@ module publisher::vip_vesting {
             &mut module_store.user_vestings,
             get_vesting_table_key(bridge_id, account_addr)
         );
+        let stage_key = table_key::encode_u64(stage);
         // force claim_vesting
         assert!(
             table::contains(
                 user_vestings,
-                table_key::encode_u64(stage)
+                stage_key
             ),
             error::not_found(EVESTING_NOT_FOUND)
         );
 
         let user_vesting = table::borrow_mut(
             user_vestings,
-            table_key::encode_u64(stage)
+            stage_key
         );
 
         assert!(
@@ -730,8 +740,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         stage: u64,
     ): bool acquires ModuleStore {
-        let user_vesting = load_user_vesting_mut(bridge_id, account_addr, stage);
-        user_vesting.finalized
+       load_user_vesting_mut(bridge_id, account_addr, stage).finalized
     }
 
     public fun is_operator_vesting_position_finalized(
@@ -739,8 +748,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         stage: u64,
     ): bool acquires ModuleStore {
-        let operator_vesting = load_operator_vesting_mut(bridge_id, account_addr, stage);
-        operator_vesting.finalized
+        load_operator_vesting_mut(bridge_id, account_addr, stage).finalized
     }
 
     // calculate user vesting til current stage
