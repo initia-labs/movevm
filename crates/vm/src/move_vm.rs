@@ -213,7 +213,7 @@ impl MoveVM {
                     Identifier::new(CODE_MODULE_NAME).unwrap(),
                 ),
                 &Identifier::new(INIT_GENESIS_FUNCTION_NAME).unwrap(),
-                &vec![],
+                &[],
             )?;
 
             // ignore the output

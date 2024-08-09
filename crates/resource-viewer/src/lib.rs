@@ -61,6 +61,7 @@ impl<'a, S: StateView> InitiaValueAnnotator<'a, S> {
         self.0.view_resource(tag, blob)
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn view_struct_fields(
         &self,
         tag: &StructTag,

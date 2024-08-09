@@ -181,7 +181,7 @@ pub fn validate_combine_signer_and_txn_args<M: MoveResolver>(
         state_view,
         &func.param_tys()[signer_param_cnt..],
         args,
-        &func.ty_args(),
+        func.ty_args(),
         allowed_structs,
         false,
         is_json,

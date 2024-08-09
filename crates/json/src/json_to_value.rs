@@ -196,7 +196,7 @@ pub fn convert_json_value_to_value(
                         ])]))
                     }
                     _ => {
-                        if type_.type_args.len() > 0 {
+                        if !type_.type_args.is_empty() {
                             return Err(deserialization_error_with_msg(
                                 "generic type not supported in json deserialization",
                             ));

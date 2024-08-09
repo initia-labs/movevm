@@ -41,7 +41,7 @@ fn native_marshal_internal(
     let value = x.read_ref().map_err(SafeNativeError::InvariantViolation)?;
 
     let (layout, has_identifier_mappings) =
-        context.type_to_type_layout_with_identifier_mappings(&ty)?;
+        context.type_to_type_layout_with_identifier_mappings(ty)?;
     if has_identifier_mappings {
         return Err(SafeNativeError::Abort {
             abort_code: EUNABLE_TO_MARSHAL_DELAYED_FIELD,
@@ -49,7 +49,7 @@ fn native_marshal_internal(
     }
 
     let move_value = value.as_move_value(&layout);
-    let annotated_layout = context.type_to_fully_annotated_layout(&ty)?;
+    let annotated_layout = context.type_to_fully_annotated_layout(ty)?;
     let decorated_value = move_value.decorate(&annotated_layout);
     let serde_value = serialize_move_value_to_json_value(&decorated_value).map_err(|_| {
         SafeNativeError::Abort {
@@ -101,14 +101,14 @@ fn native_unmarshal(
     let ty = &ty_args[0];
     let (_, has_identifier_mappings) = context
         .deref()
-        .type_to_type_layout_with_identifier_mappings(&ty)?;
+        .type_to_type_layout_with_identifier_mappings(ty)?;
     if has_identifier_mappings {
         return Err(SafeNativeError::Abort {
             abort_code: EUNABLE_TO_UNMARSHAL_DELAYED_FIELD,
         });
     }
 
-    let annotated_layout = context.type_to_fully_annotated_layout(&ty)?;
+    let annotated_layout = context.type_to_fully_annotated_layout(ty)?;
     let serde_bytes = safely_pop_arg!(arguments, Vec<u8>);
 
     let value = deserialize_json_to_value(&annotated_layout, &serde_bytes).map_err(|_| {

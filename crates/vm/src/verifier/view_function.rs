@@ -57,9 +57,9 @@ pub(crate) fn validate_view_function<M: MoveResolver>(
     let args = transaction_arg_validation::construct_args(
         session,
         move_resolver,
-        &func.param_tys(),
+        func.param_tys(),
         args,
-        &func.ty_args(),
+        func.ty_args(),
         allowed_structs,
         true,
         is_string,
