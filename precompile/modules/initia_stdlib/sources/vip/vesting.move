@@ -2,7 +2,6 @@ module publisher::vip_vesting {
     use std::error;
     use std::signer;
     use std::vector;
-    use std::option;
     use std::event;
     use std::type_info;
     use initia_std::fungible_asset::{ FungibleAsset };
@@ -1160,17 +1159,17 @@ module publisher::vip_vesting {
     //
     // (only on compiler v1) for preventing compile error; because of inferring type error
     //
-    inline fun use_mut_user_vesting(_value: &mut UserVesting) {
-    } inline fun use_mut_operator_vesting(_value: &mut OperatorVesting) {
-
-    } inline fun use_user_vesting_ref(_value: &UserVesting) {
-
-    } inline fun use_operator_vesting_ref(_value: &OperatorVesting) {
-
-    } inline fun use_user_vesting(_value: UserVesting) {
-
-    } inline fun use_operator_vesting(_value: OperatorVesting) {
-    }
+    inline fun use_mut_user_vesting(_value: &mut UserVesting) {} 
+    
+    inline fun use_mut_operator_vesting(_value: &mut OperatorVesting) {} 
+    
+    inline fun use_user_vesting_ref(_value: &UserVesting) {} 
+    
+    inline fun use_operator_vesting_ref(_value: &OperatorVesting) {} 
+    
+    inline fun use_user_vesting(_value: UserVesting) {} 
+    
+    inline fun use_operator_vesting(_value: OperatorVesting) {}
 
     //
     // Tests
@@ -1178,6 +1177,9 @@ module publisher::vip_vesting {
 
     #[test_only]
     use std::string;
+
+    #[test_only]
+    use std::option;
 
     #[test_only]
     use initia_std::coin;

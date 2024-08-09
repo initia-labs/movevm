@@ -271,6 +271,53 @@ module publisher::vip {
         create_time: u64,
     }
 
+    inline fun load_stage_data_mut(stage: u64): &mut StageData {
+
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let stage_key = table_key::encode_u64(stage);
+        assert!(
+            table::contains(&module_store.stage_data, stage_key),
+            error::not_found(ESTAGE_DATA_NOT_FOUND)
+        );
+        table::borrow_mut(
+            &mut module_store.stage_data,
+            table_key::encode_u64(stage)
+        )
+    }
+
+    inline fun load_snapshot_mut(stage: u64, bridge_id: u64): &mut Snapshot {
+
+        let stage_data = load_stage_data_mut(stage);
+        let bridge_id_key = table_key::encode_u64(bridge_id);
+        assert!(
+            table::contains(
+                &stage_data.snapshots,
+                bridge_id_key
+            ),
+            error::not_found(ESNAPSHOT_NOT_EXISTS)
+        );
+        table::borrow_mut(
+            &mut stage_data.snapshots,
+            table_key::encode_u64(bridge_id)
+        )
+    }
+
+    inline fun load_bridge_mut(bridge_id: u64): &mut Bridge {
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let bridge_id_key = table_key::encode_u64(bridge_id);
+        assert!(
+            table::contains(
+                &module_store.bridges,
+                bridge_id_key
+            ),
+            error::not_found(EBRIDGE_NOT_FOUND)
+        );
+        table::borrow_mut(
+            &mut module_store.bridges,
+            bridge_id_key
+        )
+    }
+
     //
     // Implementations
     //
@@ -431,11 +478,19 @@ module publisher::vip {
         bridge_id: u64,
         stage: u64,
     ) {
+        assert!(
+            table::contains(
+                &imut_module_store.bridges,
+                table_key::encode_u64(bridge_id)
+            ),
+            error::not_found(EBRIDGE_NOT_FOUND)
+        );
         // if current stage is init stage of bridge, then skip this check
-        let init_stage = load_bridge(
+        let init_stage = table::borrow(
             &imut_module_store.bridges,
-            bridge_id
+            table_key::encode_u64(bridge_id)
         ).init_stage;
+
         if (stage != init_stage) {
             let prev_stage_data = table::borrow(
                 &imut_module_store.stage_data,
@@ -449,40 +504,6 @@ module publisher::vip {
                 error::not_found(EPREV_STAGE_SNAPSHOT_NOT_FOUND)
             );
         };
-    }
-
-    fun load_bridge(
-        bridges: &Table<vector<u8>, Bridge>,
-        bridge_id: u64
-    ): &Bridge {
-        assert!(
-            table::contains(
-                bridges,
-                table_key::encode_u64(bridge_id)
-            ),
-            error::not_found(EBRIDGE_NOT_FOUND)
-        );
-        table::borrow(
-            bridges,
-            table_key::encode_u64(bridge_id)
-        )
-    }
-
-    fun load_bridge_mut(
-        bridges: &mut Table<vector<u8>, Bridge>,
-        bridge_id: u64
-    ): &mut Bridge {
-        assert!(
-            table::contains(
-                bridges,
-                table_key::encode_u64(bridge_id)
-            ),
-            error::not_found(EBRIDGE_NOT_FOUND)
-        );
-        table::borrow_mut(
-            bridges,
-            table_key::encode_u64(bridge_id)
-        )
     }
 
     fun zapping(
@@ -783,8 +804,19 @@ module publisher::vip {
 
         vector::enumerate_ref(
             &bridge_ids,
-            |i, id| {
-                let bridge = load_bridge_mut(&mut module_store.bridges, *id);
+            |i, bridge_id_ref| {
+                let bridge_id_key = table_key::encode_u64(*bridge_id_ref);
+                assert!(
+                    table::contains(
+                        &module_store.bridges,
+                        bridge_id_key
+                    ),
+                    error::not_found(EBRIDGE_NOT_FOUND)
+                );
+                let bridge = table::borrow_mut(
+                    &mut module_store.bridges,
+                    bridge_id_key
+                );
                 bridge.vip_weight = *vector::borrow(&weights, i);
             }
         );
@@ -909,7 +941,7 @@ module publisher::vip {
             );
         };
 
-        // add bridge info
+        // upsert bridge info
         table::upsert(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id),
@@ -926,20 +958,19 @@ module publisher::vip {
 
     public entry fun deregister(chain: &signer, bridge_id: u64,) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(signer::address_of(chain));
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
+        let bridge_id_key = table_key::encode_u64(bridge_id);
         assert!(
             table::contains(
                 &module_store.bridges,
-                table_key::encode_u64(bridge_id)
+                bridge_id_key
             ),
             error::not_found(EBRIDGE_NOT_FOUND)
         );
-
-        let bridge_data = table::borrow_mut(
-            &mut module_store.bridges,
-            table_key::encode_u64(bridge_id)
+        let bridge_data = table::borrow(
+            &module_store.bridges,
+            bridge_id_key
         );
-
         table::upsert(
             &mut module_store.bridges,
             table_key::encode_u64(bridge_id),
@@ -1145,48 +1176,19 @@ module publisher::vip {
         total_l2_score: u64,
     ) acquires ModuleStore {
         check_agent_permission(agent);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        assert!(
-            table::contains(
-                &module_store.stage_data,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(ESTAGE_DATA_NOT_FOUND)
-        );
-        let stage_data = table::borrow_mut(
-            &mut module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-
-        assert!(
-            table::contains(
-                &stage_data.snapshots,
-                table_key::encode_u64(bridge_id)
-            ),
-            error::not_found(ESNAPSHOT_NOT_EXISTS)
-        );
-
-        let snapshot = table::borrow_mut(
-            &mut stage_data.snapshots,
-            table_key::encode_u64(bridge_id)
-        );
+        let snapshot = load_snapshot_mut(stage, bridge_id);
         snapshot.merkle_root = merkle_root;
         snapshot.total_l2_score = total_l2_score;
     }
 
     fun check_claimable(bridge_id: u64, stage: u64): bool acquires ModuleStore {
         let (_, curr_time) = block::get_block_info();
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-        let snapshot_create_time = table::borrow(
-            &stage_data.snapshots,
-            table_key::encode_u64(bridge_id)
-        ).create_time;
+        let snapshot = load_snapshot_mut(stage, bridge_id);
+        let snapshot_create_time = snapshot.create_time;
 
-        curr_time > snapshot_create_time + module_store.challenge_period
+        let challenge_period = borrow_global_mut<ModuleStore>(@publisher).challenge_period;
+
+        curr_time > snapshot_create_time + challenge_period
     }
 
     public entry fun batch_claim_user_reward_script(
@@ -1405,13 +1407,9 @@ module publisher::vip {
         weight: Decimal256,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let bridge = load_bridge_mut(
-            &mut module_store.bridges,
-            bridge_id
-        );
+        let bridge = load_bridge_mut(bridge_id);
         bridge.vip_weight = weight;
-
+        let module_store = borrow_global_mut<ModuleStore>(@publisher);
         validate_vip_weights(module_store);
     }
 
@@ -1512,11 +1510,7 @@ module publisher::vip {
         new_vip_l2_score_contract: string::String,
     ) acquires ModuleStore {
         check_chain_permission(chain);
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let bridge = load_bridge_mut(
-            &mut module_store.bridges,
-            bridge_id
-        );
+        let bridge = load_bridge_mut(bridge_id);
         bridge.vip_l2_score_contract = new_vip_l2_score_contract;
     }
 
@@ -1525,11 +1519,7 @@ module publisher::vip {
         bridge_id: u64,
         new_operator_addr: address,
     ) acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@publisher);
-        let bridge = load_bridge_mut(
-            &mut module_store.bridges,
-            bridge_id
-        );
+        let bridge = load_bridge_mut(bridge_id);
         assert!(
             bridge.operator_addr == signer::address_of(operator),
             error::permission_denied(EUNAUTHORIZED)
@@ -1642,31 +1632,7 @@ module publisher::vip {
     //
     #[view]
     public fun get_snapshot(bridge_id: u64, stage: u64): SnapshotResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-
-        assert!(
-            table::contains(
-                &module_store.stage_data,
-                table_key::encode_u64(stage)
-            ),
-            error::not_found(ESTAGE_DATA_NOT_FOUND)
-        );
-        let snapshots = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-        assert!(
-            table::contains(
-                &snapshots.snapshots,
-                table_key::encode_u64(bridge_id)
-            ),
-            error::not_found(ESNAPSHOT_NOT_EXISTS)
-        );
-        let snapshot = table::borrow(
-            &snapshots.snapshots,
-            table_key::encode_u64(bridge_id)
-        );
-
+        let snapshot = load_snapshot_mut(stage, bridge_id);
         SnapshotResponse {
             create_time: snapshot.create_time,
             upsert_time: snapshot.upsert_time,
@@ -1739,12 +1705,7 @@ module publisher::vip {
 
     #[view]
     public fun get_stage_data(stage: u64): StageDataResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let stage_data = table::borrow(
-            &module_store.stage_data,
-            table_key::encode_u64(stage)
-        );
-
+        let stage_data = load_stage_data_mut(stage);
         StageDataResponse {
             stage_start_time: stage_data.stage_start_time,
             stage_end_time: stage_data.stage_end_time,
@@ -1758,9 +1719,7 @@ module publisher::vip {
 
     #[view]
     public fun get_bridge_info(bridge_id: u64): BridgeResponse acquires ModuleStore {
-        let module_store = borrow_global<ModuleStore>(@publisher);
-        let bridge = load_bridge(&module_store.bridges, bridge_id);
-
+        let bridge = load_bridge_mut(bridge_id);
         BridgeResponse {
             init_stage: bridge.init_stage,
             bridge_id: bridge_id,
@@ -1955,9 +1914,9 @@ module publisher::vip {
     //
     // (only on compiler v1) for preventing compile error; because of inferring type issue
     //
-    inline fun use_bridge(_bridge: &Bridge) {
-    } inline fun use_snapshot(_snapshot: &Snapshot) {
-    }
+    inline fun use_bridge(_bridge: &Bridge) {} 
+    
+    inline fun use_snapshot(_snapshot: &Snapshot) {}
 
     //
     // Test Functions
@@ -3908,10 +3867,7 @@ module publisher::vip {
             ),
         );
 
-        let init_stage = load_bridge(
-            &borrow_global<ModuleStore>(@publisher).bridges,
-            bridge_id1
-        ).init_stage;
+        let init_stage = load_bridge_mut(bridge_id1).init_stage;
         assert!(init_stage == 1, 1);
 
         let (
@@ -3979,10 +3935,7 @@ module publisher::vip {
                 &string::utf8(DEFAULT_COMMISSION_RATE_FOR_TEST)
             ),
         );
-        init_stage = load_bridge(
-            &borrow_global<ModuleStore>(@publisher).bridges,
-            bridge_id1
-        ).init_stage;
+        init_stage = load_bridge_mut(bridge_id1).init_stage;
         assert!(init_stage == 5, 2);
         // stage 5
         fund_reward_script(agent);
