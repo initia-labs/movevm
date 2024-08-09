@@ -1354,23 +1354,30 @@ module publisher::vip {
                     *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
-
-                // if there is no vesting store, register it
-                if (!vip_vesting::is_user_vesting_store_registered(
-                        signer::address_of(operator),
-                        bridge_id
-                    )) {
-                    vip_vesting::register_user_vesting_store(operator, bridge_id);
-                };
-
-                prev_stage = *s;
-
-                vector::push_back(
-                    &mut claimInfos,
-                    vip_vesting::build_operator_vesting_claim_infos(
-                        *s, *s + module_store.vesting_period,
-                    )
+                let stage_data = table::borrow(
+                    &module_store.stage_data,
+                    table_key::encode_u64(*s)
                 );
+                if (table::contains(
+                        &stage_data.snapshots,
+                        table_key::encode_u64(bridge_id)
+                    )) {
+                    // if there is no vesting store, register it
+                    if (!vip_vesting::is_user_vesting_store_registered(
+                            signer::address_of(operator),
+                            bridge_id
+                        )) {
+                        vip_vesting::register_user_vesting_store(operator, bridge_id);
+                    };
+
+                    vector::push_back(
+                        &mut claimInfos,
+                        vip_vesting::build_operator_vesting_claim_infos(
+                            *s, *s + module_store.vesting_period,
+                        )
+                    );
+                };
+                prev_stage = *s;
             }
         );
         // call batch claim user reward; return net reward(total vested reward - total penalty reward)
@@ -3337,7 +3344,7 @@ module publisher::vip {
         let (_, merkle_proof_map, score_map, _) = merkle_root_and_proof_scene1();
 
         test_setup_scene1(publisher, bridge_id);
-        // try claim user reward scriptl;without skipping challenge period
+        // try claim user reward script;without skipping challenge period
         batch_claim_user_reward_script(
             receiver,
             bridge_id,

@@ -681,7 +681,7 @@ module publisher::vip_vesting {
                 }
             );
         };
-        
+
         vip_vault::withdraw(zapping_amount)
     }
 
@@ -1253,6 +1253,15 @@ module publisher::vip_vesting {
         stage: u64
     ): u64 acquires ModuleStore {
         get_operator_vesting(account_addr, bridge_id, stage).initial_reward
+    }
+
+    #[test_only]
+    public fun get_operator_vesting_remaining_reward(
+        account_addr: address,
+        bridge_id: u64,
+        stage: u64
+    ): u64 acquires ModuleStore {
+        get_operator_vesting(account_addr, bridge_id, stage).remaining_reward
     }
 
     #[test_only]
