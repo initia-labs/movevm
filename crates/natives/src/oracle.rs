@@ -67,14 +67,16 @@ fn native_get_price(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.oracle.get_price;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
     let pair_id = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context
-        .charge(gas_params.base_cost + gas_params.per_byte * NumBytes::new(pair_id.len() as u64))?;
+    context.charge(
+        gas_params.oracle_get_price_base_cost
+            + gas_params.oracle_get_price_per_byte * NumBytes::new(pair_id.len() as u64),
+    )?;
 
     let oracle_context = context.extensions_mut().get_mut::<NativeOracleContext>();
     let (price, updated_at, decimals) = if let Some(item) = oracle_context.prices.get(&pair_id) {

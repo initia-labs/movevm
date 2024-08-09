@@ -10,6 +10,8 @@ rust-version = { workspace = true }
 [dependencies]
 initia-move-types = { workspace = true }
 initia-move-gas = { workspace = true }
+initia-move-json = { workspace = true }
+initia-move-storage = { workspace = true }
 
 anyhow = { workspace = true }
 bcs = { workspace = true }

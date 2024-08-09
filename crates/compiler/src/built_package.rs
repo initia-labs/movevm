@@ -54,6 +54,8 @@ pub fn build_model(package_path: &Path, build_config: BuildConfig) -> anyhow::Re
         ModelConfig {
             target_filter: None,
             all_files_as_targets: false,
+            compiler_version: move_model::metadata::CompilerVersion::V2_0,
+            language_version: move_model::metadata::LanguageVersion::V2_0,
         },
     )
 }

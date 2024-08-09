@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use initia_move_storage::{state_view::StateView, table_view::TableView};
+use initia_move_storage::{state_view::StateView, table_resolver::TableResolver};
 use std::{
     collections::BTreeMap,
     ops::{Bound, RangeBounds},
@@ -7,7 +7,6 @@ use std::{
 
 use initia_move_natives::{
     account::AccountAPI, oracle::OracleAPI, query::QueryAPI, staking::StakingAPI,
-    table::TableResolver,
 };
 use initia_move_types::{
     access_path::AccessPath, iterator::Order, table::TableHandle, write_set::WriteSet,
@@ -100,7 +99,7 @@ impl<'r> MockTableState<'r> {
     }
 }
 
-impl<'r> TableView for MockTableState<'r> {
+impl<'r> TableResolver for MockTableState<'r> {
     fn resolve_table_entry(
         &self,
         handle: &TableHandle,

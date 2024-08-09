@@ -1,57 +1,48 @@
 module minitia_std::address {
-    use std::string::{Self, String};
+    use std::string::String;
+    use std::bcs;
+    use minitia_std::from_bcs;
     use minitia_std::query;
-    use minitia_std::simple_json;
     use minitia_std::json;
-    use minitia_std::option;
+
+    struct FromSdkRequest has copy, drop {
+        sdk_addr: String,
+    }
+    struct FromSdkResponse has copy, drop {
+        vm_addr: address,
+    }
 
     public fun from_sdk(sdk_addr: String): address {
-        let obj = simple_json::empty();
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
-
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"sdk_addr")),
-            sdk_addr
-        );
-
-        let req = json::stringify(simple_json::to_json_object(&obj));
-        let res = query::query_custom(
+        let res = json::unmarshal<FromSdkResponse>(query::query_custom(
             b"from_sdk_address",
-            *string::bytes(&req)
-        );
-        let res = simple_json::from_json_object(json::parse(string::utf8(res)));
+            json::marshal(&FromSdkRequest {
+                sdk_addr: sdk_addr,
+            }),
+        ));
 
-        simple_json::increase_depth(&mut res);
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
+        res.vm_addr
+    }
 
-        from_string(json::as_string(data))
+    struct ToSdkRequest has copy, drop {
+        vm_addr: address,
+    }
+    struct ToSdkResponse has copy, drop {
+        sdk_addr: String,
     }
 
     public fun to_sdk(vm_addr: address): String {
-        let obj = simple_json::empty();
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
-
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"vm_addr")),
-            to_string(vm_addr)
-        );
-
-        let req = json::stringify(simple_json::to_json_object(&obj));
-        let res = query::query_custom(
+        let res = json::unmarshal<ToSdkResponse>(query::query_custom(
             b"to_sdk_address",
-            *string::bytes(&req)
-        );
-        let res = simple_json::from_json_object(json::parse(string::utf8(res)));
+            json::marshal(&ToSdkRequest {
+                vm_addr: vm_addr,
+            }),
+        ));
 
-        simple_json::increase_depth(&mut res);
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
-
-        json::as_string(data)
+        res.sdk_addr
     }
+
+    #[test_only]
+    use std::string;
 
     #[test]
     fun test_to_string() {
@@ -89,6 +80,15 @@ module minitia_std::address {
         assert!(addr == from_sdk(addr_sdk), 0)
     }
 
-    public native fun to_string(addr: address): String;
-    public native fun from_string(addr_str: String): address;
+    // string <> address
+    native public fun to_string(addr: address): String;
+    native public fun from_string(addr_str: String): address;
+
+    // bytes <> address
+    public fun to_bytes(addr: address): vector<u8> {
+        bcs::to_bytes(&addr)
+    }
+    public fun from_bytes(bytes: vector<u8>): address {
+        from_bcs::to_address(bytes)
+    }
 }

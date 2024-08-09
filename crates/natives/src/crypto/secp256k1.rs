@@ -31,8 +31,8 @@ pub fn native_verify(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.crypto.secp256k1;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.crypto_secp256k1_base)?;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -50,7 +50,7 @@ pub fn native_verify(
         }
     };
 
-    context.charge(gas_params.per_pubkey_deserialize * NumArgs::one())?;
+    context.charge(gas_params.crypto_secp256k1_per_pubkey_deserialize * NumArgs::one())?;
     let pk = match read_pubkey(&pubkey) {
         Ok(pk) => match PublicKey::parse_compressed(&pk) {
             Ok(pk) => pk,
@@ -59,7 +59,7 @@ pub fn native_verify(
         Err(_) => return Ok(smallvec![Value::bool(false)]),
     };
 
-    context.charge(gas_params.per_sig_deserialize * NumArgs::one())?;
+    context.charge(gas_params.crypto_secp256k1_per_sig_deserialize * NumArgs::one())?;
     let sig = match read_signature(&signature) {
         Ok(sig) => match Signature::parse_standard(&sig) {
             Ok(sig) => sig,
@@ -68,7 +68,7 @@ pub fn native_verify(
         Err(_) => return Ok(smallvec![Value::bool(false)]),
     };
 
-    context.charge(gas_params.per_sig_verify * NumArgs::one())?;
+    context.charge(gas_params.crypto_secp256k1_per_sig_verify * NumArgs::one())?;
     Ok(smallvec![Value::bool(verify(&msg, &sig, &pk))])
 }
 
@@ -89,8 +89,8 @@ pub fn native_recover_public_key(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.crypto.secp256k1;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.crypto_secp256k1_base)?;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -117,7 +117,7 @@ pub fn native_recover_public_key(
         }
     };
 
-    context.charge(gas_params.per_sig_deserialize * NumArgs::one())?;
+    context.charge(gas_params.crypto_secp256k1_per_sig_deserialize * NumArgs::one())?;
     let sig = match read_signature(&signature) {
         Ok(sig) => match Signature::parse_standard(&sig) {
             Ok(sig) => sig,
@@ -134,7 +134,7 @@ pub fn native_recover_public_key(
         }
     };
 
-    context.charge(gas_params.per_ecdsa_recover * NumArgs::one())?;
+    context.charge(gas_params.crypto_secp256k1_per_ecdsa_recover * NumArgs::one())?;
     match recover(&msg, &sig, &rid) {
         Ok(pk) => Ok(smallvec![
             Value::vector_u8(pk.serialize_compressed()),

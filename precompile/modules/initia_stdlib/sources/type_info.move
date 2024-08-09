@@ -19,9 +19,9 @@ module initia_std::type_info {
         type_info.struct_name
     }
 
-    public native fun type_of<T>(): TypeInfo;
+    native public fun type_of<T>(): TypeInfo;
 
-    public native fun type_name<T>(): string::String;
+    native public fun type_name<T>(): string::String;
 
     #[test]
     fun test() {

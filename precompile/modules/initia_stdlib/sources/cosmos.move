@@ -8,9 +8,15 @@ module initia_std::cosmos {
     use std::fungible_asset::Metadata;
     use std::collection::{ Collection };
 
-    use initia_std::option;
     use initia_std::json;
-    use initia_std::simple_json;
+
+    struct VoteRequest has copy, drop {
+        tt: String,
+        proposal_id: u64,
+        voter: String,
+        option: u64,
+        metadata: String,
+    }
 
     public entry fun stargate_vote(
         sender: &signer,
@@ -19,45 +25,19 @@ module initia_std::cosmos {
         option: u64,
         metadata: String
     ) {
-        let obj = simple_json::empty();
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
-        simple_json::set_int_raw(
-            &mut obj,
-            option::some(string::utf8(b"proposal_id")),
-            true,
-            (proposal_id as u256)
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"voter")),
-            voter
-        );
-        simple_json::set_int_raw(
-            &mut obj,
-            option::some(string::utf8(b"option")),
-            true,
-            (option as u256)
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"metadata")),
-            metadata
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"@type")),
-            string::utf8(b"/cosmos.gov.v1.MsgVote")
-        );
-
-        let req = json::stringify(simple_json::to_json_object(&obj));
-        stargate(sender, req);
+        stargate(sender, json::marshal(&VoteRequest {
+            tt: string::utf8(b"/cosmos.gov.v1.MsgVote"),
+            proposal_id,
+            voter,
+            option,
+            metadata,
+        }));
     }
 
-    public entry fun stargate(sender: &signer, data: String,) {
+    public entry fun stargate(sender: &signer, data: vector<u8>) {
         stargate_internal(
             signer::address_of(sender),
-            *string::bytes(&data),
+            data,
         )
     }
 

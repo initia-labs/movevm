@@ -26,6 +26,7 @@ once_cell = { workspace = true }
 initia-move-natives = { workspace = true, features = ["testing"] }
 initia-move-gas = { workspace = true, features = ["testing"] }
 initia-move-types = { workspace = true }
+initia-move-storage = { workspace = true }
 
 move-command-line-common = { workspace = true }
 move-cli = { workspace = true }

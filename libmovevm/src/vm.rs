@@ -9,7 +9,6 @@ use crate::GoStorage;
 
 use initia_move_gas::InitiaGasMeter;
 use initia_move_storage::state_view_impl::StateViewImpl;
-use initia_move_storage::table_view_impl::TableViewImpl;
 use initia_move_types::access_path::AccessPath;
 use initia_move_types::env::Env;
 use initia_move_types::errors::BackendError;
@@ -33,12 +32,11 @@ pub(crate) fn initialize_vm(
     let mut table_storage = GoTableStorage::new(&db_handle);
 
     let state_view_impl = StateViewImpl::new(&storage);
-    let mut table_view_impl = TableViewImpl::new(&mut table_storage);
     let output = vm.initialize(
         &api,
         &env,
         &state_view_impl,
-        &mut table_view_impl,
+        &mut table_storage,
         module_bundle,
         allowed_publishers,
     )?;
@@ -62,14 +60,13 @@ pub(crate) fn execute_contract(
     let mut table_storage = GoTableStorage::new(&db_handle);
 
     let state_view_impl = StateViewImpl::new(&storage);
-    let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
     let output = vm.execute_message(
         gas_meter,
         &api,
         &env,
         &state_view_impl,
-        &mut table_view_impl,
+        &mut table_storage,
         message,
     )?;
 
@@ -93,14 +90,13 @@ pub(crate) fn execute_script(
 
     // NOTE - storage passed as mut for iterator implementation
     let state_view_impl = StateViewImpl::new(&storage);
-    let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
     let output = vm.execute_message(
         gas_meter,
         &api,
         &env,
         &state_view_impl,
-        &mut table_view_impl,
+        &mut table_storage,
         message,
     )?;
 
@@ -124,14 +120,13 @@ pub(crate) fn execute_view_function(
     let mut table_storage = GoTableStorage::new(&db_handle);
 
     let state_view_impl = StateViewImpl::new(&storage);
-    let mut table_view_impl = TableViewImpl::new(&mut table_storage);
 
     let output = vm.execute_view_function(
         gas_meter,
         &api,
         &env,
         &state_view_impl,
-        &mut table_view_impl,
+        &mut table_storage,
         &view_fn,
     )?;
 

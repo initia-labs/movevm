@@ -46,11 +46,7 @@ fn native_write_module_event_to_store(
     mut ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .event
-        .write_module_event_to_store;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.len() == 1);
     debug_assert!(arguments.len() == 1);
@@ -59,7 +55,9 @@ fn native_write_module_event_to_store(
     let msg = arguments.pop_back().unwrap();
 
     context.charge(
-        gas_params.base + gas_params.per_abstract_value_unit * context.abs_val_size(&msg),
+        gas_params.event_write_module_event_to_store_base
+            + gas_params.event_write_module_event_to_store_per_abstract_value_unit
+                * context.abs_val_size(&msg),
     )?;
     let type_tag = context.type_to_type_tag(&ty)?;
 

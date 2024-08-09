@@ -15,6 +15,7 @@ pub mod crypto;
 pub mod debug;
 pub mod event;
 pub mod from_bcs;
+pub mod function_info;
 pub mod json;
 pub mod keccak;
 pub mod move_stdlib;

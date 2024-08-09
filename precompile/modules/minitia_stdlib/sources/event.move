@@ -8,7 +8,7 @@ module minitia_std::event {
     native fun write_module_event_to_store<T: drop + store>(msg: T);
 
     #[test_only]
-    public native fun emitted_events<T: drop + store>(): vector<T>;
+    native public fun emitted_events<T: drop + store>(): vector<T>;
 
     #[test_only]
     public fun was_event_emitted<T: drop + store>(msg: &T): bool {

@@ -9,12 +9,13 @@ use move_core_types::{
 };
 use serde_json::{Map, Value as JSONValue};
 
-use crate::json::errors::deserialization_error_with_msg;
+use crate::errors::deserialization_error_with_msg;
 
-pub(crate) fn convert_move_value_to_json_value(
-    val: &MoveValue,
-    depth: usize,
-) -> VMResult<JSONValue> {
+pub fn serialize_move_value_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
+    convert_move_value_to_json_value(val, 1)
+}
+
+fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<JSONValue> {
     const MAX_RECURSIVE_DEPTH: usize = 10;
     if depth > MAX_RECURSIVE_DEPTH {
         return Err(deserialization_error_with_msg(format!(
@@ -50,19 +51,18 @@ pub(crate) fn convert_move_value_to_json_value(
             ))
         }
         MoveValue::Struct(s) => match s {
-            MoveStruct::Runtime(values) => {
+            MoveStruct::Runtime(values) | MoveStruct::RuntimeVariant(_, values) => {
                 let mut fields_array: Vec<JSONValue> = vec![];
                 for mv in values.iter() {
                     fields_array.push(convert_move_value_to_json_value(mv, depth + 1)?);
                 }
                 Ok(JSONValue::Array(fields_array))
             }
-            MoveStruct::WithFields(fields) => {
+            MoveStruct::WithFields(fields) | MoveStruct::WithVariantFields(_, _, fields) => {
                 let mut fields_map: Map<String, JSONValue> = Map::new();
                 for (id, mv) in fields.iter() {
-                    let field_name = id.as_str().to_string();
                     let value = convert_move_value_to_json_value(mv, depth + 1)?;
-                    let _ = fields_map.insert(field_name, value);
+                    let _ = fields_map.insert(id.to_string(), value);
                 }
 
                 Ok(JSONValue::Object(fields_map))
@@ -84,9 +84,14 @@ pub(crate) fn convert_move_value_to_json_value(
                 } else {
                     let mut fields_map: Map<String, JSONValue> = Map::new();
                     for (id, mv) in fields.iter() {
-                        let field_name = id.as_str().to_string();
+                        let field_name = match id.as_str() {
+                            "tt" => "@type",
+                            "mm" => "move",
+                            v => v,
+                        };
+
                         let value = convert_move_value_to_json_value(mv, depth + 1)?;
-                        let _ = fields_map.insert(field_name, value);
+                        let _ = fields_map.insert(field_name.to_string(), value);
                     }
 
                     Ok(JSONValue::Object(fields_map))
@@ -256,7 +261,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("option").into(),
                 name: ident_str!("Option").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(
                 ident_str!("vec").into(),
@@ -272,7 +277,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("option").into(),
                 name: ident_str!("Option").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(ident_str!("vec").into(), MoveValue::Vector(vec![]))],
         });
@@ -286,7 +291,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("decimal128").into(),
                 name: ident_str!("Decimal128").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(
                 ident_str!("val").into(),
@@ -302,7 +307,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("decimal256").into(),
                 name: ident_str!("Decimal256").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(
                 ident_str!("val").into(),
@@ -318,7 +323,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("fixed_point32").into(),
                 name: ident_str!("FixedPoint32").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(
                 ident_str!("val").into(),
@@ -334,7 +339,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("fixed_point64").into(),
                 name: ident_str!("FixedPoint64").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(
                 ident_str!("val").into(),
@@ -351,7 +356,7 @@ mod move_to_json_tests {
                 address: CORE_CODE_ADDRESS,
                 module: ident_str!("object").into(),
                 name: ident_str!("Object").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
             fields: vec![(
                 ident_str!("val").into(),

@@ -1,0 +1,17 @@
+[package]
+name = "initia-move-resource-viewer"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/resource-viewer"
+rust-version = { workspace = true }
+
+[dependencies]
+initia-move-types = { workspace = true }
+initia-move-storage = { workspace = true }
+
+move-binary-format = { workspace = true }
+move-bytecode-utils = { workspace = true }
+move-core-types = { workspace = true }
+move-resource-viewer = { workspace = true }
+
+anyhow = { workspace = true }

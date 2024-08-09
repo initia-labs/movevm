@@ -20,7 +20,6 @@ module initia_std::minitswap {
     use initia_std::fungible_asset::{Self, FungibleAsset, Metadata};
     use initia_std::primary_fungible_store;
     use initia_std::coin;
-    use initia_std::simple_json;
     use initia_std::json;
     use initia_std::string_utils::to_string;
     use initia_std::hex;
@@ -2398,6 +2397,53 @@ module initia_std::minitswap {
         }
     }
 
+    struct IBCMemo has copy, drop {
+        mm: MemoMove,
+        wasm: Option<MemoWasm>,
+    }
+
+    struct MemoMove has copy, drop {
+        message: Option<MemoMoveMessage>,
+        async_callback: MemoAsyncCallback,
+    }
+
+    struct MemoAsyncCallback has copy, drop {
+        id: u64,
+        module_address: address,
+        module_name: String,
+    }
+
+    struct MemoMoveMessage has copy, drop {
+        module_address: String,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<String>,
+    }
+
+    struct MemoWasm has copy, drop {
+        message: MemoWasmMessage,
+    }
+
+    struct MemoWasmMessage has copy, drop {
+        contracts: String,
+        funds: vector<MemoWasmFunds>,
+        msg: MemoWasmMinitswapHook,
+    }
+
+    struct MemoWasmFunds has copy, drop {
+        denom: String,
+        amount: String,
+    }
+
+    struct MemoWasmMinitswapHook has copy, drop {
+        minitswap_hook: MemoWasmMinitswapHookMsg,
+    }
+
+    struct MemoWasmMinitswapHookMsg has copy, drop {
+        receiver: String,
+    }
+
     fun send_ibc_message(
         module_store: &ModuleStore,
         pool: &mut VirtualPool,
@@ -2406,7 +2452,6 @@ module initia_std::minitswap {
         amount: u64,
     ) {
         // create memo (ibc hook)
-        let obj = simple_json::empty();
         let receiver = to_sdk(
             object::address_from_extend_ref(&pool.extend_ref)
         );
@@ -2414,85 +2459,33 @@ module initia_std::minitswap {
             pool.op_bridge_id,
             string::utf8(b"uinit")
         );
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
 
         // set async callback
-        simple_json::set_object(
-            &mut obj,
-            option::some<String>(string::utf8(b"move"))
-        );
-        simple_json::increase_depth(&mut obj);
-        simple_json::set_object(
-            &mut obj,
-            option::some<String>(string::utf8(b"async_callback"))
-        );
-        simple_json::increase_depth(&mut obj);
-        simple_json::set_int_raw(
-            &mut obj,
-            option::some<String>(string::utf8(b"id")),
-            true,
-            (batch_index as u256)
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"module_address")),
-            to_string(&bcs::to_bytes(&@initia_std))
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"module_name")),
-            string::utf8(b"minitswap")
-        );
-        simple_json::decrease_depth(&mut obj);
-
+        let memo = IBCMemo {
+            mm: MemoMove {
+                message: option::none(),
+                async_callback: MemoAsyncCallback {
+                    id: batch_index,
+                    module_address: @initia_std,
+                    module_name: string::utf8(b"minitswap"),
+                },
+            },
+            wasm: option::none(),
+        };
+        
         // set hook message
         let ibc_receiver = if (pool.vm_type == MOVE) {
-            simple_json::set_object(
-                &mut obj,
-                option::some<String>(string::utf8(b"message"))
-            );
-            simple_json::increase_depth(&mut obj);
-            simple_json::set_string(
-                &mut obj,
-                option::some(string::utf8(b"module_address")),
-                pool.hook_contract
-            );
-            simple_json::set_string(
-                &mut obj,
-                option::some(string::utf8(b"module_name")),
-                string::utf8(b"minitswap_hook")
-            );
-            simple_json::set_string(
-                &mut obj,
-                option::some(string::utf8(b"function_name")),
-                string::utf8(b"minitswap_hook")
-            );
-            simple_json::set_array(
-                &mut obj,
-                option::some(string::utf8(b"type_args"))
-            );
-            simple_json::set_array(
-                &mut obj,
-                option::some(string::utf8(b"args"))
-            );
-            simple_json::increase_depth(&mut obj);
-
-            simple_json::set_string(
-                &mut obj,
-                option::none<String>(),
-                base64::to_string(bcs::to_bytes(&op_denom))
-            ); // denom
-            simple_json::set_string(
-                &mut obj,
-                option::none<String>(),
-                base64::to_string(bcs::to_bytes(&amount))
-            ); // amount
-            simple_json::set_string(
-                &mut obj,
-                option::none<String>(),
-                base64::to_string(bcs::to_bytes(&receiver))
-            ); // receiver
+            memo.mm.message = option::some(MemoMoveMessage {
+                module_address: pool.hook_contract,
+                module_name: string::utf8(b"minitswap_hook"),
+                function_name: string::utf8(b"minitswap_hook"),
+                type_args: vector[],
+                args: vector[
+                    base64::to_string(bcs::to_bytes(&op_denom)),
+                    base64::to_string(bcs::to_bytes(&amount)),
+                    base64::to_string(bcs::to_bytes(&receiver)),
+                ],
+            });
 
             let ibc_receiver = pool.hook_contract;
             string::append(
@@ -2504,68 +2497,29 @@ module initia_std::minitswap {
             ibc_receiver
         }
         else if (pool.vm_type == COSMWASM) {
-            simple_json::decrease_depth(&mut obj);
-            simple_json::set_object(
-                &mut obj,
-                option::some<String>(string::utf8(b"wasm"))
-            );
-            simple_json::increase_depth(&mut obj);
-
-            simple_json::set_object(
-                &mut obj,
-                option::some<String>(string::utf8(b"message"))
-            );
-            simple_json::increase_depth(&mut obj);
-
-            simple_json::set_string(
-                &mut obj,
-                option::some(string::utf8(b"contract")),
-                pool.hook_contract
-            );
-
-            simple_json::set_array(
-                &mut obj,
-                option::some(string::utf8(b"funds"))
-            );
-            simple_json::increase_depth(&mut obj);
-
-            simple_json::set_object(&mut obj, option::none<String>());
-            simple_json::increase_depth(&mut obj);
-            simple_json::set_string(
-                &mut obj,
-                option::some(string::utf8(b"denom")),
-                op_denom
-            );
-            simple_json::set_string(
-                &mut obj,
-                option::some(string::utf8(b"amount")),
-                to_string(&amount)
-            );
-            simple_json::decrease_depth(&mut obj);
-            simple_json::decrease_depth(&mut obj);
-
-            simple_json::set_object(
-                &mut obj,
-                option::some<String>(string::utf8(b"msg"))
-            );
-            simple_json::increase_depth(&mut obj);
-            simple_json::set_object(
-                &mut obj,
-                option::some<String>(string::utf8(b"minitswap_hook"))
-            );
-            simple_json::increase_depth(&mut obj);
-            simple_json::set_string(
-                &mut obj,
-                option::some<String>(string::utf8(b"receiver")),
-                receiver
-            ); // receiver
+            memo.wasm = option::some(MemoWasm {
+                message: MemoWasmMessage {
+                    contracts: pool.hook_contract,
+                    funds: vector[
+                        MemoWasmFunds {
+                            denom: op_denom,
+                            amount: to_string(&amount),
+                        },
+                    ],
+                    msg: MemoWasmMinitswapHook {
+                        minitswap_hook: MemoWasmMinitswapHookMsg {
+                            receiver,
+                        },
+                    },
+                },
+            });
 
             pool.hook_contract
         } else {
             abort(error::invalid_argument(EVM_TYPE))
         };
 
-        let memo = json::stringify(simple_json::to_json_object(&obj));
+        let memo = json::marshal_to_string(&memo);
 
         // execute ibc transfer
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
@@ -2585,6 +2539,26 @@ module initia_std::minitswap {
         )
     }
 
+    struct FinalizeTokenWithdrawalRequest has copy, drop {
+        tt: String,
+        bridge_id: u64,
+        output_index: u64,
+        withdrawal_proofs: vector<String>,
+        sender: String,
+        receiver: String,
+        sequence: u64,
+        amount: CosmosCoin,
+        version: String,
+        state_root: String,
+        storage_root: String,
+        latest_block_hash: String,
+    }
+
+    struct CosmosCoin has copy, drop {
+        denom: String,
+        amount: u64,
+    }
+
     fun generate_finalize_token_withdrawal_msg(
         bridge_id: u64,
         output_index: u64,
@@ -2598,96 +2572,24 @@ module initia_std::minitswap {
         state_root: String,
         storage_root: String,
         latest_block_hash: String,
-    ): String {
-        let obj = simple_json::empty();
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"@type")),
-            string::utf8(
-                b"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal"
-            )
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"bridge_id")),
-            to_string(&bridge_id)
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"output_index")),
-            to_string(&output_index)
-        );
-        simple_json::set_array(
-            &mut obj,
-            option::some(string::utf8(b"withdrawal_proofs"))
-        );
-        simple_json::increase_depth(&mut obj);
-        vector::for_each(
+    ): vector<u8> {
+        json::marshal(&FinalizeTokenWithdrawalRequest {
+            tt: string::utf8(b"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal"),
+            bridge_id,
+            output_index,
             withdrawal_proofs,
-            |proof| {
-                simple_json::set_string(
-                    &mut obj,
-                    option::none<String>(),
-                    proof
-                );
-            }
-        );
-        simple_json::decrease_depth(&mut obj);
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"sender")),
-            to_sdk(sender)
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"receiver")),
-            to_sdk(receiver)
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"sequence")),
-            to_string(&sequence)
-        );
-        simple_json::set_object(
-            &mut obj,
-            option::some(string::utf8(b"amount"))
-        );
-        simple_json::increase_depth(&mut obj);
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"denom")),
-            denom
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"amount")),
-            to_string(&amount)
-        );
-        simple_json::decrease_depth(&mut obj);
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"version")),
-            version
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"state_root")),
-            state_root
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"storage_root")),
-            storage_root
-        );
-        simple_json::set_string(
-            &mut obj,
-            option::some(string::utf8(b"latest_block_hash")),
-            latest_block_hash
-        );
-
-        json::stringify(simple_json::to_json_object(&obj))
+            sender: to_sdk(sender),
+            receiver: to_sdk(receiver),
+            sequence,
+            amount: CosmosCoin {
+                denom,
+                amount,
+            },
+            version,
+            state_root,
+            storage_root,
+            latest_block_hash,
+        })
     }
 
     fun init_metadata(): Object<Metadata> {
@@ -3331,9 +3233,8 @@ module initia_std::minitswap {
             string::utf8(b"storage_root"),
             string::utf8(b"latest_block_hash"),
         );
-        let json_str = string::utf8(
-            b"{\"@type\":\"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal\",\"amount\":{\"amount\":\"100\",\"denom\":\"uinit\"},\"bridge_id\":\"1\",\"latest_block_hash\":\"latest_block_hash\",\"output_index\":\"2\",\"receiver\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzwsp0lj\",\"sender\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqr5e3d\",\"sequence\":\"3\",\"state_root\":\"state_root\",\"storage_root\":\"storage_root\",\"version\":\"version\",\"withdrawal_proofs\":[\"abc\",\"123\"]}"
-        );
+        let json_str = 
+            b"{\"@type\":\"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal\",\"amount\":{\"amount\":\"100\",\"denom\":\"uinit\"},\"bridge_id\":\"1\",\"latest_block_hash\":\"latest_block_hash\",\"output_index\":\"2\",\"receiver\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzwsp0lj\",\"sender\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqr5e3d\",\"sequence\":\"3\",\"state_root\":\"state_root\",\"storage_root\":\"storage_root\",\"version\":\"version\",\"withdrawal_proofs\":[\"abc\",\"123\"]}";
         assert!(msg == json_str, 0);
     }
 

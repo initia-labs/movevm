@@ -47,12 +47,8 @@ fn native_get_transaction_hash(
     _ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .transaction_context
-        .get_transaction_hash;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.transaction_context_get_transaction_hash_base)?;
 
     let transaction_context = context.extensions().get::<NativeTransactionContext>();
 
@@ -72,12 +68,8 @@ fn native_generate_unique_address(
     _ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .transaction_context
-        .generate_unique_address;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.transaction_context_generate_unique_address_base)?;
 
     let transaction_context = context
         .extensions_mut()

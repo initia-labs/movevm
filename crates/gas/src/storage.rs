@@ -5,9 +5,10 @@ use move_core_types::{
     gas_algebra::{InternalGas, InternalGasPerArg, InternalGasPerByte, NumArgs, NumBytes},
 };
 
-crate::params::define_gas_parameters!(
+crate::macros::define_gas_parameters!(
     StorageGasParameters,
     "storage",
+    InitiaGasParameters => .storage,
     [
         [
             per_item_read: InternalGasPerArg,

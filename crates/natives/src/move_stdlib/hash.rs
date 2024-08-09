@@ -29,14 +29,17 @@ fn native_sha2_256(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.move_stdlib.hash.sha2_256;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
     let hash_arg = safely_pop_arg!(arguments, Vec<u8>);
 
-    context.charge(gas_params.base + gas_params.per_byte * NumBytes::new(hash_arg.len() as u64))?;
+    context.charge(
+        gas_params.hash_sha2_256_base
+            + gas_params.hash_sha2_256_per_byte * NumBytes::new(hash_arg.len() as u64),
+    )?;
 
     let hash_vec = Sha256::digest(hash_arg.as_slice()).to_vec();
     Ok(smallvec![Value::vector_u8(hash_vec)])
@@ -54,14 +57,17 @@ fn native_sha3_256(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.move_stdlib.hash.sha3_256;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
     let hash_arg = safely_pop_arg!(arguments, Vec<u8>);
 
-    context.charge(gas_params.base + gas_params.per_byte * NumBytes::new(hash_arg.len() as u64))?;
+    context.charge(
+        gas_params.hash_sha3_256_base
+            + gas_params.hash_sha3_256_per_byte * NumBytes::new(hash_arg.len() as u64),
+    )?;
 
     let hash_vec = Sha3_256::digest(hash_arg.as_slice()).to_vec();
     Ok(smallvec![Value::vector_u8(hash_vec)])

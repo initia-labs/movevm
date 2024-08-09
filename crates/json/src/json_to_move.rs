@@ -1,22 +1,30 @@
 use std::str::FromStr;
 
 use bigdecimal::{self, num_bigint::ToBigInt, BigDecimal, Signed};
-use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
-use move_binary_format::errors::VMResult;
+use bytes::Bytes;
+use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
-    account_address::AccountAddress, ident_str, language_storage::StructTag,
-    parser::parse_struct_tag, resolver::MoveResolver, u256::U256, value::MoveValue,
+    account_address::AccountAddress,
+    ident_str,
+    language_storage::StructTag,
+    metadata::Metadata,
+    parser::parse_struct_tag,
+    u256::U256,
+    value::{MoveTypeLayout, MoveValue},
 };
-use move_vm_types::loaded_data::runtime_types::Type::{self, *};
+use move_vm_types::{
+    loaded_data::runtime_types::Type::{self, *},
+    resolver::{MoveResolver, ResourceResolver},
+};
 
 use serde_json::Value as JSONValue;
 
-use crate::json::errors::{deserialization_error, deserialization_error_with_msg};
+use crate::errors::{deserialization_error, deserialization_error_with_msg};
 
 // deserialize json argument to JSONValue and convert to MoveValue,
 // and then do bcs serialization.
-pub(crate) fn deserialize_json_args<S: StateView>(
-    state_view: &StateViewImpl<'_, S>,
+pub fn deserialize_json_args<M: MoveResolver>(
+    move_resolver: &M,
     ty: &Type,
     arg: &[u8],
 ) -> VMResult<Vec<u8>> {
@@ -31,13 +39,14 @@ pub(crate) fn deserialize_json_args<S: StateView>(
     let json_val: JSONValue =
         serde_json::from_slice(arg).map_err(deserialization_error_with_msg)?;
 
-    let move_val = convert_json_value_to_move_value(state_view, ty, json_val, 1)?;
+    let move_val = convert_json_value_to_move_value(move_resolver, ty, json_val, 1)?;
     bcs::to_bytes(&move_val).map_err(deserialization_error_with_msg)
 }
 
 // convert JSONValue to MoveValue.
-pub(crate) fn convert_json_value_to_move_value<S: StateView>(
-    state_view: &StateViewImpl<'_, S>,
+fn convert_json_value_to_move_value<R: ResourceResolver>(
+    // whether to support object json => object move value
+    resolver: &R,
     ty: &Type,
     json_val: JSONValue,
     depth: usize,
@@ -100,7 +109,7 @@ pub(crate) fn convert_json_value_to_move_value<S: StateView>(
             let mut vec = Vec::new();
             for json_val in json_vals {
                 vec.push(convert_json_value_to_move_value(
-                    state_view,
+                    resolver,
                     ty,
                     json_val,
                     depth + 1,
@@ -194,7 +203,7 @@ pub(crate) fn convert_json_value_to_move_value<S: StateView>(
                     }
 
                     return Ok(MoveValue::Vector(vec![convert_json_value_to_move_value(
-                        state_view,
+                        resolver,
                         ty,
                         json_val,
                         depth + 1,
@@ -209,7 +218,7 @@ pub(crate) fn convert_json_value_to_move_value<S: StateView>(
                     // verify a object
                     // 1) address is holding object core resource
                     // 2) object is holding inner type resource
-                    verify_object(state_view, addr, ty)?;
+                    verify_object(resolver, addr, ty)?;
 
                     MoveValue::Address(addr)
                 }
@@ -220,29 +229,31 @@ pub(crate) fn convert_json_value_to_move_value<S: StateView>(
                 }
             }
         }
-
         _ => unimplemented!("Deserialization for type {:?} not implemented", ty),
     })
 }
 
 // verify object address is holding object core and inner type resources.
-fn verify_object<S: StateView>(
-    state_view: &StateViewImpl<'_, S>,
+fn verify_object<R: ResourceResolver>(
+    resolver: &R,
     addr: AccountAddress,
     inner_type: &Type,
 ) -> VMResult<()> {
     // verify a object hold object core
-    if state_view
-        .get_resource(
+    if resolver
+        .get_resource_bytes_with_metadata_and_layout(
             &addr,
             &StructTag {
                 address: AccountAddress::ONE,
                 module: ident_str!("object").into(),
                 name: ident_str!("ObjectCore").into(),
-                type_params: vec![],
+                type_args: vec![],
             },
+            &[],
+            None,
         )
         .map_err(deserialization_error_with_msg)?
+        .0
         .is_none()
     {
         return Err(deserialization_error_with_msg("invalid object address"));
@@ -252,9 +263,10 @@ fn verify_object<S: StateView>(
     let inner_type_st = parse_struct_tag(inner_type.to_string().as_str())
         .map_err(deserialization_error_with_msg)?;
 
-    if state_view
-        .get_resource(&addr, &inner_type_st)
+    if resolver
+        .get_resource_bytes_with_metadata_and_layout(&addr, &inner_type_st, &[], None)
         .map_err(deserialization_error_with_msg)?
+        .0
         .is_none()
     {
         return Err(deserialization_error_with_msg(
@@ -263,6 +275,19 @@ fn verify_object<S: StateView>(
     }
 
     Ok(())
+}
+
+pub struct DummyResolver {}
+impl ResourceResolver for DummyResolver {
+    fn get_resource_bytes_with_metadata_and_layout(
+        &self,
+        _address: &AccountAddress,
+        _struct_tag: &StructTag,
+        _metadata: &[Metadata],
+        _layout: Option<&MoveTypeLayout>,
+    ) -> PartialVMResult<(Option<Bytes>, usize)> {
+        Ok((None, 0))
+    }
 }
 
 //
@@ -514,7 +539,7 @@ mod json_arg_testing {
                     address: AccountAddress::ONE,
                     module: ident_str!("object").into(),
                     name: ident_str!("ObjectCore").into(),
-                    type_params: vec![],
+                    type_args: vec![],
                 }),
             )
             .to_bytes()
@@ -530,7 +555,7 @@ mod json_arg_testing {
                     address: AccountAddress::ONE,
                     module: ident_str!("fungible_asset").into(),
                     name: ident_str!("Metadata").into(),
-                    type_params: vec![],
+                    type_args: vec![],
                 }),
             )
             .to_bytes()

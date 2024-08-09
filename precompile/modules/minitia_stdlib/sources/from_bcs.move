@@ -12,6 +12,7 @@
 /// ```
 module minitia_std::from_bcs {
     use std::string::{Self, String};
+    use std::vector;
 
     /// UTF8 check failed in conversion from bytes to string
     const EINVALID_UTF8: u64 = 0x1;
@@ -57,7 +58,17 @@ module minitia_std::from_bcs {
     }
 
     public fun to_vector_string(v: vector<u8>): vector<String> {
-        from_bytes<vector<String>>(v)
+        let vec_string = from_bytes<vector<String>>(v);
+        vector::for_each_ref(
+            &vec_string,
+            |s| {
+                assert!(
+                    string::internal_check_utf8(string::bytes(s)),
+                    EINVALID_UTF8
+                );
+            }
+        );
+        vec_string
     }
 
     public fun to_string(v: vector<u8>): String {

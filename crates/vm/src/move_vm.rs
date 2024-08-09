@@ -9,19 +9,18 @@ use move_core_types::{
     ident_str,
     identifier::Identifier,
     language_storage::ModuleId,
-    resolver::MoveResolver,
     value::MoveValue,
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
-    config::VMConfig, native_extensions::NativeContextExtensions, runtime::VMRuntime,
+    config::VMConfig,
+    module_traversal::{TraversalContext, TraversalStorage},
+    native_extensions::NativeContextExtensions,
+    runtime::VMRuntime,
+    session::SerializedReturnValues,
     session_cache::SessionCache,
 };
-use move_vm_runtime::{
-    module_traversal::{TraversalContext, TraversalStorage},
-    session::SerializedReturnValues,
-};
-use move_vm_types::gas::GasMeter;
+use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
 
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -29,6 +28,7 @@ use initia_move_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
 };
 use initia_move_gas::{MiscGasParameters, NumBytes};
+use initia_move_json::serialize_move_value_to_json_value;
 use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
     all_natives,
@@ -41,14 +41,9 @@ use initia_move_natives::{
     transaction_context::NativeTransactionContext,
 };
 use initia_move_natives::{
-    block::NativeBlockContext,
-    staking::StakingAPI,
-    table::{NativeTableContext, TableResolver},
+    block::NativeBlockContext, staking::StakingAPI, table::NativeTableContext,
 };
-use initia_move_storage::{
-    state_view::StateView, state_view_impl::StateViewImpl, table_view::TableView,
-    table_view_impl::TableViewImpl,
-};
+use initia_move_storage::table_resolver::TableResolver;
 use initia_move_types::{
     account::Accounts,
     cosmos::CosmosMessages,
@@ -65,7 +60,6 @@ use initia_move_types::{
 };
 
 use crate::{
-    json::move_to_json::convert_move_value_to_json_value,
     session::{SessionExt, SessionOutput},
     verifier::{
         config::verifier_config, errors::metadata_validation_error,
@@ -105,7 +99,7 @@ impl MoveVM {
         let runtime = VMRuntime::new(
             all_natives(gas_params, misc_params),
             VMConfig {
-                verifier: verifier_config(),
+                verifier_config: verifier_config(),
                 module_cache_capacity,
                 script_cache_capacity,
                 ..Default::default()
@@ -126,7 +120,7 @@ impl MoveVM {
     fn create_session<
         'r,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
-        S: MoveResolver<PartialVMError>,
+        S: MoveResolver,
         T: TableResolver,
     >(
         &self,
@@ -167,15 +161,15 @@ impl MoveVM {
 
     #[allow(clippy::too_many_arguments)]
     pub fn initialize<
-        S: StateView,
-        T: TableView,
+        M: MoveResolver,
+        T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &mut self,
         api: &A,
         env: &Env,
-        state_view_impl: &StateViewImpl<'_, S>,
-        table_view_impl: &mut TableViewImpl<'_, T>,
+        state_view_impl: &M,
+        table_view_impl: &mut T,
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
@@ -188,13 +182,13 @@ impl MoveVM {
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
         let publish_request = PublishRequest {
-            check_compat: true,
             destination: AccountAddress::ONE,
             expected_modules: None,
             module_bundle,
         };
 
         let published_module_ids = self.resolve_pending_code_publish(
+            state_view_impl,
             &mut session,
             &mut gas_meter,
             publish_request,
@@ -213,16 +207,21 @@ impl MoveVM {
                 bcs::to_bytes(&allowed_publishers).unwrap(),
             ];
 
-            // ignore the output
-            session.execute_entry_function(
+            let function = session.load_function(
                 &ModuleId::new(
                     AccountAddress::ONE,
                     Identifier::new(CODE_MODULE_NAME).unwrap(),
                 ),
                 &Identifier::new(INIT_GENESIS_FUNCTION_NAME).unwrap(),
-                vec![],
+                &vec![],
+            )?;
+
+            // ignore the output
+            session.execute_entry_function(
+                function,
                 args,
                 &mut gas_meter,
+                &mut traversal_context,
             )?;
         }
 
@@ -234,16 +233,16 @@ impl MoveVM {
     }
 
     pub fn execute_message<
-        S: StateView,
-        T: TableView,
+        M: MoveResolver,
+        T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &mut self,
         gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
-        state_view_impl: &StateViewImpl<'_, S>,
-        table_view_impl: &mut TableViewImpl<'_, T>,
+        state_view_impl: &M,
+        table_view_impl: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
         let senders = msg.senders().to_vec();
@@ -268,19 +267,21 @@ impl MoveVM {
     }
 
     pub fn execute_view_function<
-        S: StateView,
-        T: TableView,
+        M: MoveResolver,
+        T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &self,
         gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
-        state_view_impl: &StateViewImpl<'_, S>,
-        table_view_impl: &mut TableViewImpl<'_, T>,
+        state_view_impl: &M,
+        table_view_impl: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
+        let traversal_storage = TraversalStorage::new();
+        let mut traversal_context = TraversalContext::new(&traversal_storage);
 
         let func_inst =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
@@ -305,6 +306,7 @@ impl MoveVM {
             view_fn.ty_args().to_vec(),
             args,
             gas_meter,
+            &mut traversal_context,
         )?;
 
         let session_output = session.finish()?;
@@ -317,15 +319,15 @@ impl MoveVM {
 
     #[allow(clippy::too_many_arguments)]
     fn execute_script_or_entry_function<
-        S: StateView,
-        T: TableView,
+        M: MoveResolver,
+        T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &self,
         api: &A,
         env: &Env,
-        state_view_impl: &StateViewImpl<'_, S>,
-        table_view_impl: &mut TableViewImpl<'_, T>,
+        state_view_impl: &M,
+        table_view_impl: &mut T,
         senders: Vec<AccountAddress>,
         payload: &MessagePayload,
         gas_meter: &mut InitiaGasMeter,
@@ -333,7 +335,7 @@ impl MoveVM {
     ) -> Result<MessageOutput, VMStatus> {
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
-        let res = match payload {
+        match payload {
             MessagePayload::Script(script) => {
                 session.check_script_dependencies_and_check_gas(
                     gas_meter,
@@ -343,7 +345,7 @@ impl MoveVM {
 
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
-                let func_inst = session.load_script(script.code(), script.ty_args().to_vec())?;
+                let func_inst = session.load_script(script.code(), script.ty_args())?;
 
                 verify_no_event_emission_in_script(
                     script.code(),
@@ -364,6 +366,7 @@ impl MoveVM {
                     script.ty_args().to_vec(),
                     args,
                     gas_meter,
+                    traversal_context,
                 )
             }
             MessagePayload::Execute(entry_fn) => {
@@ -393,25 +396,18 @@ impl MoveVM {
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
 
-                session.execute_entry_function(
+                let function = session.load_function(
                     entry_fn.module(),
                     entry_fn.function(),
-                    entry_fn.ty_args().to_vec(),
-                    args,
-                    gas_meter,
-                )
+                    entry_fn.ty_args(),
+                )?;
+                session.execute_entry_function(function, args, gas_meter, traversal_context)
             }
         }?;
 
-        if !res.return_values.is_empty() || !res.mutable_reference_outputs.is_empty() {
-            return Err(VMStatus::error(
-                StatusCode::RET_TYPE_MISMATCH_ERROR,
-                Some("entry_function or script are not allowed to return any value".to_string()),
-            ));
-        }
-
         if let Some(publish_request) = session.extract_publish_request() {
             self.resolve_pending_code_publish(
+                state_view_impl,
                 &mut session,
                 gas_meter,
                 publish_request,
@@ -433,8 +429,9 @@ impl MoveVM {
     }
 
     /// Resolve a pending code publish request registered via the NativeCodeContext.
-    fn resolve_pending_code_publish(
+    fn resolve_pending_code_publish<M: MoveResolver>(
         &self,
+        resolver: &M,
         session: &mut SessionExt,
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
@@ -444,7 +441,6 @@ impl MoveVM {
             destination,
             module_bundle,
             expected_modules,
-            check_compat,
         } = publish_request;
 
         // TODO: unfortunately we need to deserialize the entire bundle here to handle
@@ -459,14 +455,31 @@ impl MoveVM {
         //       result in shallow-loading of the modules and therefore subtle changes in
         //       the error semantics.
         {
-            // Charge old versions of the modules, in case of upgrades.
-            session.check_dependencies_and_charge_gas_non_recursive_optional(
-                gas_meter,
-                traversal_context,
-                modules
-                    .iter()
-                    .map(|module| (module.self_addr(), module.self_name())),
-            )?;
+            // Charge old versions of existing modules, in case of upgrades.
+            for module in modules.iter() {
+                let id = module.self_id();
+                let addr = module.self_addr();
+                let name = module.self_name();
+
+                // TODO: Allow the check of special addresses to be customized.
+                if addr.is_special() || traversal_context.visited.insert((addr, name), ()).is_some()
+                {
+                    continue;
+                }
+
+                let size_if_module_exists = resolver
+                    .get_module(&id)
+                    .map_err(|e| e.finish(Location::Undefined))?
+                    .map(|m| m.len() as u64);
+
+                if let Some(size) = size_if_module_exists {
+                    gas_meter
+                        .charge_dependency(false, addr, name, NumBytes::new(size))
+                        .map_err(|err| {
+                            err.finish(Location::Module(ModuleId::new(*addr, name.to_owned())))
+                        })?;
+                }
+            }
 
             // Charge all modules in the bundle that is about to be published.
             for (module, blob) in modules.iter().zip(module_bundle.iter()) {
@@ -502,12 +515,10 @@ impl MoveVM {
                     })
                     .filter(|addr_and_name| !module_ids_in_bundle.contains(addr_and_name)),
             )?;
-
-            // TODO: Revisit the order of traversal. Consider switching to alphabetical order.
         }
 
         // validate modules are properly compiled with metadata
-        validate_publish_request(session, modules)?;
+        validate_publish_request(session, modules, &module_bundle)?;
 
         if let Some(expected_modules) = expected_modules {
             for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
@@ -541,11 +552,8 @@ impl MoveVM {
             sorted_module_bundle.into_inner(),
             destination,
             gas_meter,
-            if check_compat {
-                Compatibility::full_check()
-            } else {
-                Compatibility::no_check()
-            },
+            // treat friends as private
+            Compatibility::new(true, false),
         )?;
 
         // call init function of the each module
@@ -555,6 +563,7 @@ impl MoveVM {
             sorted_compiled_modules,
             exists,
             &[destination],
+            traversal_context,
         )?;
 
         Ok(published_module_ids)
@@ -568,6 +577,7 @@ impl MoveVM {
         modules: Vec<&CompiledModule>,
         exists: BTreeSet<ModuleId>,
         senders: &[AccountAddress],
+        traversal_context: &mut TraversalContext,
     ) -> VMResult<()> {
         let init_func_name = ident_str!(INIT_MODULE_FUNCTION_NAME);
         for module in modules {
@@ -584,14 +594,10 @@ impl MoveVM {
             // with the general verify_module above.
             if init_function.is_ok() {
                 if verify_module_init_function(module).is_ok() {
-                    let args: Vec<Vec<u8>> = if init_function.unwrap().parameters.is_empty() {
-                        vec![]
-                    } else {
-                        senders
-                            .iter()
-                            .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
-                            .collect()
-                    };
+                    let args: Vec<Vec<u8>> = senders
+                        .iter()
+                        .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
+                        .collect();
 
                     // first execution does not execute `charge_call`, so need to record call here
                     gas_meter.record_call(&module.self_id());
@@ -602,6 +608,7 @@ impl MoveVM {
                         vec![],
                         args,
                         gas_meter,
+                        traversal_context,
                     )?;
                 } else {
                     return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
@@ -665,7 +672,7 @@ impl MoveVM {
                 MoveValue::simple_deserialize(event.event_data(), &ty_layout).map_err(|_| {
                     PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
                 })?;
-            let serde_value = convert_move_value_to_json_value(&move_val, 1)?;
+            let serde_value = serialize_move_value_to_json_value(&move_val)?;
             res.push((event.type_tag().clone(), serde_value.to_string()));
         }
 
@@ -687,7 +694,7 @@ fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Opti
             let move_val = MoveValue::simple_deserialize(blob, type_layout).map_err(|_| {
                 PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
             })?;
-            let serde_value = convert_move_value_to_json_value(&move_val, 1)?;
+            let serde_value = serialize_move_value_to_json_value(&move_val)?;
             serde_vals.push(serde_value);
         }
         if serde_vals.is_empty() {

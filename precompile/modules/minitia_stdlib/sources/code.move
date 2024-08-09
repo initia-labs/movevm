@@ -254,8 +254,7 @@ module minitia_std::code {
         request_publish(
             addr,
             module_ids,
-            code,
-            upgrade_policy
+            code
         )
     }
 
@@ -264,6 +263,5 @@ module minitia_std::code {
         owner: address,
         expected_modules: vector<String>,
         code: vector<vector<u8>>,
-        policy: u8
     );
 }

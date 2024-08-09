@@ -1,4 +1,5 @@
 use better_any::{Tid, TidAble};
+use initia_move_storage::table_resolver::TableResolver;
 use initia_move_types::iterator::Order;
 use initia_move_types::table::{TableChange, TableChangeSet, TableHandle, TableInfo};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
@@ -30,26 +31,6 @@ use crate::safely_pop_arg;
 
 /// UID prefix is used to generate unique address from the txn hash.
 const UID_PREFIX: [u8; 4] = [0, 0, 0, 2];
-
-/// A table resolver which needs to be provided by the environment. This allows to lookup
-/// data in remote storage, as well as retrieve cost of table operations.
-pub trait TableResolver {
-    fn resolve_table_entry(
-        &self,
-        handle: &TableHandle,
-        key: &[u8],
-    ) -> anyhow::Result<Option<Vec<u8>>>;
-
-    fn create_iterator(
-        &mut self,
-        handle: &TableHandle,
-        start: Option<&[u8]>,
-        end: Option<&[u8]>,
-        order: Order,
-    ) -> anyhow::Result<u32>;
-
-    fn next_key(&mut self, iterator_id: u32) -> anyhow::Result<Option<Vec<u8>>>;
-}
 
 /// A table operation, for supporting cost calculation.
 pub enum TableOperation {
@@ -323,12 +304,12 @@ fn native_new_table_handle(
     ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.table.new_table_handle;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 2);
     assert_eq!(_arguments.len(), 0);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.new_table_handle_base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -359,13 +340,12 @@ fn native_add_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let common_gas_params = &context.native_gas_params.table.common;
-    let gas_params = &context.native_gas_params.table.add_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 3);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.add_box_base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -377,10 +357,9 @@ fn native_add_box(
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     let key_bytes = serialize(&table.key_layout, &key)?;
-    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost = gas_params.add_box_per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
     let res = match gv.move_to(val) {
         Ok(_) => Ok(smallvec![]),
@@ -392,7 +371,8 @@ fn native_add_box(
     drop(table_data);
 
     // TODO(Gas): Figure out a way to charge this earlier.
-    context.charge(key_cost + value_cost)?;
+    context.charge(key_cost)?;
+    charge_load_cost(context, loaded)?;
 
     res
 }
@@ -402,13 +382,12 @@ fn native_borrow_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let common_gas_params = &context.native_gas_params.table.common;
-    let gas_params = &context.native_gas_params.table.borrow_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 2);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.borrow_box_base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -419,10 +398,10 @@ fn native_borrow_box(
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     let key_bytes = serialize(&table.key_layout, &key)?;
-    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost =
+        gas_params.borrow_box_per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
     let res = match gv.borrow_global() {
         Ok(ref_val) => Ok(smallvec![ref_val]),
@@ -434,7 +413,8 @@ fn native_borrow_box(
     drop(table_data);
 
     // TODO(Gas): Figure out a way to charge this earlier.
-    context.charge(key_cost + value_cost)?;
+    context.charge(key_cost)?;
+    charge_load_cost(context, loaded)?;
 
     res
 }
@@ -444,13 +424,12 @@ fn native_contains_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let common_gas_params = &context.native_gas_params.table.common;
-    let gas_params = &context.native_gas_params.table.contains_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 2);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.contains_box_base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -461,17 +440,18 @@ fn native_contains_box(
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     let key_bytes = serialize(&table.key_layout, &key)?;
-    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost =
+        gas_params.contains_box_per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
     let exists = Value::bool(gv.exists()?);
 
     drop(table_data);
 
     // TODO(Gas): Figure out a way to charge this earlier.
-    context.charge(key_cost + value_cost)?;
+    context.charge(key_cost)?;
+    charge_load_cost(context, loaded)?;
 
     Ok(smallvec![exists])
 }
@@ -481,13 +461,12 @@ fn native_remove_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let common_gas_params = &context.native_gas_params.table.common;
-    let gas_params = &context.native_gas_params.table.remove_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 2);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.remove_box_base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -498,10 +477,10 @@ fn native_remove_box(
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     let key_bytes = serialize(&table.key_layout, &key)?;
-    let key_cost = gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    let key_cost =
+        gas_params.remove_box_per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    let value_cost = common_gas_params.calculate_load_cost(loaded);
 
     let res = match gv.move_from() {
         Ok(val) => Ok(smallvec![val]),
@@ -513,7 +492,8 @@ fn native_remove_box(
     drop(table_data);
 
     // TODO(Gas): Figure out a way to charge this earlier.
-    context.charge(key_cost + value_cost)?;
+    context.charge(key_cost)?;
+    charge_load_cost(context, loaded)?;
 
     res
 }
@@ -523,12 +503,12 @@ fn native_destroy_empty_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.table.destroy_empty_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 1);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.destroy_empty_box_base)?;
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -547,12 +527,12 @@ fn native_drop_unchecked_box(
     ty_args: Vec<Type>,
     arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.table.drop_unchecked_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 1);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.drop_unchecked_box_base)?;
 
     Ok(smallvec![])
 }
@@ -562,12 +542,12 @@ fn native_new_table_iter(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.table.new_table_iter;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 4);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.new_table_iter_base)?;
 
     let order = Order::try_from(safely_pop_arg!(arguments, u8) as i32)
         .map_err(|_| PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
@@ -600,7 +580,8 @@ fn native_new_table_iter(
     )?;
 
     // charge gas cost for sorting
-    context.charge(NumArgs::new(changes.len() as u64) * gas_params.per_item_sorted)?;
+    context
+        .charge(NumArgs::new(changes.len() as u64) * gas_params.new_table_iter_per_item_sorted)?;
 
     let table_context = context.extensions_mut().get_mut::<NativeTableContext>();
     let iterator_id = table_context
@@ -631,19 +612,18 @@ fn native_prepare_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let common_gas_params = &context.native_gas_params.table.common;
-    let gas_params = &context.native_gas_params.table.prepare_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 1);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.prepare_box_base)?;
 
     let iterator_id = get_iterator_id(&safely_pop_arg!(arguments, StructRef))? as usize;
 
     loop {
         let ((next_key, loaded), handle) = get_next_key_with_table_handle(context, iterator_id)?;
-        context.charge(common_gas_params.calculate_load_cost(loaded))?;
+        charge_load_cost(context, loaded)?;
 
         if next_key.is_none() {
             return Ok(smallvec![Value::bool(false)]);
@@ -652,10 +632,10 @@ fn native_prepare_box(
         let key_bytes = next_key.unwrap();
         let (next, loaded, serialized) =
             load_table_entry(context, handle, &ty_args[0], &ty_args[2], key_bytes)?;
-        context.charge(
-            common_gas_params.calculate_load_cost(loaded)
-                + gas_params.calculate_serialize_cost(serialized),
-        )?;
+        charge_load_cost(context, loaded)?;
+        if let Some(num_bytes) = serialized {
+            context.charge(gas_params.prepare_box_per_byte_serialized * num_bytes)?;
+        }
 
         if next.is_some() {
             set_next(context, iterator_id, next);
@@ -671,12 +651,12 @@ fn native_next_box(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.table.next_box;
+    let gas_params = &context.native_gas_params.table;
 
     assert_eq!(ty_args.len(), 3);
     assert_eq!(arguments.len(), 1);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.next_box_base)?;
 
     let iterator_id = get_iterator_id(&safely_pop_arg!(arguments, StructRef))? as usize;
 
@@ -837,4 +817,18 @@ fn range_bounds(start: Option<&[u8]>, end: Option<&[u8]>) -> impl RangeBounds<Ve
         start.map_or(Bound::Unbounded, |x| Bound::Included(x.to_vec())),
         end.map_or(Bound::Unbounded, |x| Bound::Excluded(x.to_vec())),
     )
+}
+
+fn charge_load_cost(
+    context: &mut SafeNativeContext,
+    loaded: Option<Option<NumBytes>>,
+) -> SafeNativeResult<()> {
+    let gas_params = &context.native_gas_params.table;
+
+    match loaded {
+        Some(Some(num_bytes)) => context
+            .charge(gas_params.common_load_base + gas_params.common_load_per_byte * num_bytes),
+        Some(None) => context.charge(gas_params.common_load_base + gas_params.common_load_failure),
+        None => Ok(()),
+    }
 }

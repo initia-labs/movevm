@@ -31,11 +31,14 @@ fn native_keccak256(
     debug_assert!(_ty_args.is_empty());
     debug_assert!(args.len() == 1);
 
-    let gas_params = &context.native_gas_params.initia_stdlib.keccak.keccak256;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     let bytes = safely_pop_arg!(args, Vec<u8>);
 
-    context.charge(gas_params.base + gas_params.per_byte * NumBytes::new(bytes.len() as u64))?;
+    context.charge(
+        gas_params.keccak_keccak256_base
+            + gas_params.keccak_keccak256_per_byte * NumBytes::new(bytes.len() as u64),
+    )?;
 
     let mut hasher = Keccak::v256();
     hasher.update(&bytes);

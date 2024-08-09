@@ -33,10 +33,10 @@ fn success_generic(ty_args: Vec<TypeTag>, tests: Vec<TestInput>) {
         address: AccountAddress::from_hex_literal("0x1").expect("valid address"),
         module: Identifier::new("string").expect("valid identifier"),
         name: Identifier::new("String").expect("valid identifier"),
-        type_params: vec![],
+        type_args: vec![],
     };
     let string_type = TypeTag::Struct(Box::new(string_struct));
-    module_data.type_params.push(string_type);
+    module_data.type_args.push(string_type);
 
     assert!(!h.exists_resource(&acc, module_data.clone()));
 
@@ -629,7 +629,7 @@ fn string_args_generic_instantiation() {
         address: AccountAddress::from_hex_literal("0x1").expect("valid address"),
         module: Identifier::new("string").expect("valid identifier"),
         name: Identifier::new("String").expect("valid identifier"),
-        type_params: vec![],
+        type_args: vec![],
     };
     let string_type = TypeTag::Struct(Box::new(string_struct));
 

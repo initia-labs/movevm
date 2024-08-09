@@ -110,17 +110,4 @@ module initia_std::from_bcs {
         let bad_vec = b"01";
         to_address(bad_vec);
     }
-
-    #[test_only]
-    use std::address;
-
-    #[test]
-    #[expected_failure(abort_code = EINVALID_UTF8)]
-    fun zellic_invalid_utf8_to_vector_string() {
-        let invalid_utf8 = b"\x01\x03\xE0\x80\x80";
-        let res = to_vector_string(invalid_utf8);
-        assert!(!vector::is_empty(&res), 0);
-
-        address::from_string(vector::pop_back(&mut res));
-    }
 }

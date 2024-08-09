@@ -1,8 +1,6 @@
 module initia_std::query {
     use initia_std::string::{Self, String};
-    use initia_std::option;
     use initia_std::json;
-    use initia_std::simple_json;
 
     /*
     type QueryProposalResponse struct {
@@ -36,106 +34,49 @@ module initia_std::query {
     }
 
     */
+
+    struct ProposalRequest has copy, drop {
+        proposal_id: u64,
+    }
+    struct ProposalResponse has copy, drop {
+        id: u64,
+        title: String,
+        summary: String,
+        status: String,
+        submit_time: String,
+        emergency: bool,
+    }
     #[view]
     public fun get_proposal(proposal_id: u64): (u64, String, String, String) {
-        let obj = json::empty();
-        let index = json::start_index();
-        json::set_object(
-            &mut obj,
-            index,
-            option::none<String>(),
-            1
-        );
-        json::set_int_raw(
-            &mut obj,
-            json::get_next_index(&index, 0),
-            option::some(string::utf8(b"proposal_id")),
-            true,
-            (proposal_id as u256),
-        );
-
-        let req = json::stringify(&obj);
         let response = query_stargate(
             b"/initia.gov.v1.Query/Proposal",
-            *string::bytes(&req)
+            json::marshal(&ProposalRequest {
+                proposal_id,
+            })
         );
-        let res = json::parse(string::utf8(response));
-        let index = json::get_next_index(&index, 0);
-
-        let cindex = json::find(&res, &index, &string::utf8(b"id"));
-        let (_, data) = json::unpack_elem(json::borrow(&res, &cindex));
-        let (_, id) = json::as_int(data);
-
-        let cindex = json::find(
-            &res,
-            &index,
-            &string::utf8(b"title")
-        );
-        let (_, data) = json::unpack_elem(json::borrow(&res, &cindex));
-        let title = json::as_string(data);
-
-        let cindex = json::find(
-            &res,
-            &index,
-            &string::utf8(b"summary")
-        );
-        let (_, data) = json::unpack_elem(json::borrow(&res, &cindex));
-        let summary = json::as_string(data);
+        let res = json::unmarshal<ProposalResponse>(response);
         (
-            (id as u64),
-            title,
-            summary,
+            res.id,
+            res.title,
+            res.summary,
             string::utf8(response)
         )
     }
 
     #[view]
     public fun get_proposal_status(proposal_id: u64): (u64, String, String, bool) {
-        let obj = simple_json::empty();
-        simple_json::set_object(&mut obj, option::none<String>());
-        simple_json::increase_depth(&mut obj);
-        simple_json::set_int_raw(
-            &mut obj,
-            option::some(string::utf8(b"proposal_id")),
-            true,
-            (proposal_id as u256)
-        );
-
-        let req = json::stringify(simple_json::to_json_object(&obj));
-        let res = query_stargate(
+        let response = query_stargate(
             b"/initia.gov.v1.Query/Proposal",
-            *string::bytes(&req)
+            json::marshal(&ProposalRequest {
+                proposal_id,
+            })
         );
-        let res = simple_json::from_json_object(json::parse(string::utf8(res)));
-        simple_json::increase_depth(&mut res);
-        simple_json::increase_depth(&mut res);
-
-        simple_json::find_and_set_index(&mut res, &string::utf8(b"id"));
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
-        let (_, id) = json::as_int(data);
-
-        simple_json::find_and_set_index(&mut res, &string::utf8(b"status"));
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
-        let status = json::as_string(data);
-
-        simple_json::find_and_set_index(
-            &mut res,
-            &string::utf8(b"submit_time")
-        );
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
-        let submit_time = json::as_string(data);
-
-        simple_json::find_and_set_index(
-            &mut res,
-            &string::utf8(b"emergency")
-        );
-        let (_, data) = json::unpack_elem(simple_json::borrow(&mut res));
-        let emergency = json::as_bool(data);
+        let res = json::unmarshal<ProposalResponse>(response);
         (
-            (id as u64),
-            status,
-            submit_time,
-            emergency
+            res.id,
+            res.status,
+            res.submit_time,
+            res.emergency
         )
     }
 

@@ -8,10 +8,10 @@
 use anyhow::Result;
 use initia_move_types::{iterator::Order, table::TableHandle};
 
-/// `TableView` is a trait that defines a read-only snapshot of the global state for table extension. It is passed to
+/// `TableResolver` is a trait that defines a read-only snapshot of the global state for table extension. It is passed to
 /// the VM for transaction execution, during which the VM is guaranteed to read anything at the
 /// given state.
-pub trait TableView {
+pub trait TableResolver {
     fn resolve_table_entry(
         &self,
         handle: &TableHandle,

@@ -16,33 +16,30 @@
 //!     in the future.
 
 #[macro_use]
-mod natives;
-
-#[macro_use]
-mod params;
+mod macros;
 
 mod algebra;
-pub mod gas_params;
-pub mod initia;
+pub mod initia_stdlib;
 mod instr;
 mod meter;
 mod misc;
 mod move_stdlib;
 mod storage;
 pub mod table;
+mod traits;
 mod transaction;
 
 pub use algebra::*;
 pub use instr::InstructionGasParameters;
 pub use meter::{
-    FromOnChainGasSchedule, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule,
-    NativeGasParameters, ToOnChainGasSchedule, GAS_UNIT_SCALING_FACTOR,
+    InitiaGasMeter, InitiaGasParameters, NativeGasParameters, GAS_UNIT_SCALING_FACTOR,
 };
 pub use misc::{AbstractValueSizeGasParameters, MiscGasParameters};
 pub use move_core_types::gas_algebra::{
     Arg, Byte, GasQuantity, InternalGas, InternalGasPerArg, InternalGasPerByte, InternalGasUnit,
     NumArgs, NumBytes, UnitDiv,
 };
+pub use traits::{FromOnChainGasSchedule, InitialGasSchedule, ToOnChainGasSchedule};
 
 /// Unit of abstract value size -- a conceptual measurement of the memory space a Move value occupies.
 pub enum AbstractValueUnit {}
