@@ -42,6 +42,7 @@ module publisher::vip_weight_vote {
     const ECHALLENGE_ALREADY_EXECUTED: u64 = 16;
     const EINVALID_PARAMETER: u64 = 17;
     const EINVALID_BRIDGE: u64 = 18;
+    const ENOT_FOUND: u64 = 101;
     //
     //  Constants
     //
@@ -396,6 +397,7 @@ module publisher::vip_weight_vote {
                 );
             };
         };
+
         let voting_end_time = calculate_voting_end_time(timestamp, module_store);
         submit_snapshot_internal(
             module_store,
@@ -1012,23 +1014,21 @@ module publisher::vip_weight_vote {
         max_voting_power: u64,
         weights: vector<Weight>
     ) {
-
-        let i = 0;
-        let len = vector::length(&weights);
         let voting_power_removed = 0;
-        while (i < len) {
-            let w = vector::borrow(&weights, i);
-            // bridge_vp
-            let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
-            voting_power_removed = voting_power_removed + bridge_vp;
-            let tally = table::borrow_mut_with_default(
-                &mut proposal.tally,
-                table_key::encode_u64(w.bridge_id),
-                0
-            );
-            *tally = *tally - (bridge_vp as u64);
-            i = i + 1;
-        };
+        vector::for_each(
+            weights,
+            |w| {
+                use_weight(w);
+                let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
+                voting_power_removed = voting_power_removed + bridge_vp;
+                let tally = table::borrow_mut_with_default(
+                    &mut proposal.tally,
+                    table_key::encode_u64(w.bridge_id),
+                    0
+                );
+                *tally = *tally - (bridge_vp as u64);
+            }
+        );
         proposal.total_tally = proposal.total_tally - voting_power_removed;
 
     }
@@ -1039,22 +1039,20 @@ module publisher::vip_weight_vote {
         weights: vector<Weight>
     ) {
         let voting_power_used = 0;
-
-        let len = vector::length(&weights);
-        let i = 0;
-        while (i < len) {
-            let w = vector::borrow(&weights, i);
-            let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
-            voting_power_used = voting_power_used + bridge_vp;
-            let tally = table::borrow_mut_with_default(
-                &mut proposal.tally,
-                table_key::encode_u64(w.bridge_id),
-                0
-            );
-            *tally = *tally + (bridge_vp as u64);
-            i = i + 1;
-        };
-
+        vector::for_each(
+            weights,
+            |w| {
+                use_weight(w);
+                let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
+                voting_power_used = voting_power_used + bridge_vp;
+                let tally = table::borrow_mut_with_default(
+                    &mut proposal.tally,
+                    table_key::encode_u64(w.bridge_id),
+                    0
+                );
+                *tally = *tally + (bridge_vp as u64);
+            }
+        );
         proposal.total_tally = proposal.total_tally + voting_power_used
 
     }
@@ -1150,45 +1148,6 @@ module publisher::vip_weight_vote {
         };
 
         0
-    }
-
-    fun normalize_weights(
-        bridge_ids: vector<u64>,
-        weights: vector<Decimal128>
-    ): vector<Weight> {
-        let len = vector::length(&bridge_ids);
-        assert!(
-            len == vector::length(&weights),
-            error::invalid_argument(EVECTOR_LENGTH)
-        );
-
-        let weight_sum = 0;
-        vector::for_each_ref(
-            &weights,
-            |weight| {
-                weight_sum = weight_sum + decimal128::val(weight);
-            }
-        );
-
-        let n_weights = vector[];
-        vector::zip_reverse(
-            bridge_ids,
-            weights,
-            |bridge_id, weight| {
-                vector::push_back(
-                    &mut n_weights,
-                    Weight {
-                        bridge_id: bridge_id,
-                        weight: decimal128::from_ratio(
-                            decimal128::val(&weight),
-                            weight_sum
-                        ),
-                    }
-                );
-            },
-        );
-
-        n_weights
     }
 
     // if submitter submit merkle root after grace period, set voting end time to current timestamp + voting period
@@ -1327,42 +1286,37 @@ module publisher::vip_weight_vote {
     #[view]
     public fun get_challenge_by_cycle(cycle: u64): vector<ChallengeResponse> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
-        let iter = table::iter(
-            &module_store.challenges,
-            option::none(),
-            option::none(),
-            1
-        );
-
         let challenge_responses = vector::empty<ChallengeResponse>();
-        loop {
-            if (!table::prepare<vector<u8>, Challenge>(&mut iter)) { break };
-            let (_, challenge) = table::next<vector<u8>, Challenge>(&mut iter);
-            if (challenge.cycle == cycle) {
-                vector::push_back(
-                    &mut challenge_responses,
-                    ChallengeResponse {
-                        title: challenge.title,
-                        summary: challenge.summary,
-                        api_uri: challenge.api_uri,
-                        cycle: challenge.cycle,
-                        challenger: challenge.challenger,
-                        voting_power_cycle: challenge.voting_power_cycle,
-                        new_submitter: challenge.new_submitter,
-                        merkle_root: challenge.merkle_root,
-                        snapshot_height: challenge.snapshot_height,
-                        yes_tally: challenge.yes_tally,
-                        no_tally: challenge.no_tally,
-                        quorum: challenge.quorum,
-                        voting_end_time: challenge.voting_end_time,
-                        min_voting_end_time: challenge.min_voting_end_time,
-                        deposit_amount: challenge.deposit_amount,
-                        is_executed: challenge.is_executed,
-                    }
-                );
-            };
-        };
-
+        table::loop_table(
+            &module_store.challenges,
+            |_k, challenge| {
+                use_challenge(challenge);
+                if (challenge.cycle == cycle) {
+                    vector::push_back(
+                        &mut challenge_responses,
+                        ChallengeResponse {
+                            title: challenge.title,
+                            summary: challenge.summary,
+                            api_uri: challenge.api_uri,
+                            cycle: challenge.cycle,
+                            challenger: challenge.challenger,
+                            voting_power_cycle: challenge.voting_power_cycle,
+                            new_submitter: challenge.new_submitter,
+                            merkle_root: challenge.merkle_root,
+                            snapshot_height: challenge.snapshot_height,
+                            yes_tally: challenge.yes_tally,
+                            no_tally: challenge.no_tally,
+                            quorum: challenge.quorum,
+                            voting_end_time: challenge.voting_end_time,
+                            min_voting_end_time: challenge.min_voting_end_time,
+                            deposit_amount: challenge.deposit_amount,
+                            is_executed: challenge.is_executed,
+                        }
+                    );
+                };
+                false
+            }
+        );
         challenge_responses
     }
 
@@ -1403,12 +1357,15 @@ module publisher::vip_weight_vote {
         }
     }
 
+    inline fun use_challenge(_v: &Challenge) {
+    } inline fun use_weight(_v: Weight) {
+    }
+
     #[test_only]
     use initia_std::block::set_block_info;
 
     #[test_only]
     use initia_std::coin;
-
     #[test_only]
     use initia_std::string;
 
@@ -1791,7 +1748,7 @@ module publisher::vip_weight_vote {
         vote_challenge(u1, 1, true);
 
         // after min_voting_period
-        skip_period(1);
+        skip_period(10);
 
         // execute challenge
         execute_challenge(1);
@@ -1831,7 +1788,7 @@ module publisher::vip_weight_vote {
         vote_challenge(u2, 2, true);
 
         // after min_voting_period
-        set_block_info(100, 252);
+        skip_period(10);
 
         // execute proposal
         execute_challenge(2);

@@ -1,11 +1,9 @@
 module publisher::vip_tvl_manager {
     use std::error;
     use initia_std::vector;
-    use initia_std::option;
     use initia_std::table_key;
     use initia_std::table;
     use initia_std::block;
-    use initia_std::decimal256;
     friend publisher::vip;
     const EINVALID_EPOCH: u64 = 1;
     ///
@@ -119,20 +117,21 @@ module publisher::vip_tvl_manager {
         );
 
         // update the average tvl of the bridge at the stage
-        let average_tvl = table::borrow_mut(
+        let average_tvl = table::borrow(
             average_tvl_table,
             table_key::encode_u64(bridge_id)
         );
         // new average tvl = (snapshot_count * average_tvl + balance) / (snapshot_count + 1)
-        let new_average_tvl = decimal256::mul_u64(
-            &decimal256::from_ratio_u64(*average_tvl,(snapshot_count + 1)),
-            snapshot_count
-        ) + balance / (snapshot_count + 1);
+        let new_average_tvl = (
+            (
+                (snapshot_count as u128) * (*average_tvl as u128) + (balance as u128)
+            ) / ((snapshot_count + 1) as u128)
+        );
 
         table::upsert(
             average_tvl_table,
             table_key::encode_u64(bridge_id),
-            (new_average_tvl)
+            (new_average_tvl as u64)
         )
     }
 
@@ -197,24 +196,19 @@ module publisher::vip_tvl_manager {
             table_key::encode_u64(bridge_id)
         );
         let snapshot_responses = vector::empty<TVLSnapshotResponse>();
-        let iter = table::iter(
+        table::loop_table(
             snapshots_table,
-            option::none(),
-            option::none(),
-            1
+            |time_vec, snapshot_tvl| {
+                vector::push_back(
+                    &mut snapshot_responses,
+                    TVLSnapshotResponse {
+                        time: table_key::decode_u64(time_vec),
+                        tvl: *snapshot_tvl,
+                    }
+                );
+                false
+            }
         );
-        loop {
-            if (!table::prepare<vector<u8>, u64>(&mut iter)) { break };
-            let (time_vec, snapshot_tvl) = table::next<vector<u8>, u64>(&mut iter);
-
-            vector::push_back(
-                &mut snapshot_responses,
-                TVLSnapshotResponse {
-                    time: table_key::decode_u64(time_vec),
-                    tvl: *snapshot_tvl,
-                }
-            );
-        };
         snapshot_responses
     }
 
