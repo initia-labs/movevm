@@ -1776,11 +1776,14 @@ module publisher::vip {
         let bridge_ids = vector::empty<u64>();
         table::loop_table(
             &module_store.bridges,
-            |bridge_id_vec, _v| {
-                vector::push_back(
-                    &mut bridge_ids,
-                    table_key::decode_u64(bridge_id_vec)
-                );
+            |bridge_id_vec, bridge| {
+                use_bridge(bridge);
+                if(bridge.is_registered) {
+                    vector::push_back(
+                        &mut bridge_ids,
+                        table_key::decode_u64(bridge_id_vec)
+                    );
+                };
                 false
             }
         );
