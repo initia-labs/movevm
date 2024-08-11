@@ -31,10 +31,7 @@ module std::ascii {
 
     /// Convert a `byte` into a `Char` that is checked to make sure it is valid ASCII.
     public fun char(byte: u8): Char {
-        assert!(
-            is_valid_char(byte),
-            EINVALID_ASCII_CHARACTER
-        );
+        assert!(is_valid_char(byte), EINVALID_ASCII_CHARACTER);
         Char { byte }
     }
 
@@ -46,10 +43,7 @@ module std::ascii {
     /// `bytes` contains non-ASCII characters.
     public fun string(bytes: vector<u8>): String {
         let x = try_string(bytes);
-        assert!(
-            option::is_some(&x),
-            EINVALID_ASCII_CHARACTER
-        );
+        assert!(option::is_some(&x), EINVALID_ASCII_CHARACTER);
         option::destroy_some(x)
     }
 
@@ -63,15 +57,13 @@ module std::ascii {
     public fun try_string(bytes: vector<u8>): Option<String> {
         let len = vector::length(&bytes);
         let i = 0;
-        while (
-            {
+        while ({
                 spec {
                     invariant i <= len;
                     invariant forall j in 0..i: is_valid_char(bytes[j]);
                 };
                 i < len
-            }
-        ) {
+            }) {
             let possible_byte = *vector::borrow(&bytes, i);
             if (!is_valid_char(possible_byte)) return option::none();
             i = i + 1;
@@ -88,15 +80,13 @@ module std::ascii {
     public fun all_characters_printable(string: &String): bool {
         let len = vector::length(&string.bytes);
         let i = 0;
-        while (
-            {
+        while ({
                 spec {
                     invariant i <= len;
                     invariant forall j in 0..i: is_printable_char(string.bytes[j]);
                 };
                 i < len
-            }
-        ) {
+            }) {
             let byte = *vector::borrow(&string.bytes, i);
             if (!is_printable_char(byte)) return false;
             i = i + 1;
@@ -109,9 +99,8 @@ module std::ascii {
     }
 
     spec all_characters_printable {
-        ensures result ==> (
-            forall j in 0..len(string.bytes): is_printable_char(string.bytes[j])
-        );
+        ensures result ==>
+            (forall j in 0..len(string.bytes): is_printable_char(string.bytes[j]));
     }
 
     public fun push_char(string: &mut String, char: Char) {
@@ -123,9 +112,7 @@ module std::ascii {
     }
 
     public fun pop_char(string: &mut String): Char {
-        Char {
-            byte: vector::pop_back(&mut string.bytes)
-        }
+        Char { byte: vector::pop_back(&mut string.bytes) }
     }
 
     spec pop_char {

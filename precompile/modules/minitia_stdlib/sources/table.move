@@ -27,14 +27,14 @@ module minitia_std::table {
     public fun new<K: copy + drop, V: store>(): Table<K, V> {
         let handle = new_table_handle<K, V>();
         account::create_table_account(handle);
-        Table {handle, length: 0,}
+        Table { handle, length: 0, }
     }
 
     /// Destroy a table. The table must be empty to succeed.
     public fun destroy_empty<K: copy + drop, V>(table: Table<K, V>) {
         assert!(
             table.length == 0,
-            error::invalid_state(ENOT_EMPTY)
+            error::invalid_state(ENOT_EMPTY),
         );
         destroy_empty_box<K, V, Box<V>>(&table);
         drop_unchecked_box<K, V, Box<V>>(table)
@@ -61,9 +61,12 @@ module minitia_std::table {
 
     /// Acquire an immutable reference to the value which `key` maps to.
     /// Returns specified default value if there is no entry for `key`.
-    public fun borrow_with_default<K: copy + drop, V>(table: &Table<K, V>, key: K, default: &V)
-        : &V {
-        if (!contains(table, copy key)) { default } else {
+    public fun borrow_with_default<K: copy + drop, V>(
+        table: &Table<K, V>, key: K, default: &V
+    ): &V {
+        if (!contains(table, copy key)) {
+            default
+        } else {
             borrow(table, copy key)
         }
     }
@@ -87,7 +90,8 @@ module minitia_std::table {
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Insert the pair (`key`, `default`) first if there is no entry for `key`.
     public fun borrow_mut_with_default<K: copy + drop, V: drop>(
-        table: &mut Table<K, V>, key: K,
+        table: &mut Table<K, V>,
+        key: K,
         default: V
     ): &mut V {
         if (!contains(table, copy key)) {
@@ -99,7 +103,8 @@ module minitia_std::table {
     /// Insert the pair (`key`, `value`) if there is no entry for `key`.
     /// update the value of the entry for `key` to `value` otherwise
     public fun upsert<K: copy + drop, V: drop>(
-        table: &mut Table<K, V>, key: K,
+        table: &mut Table<K, V>,
+        key: K,
         value: V
     ) {
         if (!contains(table, copy key)) {
@@ -152,13 +157,19 @@ module minitia_std::table {
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */,
     ): &TableIter<K, V> {
-        let start_bytes: vector<u8> = if (option::is_some(&start)) {
-            bcs::to_bytes<K>(&option::extract(&mut start))
-        } else {vector::empty()};
+        let start_bytes: vector<u8> =
+            if (option::is_some(&start)) {
+                bcs::to_bytes<K>(&option::extract(&mut start))
+            } else {
+                vector::empty()
+            };
 
-        let end_bytes: vector<u8> = if (option::is_some(&end)) {
-            bcs::to_bytes<K>(&option::extract(&mut end))
-        } else {vector::empty()};
+        let end_bytes: vector<u8> =
+            if (option::is_some(&end)) {
+                bcs::to_bytes<K>(&option::extract(&mut end))
+            } else {
+                vector::empty()
+            };
 
         new_table_iter<K, V, Box<V>>(table, start_bytes, end_bytes, order)
     }
@@ -195,18 +206,26 @@ module minitia_std::table {
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */,
     ): &mut TableIter<K, V> {
-        let start_bytes: vector<u8> = if (option::is_some(&start)) {
-            bcs::to_bytes<K>(&option::extract(&mut start))
-        } else {vector::empty()};
+        let start_bytes: vector<u8> =
+            if (option::is_some(&start)) {
+                bcs::to_bytes<K>(&option::extract(&mut start))
+            } else {
+                vector::empty()
+            };
 
-        let end_bytes: vector<u8> = if (option::is_some(&end)) {
-            bcs::to_bytes<K>(&option::extract(&mut end))
-        } else {vector::empty()};
+        let end_bytes: vector<u8> =
+            if (option::is_some(&end)) {
+                bcs::to_bytes<K>(&option::extract(&mut end))
+            } else {
+                vector::empty()
+            };
 
         new_table_iter_mut<K, V, Box<V>>(table, start_bytes, end_bytes, order)
     }
 
-    public fun prepare_mut<K: copy + drop, V>(table_iter: &mut TableIter<K, V>): bool {
+    public fun prepare_mut<K: copy + drop, V>(
+        table_iter: &mut TableIter<K, V>
+    ): bool {
         prepare_box_mut<K, V, Box<V>>(table_iter)
     }
 
@@ -227,10 +246,7 @@ module minitia_std::table {
     // can use this to determine serialization layout.
     native fun new_table_handle<K, V>(): address;
 
-    native fun add_box<K: copy + drop, V, B>(
-        table: &mut Table<K, V>, key: K,
-        val: Box<V>
-    );
+    native fun add_box<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K, val: Box<V>);
 
     native fun borrow_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): &Box<V>;
 
@@ -245,17 +261,11 @@ module minitia_std::table {
     native fun drop_unchecked_box<K: copy + drop, V, B>(table: Table<K, V>);
 
     native fun new_table_iter<K: copy + drop, V, B>(
-        table: &Table<K, V>,
-        start: vector<u8>,
-        end: vector<u8>,
-        order: u8
+        table: &Table<K, V>, start: vector<u8>, end: vector<u8>, order: u8
     ): &TableIter<K, V>;
 
     native fun new_table_iter_mut<K: copy + drop, V, B>(
-        table: &mut Table<K, V>,
-        start: vector<u8>,
-        end: vector<u8>,
-        order: u8
+        table: &mut Table<K, V>, start: vector<u8>, end: vector<u8>, order: u8
     ): &mut TableIter<K, V>;
 
     native fun next_box<K: copy + drop, V, B>(table_iter: &TableIter<K, V>): (K, &Box<V>);
@@ -270,10 +280,7 @@ module minitia_std::table {
     // Tests
 
     #[test_only]
-    struct TableHolder<
-        phantom K: copy + drop,
-        phantom V: drop
-    > has key {
+    struct TableHolder<phantom K: copy + drop, phantom V: drop> has key {
         t: Table<K, V>
     }
 
@@ -299,12 +306,12 @@ module minitia_std::table {
         assert!(!contains(&t, key), error_code);
         assert!(
             *borrow_with_default(&t, key, &12) == 12,
-            error_code
+            error_code,
         );
         add(&mut t, key, 1);
         assert!(
             *borrow_with_default(&t, key, &12) == 1,
-            error_code
+            error_code,
         );
 
         move_to(&account, TableHolder { t });

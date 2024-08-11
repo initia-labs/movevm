@@ -34,23 +34,22 @@ module std::guid {
     public fun gen_create_capability(account: &signer): CreateCapability {
         let addr = signer::address_of(account);
         if (!exists<Generator>(addr)) {
-            move_to(account, Generator {counter: 0})
+            move_to(account, Generator { counter: 0 })
         };
         CreateCapability { addr }
     }
 
     /// Create a non-privileged id from `addr` and `creation_num`
     public fun create_id(addr: address, creation_num: u64): ID {
-        ID {creation_num, addr}
+        ID { creation_num, addr }
     }
 
     public fun create_with_capability(
-        addr: address,
-        _cap: &CreateCapability
+        addr: address, _cap: &CreateCapability
     ): GUID acquires Generator {
         assert!(
             exists<Generator>(addr),
-            EGUID_GENERATOR_NOT_PUBLISHED
+            EGUID_GENERATOR_NOT_PUBLISHED,
         );
         create_impl(addr)
     }
@@ -60,7 +59,7 @@ module std::guid {
     public fun create(account: &signer): GUID acquires Generator {
         let addr = signer::address_of(account);
         if (!exists<Generator>(addr)) {
-            move_to(account, Generator {counter: 0})
+            move_to(account, Generator { counter: 0 })
         };
         create_impl(addr)
     }
@@ -69,12 +68,12 @@ module std::guid {
         let generator = borrow_global_mut<Generator>(addr);
         let creation_num = generator.counter;
         generator.counter = creation_num + 1;
-        GUID {id: ID {creation_num, addr}}
+        GUID { id: ID { creation_num, addr } }
     }
 
     /// Publish a Generator resource under `account`
     public fun publish_generator(account: &signer) {
-        move_to(account, Generator {counter: 0})
+        move_to(account, Generator { counter: 0 })
     }
 
     /// Get the non-privileged ID associated with a GUID
@@ -109,7 +108,8 @@ module std::guid {
 
     /// Return the number of the next GUID to be created by `addr`
     public fun get_next_creation_num(addr: address): u64 acquires Generator {
-        if (!exists<Generator>(addr)) { 0 } else {
+        if (!exists<Generator>(addr)) { 0 }
+        else {
             borrow_global<Generator>(addr).counter
         }
     }

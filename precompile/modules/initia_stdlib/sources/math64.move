@@ -29,11 +29,7 @@ module initia_std::math64 {
 
     /// Returns a * b / c going through u128 to prevent intermediate overflow
     public fun mul_div(a: u64, b: u64, c: u64): u64 {
-        (
-            (
-                (a as u128) * (b as u128) / (c as u128)
-            ) as u64
-        )
+        (((a as u128) * (b as u128) / (c as u128)) as u64)
     }
 
     /// Return x clamped to the interval [lower, upper].
@@ -43,7 +39,8 @@ module initia_std::math64 {
 
     /// Return the value of n raised to power e
     public fun pow(n: u64, e: u64): u64 {
-        if (e == 0) { 1 } else {
+        if (e == 0) { 1 }
+        else {
             let p = 1;
             while (e > 1) {
                 if (e % 2 == 1) {
@@ -61,7 +58,7 @@ module initia_std::math64 {
         let res = 0;
         assert!(
             x != 0,
-            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2)
+            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2),
         );
         // Effectively the position of the most significant set bit
         let n = 32;
@@ -80,7 +77,11 @@ module initia_std::math64 {
         let integer_part = floor_log2(x);
         // Normalize x to [1, 2) in fixed point 32.
         let y = (
-            if (x >= 1 << 32) {x >> (integer_part - 32)} else {x << (32 - integer_part)} as u128
+            if (x >= 1 << 32) {
+                x >> (integer_part - 32)
+            } else {
+                x << (32 - integer_part)
+            } as u128
         );
         let frac = 0;
         let delta = 1 << 31;
@@ -139,9 +140,9 @@ module initia_std::math64 {
         assert!(
             ceil_div(
                 (((1u128 << 64) - 9) as u64),
-                11
+                11,
             ) == 1676976733973595601,
-            0
+            0,
         );
     }
 
@@ -174,10 +175,7 @@ module initia_std::math64 {
 
     #[test]
     public entry fun test_average_does_not_overflow() {
-        let result = average(
-            18446744073709551615,
-            18446744073709551615
-        );
+        let result = average(18446744073709551615, 18446744073709551615);
         assert!(result == 18446744073709551615, 0);
     }
 
@@ -206,7 +204,7 @@ module initia_std::math64 {
     #[test]
     public entry fun test_floor_lg2() {
         let idx: u8 = 0;
-        while (idx <64) {
+        while (idx < 64) {
             assert!(floor_log2(1 << idx) == idx, 0);
             idx = idx + 1;
         };
@@ -216,7 +214,7 @@ module initia_std::math64 {
                 floor_log2(
                     (((1u128 << idx) - 1) as u64)
                 ) == idx - 1,
-                0
+                0,
             );
             idx = idx + 1;
         };
@@ -225,36 +223,30 @@ module initia_std::math64 {
     #[test]
     public entry fun test_log2() {
         let idx: u8 = 0;
-        while (idx <64) {
+        while (idx < 64) {
             let res = log2(1 << idx);
             assert!(
                 fixed_point32::get_raw_value(res) == (idx as u64) << 32,
-                0
+                0,
             );
             idx = idx + 1;
         };
         idx = 10;
         while (idx <= 64) {
-            let res = log2(
-                (((1u128 << idx) - 1) as u64)
-            );
+            let res = log2((((1u128 << idx) - 1) as u64));
             // idx + log2 (1 - 1/2^idx) = idx + ln (1-1/2^idx)/ln2
             // Use 3rd order taylor to approximate expected result
             let expected = (idx as u128) << 32;
-            let taylor1 = (
-                (1 << 32) / ((1u256 << idx)) as u128
-            );
+            let taylor1 = ((1 << 32) / ((1u256 << idx)) as u128);
             let taylor2 = (taylor1 * taylor1) >> 32;
             let taylor3 = (taylor2 * taylor1) >> 32;
-            let expected = expected - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) /
-                2977044472;
+            let expected = expected
+                - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) / 2977044472;
             // verify it matches to 8 significant digits
             assert_approx_the_same(
-                (
-                    fixed_point32::get_raw_value(res) as u128
-                ),
+                (fixed_point32::get_raw_value(res) as u128),
                 expected,
-                8
+                8,
             );
             idx = idx + 1;
         };
@@ -274,9 +266,7 @@ module initia_std::math64 {
         let result = sqrt(1 << 62);
         assert!(result == 1 << 31, 0);
 
-        let result = sqrt(
-            (((1u128 << 64) - 1) as u64)
-        );
+        let result = sqrt((((1u128 << 64) - 1) as u64));
         assert!(result == (1u64 << 32) - 1, 0);
 
         let result = sqrt((1u64 << 63));

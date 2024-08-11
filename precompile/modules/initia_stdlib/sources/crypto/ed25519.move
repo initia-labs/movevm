@@ -53,7 +53,7 @@ module initia_std::ed25519 {
     public fun signature_from_bytes(bytes: vector<u8>): Signature {
         assert!(
             std::vector::length(&bytes) == SIGNATURE_SIZE,
-            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE)
+            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE),
         );
         Signature { bytes }
     }
@@ -77,7 +77,7 @@ module initia_std::ed25519 {
         verify_internal(
             message,
             public_key.bytes,
-            signature.bytes
+            signature.bytes,
         )
     }
 
@@ -109,21 +109,19 @@ module initia_std::ed25519 {
         if (message_length == 1) {
             assert!(
                 public_key_length == signature_length,
-                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH)
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH),
             );
             if (public_key_length == 0) return true;
-        }
-        else if (public_key_length == 1) {
+        } else if (public_key_length == 1) {
             assert!(
                 message_length == signature_length,
-                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH)
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH),
             );
             if (message_length == 0) return true;
-        }
-        else {
+        } else {
             assert!(
                 message_length == public_key_length && public_key_length == signature_length,
-                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH)
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH),
             );
             if (message_length == 0) return true;
         };
@@ -132,9 +130,7 @@ module initia_std::ed25519 {
     }
 
     native fun verify_internal(
-        message: vector<u8>,
-        public_key: vector<u8>,
-        signature: vector<u8>
+        message: vector<u8>, public_key: vector<u8>, signature: vector<u8>
     ): bool;
 
     native fun batch_verify_internal(
@@ -147,10 +143,7 @@ module initia_std::ed25519 {
     native public fun generate_keys(): (vector<u8>, vector<u8>);
 
     #[test_only]
-    native public fun sign(
-        message: vector<u8>,
-        secrete_key: vector<u8>
-    ): vector<u8>;
+    native public fun sign(message: vector<u8>, secrete_key: vector<u8>): vector<u8>;
 
     //
     // Tests

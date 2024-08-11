@@ -24,7 +24,7 @@ module TestAccount::TestCoin {
         if (!exists<Coin<CoinType>>(account_addr)) {
             move_to(
                 &account,
-                Coin<CoinType> {value, test: true}
+                Coin<CoinType> { value, test: true },
             );
         } else {
             let coin = borrow_global_mut<Coin<CoinType>>(account_addr);
@@ -32,7 +32,7 @@ module TestAccount::TestCoin {
         };
 
         // emit event
-        event::emit(MintEvent {amount: value,});
+        event::emit(MintEvent { amount: value, });
     }
 
     #[view]
@@ -43,7 +43,7 @@ module TestAccount::TestCoin {
 
     #[view]
     public fun number(): u64 {
-         123
+        123
     }
 
     #[view]

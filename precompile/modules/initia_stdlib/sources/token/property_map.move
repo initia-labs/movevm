@@ -86,15 +86,15 @@ module initia_std::property_map {
         let length = vector::length(&keys);
         assert!(
             length <= MAX_PROPERTY_MAP_SIZE,
-            error::invalid_argument(ETOO_MANY_PROPERTIES)
+            error::invalid_argument(ETOO_MANY_PROPERTIES),
         );
         assert!(
             length == vector::length(&values),
-            error::invalid_argument(EKEY_VALUE_COUNT_MISMATCH)
+            error::invalid_argument(EKEY_VALUE_COUNT_MISMATCH),
         );
         assert!(
             length == vector::length(&types),
-            error::invalid_argument(EKEY_TYPE_COUNT_MISMATCH)
+            error::invalid_argument(EKEY_TYPE_COUNT_MISMATCH),
         );
 
         let container = simple_map::create<String, PropertyValue>();
@@ -112,50 +112,39 @@ module initia_std::property_map {
             validate_type(new_type, value);
 
             simple_map::add(
-                &mut container, key,
-                PropertyValue {value, type: new_type}
+                &mut container,
+                key,
+                PropertyValue { value, type: new_type },
             );
         };
 
-        PropertyMap {inner: container}
+        PropertyMap { inner: container }
     }
 
     /// Maps `String` representation of types from their `u8` representation
     inline fun to_external_type(type: u8): String {
         if (type == BOOL) {
             string::utf8(b"bool")
-        }
-        else if (type == U8) {
+        } else if (type == U8) {
             string::utf8(b"u8")
-        }
-        else if (type == U16) {
+        } else if (type == U16) {
             string::utf8(b"u16")
-        }
-        else if (type == U32) {
+        } else if (type == U32) {
             string::utf8(b"u32")
-        }
-        else if (type == U64) {
+        } else if (type == U64) {
             string::utf8(b"u64")
-        }
-        else if (type == U128) {
+        } else if (type == U128) {
             string::utf8(b"u128")
-        }
-        else if (type == U256) {
+        } else if (type == U256) {
             string::utf8(b"u256")
-        }
-        else if (type == ADDRESS) {
+        } else if (type == ADDRESS) {
             string::utf8(b"address")
-        }
-        else if (type == BYTE_VECTOR) {
+        } else if (type == BYTE_VECTOR) {
             string::utf8(b"vector<u8>")
-        }
-        else if (type == STRING) {
+        } else if (type == STRING) {
             string::utf8(b"0x1::string::String")
-        }
-        else {
-            abort(
-                error::invalid_argument(ETYPE_INVALID)
-            )
+        } else {
+            abort(error::invalid_argument(ETYPE_INVALID))
         }
     }
 
@@ -168,13 +157,13 @@ module initia_std::property_map {
         else if (type == string::utf8(b"u64")) { U64 }
         else if (type == string::utf8(b"u128")) { U128 }
         else if (type == string::utf8(b"u256")) { U256 }
-        else if (type == string::utf8(b"address")) { ADDRESS }
-        else if (type == string::utf8(b"vector<u8>")) { BYTE_VECTOR }
-        else if (type == string::utf8(b"0x1::string::String")) { STRING }
+        else if (type == string::utf8(b"address")) {
+            ADDRESS
+        } else if (type == string::utf8(b"vector<u8>")) {
+            BYTE_VECTOR
+        } else if (type == string::utf8(b"0x1::string::String")) { STRING }
         else {
-            abort(
-                error::invalid_argument(ETYPE_INVALID)
-            )
+            abort(error::invalid_argument(ETYPE_INVALID))
         }
     }
 
@@ -188,43 +177,31 @@ module initia_std::property_map {
     inline fun validate_type(type: u8, value: vector<u8>) {
         if (type == BOOL) {
             from_bcs::to_bool(value);
-        }
-        else if (type == U8) {
+        } else if (type == U8) {
             from_bcs::to_u8(value);
-        }
-        else if (type == U16) {
+        } else if (type == U16) {
             from_bcs::to_u16(value);
-        }
-        else if (type == U32) {
+        } else if (type == U32) {
             from_bcs::to_u32(value);
-        }
-        else if (type == U64) {
+        } else if (type == U64) {
             from_bcs::to_u64(value);
-        }
-        else if (type == U128) {
+        } else if (type == U128) {
             from_bcs::to_u128(value);
-        }
-        else if (type == U256) {
+        } else if (type == U256) {
             from_bcs::to_u256(value);
-        }
-        else if (type == ADDRESS) {
+        } else if (type == ADDRESS) {
             from_bcs::to_address(value);
-        }
-        else if (type == BYTE_VECTOR) {
+        } else if (type == BYTE_VECTOR) {
             // nothing to validate...
-        }
-        else if (type == STRING) {
+        } else if (type == STRING) {
             from_bcs::to_string(value);
-        }
-        else {
-            abort(
-                error::invalid_argument(ETYPE_MISMATCH)
-            )
+        } else {
+            abort(error::invalid_argument(ETYPE_MISMATCH))
         };
     }
 
     public fun generate_mutator_ref(s: &signer): MutatorRef {
-        MutatorRef {self: signer::address_of(s)}
+        MutatorRef { self: signer::address_of(s) }
     }
 
     // Accessors
@@ -322,7 +299,8 @@ module initia_std::property_map {
     // Mutators
     /// Add a property, already bcs encoded as a `vector<u8>`
     public fun add(
-        ref: &MutatorRef, key: String,
+        ref: &MutatorRef,
+        key: String,
         type: String,
         value: vector<u8>
     ) acquires PropertyMap {
@@ -338,21 +316,24 @@ module initia_std::property_map {
     }
 
     inline fun add_internal(
-        ref: &MutatorRef, key: String,
+        ref: &MutatorRef,
+        key: String,
         type: u8,
         value: vector<u8>
     ) acquires PropertyMap {
         assert_exists(ref.self);
         let property_map = borrow_global_mut<PropertyMap>(ref.self);
         simple_map::add(
-            &mut property_map.inner, key,
-            PropertyValue {type, value}
+            &mut property_map.inner,
+            key,
+            PropertyValue { type, value },
         );
     }
 
     /// Updates a property in place already bcs encoded
     public fun update(
-        ref: &MutatorRef, key: &String,
+        ref: &MutatorRef,
+        key: &String,
         type: String,
         value: vector<u8>
     ) acquires PropertyMap {
@@ -363,22 +344,22 @@ module initia_std::property_map {
 
     /// Updates a property in place that is not already bcs encoded
     public fun update_typed<T: drop>(
-        ref: &MutatorRef, key: &String,
-        value: T
+        ref: &MutatorRef, key: &String, value: T
     ) acquires PropertyMap {
         let type = type_info_to_internal_type<T>();
         update_internal(ref, key, type, bcs::to_bytes(&value));
     }
 
     inline fun update_internal(
-        ref: &MutatorRef, key: &String,
+        ref: &MutatorRef,
+        key: &String,
         type: u8,
         value: vector<u8>
     ) acquires PropertyMap {
         assert_exists(ref.self);
         let property_map = borrow_global_mut<PropertyMap>(ref.self);
         let old_value = simple_map::borrow_mut(&mut property_map.inner, key);
-        *old_value = PropertyValue {type, value};
+        *old_value = PropertyValue { type, value };
     }
 
     /// Removes a property from the map, ensuring that it does in fact exist
@@ -393,95 +374,78 @@ module initia_std::property_map {
     fun test_end_to_end(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(
-            &constructor_ref
-        );
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
 
-        let input = prepare_input(
-            vector[
-                string::utf8(b"bool"),
-                string::utf8(b"u8"),
-                string::utf8(b"u16"),
-                string::utf8(b"u32"),
-                string::utf8(b"u64"),
-                string::utf8(b"u128"),
-                string::utf8(b"u256"),
-                string::utf8(b"vector<u8>"),
-                string::utf8(b"0x1::string::String"),
-            ],
-            vector[
-                string::utf8(b"bool"),
-                string::utf8(b"u8"),
-                string::utf8(b"u16"),
-                string::utf8(b"u32"),
-                string::utf8(b"u64"),
-                string::utf8(b"u128"),
-                string::utf8(b"u256"),
-                string::utf8(b"vector<u8>"),
-                string::utf8(b"0x1::string::String"),
-            ],
-            vector[
-                bcs::to_bytes<bool>(&true),
-                bcs::to_bytes<u8>(&0x12),
-                bcs::to_bytes<u16>(&0x1234),
-                bcs::to_bytes<u32>(&0x12345678),
-                bcs::to_bytes<u64>(&0x1234567812345678),
-                bcs::to_bytes<u128>(
-                    &0x12345678123456781234567812345678
-                ),
-                bcs::to_bytes<u256>(
-                    &0x1234567812345678123456781234567812345678123456781234567812345678
-                ),
-                bcs::to_bytes<vector<u8>>(&vector[0x01]),
-                bcs::to_bytes<String>(&string::utf8(b"a")),
-            ],
-        );
+        let input =
+            prepare_input(
+                vector[
+                    string::utf8(b"bool"), string::utf8(b"u8"), string::utf8(b"u16"), string::utf8(
+                        b"u32"
+                    ), string::utf8(b"u64"), string::utf8(b"u128"), string::utf8(b"u256"), string::utf8(
+                        b"vector<u8>"
+                    ), string::utf8(b"0x1::string::String"),],
+                vector[
+                    string::utf8(b"bool"), string::utf8(b"u8"), string::utf8(b"u16"), string::utf8(
+                        b"u32"
+                    ), string::utf8(b"u64"), string::utf8(b"u128"), string::utf8(b"u256"), string::utf8(
+                        b"vector<u8>"
+                    ), string::utf8(b"0x1::string::String"),],
+                vector[
+                    bcs::to_bytes<bool>(&true), bcs::to_bytes<u8>(&0x12), bcs::to_bytes<u16>(
+                        &0x1234
+                    ), bcs::to_bytes<u32>(&0x12345678), bcs::to_bytes<u64>(
+                        &0x1234567812345678
+                    ), bcs::to_bytes<u128>(&0x12345678123456781234567812345678), bcs::to_bytes<u256>(
+                        &
+                        0x1234567812345678123456781234567812345678123456781234567812345678
+                    ), bcs::to_bytes<vector<u8>>(&vector[0x01]), bcs::to_bytes<String>(
+                        &string::utf8(b"a")
+                    ),],
+            );
         init(&s, input);
         let mutator = generate_mutator_ref(&s);
 
-        assert!(
-            read_bool(object, &string::utf8(b"bool")),
-            0
-        );
+        assert!(read_bool(object, &string::utf8(b"bool")), 0);
         assert!(
             read_u8(object, &string::utf8(b"u8")) == 0x12,
-            1
+            1,
         );
         assert!(
             read_u16(object, &string::utf8(b"u16")) == 0x1234,
-            2
+            2,
         );
         assert!(
             read_u32(object, &string::utf8(b"u32")) == 0x12345678,
-            3
+            3,
         );
         assert!(
             read_u64(object, &string::utf8(b"u64")) == 0x1234567812345678,
-            4
+            4,
         );
         assert!(
-            read_u128(object, &string::utf8(b"u128")) == 0x12345678123456781234567812345678
-                ,
-            5
+            read_u128(object, &string::utf8(b"u128")) ==
+            0x12345678123456781234567812345678,
+            5,
         );
         assert!(
-            read_u256(object, &string::utf8(b"u256")) == 0x1234567812345678123456781234567812345678123456781234567812345678
-                ,
-            6
+            read_u256(object, &string::utf8(b"u256"))
+                == 0x1234567812345678123456781234567812345678123456781234567812345678,
+            6,
         );
         assert!(
             read_bytes(
                 object,
-                &string::utf8(b"vector<u8>")
+                &string::utf8(b"vector<u8>"),
             ) == vector[0x01],
-            7
+            7,
         );
         assert!(
             read_string(
                 object,
-                &string::utf8(b"0x1::string::String")
+                &string::utf8(b"0x1::string::String"),
             ) == string::utf8(b"a"),
-            8
+            8,
         );
 
         assert!(length(object) == 9, 9);
@@ -489,86 +453,86 @@ module initia_std::property_map {
         update_typed<bool>(
             &mutator,
             &string::utf8(b"bool"),
-            false
+            false,
         );
         update_typed<u8>(&mutator, &string::utf8(b"u8"), 0x21);
         update_typed<u16>(
             &mutator,
             &string::utf8(b"u16"),
-            0x22
+            0x22,
         );
         update_typed<u32>(
             &mutator,
             &string::utf8(b"u32"),
-            0x23
+            0x23,
         );
         update_typed<u64>(
             &mutator,
             &string::utf8(b"u64"),
-            0x24
+            0x24,
         );
         update_typed<u128>(
             &mutator,
             &string::utf8(b"u128"),
-            0x25
+            0x25,
         );
         update_typed<u256>(
             &mutator,
             &string::utf8(b"u256"),
-            0x26
+            0x26,
         );
         update_typed<vector<u8>>(
             &mutator,
             &string::utf8(b"vector<u8>"),
-            vector[0x02]
+            vector[0x02],
         );
         update_typed<String>(
             &mutator,
             &string::utf8(b"0x1::string::String"),
-            string::utf8(b"ha")
+            string::utf8(b"ha"),
         );
 
         assert!(
             !read_bool(object, &string::utf8(b"bool")),
-            10
+            10,
         );
         assert!(
             read_u8(object, &string::utf8(b"u8")) == 0x21,
-            11
+            11,
         );
         assert!(
             read_u16(object, &string::utf8(b"u16")) == 0x22,
-            12
+            12,
         );
         assert!(
             read_u32(object, &string::utf8(b"u32")) == 0x23,
-            13
+            13,
         );
         assert!(
             read_u64(object, &string::utf8(b"u64")) == 0x24,
-            14
+            14,
         );
         assert!(
             read_u128(object, &string::utf8(b"u128")) == 0x25,
-            15
+            15,
         );
         assert!(
             read_u256(object, &string::utf8(b"u256")) == 0x26,
-            16
+            16,
         );
         assert!(
             read_bytes(
                 object,
-                &string::utf8(b"vector<u8>")
+                &string::utf8(b"vector<u8>"),
             ) == vector[0x02],
-            17
+            17,
         );
         assert!(
             read_string(
                 object,
-                &string::utf8(b"0x1::string::String")
+                &string::utf8(b"0x1::string::String"),
             ) == string::utf8(b"ha"),
-            18
+            18,
         );
 
         assert!(length(object) == 9, 19);
@@ -580,13 +544,10 @@ module initia_std::property_map {
         remove(&mutator, &string::utf8(b"u64"));
         remove(&mutator, &string::utf8(b"u128"));
         remove(&mutator, &string::utf8(b"u256"));
+        remove(&mutator, &string::utf8(b"vector<u8>"));
         remove(
             &mutator,
-            &string::utf8(b"vector<u8>")
-        );
-        remove(
-            &mutator,
-            &string::utf8(b"0x1::string::String")
+            &string::utf8(b"0x1::string::String"),
         );
 
         assert!(length(object) == 0, 20);
@@ -594,7 +555,7 @@ module initia_std::property_map {
         add_typed<bool>(
             &mutator,
             string::utf8(b"bool"),
-            false
+            false,
         );
         add_typed<u8>(&mutator, string::utf8(b"u8"), 0x21);
         add_typed<u16>(&mutator, string::utf8(b"u16"), 0x22);
@@ -603,65 +564,65 @@ module initia_std::property_map {
         add_typed<u128>(
             &mutator,
             string::utf8(b"u128"),
-            0x25
+            0x25,
         );
         add_typed<u256>(
             &mutator,
             string::utf8(b"u256"),
-            0x26
+            0x26,
         );
         add_typed<vector<u8>>(
             &mutator,
             string::utf8(b"vector<u8>"),
-            vector[0x02]
+            vector[0x02],
         );
         add_typed<String>(
             &mutator,
             string::utf8(b"0x1::string::String"),
-            string::utf8(b"ha")
+            string::utf8(b"ha"),
         );
 
         assert!(
             !read_bool(object, &string::utf8(b"bool")),
-            21
+            21,
         );
         assert!(
             read_u8(object, &string::utf8(b"u8")) == 0x21,
-            22
+            22,
         );
         assert!(
             read_u16(object, &string::utf8(b"u16")) == 0x22,
-            23
+            23,
         );
         assert!(
             read_u32(object, &string::utf8(b"u32")) == 0x23,
-            24
+            24,
         );
         assert!(
             read_u64(object, &string::utf8(b"u64")) == 0x24,
-            25
+            25,
         );
         assert!(
             read_u128(object, &string::utf8(b"u128")) == 0x25,
-            26
+            26,
         );
         assert!(
             read_u256(object, &string::utf8(b"u256")) == 0x26,
-            27
+            27,
         );
         assert!(
             read_bytes(
                 object,
-                &string::utf8(b"vector<u8>")
+                &string::utf8(b"vector<u8>"),
             ) == vector[0x02],
-            28
+            28,
         );
         assert!(
             read_string(
                 object,
-                &string::utf8(b"0x1::string::String")
+                &string::utf8(b"0x1::string::String"),
             ) == string::utf8(b"ha"),
-            29
+            29,
         );
 
         assert!(length(object) == 9, 30);
@@ -673,13 +634,10 @@ module initia_std::property_map {
         remove(&mutator, &string::utf8(b"u64"));
         remove(&mutator, &string::utf8(b"u128"));
         remove(&mutator, &string::utf8(b"u256"));
+        remove(&mutator, &string::utf8(b"vector<u8>"));
         remove(
             &mutator,
-            &string::utf8(b"vector<u8>")
-        );
-        remove(
-            &mutator,
-            &string::utf8(b"0x1::string::String")
+            &string::utf8(b"0x1::string::String"),
         );
 
         assert!(length(object) == 0, 31);
@@ -688,25 +646,25 @@ module initia_std::property_map {
             &mutator,
             string::utf8(b"bool"),
             string::utf8(b"bool"),
-            bcs::to_bytes<bool>(&true)
+            bcs::to_bytes<bool>(&true),
         );
         add(
             &mutator,
             string::utf8(b"u8"),
             string::utf8(b"u8"),
-            bcs::to_bytes<u8>(&0x12)
+            bcs::to_bytes<u8>(&0x12),
         );
         add(
             &mutator,
             string::utf8(b"u16"),
             string::utf8(b"u16"),
-            bcs::to_bytes<u16>(&0x1234)
+            bcs::to_bytes<u16>(&0x1234),
         );
         add(
             &mutator,
             string::utf8(b"u32"),
             string::utf8(b"u32"),
-            bcs::to_bytes<u32>(&0x12345678)
+            bcs::to_bytes<u32>(&0x12345678),
         );
         add(
             &mutator,
@@ -718,9 +676,7 @@ module initia_std::property_map {
             &mutator,
             string::utf8(b"u128"),
             string::utf8(b"u128"),
-            bcs::to_bytes<u128>(
-                &0x12345678123456781234567812345678
-            ),
+            bcs::to_bytes<u128>(&0x12345678123456781234567812345678),
         );
         add(
             &mutator,
@@ -743,49 +699,46 @@ module initia_std::property_map {
             bcs::to_bytes<String>(&string::utf8(b"a")),
         );
 
-        assert!(
-            read_bool(object, &string::utf8(b"bool")),
-            32
-        );
+        assert!(read_bool(object, &string::utf8(b"bool")), 32);
         assert!(
             read_u8(object, &string::utf8(b"u8")) == 0x12,
-            33
+            33,
         );
         assert!(
             read_u16(object, &string::utf8(b"u16")) == 0x1234,
-            34
+            34,
         );
         assert!(
             read_u32(object, &string::utf8(b"u32")) == 0x12345678,
-            35
+            35,
         );
         assert!(
             read_u64(object, &string::utf8(b"u64")) == 0x1234567812345678,
-            36
+            36,
         );
         assert!(
-            read_u128(object, &string::utf8(b"u128")) == 0x12345678123456781234567812345678
-                ,
-            37
+            read_u128(object, &string::utf8(b"u128")) ==
+            0x12345678123456781234567812345678,
+            37,
         );
         assert!(
-            read_u256(object, &string::utf8(b"u256")) == 0x1234567812345678123456781234567812345678123456781234567812345678
-                ,
-            38
+            read_u256(object, &string::utf8(b"u256"))
+                == 0x1234567812345678123456781234567812345678123456781234567812345678,
+            38,
         );
         assert!(
             read_bytes(
                 object,
-                &string::utf8(b"vector<u8>")
+                &string::utf8(b"vector<u8>"),
             ) == vector[0x01],
-            39
+            39,
         );
         assert!(
             read_string(
                 object,
-                &string::utf8(b"0x1::string::String")
+                &string::utf8(b"0x1::string::String"),
             ) == string::utf8(b"a"),
-            40
+            40,
         );
 
         assert!(length(object) == 9, 41);
@@ -794,43 +747,43 @@ module initia_std::property_map {
             &mutator,
             &string::utf8(b"bool"),
             string::utf8(b"bool"),
-            bcs::to_bytes<bool>(&false)
+            bcs::to_bytes<bool>(&false),
         );
         update(
             &mutator,
             &string::utf8(b"u8"),
             string::utf8(b"u8"),
-            bcs::to_bytes<u8>(&0x21)
+            bcs::to_bytes<u8>(&0x21),
         );
         update(
             &mutator,
             &string::utf8(b"u16"),
             string::utf8(b"u16"),
-            bcs::to_bytes<u16>(&0x22)
+            bcs::to_bytes<u16>(&0x22),
         );
         update(
             &mutator,
             &string::utf8(b"u32"),
             string::utf8(b"u32"),
-            bcs::to_bytes<u32>(&0x23)
+            bcs::to_bytes<u32>(&0x23),
         );
         update(
             &mutator,
             &string::utf8(b"u64"),
             string::utf8(b"u64"),
-            bcs::to_bytes<u64>(&0x24)
+            bcs::to_bytes<u64>(&0x24),
         );
         update(
             &mutator,
             &string::utf8(b"u128"),
             string::utf8(b"u128"),
-            bcs::to_bytes<u128>(&0x25)
+            bcs::to_bytes<u128>(&0x25),
         );
         update(
             &mutator,
             &string::utf8(b"u256"),
             string::utf8(b"u256"),
-            bcs::to_bytes<u256>(&0x26)
+            bcs::to_bytes<u256>(&0x26),
         );
         update(
             &mutator,
@@ -847,45 +800,45 @@ module initia_std::property_map {
 
         assert!(
             !read_bool(object, &string::utf8(b"bool")),
-            10
+            10,
         );
         assert!(
             read_u8(object, &string::utf8(b"u8")) == 0x21,
-            11
+            11,
         );
         assert!(
             read_u16(object, &string::utf8(b"u16")) == 0x22,
-            12
+            12,
         );
         assert!(
             read_u32(object, &string::utf8(b"u32")) == 0x23,
-            13
+            13,
         );
         assert!(
             read_u64(object, &string::utf8(b"u64")) == 0x24,
-            14
+            14,
         );
         assert!(
             read_u128(object, &string::utf8(b"u128")) == 0x25,
-            15
+            15,
         );
         assert!(
             read_u256(object, &string::utf8(b"u256")) == 0x26,
-            16
+            16,
         );
         assert!(
             read_bytes(
                 object,
-                &string::utf8(b"vector<u8>")
+                &string::utf8(b"vector<u8>"),
             ) == vector[0x02],
-            17
+            17,
         );
         assert!(
             read_string(
                 object,
-                &string::utf8(b"0x1::string::String")
+                &string::utf8(b"0x1::string::String"),
             ) == string::utf8(b"ha"),
-            18
+            18,
         );
     }
 
@@ -895,11 +848,12 @@ module initia_std::property_map {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
 
-        let input = prepare_input(
-            vector[string::utf8(b"bool")],
-            vector[string::utf8(b"u16")],
-            vector[bcs::to_bytes<bool>(&true)],
-        );
+        let input =
+            prepare_input(
+                vector[string::utf8(b"bool")],
+                vector[string::utf8(b"u16")],
+                vector[bcs::to_bytes<bool>(&true)],
+            );
         init(&s, input);
     }
 
@@ -909,17 +863,12 @@ module initia_std::property_map {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
 
-        let input = prepare_input(
-            vector[
-                string::utf8(b"bool"),
-                string::utf8(b"u8")
-            ],
-            vector[
-                string::utf8(b"bool"),
-                string::utf8(b"u8")
-            ],
-            vector[bcs::to_bytes<bool>(&true)],
-        );
+        let input =
+            prepare_input(
+                vector[string::utf8(b"bool"), string::utf8(b"u8")],
+                vector[string::utf8(b"bool"), string::utf8(b"u8")],
+                vector[bcs::to_bytes<bool>(&true)],
+            );
         init(&s, input);
     }
 
@@ -929,17 +878,12 @@ module initia_std::property_map {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
 
-        let input = prepare_input(
-            vector[
-                string::utf8(b"bool"),
-                string::utf8(b"u8")
-            ],
-            vector[string::utf8(b"bool")],
-            vector[
-                bcs::to_bytes<bool>(&true),
-                bcs::to_bytes<u8>(&0x2)
-            ],
-        );
+        let input =
+            prepare_input(
+                vector[string::utf8(b"bool"), string::utf8(b"u8")],
+                vector[string::utf8(b"bool")],
+                vector[bcs::to_bytes<bool>(&true), bcs::to_bytes<u8>(&0x2)],
+            );
         init(&s, input);
     }
 
@@ -949,11 +893,12 @@ module initia_std::property_map {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
 
-        let input = prepare_input(
-            vector[string::utf8(b"bool")],
-            vector[string::utf8(b"bool")],
-            vector[bcs::to_bytes<bool>(&true)],
-        );
+        let input =
+            prepare_input(
+                vector[string::utf8(b"bool")],
+                vector[string::utf8(b"bool")],
+                vector[bcs::to_bytes<bool>(&true)],
+            );
         init(&s, input);
         let mutator = generate_mutator_ref(&s);
 
@@ -961,7 +906,7 @@ module initia_std::property_map {
             &mutator,
             &string::utf8(b"u16"),
             string::utf8(b"bool"),
-            bcs::to_bytes<u16>(&0x1234)
+            bcs::to_bytes<u16>(&0x1234),
         );
     }
 
@@ -971,11 +916,12 @@ module initia_std::property_map {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
 
-        let input = prepare_input(
-            vector[string::utf8(b"bool")],
-            vector[string::utf8(b"bool")],
-            vector[bcs::to_bytes<bool>(&true)],
-        );
+        let input =
+            prepare_input(
+                vector[string::utf8(b"bool")],
+                vector[string::utf8(b"bool")],
+                vector[bcs::to_bytes<bool>(&true)],
+            );
         init(&s, input);
         let mutator = generate_mutator_ref(&s);
 
@@ -983,7 +929,7 @@ module initia_std::property_map {
             &mutator,
             &string::utf8(b"bool"),
             string::utf8(b"bool"),
-            bcs::to_bytes<u16>(&0x1234)
+            bcs::to_bytes<u16>(&0x1234),
         );
     }
 
@@ -992,15 +938,15 @@ module initia_std::property_map {
     fun test_invalid_read(creator: &signer) acquires PropertyMap {
         let constructor_ref = object::create_named_object(creator, b"", false);
         let s = object::generate_signer(&constructor_ref);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(
-            &constructor_ref
-        );
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
 
-        let input = prepare_input(
-            vector[string::utf8(b"bool")],
-            vector[string::utf8(b"bool")],
-            vector[bcs::to_bytes<bool>(&true)],
-        );
+        let input =
+            prepare_input(
+                vector[string::utf8(b"bool")],
+                vector[string::utf8(b"bool")],
+                vector[bcs::to_bytes<bool>(&true)],
+            );
         init(&s, input);
         read_u8(object, &string::utf8(b"bool"));
     }

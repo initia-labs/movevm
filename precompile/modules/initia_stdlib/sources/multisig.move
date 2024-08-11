@@ -34,11 +34,7 @@ module initia_std::multisig {
 
     // constants
 
-    const STATUS: vector<vector<u8>> = vector[
-        b"in voting preiod",
-        b"executed",
-        b"expired",
-    ];
+    const STATUS: vector<vector<u8>> = vector[b"in voting preiod", b"executed", b"expired",];
 
     const MAX_LIMIT: u8 = 30;
 
@@ -150,28 +146,20 @@ module initia_std::multisig {
 
     // view functions
     #[view]
-    public fun get_proposal(
-        multisig_addr: address,
-        proposal_id: u64
-    ): ProposalResponse acquires MultisigWallet {
+    public fun get_proposal(multisig_addr: address, proposal_id: u64): ProposalResponse acquires MultisigWallet {
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let proposal = table::borrow(
-            &multisig_wallet.proposals,
-            proposal_id
-        );
+        let proposal = table::borrow(&multisig_wallet.proposals, proposal_id);
         proposal_to_proposal_response(
             multisig_wallet,
             multisig_addr,
             proposal_id,
-            proposal
+            proposal,
         )
     }
 
     #[view]
     public fun get_proposals(
-        multisig_addr: address,
-        start_after: Option<u64>,
-        limit: u8
+        multisig_addr: address, start_after: Option<u64>, limit: u8
     ): vector<ProposalResponse> acquires MultisigWallet {
         if (limit > MAX_LIMIT) {
             limit = MAX_LIMIT
@@ -182,12 +170,12 @@ module initia_std::multisig {
             &multisig_wallet.proposals,
             option::none(),
             start_after,
-            2
+            2,
         );
 
-        while (
-            vector::length(&res) <(limit as u64) && table::prepare<u64, Proposal>(iter)
-        ) {
+        while (vector::length(&res) < (limit as u64) && table::prepare<u64, Proposal>(
+                iter
+            )) {
             let (proposal_id, proposal) = table::next<u64, Proposal>(iter);
             vector::push_back(
                 &mut res,
@@ -195,8 +183,8 @@ module initia_std::multisig {
                     multisig_wallet,
                     multisig_addr,
                     proposal_id,
-                    proposal
-                )
+                    proposal,
+                ),
             );
         };
 
@@ -227,19 +215,17 @@ module initia_std::multisig {
         max_voting_period_height: Option<u64>,
         max_voting_period_timestamp: Option<u64>,
     ) {
-        assert_member(
-            &members,
-            &signer::address_of(account)
-        );
+        assert_member(&members, &signer::address_of(account));
         assert!(
             vector::length(&members) >= threshold,
-            error::invalid_argument(EINVALID_THRESHOLD)
+            error::invalid_argument(EINVALID_THRESHOLD),
         );
-        let constructor_ref = object::create_named_object(
-            account,
-            *string::bytes(&name),
-            false
-        );
+        let constructor_ref =
+            object::create_named_object(
+                account,
+                *string::bytes(&name),
+                false,
+            );
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let multisig_signer = object::generate_signer(&constructor_ref);
         let multisig_addr = signer::address_of(&multisig_signer);
@@ -250,7 +236,7 @@ module initia_std::multisig {
         let members_map = simple_map::create<address, bool>();
         vector::for_each(
             members,
-            |member| simple_map::add(&mut members_map, member, true)
+            |member| simple_map::add(&mut members_map, member, true),
         ); // just for check uniqueness
 
         move_to(
@@ -262,7 +248,7 @@ module initia_std::multisig {
                 threshold,
                 max_voting_period,
                 proposals: table::new(),
-            }
+            },
         );
 
         event::emit<CreateMultisigAccountEvent>(
@@ -271,7 +257,7 @@ module initia_std::multisig {
                 members,
                 threshold,
                 max_voting_period,
-            }
+            },
         )
     }
 
@@ -335,33 +321,19 @@ module initia_std::multisig {
         assert!(
             table::contains(
                 &multisig_wallet.proposals,
-                proposal_id
+                proposal_id,
             ),
-            error::invalid_argument(EPROPOSAL_NOT_FOUND)
+            error::invalid_argument(EPROPOSAL_NOT_FOUND),
         );
-        let proposal = table::borrow_mut(
-            &mut multisig_wallet.proposals,
-            proposal_id
-        );
+        let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
 
-        assert_config_version(
-            multisig_wallet.config_version,
-            proposal
-        );
-        assert_proposal(
-            &multisig_wallet.max_voting_period,
-            proposal
-        );
+        assert_config_version(multisig_wallet.config_version, proposal);
+        assert_proposal(&multisig_wallet.max_voting_period, proposal);
 
         vote(&mut proposal.votes, voter, vote_yes);
 
         event::emit<VoteProposalEvent>(
-            VoteProposalEvent {
-                multisig_addr,
-                proposal_id,
-                voter,
-                vote_yes,
-            }
+            VoteProposalEvent { multisig_addr, proposal_id, voter, vote_yes, },
         )
     }
 
@@ -378,36 +350,26 @@ module initia_std::multisig {
         assert!(
             table::contains(
                 &multisig_wallet.proposals,
-                proposal_id
+                proposal_id,
             ),
-            error::invalid_argument(EPROPOSAL_NOT_FOUND)
+            error::invalid_argument(EPROPOSAL_NOT_FOUND),
         );
-        let proposal = table::borrow_mut(
-            &mut multisig_wallet.proposals,
-            proposal_id
-        );
+        let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
 
-        assert_config_version(
-            multisig_wallet.config_version,
-            proposal
-        );
-        assert_proposal(
-            &multisig_wallet.max_voting_period,
-            proposal
-        );
+        assert_config_version(multisig_wallet.config_version, proposal);
+        assert_proposal(&multisig_wallet.max_voting_period, proposal);
 
         // check passed
         assert!(
             yes_vote_count(
                 &proposal.votes,
-                &multisig_wallet.members
+                &multisig_wallet.members,
             ) >= multisig_wallet.threshold,
             error::invalid_state(ENOT_PASS),
         );
 
-        let multisig_signer = &object::generate_signer_for_extending(
-            &multisig_wallet.extend_ref
-        );
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
 
         if (!proposal.is_json) {
             move_execute(
@@ -432,11 +394,7 @@ module initia_std::multisig {
         proposal.status = 1; // executed
 
         event::emit<ExecuteProposalEvent>(
-            ExecuteProposalEvent {
-                multisig_addr,
-                proposal_id,
-                executor,
-            }
+            ExecuteProposalEvent { multisig_addr, proposal_id, executor, },
         )
     }
 
@@ -453,12 +411,12 @@ module initia_std::multisig {
 
         assert!(
             vector::length(&new_members) >= new_threshold,
-            error::invalid_argument(EINVALID_THRESHOLD)
+            error::invalid_argument(EINVALID_THRESHOLD),
         );
         let new_members_map = simple_map::create<address, bool>();
         vector::for_each(
             new_members,
-            |member| simple_map::add(&mut new_members_map, member, true)
+            |member| simple_map::add(&mut new_members_map, member, true),
         ); // just for check uniqueness
         let new_max_voting_period = Period {
             height: new_max_voting_period_height,
@@ -476,7 +434,7 @@ module initia_std::multisig {
                 members: new_members,
                 threshold: new_threshold,
                 max_voting_period: new_max_voting_period,
-            }
+            },
         )
     }
 
@@ -517,7 +475,7 @@ module initia_std::multisig {
         table::add(
             &mut multisig_wallet.proposals,
             proposal_id,
-            proposal
+            proposal,
         );
 
         event::emit<CreateProposalEvent>(
@@ -530,29 +488,25 @@ module initia_std::multisig {
                 type_args,
                 args,
                 config_version,
-            }
+            },
         )
     }
 
     fun is_proposal_expired(
-        max_period: &Period,
-        proposal_height: u64,
-        proposal_timestamp: u64
+        max_period: &Period, proposal_height: u64, proposal_timestamp: u64
     ): bool {
         let (height, timestamp) = get_block_info();
-        let expired_height = if (option::is_some(&max_period.height)) {
-            let max_voting_period_height = *option::borrow(&max_period.height);
-            (
-                max_voting_period_height + proposal_height
-            ) >= height
-        } else { false };
+        let expired_height =
+            if (option::is_some(&max_period.height)) {
+                let max_voting_period_height = *option::borrow(&max_period.height);
+                (max_voting_period_height + proposal_height) >= height
+            } else { false };
 
-        let expired_timestamp = if (option::is_some(&max_period.timestamp)) {
-            let max_voting_period_timestamp = *option::borrow(&max_period.timestamp);
-            (
-                max_voting_period_timestamp + proposal_timestamp
-            ) >= timestamp
-        } else { false };
+        let expired_timestamp =
+            if (option::is_some(&max_period.timestamp)) {
+                let max_voting_period_timestamp = *option::borrow(&max_period.timestamp);
+                (max_voting_period_timestamp + proposal_timestamp) >= timestamp
+            } else { false };
 
         expired_height || expired_timestamp
     }
@@ -571,17 +525,17 @@ module initia_std::multisig {
     }
 
     fun yes_vote_count(
-        votes: &SimpleMap<address, bool>,
-        members: &vector<address>
+        votes: &SimpleMap<address, bool>, members: &vector<address>
     ): u64 {
         let yes_count = 0;
         vector::for_each_ref(
             members,
             |member| {
-                if (simple_map::contains_key(votes, member) && *simple_map::borrow(votes, member)) {
+                if (simple_map::contains_key(votes, member)
+                        && *simple_map::borrow(votes, member)) {
                     yes_count = yes_count + 1;
                 }
-            }
+            },
         );
 
         yes_count
@@ -594,15 +548,13 @@ module initia_std::multisig {
         proposal: &Proposal,
     ): ProposalResponse {
         let status_index = proposal.status;
-        let is_expired = is_proposal_expired(
-            &multisig_wallet.max_voting_period,
-            proposal.proposal_height,
-            proposal.proposal_timestamp
-        );
-        let yes_vote_count = yes_vote_count(
-            &proposal.votes,
-            &multisig_wallet.members
-        );
+        let is_expired =
+            is_proposal_expired(
+                &multisig_wallet.max_voting_period,
+                proposal.proposal_height,
+                proposal.proposal_timestamp,
+            );
+        let yes_vote_count = yes_vote_count(&proposal.votes, &multisig_wallet.members);
         if (status_index == 0 && is_expired) {
             status_index = 2
         };
@@ -619,41 +571,34 @@ module initia_std::multisig {
             proposal_timestamp: proposal.proposal_timestamp,
             config_version: proposal.config_version,
             yes_vote_count,
-            status: string::utf8(
-                *vector::borrow(&STATUS,(status_index as u64))
-            ),
+            status: string::utf8(*vector::borrow(&STATUS, (status_index as u64))),
             is_json: proposal.is_json,
             json_args: proposal.json_args,
         }
     }
 
-    inline fun assert_member(
-        members: &vector<address>,
-        member: &address
-    ) {
+    inline fun assert_member(members: &vector<address>, member: &address) {
         assert!(
             vector::contains(members, member),
-            error::permission_denied(ENOT_MEMBER)
+            error::permission_denied(ENOT_MEMBER),
         )
     }
 
     inline fun assert_config_version(
-        multisig_wallet_config_version: u64,
-        execute_proposal: &Proposal
+        multisig_wallet_config_version: u64, execute_proposal: &Proposal
     ) {
         assert!(
             multisig_wallet_config_version == execute_proposal.config_version,
-            error::invalid_state(EOLD_CONFIG_VERSION)
+            error::invalid_state(EOLD_CONFIG_VERSION),
         )
     }
 
     inline fun assert_proposal(
-        max_voting_period: &Period,
-        proposal: &Proposal
+        max_voting_period: &Period, proposal: &Proposal
     ) {
         assert!(
             proposal.status == 0,
-            error::invalid_state(EINVALID_PROPOSAL_STATUS)
+            error::invalid_state(EINVALID_PROPOSAL_STATUS),
         );
         assert!(
             !is_proposal_expired(
@@ -770,8 +715,7 @@ module initia_std::multisig {
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-            ],
+                std::bcs::to_bytes(&option::none<u64>()),],
         );
     }
 
@@ -810,8 +754,7 @@ module initia_std::multisig {
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-            ],
+                std::bcs::to_bytes(&option::none<u64>()),],
         );
 
         vote_proposal(&account4, multisig_addr, 1, true);
@@ -853,8 +796,7 @@ module initia_std::multisig {
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-            ],
+                std::bcs::to_bytes(&option::none<u64>()),],
         );
 
         set_block_info(111, 100);
@@ -897,8 +839,7 @@ module initia_std::multisig {
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-            ],
+                std::bcs::to_bytes(&option::none<u64>()),],
         );
 
         set_block_info(100, 111);
@@ -940,8 +881,7 @@ module initia_std::multisig {
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-            ],
+                std::bcs::to_bytes(&option::none<u64>()),],
         );
 
         vote_proposal(&account1, multisig_addr, 1, true);
@@ -986,8 +926,7 @@ module initia_std::multisig {
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-            ],
+                std::bcs::to_bytes(&option::none<u64>()),],
         );
 
         vote_proposal(&account1, multisig_addr, 1, true);
@@ -995,9 +934,8 @@ module initia_std::multisig {
         vote_proposal(&account3, multisig_addr, 1, false);
 
         let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
-        let multisig_signer = object::generate_signer_for_extending(
-            &multisig_wallet.extend_ref
-        );
+        let multisig_signer =
+            object::generate_signer_for_extending(&multisig_wallet.extend_ref);
         update_config(
             &multisig_signer,
             vector[addr1, addr2, addr4],
@@ -1041,21 +979,29 @@ module initia_std::multisig {
                 string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
                 string::utf8(b"\"3\""),
                 string::utf8(b""),
-                string::utf8(b""),
-            ],
+                string::utf8(b""),],
         );
 
         let proposal = get_proposal(multisig_addr, 1);
         assert!(proposal.module_address == @initia_std, 0);
-        assert!(proposal.module_name == string::utf8(b"multisig"), 1);
-        assert!(proposal.function_name == string::utf8(b"update_config"), 2);
+        assert!(
+            proposal.module_name == string::utf8(b"multisig"),
+            1,
+        );
+        assert!(
+            proposal.function_name == string::utf8(b"update_config"),
+            2,
+        );
         assert!(proposal.type_args == vector[], 3);
-        assert!(proposal.json_args == vector[
-            string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
-            string::utf8(b"\"3\""),
-            string::utf8(b""),
-            string::utf8(b""),
-        ], 4);
+        assert!(
+            proposal.json_args
+                == vector[
+                    string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
+                    string::utf8(b"\"3\""),
+                    string::utf8(b""),
+                    string::utf8(b""),],
+            4,
+        );
         assert!(proposal.args == vector[], 5);
     }
 }

@@ -5,12 +5,7 @@ module initia_std::royalty {
     use std::error;
     use std::option::{Self, Option};
     use initia_std::decimal128::{Self, Decimal128};
-    use initia_std::object::{
-        Self,
-        ConstructorRef,
-        ExtendRef,
-        Object
-    };
+    use initia_std::object::{Self, ConstructorRef, ExtendRef, Object};
 
     friend initia_std::nft;
 
@@ -36,19 +31,13 @@ module initia_std::royalty {
     }
 
     /// Add a royalty, given a ConstructorRef.
-    public fun init(
-        ref: &ConstructorRef,
-        royalty: Royalty
-    ) {
+    public fun init(ref: &ConstructorRef, royalty: Royalty) {
         let signer = object::generate_signer(ref);
         move_to(&signer, royalty);
     }
 
     /// Set the royalty if it does not exist, replace it otherwise.
-    public fun update(
-        mutator_ref: &MutatorRef,
-        royalty: Royalty
-    ) acquires Royalty {
+    public fun update(mutator_ref: &MutatorRef, royalty: Royalty) acquires Royalty {
         let addr = object::address_from_extend_ref(&mutator_ref.inner);
         if (exists<Royalty>(addr)) {
             move_from<Royalty>(addr);
@@ -59,20 +48,17 @@ module initia_std::royalty {
     }
 
     /// Creates a new royalty, verifying that it is a valid percentage
-    public fun create(
-        royalty: Decimal128,
-        payee_address: address
-    ): Royalty {
+    public fun create(royalty: Decimal128, payee_address: address): Royalty {
         assert!(
             decimal128::val(&royalty) <= decimal128::val(&decimal128::one()),
-            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM)
+            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM),
         );
 
-        Royalty {royalty, payee_address}
+        Royalty { royalty, payee_address }
     }
 
     public fun generate_mutator_ref(ref: ExtendRef): MutatorRef {
-        MutatorRef {inner: ref}
+        MutatorRef { inner: ref }
     }
 
     public fun exists_at(addr: address): bool {
@@ -82,7 +68,7 @@ module initia_std::royalty {
     public(friend) fun delete(addr: address) acquires Royalty {
         assert!(
             exists<Royalty>(addr),
-            error::not_found(EROYALTY_DOES_NOT_EXIST)
+            error::not_found(EROYALTY_DOES_NOT_EXIST),
         );
         move_from<Royalty>(addr);
     }
@@ -108,68 +94,54 @@ module initia_std::royalty {
     #[test(creator = @0x123)]
     fun test_none(creator: &signer) acquires Royalty {
         let constructor_ref = object::create_named_object(creator, b"", false);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(
-            &constructor_ref
-        );
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         assert!(option::none() == get(object), 0);
     }
 
     #[test(creator = @0x123)]
     fun test_init_and_update(creator: &signer) acquires Royalty {
         let constructor_ref = object::create_named_object(creator, b"", false);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(
-            &constructor_ref
-        );
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         let init_royalty = create(decimal128::from_ratio(1, 2), @0x123);
         init(&constructor_ref, init_royalty);
-        assert!(
-            option::some(init_royalty) == get(object),
-            0
-        );
+        assert!(option::some(init_royalty) == get(object), 0);
         assert!(
             royalty(&init_royalty) == decimal128::from_ratio(1, 2),
-            1
+            1,
         );
-        assert!(
-            payee_address(&init_royalty) == @0x123,
-            2
-        );
+        assert!(payee_address(&init_royalty) == @0x123, 2);
 
-        let mutator_ref = generate_mutator_ref(
-            object::generate_extend_ref(&constructor_ref)
-        );
+        let mutator_ref =
+            generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
         let update_royalty = create(decimal128::from_ratio(2, 5), @0x456);
         update(&mutator_ref, update_royalty);
         assert!(
             option::some(update_royalty) == get(object),
-            3
+            3,
         );
         assert!(
             royalty(&update_royalty) == decimal128::from_ratio(2, 5),
-            4
+            4,
         );
-        assert!(
-            payee_address(&update_royalty) == @0x456,
-            5
-        );
+        assert!(payee_address(&update_royalty) == @0x456, 5);
     }
 
     #[test(creator = @0x123)]
     fun test_update_only(creator: &signer) acquires Royalty {
         let constructor_ref = object::create_named_object(creator, b"", false);
-        let object = object::object_from_constructor_ref<object::ObjectCore>(
-            &constructor_ref
-        );
+        let object =
+            object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
         assert!(option::none() == get(object), 0);
 
-        let mutator_ref = generate_mutator_ref(
-            object::generate_extend_ref(&constructor_ref)
-        );
+        let mutator_ref =
+            generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
         let update_royalty = create(decimal128::from_ratio(1, 5), @0x123);
         update(&mutator_ref, update_royalty);
         assert!(
             option::some(update_royalty) == get(object),
-            1
+            1,
         );
     }
 

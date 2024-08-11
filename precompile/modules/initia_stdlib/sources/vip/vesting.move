@@ -135,12 +135,15 @@ module initia_std::vip_vesting {
     // Implementations
     //
 
-    fun register_vesting_store<Vesting: copy + drop + store>(account: &signer, bridge_id: u64) {
+    fun register_vesting_store<Vesting: copy + drop + store>(
+        account: &signer, bridge_id: u64
+    ) {
         let seed = generate_vesting_store_seed<Vesting>(bridge_id);
-        let vesting_addr = object::create_object_address(signer::address_of(account), seed);
+        let vesting_addr =
+            object::create_object_address(signer::address_of(account), seed);
         assert!(
             !exists<VestingStore<Vesting>>(vesting_addr),
-            error::already_exists(EVESTING_STORE_ALREADY_EXISTS)
+            error::already_exists(EVESTING_STORE_ALREADY_EXISTS),
         );
 
         let constructor_ref = object::create_named_object(account, seed, false);
@@ -156,22 +159,19 @@ module initia_std::vip_vesting {
         move_to(&object, vesting_store);
     }
 
-    fun generate_vesting_store_seed<Vesting: copy + drop + store>(bridge_id: u64): vector<u8> {
-        let seed = if (type_info::type_name<Vesting>() == type_info::type_name<OperatorVesting>()) {
-            vector[OPERATOR_VESTING_PREFIX]
-        }
-        else if (type_info::type_name<Vesting>() == type_info::type_name<UserVesting>()) {
-            vector[USER_VESTING_PREFIX]
-        } else {
-            abort(
-                error::invalid_argument(EINVALID_VESTING_TYPE)
-            )
-        };
+    fun generate_vesting_store_seed<Vesting: copy + drop + store>(
+        bridge_id: u64
+    ): vector<u8> {
+        let seed =
+            if (type_info::type_name<Vesting>() == type_info::type_name<OperatorVesting>()) {
+                vector[OPERATOR_VESTING_PREFIX]
+            } else if (type_info::type_name<Vesting>() == type_info::type_name<UserVesting>()) {
+                vector[USER_VESTING_PREFIX]
+            } else {
+                abort(error::invalid_argument(EINVALID_VESTING_TYPE))
+            };
 
-        vector::append(
-            &mut seed,
-            bcs::to_bytes(&bridge_id)
-        );
+        vector::append(&mut seed, bcs::to_bytes(&bridge_id));
         return seed
     }
 
@@ -181,40 +181,43 @@ module initia_std::vip_vesting {
         stage: u64,
         vesting: Vesting
     ) acquires VestingStore {
-        let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
+        let vesting_store_addr =
+            get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
         assert!(
             !table::contains(
                 &vesting_store.claimed_stages,
-                table_key::encode_u64(stage)
+                table_key::encode_u64(stage),
             ),
-            error::already_exists(EVESTING_ALREADY_CLAIMED)
+            error::already_exists(EVESTING_ALREADY_CLAIMED),
         );
 
         table::add(
             &mut vesting_store.claimed_stages,
             table_key::encode_u64(stage),
-            true
+            true,
         );
         table::add(
             &mut vesting_store.vestings,
             table_key::encode_u64(stage),
-            vesting
+            vesting,
         );
     }
 
-    fun create_vesting_store_address<Vesting: copy + drop + store>(account: address, bridge_id: u64)
-        : address {
+    fun create_vesting_store_address<Vesting: copy + drop + store>(
+        account: address, bridge_id: u64
+    ): address {
         let seed = generate_vesting_store_seed<Vesting>(bridge_id);
         object::create_object_address(account, seed)
     }
 
-    fun get_vesting_store_address<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64)
-        : address {
+    fun get_vesting_store_address<Vesting: copy + drop + store>(
+        account_addr: address, bridge_id: u64
+    ): address {
         let vesting_addr = create_vesting_store_address<Vesting>(account_addr, bridge_id);
         assert!(
             exists<VestingStore<Vesting>>(vesting_addr),
-            error::not_found(EVESTING_STORE_NOT_FOUND)
+            error::not_found(EVESTING_STORE_NOT_FOUND),
         );
         vesting_addr
     }
@@ -243,9 +246,12 @@ module initia_std::vip_vesting {
         //
         // vest_ratio = max_ratio * score_ratio
         // vest_amount = value.initial_reward * vest_ratio
-        let score_ratio = if (l2_score >= value.minimum_score) {decimal256::one()} else {
-            decimal256::from_ratio_u64(l2_score, value.minimum_score)
-        };
+        let score_ratio =
+            if (l2_score >= value.minimum_score) {
+                decimal256::one()
+            } else {
+                decimal256::from_ratio_u64(l2_score, value.minimum_score)
+            };
 
         let vesting_period = value.end_stage - value.start_stage;
         let max_ratio = decimal256::div_u64(&decimal256::one(), vesting_period);
@@ -260,62 +266,65 @@ module initia_std::vip_vesting {
     }
 
     fun get_vesting<Vesting: copy + drop + store>(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): Vesting acquires VestingStore {
-        let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
+        let vesting_store_addr =
+            get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
 
         assert!(
             table::contains(
                 &mut vesting_store.vestings,
-                table_key::encode_u64(stage)
+                table_key::encode_u64(stage),
             ),
-            error::not_found(EVESTING_NOT_FOUND)
+            error::not_found(EVESTING_NOT_FOUND),
         );
-        let vesting = table::borrow(
-            &vesting_store.vestings,
-            table_key::encode_u64(stage)
-        );
+        let vesting =
+            table::borrow(
+                &vesting_store.vestings,
+                table_key::encode_u64(stage),
+            );
 
         *vesting
     }
 
     fun get_vesting_finalized<Vesting: copy + drop + store>(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): Vesting acquires VestingStore {
-        let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
+        let vesting_store_addr =
+            get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
 
         assert!(
             table::contains(
                 &mut vesting_store.vestings_finalized,
-                table_key::encode_u64(stage)
+                table_key::encode_u64(stage),
             ),
-            error::not_found(EVESTING_NOT_FOUND)
+            error::not_found(EVESTING_NOT_FOUND),
         );
-        let vesting_finalized = table::borrow(
-            &vesting_store.vestings_finalized,
-            table_key::encode_u64(stage)
-        );
+        let vesting_finalized =
+            table::borrow(
+                &vesting_store.vestings_finalized,
+                table_key::encode_u64(stage),
+            );
 
         *vesting_finalized
     }
 
-    fun get_last_claimed_stage<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64)
-        : u64 acquires VestingStore {
-        let vesting_store_addr = get_vesting_store_address<Vesting>(account_addr, bridge_id);
+    fun get_last_claimed_stage<Vesting: copy + drop + store>(
+        account_addr: address, bridge_id: u64
+    ): u64 acquires VestingStore {
+        let vesting_store_addr =
+            get_vesting_store_address<Vesting>(account_addr, bridge_id);
         let vesting_store = borrow_global_mut<VestingStore<Vesting>>(vesting_store_addr);
 
-        let iter = table::iter(
-            &mut vesting_store.claimed_stages,
-            option::none(),
-            option::none(),
-            2
-        );
+        let iter =
+            table::iter(
+                &mut vesting_store.claimed_stages,
+                option::none(),
+                option::none(),
+                2,
+            );
         if (!table::prepare<vector<u8>, bool>(iter)) {
             return 0
         };
@@ -333,16 +342,17 @@ module initia_std::vip_vesting {
 
         let finalized_vestings = vector::empty<u64>();
         let vesting_changes = vector::empty<VestingChange>();
-        let vesting_store_addr = get_vesting_store_address<UserVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
-        let iter = table::iter_mut(
-            &mut vesting_store.vestings,
-            option::none(),
-            option::none(),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<UserVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        let iter =
+            table::iter_mut(
+                &mut vesting_store.vestings,
+                option::none(),
+                option::none(),
+                1,
+            );
         loop {
             if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
 
@@ -356,12 +366,12 @@ module initia_std::vip_vesting {
                         bridge_id,
                         stage: value.start_stage,
                         remaining_reward: value.remaining_reward,
-                    }
+                    },
                 );
 
                 vector::push_back(
                     &mut finalized_vestings,
-                    value.start_stage
+                    value.start_stage,
                 );
                 continue
             };
@@ -377,7 +387,7 @@ module initia_std::vip_vesting {
                     vesting_start_stage: value.start_stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
-                }
+                },
             );
         };
 
@@ -388,21 +398,22 @@ module initia_std::vip_vesting {
                 assert!(
                     table::contains(
                         &vesting_store.claimed_stages,
-                        table_key::encode_u64(*stage)
+                        table_key::encode_u64(*stage),
                     ),
-                    error::unavailable(EVESTING_NOT_CLAIMED)
+                    error::unavailable(EVESTING_NOT_CLAIMED),
                 );
 
-                let vesting = table::remove(
-                    &mut vesting_store.vestings,
-                    table_key::encode_u64(*stage)
-                );
+                let vesting =
+                    table::remove(
+                        &mut vesting_store.vestings,
+                        table_key::encode_u64(*stage),
+                    );
                 table::add(
                     &mut vesting_store.vestings_finalized,
                     table_key::encode_u64(*stage),
-                    vesting
+                    vesting,
                 );
-            }
+            },
         );
 
         (vested_reward, vesting_changes)
@@ -417,18 +428,17 @@ module initia_std::vip_vesting {
 
         let finalized_vestings = vector::empty<u64>();
         let vesting_changes = vector::empty<VestingChange>();
-        let vesting_store_addr = get_vesting_store_address<OperatorVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<OperatorVesting>>(
-            vesting_store_addr
-        );
-        let iter = table::iter_mut(
-            &mut vesting_store.vestings,
-            option::none(),
-            option::none(),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<OperatorVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<OperatorVesting>>(vesting_store_addr);
+        let iter =
+            table::iter_mut(
+                &mut vesting_store.vestings,
+                option::none(),
+                option::none(),
+                1,
+            );
         loop {
             if (!table::prepare_mut<vector<u8>, OperatorVesting>(iter)) { break };
 
@@ -442,12 +452,12 @@ module initia_std::vip_vesting {
                         bridge_id,
                         stage: value.start_stage,
                         remaining_reward: value.remaining_reward,
-                    }
+                    },
                 );
 
                 vector::push_back(
                     &mut finalized_vestings,
-                    value.start_stage
+                    value.start_stage,
                 );
                 continue
             };
@@ -463,7 +473,7 @@ module initia_std::vip_vesting {
                     vesting_start_stage: value.start_stage,
                     initial_reward: value.initial_reward,
                     remaining_reward: value.remaining_reward,
-                }
+                },
             );
         };
 
@@ -474,21 +484,22 @@ module initia_std::vip_vesting {
                 assert!(
                     table::contains(
                         &vesting_store.claimed_stages,
-                        table_key::encode_u64(*stage)
+                        table_key::encode_u64(*stage),
                     ),
-                    error::unavailable(EVESTING_NOT_CLAIMED)
+                    error::unavailable(EVESTING_NOT_CLAIMED),
                 );
 
-                let vesting = table::remove(
-                    &mut vesting_store.vestings,
-                    table_key::encode_u64(*stage)
-                );
+                let vesting =
+                    table::remove(
+                        &mut vesting_store.vestings,
+                        table_key::encode_u64(*stage),
+                    );
                 table::add(
                     &mut vesting_store.vestings_finalized,
                     table_key::encode_u64(*stage),
-                    vesting
+                    vesting,
                 );
-            }
+            },
         );
 
         (vested_reward, vesting_changes)
@@ -498,17 +509,15 @@ module initia_std::vip_vesting {
         account_addr: address,
         bridge_id: u64,
         stage: u64,
-    ): (
-        FungibleAsset,
-        vector<VestingChange>
-    ) acquires VestingStore {
+    ): (FungibleAsset, vector<VestingChange>) acquires VestingStore {
         assert!(
             get_last_claimed_stage<OperatorVesting>(account_addr, bridge_id) < stage,
-            error::invalid_argument(ESTAGE_ALREADY_CLAIMED)
+            error::invalid_argument(ESTAGE_ALREADY_CLAIMED),
         );
 
         // vest previous vesting rewards until the stage
-        let (amount, vesting_changes) = vest_operator_reward(account_addr, bridge_id, stage,);
+        let (amount, vesting_changes) =
+            vest_operator_reward(account_addr, bridge_id, stage);
         let reward_store_addr = get_operator_reward_store_address(bridge_id);
         let vested_reward = vip_reward::withdraw(reward_store_addr, amount);
 
@@ -520,22 +529,20 @@ module initia_std::vip_vesting {
         bridge_id: u64,
         stage: u64,
         l2_score: u64,
-    ): (
-        FungibleAsset,
-        vector<VestingChange>
-    ) acquires VestingStore {
+    ): (FungibleAsset, vector<VestingChange>) acquires VestingStore {
         assert!(
             get_last_claimed_stage<UserVesting>(account_addr, bridge_id) < stage,
-            error::invalid_argument(ESTAGE_ALREADY_CLAIMED)
+            error::invalid_argument(ESTAGE_ALREADY_CLAIMED),
         );
 
         // vest previous vesting rewards until the stage
-        let (amount, vesting_changes) = vest_user_reward(
-            account_addr,
-            bridge_id,
-            stage,
-            l2_score,
-        );
+        let (amount, vesting_changes) =
+            vest_user_reward(
+                account_addr,
+                bridge_id,
+                stage,
+                l2_score,
+            );
         let reward_store_addr = get_user_reward_store_address(bridge_id);
         let vested_reward = vip_reward::withdraw(reward_store_addr, amount);
 
@@ -580,7 +587,7 @@ module initia_std::vip_vesting {
                 l2_score,
                 minimum_score,
                 initial_reward: vesting_reward_amount,
-            }
+            },
         );
 
         vesting_reward_amount
@@ -614,7 +621,7 @@ module initia_std::vip_vesting {
                 start_stage,
                 end_stage,
                 initial_reward: stage_reward,
-            }
+            },
         );
 
         stage_reward
@@ -624,21 +631,29 @@ module initia_std::vip_vesting {
     // Public Functions
     //
 
-    public fun register_user_vesting_store(account: &signer, bridge_id: u64) {
+    public fun register_user_vesting_store(
+        account: &signer, bridge_id: u64
+    ) {
         register_vesting_store<UserVesting>(account, bridge_id);
     }
 
-    public fun register_operator_vesting_store(account: &signer, bridge_id: u64) {
+    public fun register_operator_vesting_store(
+        account: &signer, bridge_id: u64
+    ) {
         register_vesting_store<OperatorVesting>(account, bridge_id);
     }
 
-    public fun is_user_vesting_store_registered(addr: address, bridge_id: u64): bool {
+    public fun is_user_vesting_store_registered(
+        addr: address, bridge_id: u64
+    ): bool {
         exists<VestingStore<UserVesting>>(
             create_vesting_store_address<UserVesting>(addr, bridge_id)
         )
     }
 
-    public fun is_operator_vesting_store_registered(addr: address, bridge_id: u64): bool {
+    public fun is_operator_vesting_store_registered(
+        addr: address, bridge_id: u64
+    ): bool {
         exists<VestingStore<OperatorVesting>>(
             create_vesting_store_address<OperatorVesting>(addr, bridge_id)
         )
@@ -656,11 +671,15 @@ module initia_std::vip_vesting {
     // Friends Functions
     //
 
-    public(friend) fun register_user_reward_store(chain: &signer, bridge_id: u64,) {
+    public(friend) fun register_user_reward_store(
+        chain: &signer, bridge_id: u64,
+    ) {
         vip_reward::register_reward_store<UserVesting>(chain, bridge_id)
     }
 
-    public(friend) fun register_operator_reward_store(chain: &signer, bridge_id: u64,) {
+    public(friend) fun register_operator_reward_store(
+        chain: &signer, bridge_id: u64,
+    ) {
         vip_reward::register_reward_store<OperatorVesting>(chain, bridge_id)
     }
 
@@ -673,7 +692,7 @@ module initia_std::vip_vesting {
         vip_reward::add_reward_per_stage(
             reward_store_addr,
             stage,
-            fungible_asset::amount(&reward)
+            fungible_asset::amount(&reward),
         );
         primary_fungible_store::deposit(reward_store_addr, reward);
     }
@@ -687,7 +706,7 @@ module initia_std::vip_vesting {
         vip_reward::add_reward_per_stage(
             reward_store_addr,
             stage,
-            fungible_asset::amount(&reward)
+            fungible_asset::amount(&reward),
         );
         primary_fungible_store::deposit(reward_store_addr, reward);
     }
@@ -701,12 +720,13 @@ module initia_std::vip_vesting {
         total_l2_score: u64,
         proportion: Decimal256,
     ): FungibleAsset acquires VestingStore {
-        let (vested_reward, vesting_changes) = claim_previous_user_vestings(
-            account_addr,
-            bridge_id,
-            start_stage,
-            l2_score,
-        );
+        let (vested_reward, vesting_changes) =
+            claim_previous_user_vestings(
+                account_addr,
+                bridge_id,
+                start_stage,
+                l2_score,
+            );
 
         let vesting_reward_amount = 0;
 
@@ -731,7 +751,7 @@ module initia_std::vip_vesting {
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
                 vesting_changes,
-            }
+            },
         );
 
         vested_reward
@@ -743,18 +763,20 @@ module initia_std::vip_vesting {
         start_stage: u64,
         end_stage: u64,
     ): FungibleAsset acquires VestingStore {
-        let (vested_reward, vesting_changes) = claim_previous_operator_vestings(
-            account_addr,
-            bridge_id,
-            start_stage,
-        );
+        let (vested_reward, vesting_changes) =
+            claim_previous_operator_vestings(
+                account_addr,
+                bridge_id,
+                start_stage,
+            );
 
-        let vesting_reward_amount = add_operator_vesting(
-            account_addr,
-            bridge_id,
-            start_stage,
-            end_stage,
-        );
+        let vesting_reward_amount =
+            add_operator_vesting(
+                account_addr,
+                bridge_id,
+                start_stage,
+                end_stage,
+            );
 
         event::emit(
             OperatorVestingClaimEvent {
@@ -764,7 +786,7 @@ module initia_std::vip_vesting {
                 vesting_reward_amount,
                 vested_reward_amount: fungible_asset::amount(&vested_reward),
                 vesting_changes,
-            }
+            },
         );
 
         vested_reward
@@ -776,25 +798,26 @@ module initia_std::vip_vesting {
         stage: u64,
         zapping_amount: u64
     ): FungibleAsset acquires VestingStore {
-        let vesting_store_addr = get_vesting_store_address<UserVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        let vesting_store_addr =
+            get_vesting_store_address<UserVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
         assert!(
             table::contains(
                 &vesting_store.vestings,
-                table_key::encode_u64(stage)
+                table_key::encode_u64(stage),
             ),
-            error::not_found(EVESTING_NOT_FOUND)
+            error::not_found(EVESTING_NOT_FOUND),
         );
 
-        let vesting = table::borrow_mut(
-            &mut vesting_store.vestings,
-            table_key::encode_u64(stage)
-        );
+        let vesting =
+            table::borrow_mut(
+                &mut vesting_store.vestings,
+                table_key::encode_u64(stage),
+            );
         assert!(
             vesting.remaining_reward >= zapping_amount,
-            error::invalid_argument(EREWARD_NOT_ENOUGH)
+            error::invalid_argument(EREWARD_NOT_ENOUGH),
         );
         vesting.remaining_reward = vesting.remaining_reward - zapping_amount;
 
@@ -815,35 +838,34 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_user_last_claimed_stage(
-        account_addr: address,
-        bridge_id: u64,
+        account_addr: address, bridge_id: u64,
     ): u64 acquires VestingStore {
         get_last_claimed_stage<UserVesting>(account_addr, bridge_id)
     }
 
     #[view]
     public fun get_user_claimed_stages(
-        account_addr: address,
-        bridge_id: u64,
+        account_addr: address, bridge_id: u64,
     ): vector<u64> acquires VestingStore {
         let claimed_stages = vector::empty<u64>();
-        let vesting_store_addr = get_vesting_store_address<UserVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
-        let iter = table::iter(
-            &mut vesting_store.claimed_stages,
-            option::none(),
-            option::none(),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<UserVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        let iter =
+            table::iter(
+                &mut vesting_store.claimed_stages,
+                option::none(),
+                option::none(),
+                1,
+            );
         loop {
             if (!table::prepare<vector<u8>, bool>(iter)) { break };
 
             let (key, _) = table::next<vector<u8>, bool>(iter);
             vector::push_back(
                 &mut claimed_stages,
-                table_key::decode_u64(key)
+                table_key::decode_u64(key),
             );
         };
         claimed_stages
@@ -869,21 +891,20 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_user_locked_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let locked_reward = 0u64;
-        let vesting_store_addr = get_vesting_store_address<UserVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
-        let iter = table::iter(
-            &mut vesting_store.vestings,
-            option::none(),
-            option::some(table_key::encode_u64(stage + 1)),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<UserVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        let iter =
+            table::iter(
+                &mut vesting_store.vestings,
+                option::none(),
+                option::some(table_key::encode_u64(stage + 1)),
+                1,
+            );
         loop {
             if (!table::prepare<vector<u8>, UserVesting>(iter)) { break };
 
@@ -902,16 +923,17 @@ module initia_std::vip_vesting {
         l2_score: u64
     ): u64 acquires VestingStore {
         let vested_reward = 0u64;
-        let vesting_store_addr = get_vesting_store_address<UserVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
-        let iter = table::iter_mut(
-            &mut vesting_store.vestings,
-            option::none(),
-            option::some(table_key::encode_u64(stage)),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<UserVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<UserVesting>>(vesting_store_addr);
+        let iter =
+            table::iter_mut(
+                &mut vesting_store.vestings,
+                option::none(),
+                option::some(table_key::encode_u64(stage)),
+                1,
+            );
         loop {
             if (!table::prepare_mut<vector<u8>, UserVesting>(iter)) { break };
 
@@ -925,9 +947,7 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_user_vesting_initial_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let vesting = get_vesting<UserVesting>(account_addr, bridge_id, stage);
         vesting.initial_reward
@@ -935,9 +955,7 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_user_vesting_remaining_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let vesting = get_vesting<UserVesting>(account_addr, bridge_id, stage);
         vesting.remaining_reward
@@ -945,9 +963,7 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_user_vesting_minimum_score(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let vesting = get_vesting<UserVesting>(account_addr, bridge_id, stage);
         vesting.minimum_score
@@ -962,37 +978,34 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_operator_last_claimed_stage(
-        account_addr: address,
-        bridge_id: u64,
+        account_addr: address, bridge_id: u64,
     ): u64 acquires VestingStore {
         get_last_claimed_stage<OperatorVesting>(account_addr, bridge_id)
     }
 
     #[view]
     public fun get_operator_claimed_stages(
-        account_addr: address,
-        bridge_id: u64,
+        account_addr: address, bridge_id: u64,
     ): vector<u64> acquires VestingStore {
         let claimed_stages = vector::empty<u64>();
-        let vesting_store_addr = get_vesting_store_address<OperatorVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<OperatorVesting>>(
-            vesting_store_addr
-        );
-        let iter = table::iter(
-            &mut vesting_store.claimed_stages,
-            option::none(),
-            option::none(),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<OperatorVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<OperatorVesting>>(vesting_store_addr);
+        let iter =
+            table::iter(
+                &mut vesting_store.claimed_stages,
+                option::none(),
+                option::none(),
+                1,
+            );
         loop {
             if (!table::prepare<vector<u8>, bool>(iter)) { break };
 
             let (key, _) = table::next<vector<u8>, bool>(iter);
             vector::push_back(
                 &mut claimed_stages,
-                table_key::decode_u64(key)
+                table_key::decode_u64(key),
             );
         };
         claimed_stages
@@ -1018,23 +1031,20 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_operator_locked_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let locked_reward = 0u64;
-        let vesting_store_addr = get_vesting_store_address<OperatorVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<OperatorVesting>>(
-            vesting_store_addr
-        );
-        let iter = table::iter(
-            &mut vesting_store.vestings,
-            option::none(),
-            option::some(table_key::encode_u64(stage + 1)),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<OperatorVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<OperatorVesting>>(vesting_store_addr);
+        let iter =
+            table::iter(
+                &mut vesting_store.vestings,
+                option::none(),
+                option::some(table_key::encode_u64(stage + 1)),
+                1,
+            );
         loop {
             if (!table::prepare<vector<u8>, OperatorVesting>(iter)) { break };
 
@@ -1047,23 +1057,20 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_operator_unlocked_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let vested_reward = 0u64;
-        let vesting_store_addr = get_vesting_store_address<OperatorVesting>(
-            account_addr, bridge_id
-        );
-        let vesting_store = borrow_global_mut<VestingStore<OperatorVesting>>(
-            vesting_store_addr
-        );
-        let iter = table::iter_mut(
-            &mut vesting_store.vestings,
-            option::none(),
-            option::some(table_key::encode_u64(stage)),
-            1
-        );
+        let vesting_store_addr =
+            get_vesting_store_address<OperatorVesting>(account_addr, bridge_id);
+        let vesting_store =
+            borrow_global_mut<VestingStore<OperatorVesting>>(vesting_store_addr);
+        let iter =
+            table::iter_mut(
+                &mut vesting_store.vestings,
+                option::none(),
+                option::some(table_key::encode_u64(stage)),
+                1,
+            );
         loop {
             if (!table::prepare_mut<vector<u8>, OperatorVesting>(iter)) { break };
 
@@ -1077,9 +1084,7 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_operator_vesting_initial_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let vesting = get_vesting<OperatorVesting>(account_addr, bridge_id, stage);
         vesting.initial_reward
@@ -1087,9 +1092,7 @@ module initia_std::vip_vesting {
 
     #[view]
     public fun get_operator_vesting_remaining_reward(
-        account_addr: address,
-        bridge_id: u64,
-        stage: u64
+        account_addr: address, bridge_id: u64, stage: u64
     ): u64 acquires VestingStore {
         let vesting = get_vesting<OperatorVesting>(account_addr, bridge_id, stage);
         vesting.remaining_reward
@@ -1120,32 +1123,26 @@ module initia_std::vip_vesting {
     }
 
     #[test_only]
-    public fun initialize_coin(
-        account: &signer,
-        symbol: string::String,
-    ): (
+    public fun initialize_coin(account: &signer, symbol: string::String,)
+        : (
         coin::BurnCapability,
         coin::FreezeCapability,
         coin::MintCapability,
         Object<Metadata>
     ) {
-        let (mint_cap, burn_cap, freeze_cap) = coin::initialize(
-            account,
-            option::none(),
-            string::utf8(b""),
-            symbol,
-            6,
-            string::utf8(b""),
-            string::utf8(b""),
-        );
+        let (mint_cap, burn_cap, freeze_cap) =
+            coin::initialize(
+                account,
+                option::none(),
+                string::utf8(b""),
+                symbol,
+                6,
+                string::utf8(b""),
+                string::utf8(b""),
+            );
         let metadata = coin::metadata(signer::address_of(account), symbol);
 
-        (
-            burn_cap,
-            freeze_cap,
-            mint_cap,
-            metadata
-        )
+        (burn_cap, freeze_cap, mint_cap, metadata)
     }
 
     // <-- VESTING ----->
@@ -1155,12 +1152,12 @@ module initia_std::vip_vesting {
         let account_addr = signer::address_of(account);
         assert!(
             !is_user_vesting_store_registered(account_addr, 1),
-            1
+            1,
         );
         register_user_vesting_store(account, 1);
         assert!(
             is_user_vesting_store_registered(account_addr, 1),
-            2
+            2,
         );
         register_user_vesting_store(account, 2);
     }
@@ -1194,25 +1191,13 @@ module initia_std::vip_vesting {
         primary_fungible_store::init_module_for_test(chain);
         initialize_coin(chain, string::utf8(b"uinit"));
 
-        assert!(
-            !is_user_reward_store_registered(1),
-            1
-        );
+        assert!(!is_user_reward_store_registered(1), 1);
         register_user_reward_store(chain, 1);
-        assert!(
-            is_user_reward_store_registered(1),
-            2
-        );
+        assert!(is_user_reward_store_registered(1), 2);
 
-        assert!(
-            !is_operator_reward_store_registered(1),
-            3
-        );
+        assert!(!is_operator_reward_store_registered(1), 3);
         register_operator_reward_store(chain, 1);
-        assert!(
-            is_operator_reward_store_registered(1),
-            4
-        );
+        assert!(is_operator_reward_store_registered(1), 4);
 
         register_user_reward_store(chain, 2);
         register_operator_reward_store(chain, 2);
@@ -1228,7 +1213,7 @@ module initia_std::vip_vesting {
         vip_reward::add_reward_per_stage(reward_store_addr, 1, 100);
         assert!(
             vip_reward::get_stage_reward(reward_store_addr, 1) == 100,
-            1
+            1,
         );
 
         register_operator_reward_store(chain, 1);
@@ -1236,7 +1221,7 @@ module initia_std::vip_vesting {
         vip_reward::add_reward_per_stage(reward_store_addr, 1, 200);
         assert!(
             vip_reward::get_stage_reward(reward_store_addr, 1) == 200,
-            2
+            2,
         );
     }
 

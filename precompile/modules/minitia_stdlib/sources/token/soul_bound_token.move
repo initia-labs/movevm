@@ -101,29 +101,34 @@ module minitia_std::soul_bound_token {
     ): Object<SoulBoundTokenCollection> {
         let creator_addr = signer::address_of(creator);
         let royalty = royalty::create(royalty, creator_addr);
-        let constructor_ref = collection::create_fixed_collection(
-            creator,
-            description,
-            max_supply,
-            name,
-            option::some(royalty),
-            uri,
-        );
+        let constructor_ref =
+            collection::create_fixed_collection(
+                creator,
+                description,
+                max_supply,
+                name,
+                option::some(royalty),
+                uri,
+            );
 
         let object_signer = object::generate_signer(&constructor_ref);
-        let mutator_ref = if (mutable_description || mutable_uri) {
-            option::some(
-                collection::generate_mutator_ref(&constructor_ref)
-            )
-        } else {option::none()};
+        let mutator_ref =
+            if (mutable_description || mutable_uri) {
+                option::some(collection::generate_mutator_ref(&constructor_ref))
+            } else {
+                option::none()
+            };
 
-        let royalty_mutator_ref = if (mutable_royalty) {
-            option::some(
-                royalty::generate_mutator_ref(
-                    object::generate_extend_ref(&constructor_ref)
+        let royalty_mutator_ref =
+            if (mutable_royalty) {
+                option::some(
+                    royalty::generate_mutator_ref(
+                        object::generate_extend_ref(&constructor_ref)
+                    ),
                 )
-            )
-        } else {option::none()};
+            } else {
+                option::none()
+            };
 
         let soul_bound_token_collection = SoulBoundTokenCollection {
             mutator_ref,
@@ -135,10 +140,7 @@ module minitia_std::soul_bound_token {
             mutable_nft_properties,
             mutable_nft_uri,
         };
-        move_to(
-            &object_signer,
-            soul_bound_token_collection
-        );
+        move_to(&object_signer, soul_bound_token_collection);
         object::object_from_constructor_ref(&constructor_ref)
     }
 
@@ -179,16 +181,17 @@ module minitia_std::soul_bound_token {
         property_values: vector<vector<u8>>,
         soul_bound_to: address,
     ): Object<SoulBoundToken> acquires SoulBoundTokenCollection {
-        let constructor_ref = mint_internal(
-            creator,
-            collection,
-            description,
-            name,
-            uri,
-            property_keys,
-            property_types,
-            property_values,
-        );
+        let constructor_ref =
+            mint_internal(
+                creator,
+                collection,
+                description,
+                name,
+                uri,
+                property_keys,
+                property_types,
+                property_values,
+            );
 
         let transfer_ref = object::generate_transfer_ref(&constructor_ref);
         let linear_transfer_ref = object::generate_linear_transfer_ref(&transfer_ref);
@@ -208,14 +211,15 @@ module minitia_std::soul_bound_token {
         property_types: vector<String>,
         property_values: vector<vector<u8>>,
     ): ConstructorRef acquires SoulBoundTokenCollection {
-        let constructor_ref = nft::create(
-            creator,
-            collection,
-            description,
-            name,
-            option::none(),
-            uri,
-        );
+        let constructor_ref =
+            nft::create(
+                creator,
+                collection,
+                description,
+                name,
+                option::none(),
+                uri,
+            );
         let s = object::generate_signer(&constructor_ref);
 
         let object_signer = object::generate_signer(&constructor_ref);
@@ -223,13 +227,14 @@ module minitia_std::soul_bound_token {
         let collection_obj = collection_object(creator, &collection);
         let collection = borrow_collection(collection_obj);
 
-        let mutator_ref = if (
-            collection.mutable_nft_description || collection.mutable_nft_name || collection
-                .mutable_nft_uri) {
-            option::some(
-                nft::generate_mutator_ref(&constructor_ref)
-            )
-        } else {option::none()};
+        let mutator_ref =
+            if (collection.mutable_nft_description
+                || collection.mutable_nft_name
+                || collection.mutable_nft_uri) {
+                option::some(nft::generate_mutator_ref(&constructor_ref))
+            } else {
+                option::none()
+            };
 
         let soul_bound_token = SoulBoundToken {
             mutator_ref,
@@ -237,11 +242,12 @@ module minitia_std::soul_bound_token {
         };
         move_to(&object_signer, soul_bound_token);
 
-        let properties = property_map::prepare_input(
-            property_keys,
-            property_types,
-            property_values
-        );
+        let properties =
+            property_map::prepare_input(
+                property_keys,
+                property_types,
+                property_values,
+            );
         property_map::init(&s, properties);
 
         constructor_ref
@@ -307,7 +313,7 @@ module minitia_std::soul_bound_token {
         let soul_bound_token = authorized_borrow(nft, creator);
         nft::set_description(
             option::borrow(&soul_bound_token.mutator_ref),
-            description
+            description,
         );
     }
 
@@ -323,13 +329,14 @@ module minitia_std::soul_bound_token {
         let soul_bound_token = authorized_borrow(nft, creator);
         nft::set_uri(
             option::borrow(&soul_bound_token.mutator_ref),
-            uri
+            uri,
         );
     }
 
     public entry fun add_property<T: key>(
         creator: &signer,
-        nft: Object<T>, key: String,
+        nft: Object<T>,
+        key: String,
         type: String,
         value: vector<u8>,
     ) acquires SoulBoundTokenCollection, SoulBoundToken {
@@ -340,15 +347,17 @@ module minitia_std::soul_bound_token {
         );
 
         property_map::add(
-            &soul_bound_token.property_mutator_ref, key,
+            &soul_bound_token.property_mutator_ref,
+            key,
             type,
-            value
+            value,
         );
     }
 
     public entry fun add_typed_property<T: key, V: drop>(
         creator: &signer,
-        nft: Object<T>, key: String,
+        nft: Object<T>,
+        key: String,
         value: V,
     ) acquires SoulBoundTokenCollection, SoulBoundToken {
         let soul_bound_token = authorized_borrow(nft, creator);
@@ -358,14 +367,16 @@ module minitia_std::soul_bound_token {
         );
 
         property_map::add_typed(
-            &soul_bound_token.property_mutator_ref, key,
-            value
+            &soul_bound_token.property_mutator_ref,
+            key,
+            value,
         );
     }
 
     public entry fun remove_property<T: key>(
         creator: &signer,
-        nft: Object<T>, key: String,
+        nft: Object<T>,
+        key: String,
     ) acquires SoulBoundTokenCollection, SoulBoundToken {
         let soul_bound_token = authorized_borrow(nft, creator);
         assert!(
@@ -373,15 +384,13 @@ module minitia_std::soul_bound_token {
             error::permission_denied(EPROPERTIES_NOT_MUTABLE),
         );
 
-        property_map::remove(
-            &soul_bound_token.property_mutator_ref,
-            &key
-        );
+        property_map::remove(&soul_bound_token.property_mutator_ref, &key);
     }
 
     public entry fun update_property<T: key>(
         creator: &signer,
-        nft: Object<T>, key: String,
+        nft: Object<T>,
+        key: String,
         type: String,
         value: vector<u8>,
     ) acquires SoulBoundTokenCollection, SoulBoundToken {
@@ -395,13 +404,14 @@ module minitia_std::soul_bound_token {
             &soul_bound_token.property_mutator_ref,
             &key,
             type,
-            value
+            value,
         );
     }
 
     public entry fun update_typed_property<T: key, V: drop>(
         creator: &signer,
-        nft: Object<T>, key: String,
+        nft: Object<T>,
+        key: String,
         value: V,
     ) acquires SoulBoundTokenCollection, SoulBoundToken {
         let soul_bound_token = authorized_borrow(nft, creator);
@@ -413,7 +423,7 @@ module minitia_std::soul_bound_token {
         property_map::update_typed(
             &soul_bound_token.property_mutator_ref,
             &key,
-            value
+            value,
         );
     }
 
@@ -421,9 +431,8 @@ module minitia_std::soul_bound_token {
 
     inline fun collection_object(creator: &signer, name: &String)
         : Object<SoulBoundTokenCollection> {
-        let collection_addr = collection::create_collection_address(
-            signer::address_of(creator), name
-        );
+        let collection_addr =
+            collection::create_collection_address(signer::address_of(creator), name);
         object::address_to_object<SoulBoundTokenCollection>(collection_addr)
     }
 
@@ -436,41 +445,50 @@ module minitia_std::soul_bound_token {
         borrow_global<SoulBoundTokenCollection>(collection_address)
     }
 
-    public fun is_mutable_collection_description<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
+    public fun is_mutable_collection_description<T: key>(
+        collection: Object<T>,
+    ): bool acquires SoulBoundTokenCollection {
         borrow_collection(collection).mutable_description
     }
 
-    public fun is_mutable_collection_royalty<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
-        option::is_some(
-            &borrow_collection(collection).royalty_mutator_ref
-        )
+    public fun is_mutable_collection_royalty<T: key>(
+        collection: Object<T>,
+    ): bool acquires SoulBoundTokenCollection {
+        option::is_some(&borrow_collection(collection).royalty_mutator_ref)
     }
 
     public fun is_mutable_collection_uri<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
         borrow_collection(collection).mutable_uri
     }
 
-    public fun is_mutable_collection_nft_description<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
+    public fun is_mutable_collection_nft_description<T: key>(
+        collection: Object<T>,
+    ): bool acquires SoulBoundTokenCollection {
         borrow_collection(collection).mutable_nft_description
     }
 
-    public fun is_mutable_collection_nft_name<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
+    public fun is_mutable_collection_nft_name<T: key>(
+        collection: Object<T>,
+    ): bool acquires SoulBoundTokenCollection {
         borrow_collection(collection).mutable_nft_name
     }
 
-    public fun is_mutable_collection_nft_uri<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
+    public fun is_mutable_collection_nft_uri<T: key>(
+        collection: Object<T>,
+    ): bool acquires SoulBoundTokenCollection {
         borrow_collection(collection).mutable_nft_uri
     }
 
-    public fun is_mutable_collection_nft_properties<T: key>(collection: Object<T>,): bool acquires SoulBoundTokenCollection {
+    public fun is_mutable_collection_nft_properties<T: key>(
+        collection: Object<T>,
+    ): bool acquires SoulBoundTokenCollection {
         borrow_collection(collection).mutable_nft_properties
     }
 
     // Collection mutators
 
     inline fun authorized_borrow_collection<T: key>(
-        collection: Object<T>,
-        creator: &signer
+        collection: Object<T>, creator: &signer
     ): &SoulBoundTokenCollection {
         let collection_address = object::object_address(collection);
         assert!(
@@ -489,16 +507,15 @@ module minitia_std::soul_bound_token {
         collection: Object<T>,
         description: String,
     ) acquires SoulBoundTokenCollection {
-        let soul_bound_token_collection = authorized_borrow_collection(collection, creator);
+        let soul_bound_token_collection =
+            authorized_borrow_collection(collection, creator);
         assert!(
             soul_bound_token_collection.mutable_description,
             error::permission_denied(EFIELD_NOT_MUTABLE),
         );
         collection::set_description(
-            option::borrow(
-                &soul_bound_token_collection.mutator_ref
-            ),
-            description
+            option::borrow(&soul_bound_token_collection.mutator_ref),
+            description,
         );
     }
 
@@ -507,18 +524,15 @@ module minitia_std::soul_bound_token {
         collection: Object<T>,
         royalty: royalty::Royalty,
     ) acquires SoulBoundTokenCollection {
-        let soul_bound_token_collection = authorized_borrow_collection(collection, creator);
+        let soul_bound_token_collection =
+            authorized_borrow_collection(collection, creator);
         assert!(
-            option::is_some(
-                &soul_bound_token_collection.royalty_mutator_ref
-            ),
+            option::is_some(&soul_bound_token_collection.royalty_mutator_ref),
             error::permission_denied(EFIELD_NOT_MUTABLE),
         );
         royalty::update(
-            option::borrow(
-                &soul_bound_token_collection.royalty_mutator_ref
-            ),
-            royalty
+            option::borrow(&soul_bound_token_collection.royalty_mutator_ref),
+            royalty,
         );
     }
 
@@ -537,16 +551,15 @@ module minitia_std::soul_bound_token {
         collection: Object<T>,
         uri: String,
     ) acquires SoulBoundTokenCollection {
-        let soul_bound_token_collection = authorized_borrow_collection(collection, creator);
+        let soul_bound_token_collection =
+            authorized_borrow_collection(collection, creator);
         assert!(
             soul_bound_token_collection.mutable_uri,
             error::permission_denied(EFIELD_NOT_MUTABLE),
         );
         collection::set_uri(
-            option::borrow(
-                &soul_bound_token_collection.mutator_ref
-            ),
-            uri
+            option::borrow(&soul_bound_token_collection.mutator_ref),
+            uri,
         );
     }
 
@@ -568,19 +581,13 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         let description = string::utf8(b"not");
-        assert!(
-            nft::description(nft) != description,
-            0
-        );
+        assert!(nft::description(nft) != description, 0);
         set_description(creator, nft, description);
-        assert!(
-            nft::description(nft) == description,
-            1
-        );
+        assert!(nft::description(nft) == description, 1);
     }
 
     #[test(creator = @0x123)]
@@ -594,7 +601,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         set_description(creator, nft, string::utf8(b""));
@@ -603,8 +610,7 @@ module minitia_std::soul_bound_token {
     #[test(creator = @0x123, noncreator = @0x456)]
     #[expected_failure(abort_code = 0x50003, location = Self)]
     fun test_set_description_non_creator(
-        creator: &signer,
-        noncreator: &signer,
+        creator: &signer, noncreator: &signer,
     ) acquires SoulBoundTokenCollection, SoulBoundToken {
         let collection_name = string::utf8(b"collection name");
         let nft_name = string::utf8(b"nft name");
@@ -614,7 +620,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         let description = string::utf8(b"not");
@@ -631,7 +637,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         let uri = string::utf8(b"not");
@@ -651,7 +657,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         set_uri(creator, nft, string::utf8(b""));
@@ -659,10 +665,7 @@ module minitia_std::soul_bound_token {
 
     #[test(creator = @0x123, noncreator = @0x456)]
     #[expected_failure(abort_code = 0x50003, location = Self)]
-    fun test_set_uri_non_creator(
-        creator: &signer,
-        noncreator: &signer,
-    ) acquires SoulBoundTokenCollection, SoulBoundToken {
+    fun test_set_uri_non_creator(creator: &signer, noncreator: &signer,) acquires SoulBoundTokenCollection, SoulBoundToken {
         let collection_name = string::utf8(b"collection name");
         let nft_name = string::utf8(b"nft name");
 
@@ -671,7 +674,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         let uri = string::utf8(b"not");
@@ -685,12 +688,12 @@ module minitia_std::soul_bound_token {
         let value = string::utf8(b"not");
         assert!(
             collection::description(collection) != value,
-            0
+            0,
         );
         set_collection_description(creator, collection, value);
         assert!(
             collection::description(collection) == value,
-            1
+            1,
         );
     }
 
@@ -702,22 +705,21 @@ module minitia_std::soul_bound_token {
         set_collection_description(
             creator,
             collection,
-            string::utf8(b"")
+            string::utf8(b""),
         );
     }
 
     #[test(creator = @0x123, noncreator = @0x456)]
     #[expected_failure(abort_code = 0x50003, location = Self)]
     fun test_set_collection_description_non_creator(
-        creator: &signer,
-        noncreator: &signer,
+        creator: &signer, noncreator: &signer,
     ) acquires SoulBoundTokenCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
         set_collection_description(
             noncreator,
             collection,
-            string::utf8(b"")
+            string::utf8(b""),
         );
     }
 
@@ -726,15 +728,9 @@ module minitia_std::soul_bound_token {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
         let value = string::utf8(b"not");
-        assert!(
-            collection::uri(collection) != value,
-            0
-        );
+        assert!(collection::uri(collection) != value, 0);
         set_collection_uri(creator, collection, value);
-        assert!(
-            collection::uri(collection) == value,
-            1
-        );
+        assert!(collection::uri(collection) == value, 1);
     }
 
     #[test(creator = @0x123)]
@@ -745,22 +741,21 @@ module minitia_std::soul_bound_token {
         set_collection_uri(
             creator,
             collection,
-            string::utf8(b"")
+            string::utf8(b""),
         );
     }
 
     #[test(creator = @0x123, noncreator = @0x456)]
     #[expected_failure(abort_code = 0x50003, location = Self)]
     fun test_set_collection_uri_non_creator(
-        creator: &signer,
-        noncreator: &signer,
+        creator: &signer, noncreator: &signer,
     ) acquires SoulBoundTokenCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
         set_collection_uri(
             noncreator,
             collection,
-            string::utf8(b"")
+            string::utf8(b""),
         );
     }
 
@@ -776,19 +771,19 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
         add_property(
             creator,
             nft,
             property_name,
             property_type,
-            vector[0x08]
+            vector[0x08],
         );
 
         assert!(
             property_map::read_u8(nft, &property_name) == 0x8,
-            0
+            0,
         );
     }
 
@@ -803,13 +798,13 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
         add_typed_property<SoulBoundToken, u8>(creator, nft, property_name, 0x8);
 
         assert!(
             property_map::read_u8(nft, &property_name) == 0x8,
-            0
+            0,
         );
     }
 
@@ -825,19 +820,19 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
         update_property(
             creator,
             nft,
             property_name,
             property_type,
-            vector[0x00]
+            vector[0x00],
         );
 
         assert!(
             !property_map::read_bool(nft, &property_name),
-            0
+            0,
         );
     }
 
@@ -852,13 +847,13 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
         update_typed_property<SoulBoundToken, bool>(creator, nft, property_name, false);
 
         assert!(
             !property_map::read_bool(nft, &property_name),
-            0
+            0,
         );
     }
 
@@ -873,7 +868,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
         remove_property(creator, nft, property_name);
     }
@@ -888,7 +883,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection_name,
             nft_name,
-            @0x123
+            @0x123,
         );
 
         let royalty_before = option::extract(&mut nft::royalty(nft));
@@ -896,7 +891,7 @@ module minitia_std::soul_bound_token {
             creator,
             collection,
             decimal128::from_ratio(2, 3),
-            @0x444
+            @0x444,
         );
         let royalty_after = option::extract(&mut nft::royalty(nft));
         assert!(royalty_before != royalty_after, 0);
