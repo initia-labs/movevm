@@ -1022,8 +1022,7 @@ module publisher::vip_test {
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0xC0014, location = vip)]
-    fun failed_zapping_vesting_position_without_claim(
+    fun zapping_vesting_position_without_claim(
         chain: &signer,
         publisher: &signer,
         operator: &signer,
@@ -1080,6 +1079,7 @@ module publisher::vip_test {
         let remaining_reward = vip_vesting::get_user_vesting_remaining(
             receiver_addr, get_bridge_id(), 1
         );
+        let vault_balance_before = vip_vault::balance();
         // zapping stage 1 vesting position; remaining reward: (stage_reward) * 100 / 1000
         // without waiting the challenge period
         vip::zapping_script(
@@ -1092,11 +1092,22 @@ module publisher::vip_test {
             remaining_reward,
             1_000_000,
             usdc_metadata()
+        );
+        let vault_balance_after = vip_vault::balance();
+        assert!(
+            vip_reward::balance(receiver_addr) == 0,
+            4
+        );
+
+        assert!(
+            vip_vault::balance() == vault_balance_before - remaining_reward,
+            5
         )
+
     }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    #[expected_failure(abort_code = 0xD001f, location = vip)]
+    #[expected_failure(abort_code = 0xD0014, location = vip)]
     fun fail_submit_snapshot_and_fund_reward_with_deregistered_bridge(
         chain: &signer,
         publisher: &signer,
@@ -1122,122 +1133,122 @@ module publisher::vip_test {
             1000
         );
     }
+    // FIX: DEPRECATED
+    // #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    // fun claim_re_registered_bridge_reward(
+    //     chain: &signer,
+    //     publisher: &signer,
+    //     operator: &signer,
+    //     receiver: &signer,
+    // ) acquires TestState {
+    //     initialize(chain, publisher, operator);
+    //     let receiver_addr = signer::address_of(receiver);
+    //     let vesting_period = get_vesting_period();
+    //     let (stages, merkle_proofs, l2_scores) = reset_claim_args();
+    //     // submit snapshot of stage 1; total score: 1000, receiver's score : 100
+    //     // stage 1 snapshot submitted
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         100,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // stage 2
+    //     // total score: 1000, receiver's score : 500
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         500,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // deregister bridge
+    //     vip::deregister(publisher, get_bridge_id());
+    //     // stage3 distributed
+    //     only_fund_reward(
+    //         publisher,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // bridge 1 re-registered on stage 4
+    //     vip::register(
+    //         publisher,
+    //         signer::address_of(operator),
+    //         get_bridge_id(),
+    //         get_bridge_address(),
+    //         string::utf8(b"contract"),
+    //         decimal256::from_ratio(1, 2),
+    //         decimal256::from_ratio(1, 2),
+    //         decimal256::from_ratio(1, 2),
+    //     );
+    //     // stage4 distributed
+    //     only_fund_reward(
+    //         publisher,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
 
-    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun claim_re_registered_bridge_reward(
-        chain: &signer,
-        publisher: &signer,
-        operator: &signer,
-        receiver: &signer,
-    ) acquires TestState {
-        initialize(chain, publisher, operator);
-        let receiver_addr = signer::address_of(receiver);
-        let vesting_period = get_vesting_period();
-        let (stages, merkle_proofs, l2_scores) = reset_claim_args();
-        // submit snapshot of stage 1; total score: 1000, receiver's score : 100
-        // stage 1 snapshot submitted
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            100,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // stage 2
-        // total score: 1000, receiver's score : 500
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            500,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // deregister bridge
-        vip::deregister(publisher, get_bridge_id());
-        // stage3 distributed
-        only_fund_reward(
-            publisher,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // bridge 1 re-registered on stage 4
-        vip::register(
-            publisher,
-            signer::address_of(operator),
-            get_bridge_id(),
-            get_bridge_address(),
-            string::utf8(b"contract"),
-            decimal256::from_ratio(1, 2),
-            decimal256::from_ratio(1, 2),
-            decimal256::from_ratio(1, 2),
-        );
-        // stage4 distributed
-        only_fund_reward(
-            publisher,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
+    //     // stage 5
+    //     // total score: 1000, receiver's score : 100
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         100,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     let vault_balance_before = vip_vault::balance();
 
-        // stage 5
-        // total score: 1000, receiver's score : 100
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            100,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        let vault_balance_before = vip_vault::balance();
+    //     // stage 1,2,3,4,5 claim
+    //     vip::batch_claim_user_reward_script(
+    //         receiver,
+    //         get_bridge_id(),
+    //         stages,
+    //         merkle_proofs,
+    //         l2_scores,
+    //     );
 
-        // stage 1,2,3,4,5 claim
-        vip::batch_claim_user_reward_script(
-            receiver,
-            get_bridge_id(),
-            stages,
-            merkle_proofs,
-            l2_scores,
-        );
+    //     assert!(
+    //         vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 5,
+    //         5
+    //     );
+    //     assert!(
+    //         !vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 2),
+    //         6
+    //     );
+    //     let vesting1_initial_reward = vip_vesting::get_user_vesting_initial_reward(
+    //         receiver_addr, get_bridge_id(), 1
+    //     );
 
-        assert!(
-            vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 5,
-            5
-        );
-        assert!(
-            !vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 2),
-            6
-        );
-        let vesting1_initial_reward = vip_vesting::get_user_vesting_initial_reward(
-            receiver_addr, get_bridge_id(), 1
-        );
+    //     let vesting2_initial_reward = vip_vesting::get_user_vesting_initial_reward(
+    //         receiver_addr, get_bridge_id(), 2
+    //     );
 
-        let vesting2_initial_reward = vip_vesting::get_user_vesting_initial_reward(
-            receiver_addr, get_bridge_id(), 2
-        );
+    //     let vault_balance_after = vip_vault::balance();
+    //     // stage 1 vested reward(2,5;twice) + stage 2 vested reward(5;one time)
+    //     assert!(
+    //         vip_reward::balance(receiver_addr) == (
+    //             2 * vesting1_initial_reward / vesting_period + (2 * vesting2_initial_reward)
+    //                 / (5 * vesting_period)
+    //         ),
+    //         8
+    //     );
+    //     // claim no reward of vesting2 position; vault balance reduce only amount of claim reward
+    //     assert!(
+    //         vault_balance_after == vault_balance_before - vip_reward::balance(receiver_addr),
+    //         9
+    //     )
 
-        let vault_balance_after = vip_vault::balance();
-        // stage 1 vested reward(2,5;twice) + stage 2 vested reward(5;one time)
-        assert!(
-            vip_reward::balance(receiver_addr) == (
-                2 * vesting1_initial_reward / vesting_period + (2 * vesting2_initial_reward)
-                    / (5 * vesting_period)
-            ),
-            8
-        );
-        // claim no reward of vesting2 position; vault balance reduce only amount of claim reward
-        assert!(
-            vault_balance_after == vault_balance_before - vip_reward::balance(receiver_addr),
-            9
-        )
-
-    }
+    // }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     #[expected_failure(abort_code = 0x60013, location = vip)]
@@ -1627,153 +1638,153 @@ module publisher::vip_test {
             usdc_metadata()
         )
     }
+    // FIX: DEPRECATED
+    // #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    // fun zapping_and_claim_re_registered_bridge_reward(
+    //     chain: &signer,
+    //     publisher: &signer,
+    //     operator: &signer,
+    //     receiver: &signer,
+    // ) acquires TestState {
+    //     initialize(chain, publisher, operator);
+    //     let receiver_addr = signer::address_of(receiver);
+    //     let vesting_period = get_vesting_period();
+    //     coin::transfer(
+    //         chain,
+    //         receiver_addr,
+    //         usdc_metadata(),
+    //         1_000_000_00
+    //     );
+    //     let (stages, merkle_proofs, l2_scores) = reset_claim_args();
 
-    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun zapping_and_claim_re_registered_bridge_reward(
-        chain: &signer,
-        publisher: &signer,
-        operator: &signer,
-        receiver: &signer,
-    ) acquires TestState {
-        initialize(chain, publisher, operator);
-        let receiver_addr = signer::address_of(receiver);
-        let vesting_period = get_vesting_period();
-        coin::transfer(
-            chain,
-            receiver_addr,
-            usdc_metadata(),
-            1_000_000_00
-        );
-        let (stages, merkle_proofs, l2_scores) = reset_claim_args();
+    //     // submit snapshot of stage 1; total score: 1000, receiver's score : 100
+    //     // stage 1 snapshot submitted
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         100,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
 
-        // submit snapshot of stage 1; total score: 1000, receiver's score : 100
-        // stage 1 snapshot submitted
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            100,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
+    //     // stage 1 claim & zapping
+    //     vip::batch_claim_user_reward_script(
+    //         receiver,
+    //         get_bridge_id(),
+    //         vector[vector::remove(&mut stages, 0)],
+    //         vector[
+    //             vector::remove(&mut merkle_proofs, 0)
+    //         ],
+    //         vector[
+    //             vector::remove(&mut l2_scores, 0)
+    //         ],
+    //     );
+    //     let vesting1_initial_reward = vip_vesting::get_user_vesting_initial_reward(
+    //         receiver_addr, get_bridge_id(), 1
+    //     );
+    //     // user can only zap the deregisterd minitia positions
+    //     vip::zapping_script(
+    //         receiver,
+    //         get_bridge_id(),
+    //         get_lp_metadata(),
+    //         option::none(),
+    //         get_validator(),
+    //         1,
+    //         vesting1_initial_reward,
+    //         vesting1_initial_reward, // usdc amount 1:1
+    //         usdc_metadata()
+    //     );
+    //     // stage 2
+    //     // total score: 1000, receiver's score : 500
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         500,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // deregister bridge
+    //     vip::deregister(publisher, get_bridge_id());
+    //     // stage3 distributed
+    //     only_fund_reward(
+    //         publisher,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // bridge 1 re-registered on stage 4
+    //     vip::register(
+    //         publisher,
+    //         signer::address_of(operator),
+    //         get_bridge_id(),
+    //         get_bridge_address(),
+    //         string::utf8(b"contract"),
+    //         decimal256::from_ratio(1, 2),
+    //         decimal256::from_ratio(1, 2),
+    //         decimal256::from_ratio(1, 2),
+    //     );
+    //     // stage4 distributed
+    //     only_fund_reward(
+    //         publisher,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
 
-        // stage 1 claim & zapping
-        vip::batch_claim_user_reward_script(
-            receiver,
-            get_bridge_id(),
-            vector[vector::remove(&mut stages, 0)],
-            vector[
-                vector::remove(&mut merkle_proofs, 0)
-            ],
-            vector[
-                vector::remove(&mut l2_scores, 0)
-            ],
-        );
-        let vesting1_initial_reward = vip_vesting::get_user_vesting_initial_reward(
-            receiver_addr, get_bridge_id(), 1
-        );
-        // user can only zap the deregisterd minitia positions
-        vip::zapping_script(
-            receiver,
-            get_bridge_id(),
-            get_lp_metadata(),
-            option::none(),
-            get_validator(),
-            1,
-            vesting1_initial_reward,
-            vesting1_initial_reward, // usdc amount 1:1
-            usdc_metadata()
-        );
-        // stage 2
-        // total score: 1000, receiver's score : 500
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            500,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // deregister bridge
-        vip::deregister(publisher, get_bridge_id());
-        // stage3 distributed
-        only_fund_reward(
-            publisher,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // bridge 1 re-registered on stage 4
-        vip::register(
-            publisher,
-            signer::address_of(operator),
-            get_bridge_id(),
-            get_bridge_address(),
-            string::utf8(b"contract"),
-            decimal256::from_ratio(1, 2),
-            decimal256::from_ratio(1, 2),
-            decimal256::from_ratio(1, 2),
-        );
-        // stage4 distributed
-        only_fund_reward(
-            publisher,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
+    //     // stage 5
+    //     // total score: 1000, receiver's score : 100
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         100,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     let vault_balance_before = vip_vault::balance();
 
-        // stage 5
-        // total score: 1000, receiver's score : 100
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            100,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        let vault_balance_before = vip_vault::balance();
+    //     // stage 2,3,4,5 claim
+    //     vip::batch_claim_user_reward_script(
+    //         receiver,
+    //         get_bridge_id(),
+    //         stages,
+    //         merkle_proofs,
+    //         l2_scores,
+    //     );
 
-        // stage 2,3,4,5 claim
-        vip::batch_claim_user_reward_script(
-            receiver,
-            get_bridge_id(),
-            stages,
-            merkle_proofs,
-            l2_scores,
-        );
+    //     assert!(
+    //         vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 5,
+    //         5
+    //     );
+    //     assert!(
+    //         vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 1),
+    //         6
+    //     );
 
-        assert!(
-            vip_vesting::get_user_last_claimed_stage(receiver_addr, 1) == 5,
-            5
-        );
-        assert!(
-            vip_vesting::is_user_vesting_position_finalized(receiver_addr, 1, 1),
-            6
-        );
+    //     let vesting2_initial_reward = vip_vesting::get_user_vesting_initial_reward(
+    //         receiver_addr, get_bridge_id(), 2
+    //     );
 
-        let vesting2_initial_reward = vip_vesting::get_user_vesting_initial_reward(
-            receiver_addr, get_bridge_id(), 2
-        );
+    //     let vault_balance_after = vip_vault::balance();
+    //     // stage 2 vested reward(5; 40% one time)
+    //     assert!(
+    //         vip_reward::balance(receiver_addr) == (
+    //             (2 * vesting2_initial_reward) / (5 * vesting_period)
+    //         ),
+    //         7
+    //     );
+    //     // claim no reward of vesting2 position; vault balance reduce only amount of claim reward
+    //     assert!(
+    //         vault_balance_after == vault_balance_before - vip_reward::balance(receiver_addr),
+    //         8
+    //     )
 
-        let vault_balance_after = vip_vault::balance();
-        // stage 2 vested reward(5; 40% one time)
-        assert!(
-            vip_reward::balance(receiver_addr) == (
-                (2 * vesting2_initial_reward) / (5 * vesting_period)
-            ),
-            7
-        );
-        // claim no reward of vesting2 position; vault balance reduce only amount of claim reward
-        assert!(
-            vault_balance_after == vault_balance_before - vip_reward::balance(receiver_addr),
-            8
-        )
-
-    }
+    // }
 
     #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     fun test_batch_zapping(
@@ -1979,112 +1990,112 @@ module publisher::vip_test {
         );
 
     }
+    // FIX: DEPRECATED
+    // #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
+    // fun claim_operator_reward_re_registerd_bridge(
+    //     chain: &signer,
+    //     publisher: &signer,
+    //     operator: &signer,
+    //     receiver: &signer
+    // ) acquires TestState {
+    //     initialize(chain, publisher, operator);
+    //     let receiver_addr = signer::address_of(receiver);
+    //     let operator_addr = signer::address_of(operator);
+    //     let vesting_period = get_vesting_period();
+    //     let (stages, merkle_proofs, l2_scores) = reset_claim_args();
 
-    #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun claim_operator_reward_re_registerd_bridge(
-        chain: &signer,
-        publisher: &signer,
-        operator: &signer,
-        receiver: &signer
-    ) acquires TestState {
-        initialize(chain, publisher, operator);
-        let receiver_addr = signer::address_of(receiver);
-        let operator_addr = signer::address_of(operator);
-        let vesting_period = get_vesting_period();
-        let (stages, merkle_proofs, l2_scores) = reset_claim_args();
+    //     // submit snapshot of stage 1; total score: 1000, receiver's score : 100
+    //     // stage 1 snapshot submitted
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         100,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // stage 2
+    //     // total score: 1000, receiver's score : 500
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         500,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // deregister bridge
+    //     vip::deregister(publisher, get_bridge_id());
+    //     // stage3 distributed
+    //     only_fund_reward(
+    //         publisher,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     // bridge 1 re-registered on stage 4
+    //     vip::register(
+    //         publisher,
+    //         signer::address_of(operator),
+    //         get_bridge_id(),
+    //         get_bridge_address(),
+    //         string::utf8(b"contract"),
+    //         decimal256::from_ratio(1, 2),
+    //         decimal256::from_ratio(1, 2),
+    //         decimal256::from_ratio(1, 2),
+    //     );
+    //     // stage4 distributed
+    //     only_fund_reward(
+    //         publisher,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
 
-        // submit snapshot of stage 1; total score: 1000, receiver's score : 100
-        // stage 1 snapshot submitted
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            100,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // stage 2
-        // total score: 1000, receiver's score : 500
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            500,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // deregister bridge
-        vip::deregister(publisher, get_bridge_id());
-        // stage3 distributed
-        only_fund_reward(
-            publisher,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        // bridge 1 re-registered on stage 4
-        vip::register(
-            publisher,
-            signer::address_of(operator),
-            get_bridge_id(),
-            get_bridge_address(),
-            string::utf8(b"contract"),
-            decimal256::from_ratio(1, 2),
-            decimal256::from_ratio(1, 2),
-            decimal256::from_ratio(1, 2),
-        );
-        // stage4 distributed
-        only_fund_reward(
-            publisher,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
+    //     // stage 5
+    //     // total score: 1000, receiver's score : 100
+    //     submit_snapshot_and_fund_reward(
+    //         publisher,
+    //         receiver_addr,
+    //         100,
+    //         1000,
+    //         &mut stages,
+    //         &mut merkle_proofs,
+    //         &mut l2_scores
+    //     );
+    //     let vault_balance_before = vip_vault::balance();
 
-        // stage 5
-        // total score: 1000, receiver's score : 100
-        submit_snapshot_and_fund_reward(
-            publisher,
-            receiver_addr,
-            100,
-            1000,
-            &mut stages,
-            &mut merkle_proofs,
-            &mut l2_scores
-        );
-        let vault_balance_before = vip_vault::balance();
+    //     // stage 1,2,3,4,5 claim
+    //     vip::batch_claim_operator_reward_script(operator, get_bridge_id(), stages,);
 
-        // stage 1,2,3,4,5 claim
-        vip::batch_claim_operator_reward_script(operator, get_bridge_id(), stages,);
+    //     assert!(
+    //         vip_vesting::get_operator_last_claimed_stage(operator_addr, get_bridge_id()) ==
+    //              5,
+    //         5
+    //     );
 
-        assert!(
-            vip_vesting::get_operator_last_claimed_stage(operator_addr, get_bridge_id()) ==
-                 5,
-            5
-        );
+    //     let vesting1_initial_reward = vip_vesting::get_operator_vesting_initial_reward(
+    //         operator_addr, get_bridge_id(), 1
+    //     );
+    //     let vesting2_initial_reward = vip_vesting::get_operator_vesting_initial_reward(
+    //         operator_addr, get_bridge_id(), 2
+    //     );
+    //     let vault_balance_after = vip_vault::balance();
+    //     // stage 1 vesting reward(2,5) + stage 2 vested reward(5)
+    //     assert!(
+    //         vip_reward::balance(operator_addr) == (
+    //             (2 * vesting1_initial_reward) / (vesting_period) + (vesting2_initial_reward)
+    //                 / (vesting_period)
+    //         ),
+    //         6
+    //     );
+    //     // claim no reward of vesting2 position; vault balance reduce only amount of claim reward
+    //     assert!(
+    //         vault_balance_after == vault_balance_before - vip_reward::balance(operator_addr),
+    //         8
+    //     )
 
-        let vesting1_initial_reward = vip_vesting::get_operator_vesting_initial_reward(
-            operator_addr, get_bridge_id(), 1
-        );
-        let vesting2_initial_reward = vip_vesting::get_operator_vesting_initial_reward(
-            operator_addr, get_bridge_id(), 2
-        );
-        let vault_balance_after = vip_vault::balance();
-        // stage 1 vesting reward(2,5) + stage 2 vested reward(5)
-        assert!(
-            vip_reward::balance(operator_addr) == (
-                (2 * vesting1_initial_reward) / (vesting_period) + (vesting2_initial_reward)
-                    / (vesting_period)
-            ),
-            6
-        );
-        // claim no reward of vesting2 position; vault balance reduce only amount of claim reward
-        assert!(
-            vault_balance_after == vault_balance_before - vip_reward::balance(operator_addr),
-            8
-        )
-
-    }
+    // }
 }

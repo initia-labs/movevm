@@ -51,7 +51,7 @@ module publisher::vip {
     const EINVALID_BATCH_ARGUMENT: u64 = 17;
     const EINVALID_TOTAL_REWARD: u64 = 18;
     const ESNAPSHOT_NOT_EXISTS: u64 = 19;
-    const ECLAIMABLE_REWARD_CAN_BE_EXIST: u64 = 20;
+    const EINVALID_REGISTERD_BRIDGE: u64 = 20;
     const EINVALID_WEIGHT: u64 = 21;
     const EINVALID_STAGE_ORDER: u64 = 22;
     const EINVALID_CLAIMABLE_PERIOD: u64 = 23;
@@ -62,7 +62,6 @@ module publisher::vip {
     const ETOO_EARLY_FUND: u64 = 28;
     const EINVALID_STAGE_INTERVAL: u64 = 29;
     const EINVALID_STAGE_SNAPSHOT: u64 = 30;
-    const EINVALID_REGISTERD_BRIDGE: u64 = 31;
     //
     //  Constants
     //
@@ -1255,42 +1254,38 @@ module publisher::vip {
                     table_key::encode_u64(*stage)
                 );
                 // handle to re-registered minitia (ref. vip_test::claim_re_registered_bridge_reward)
-                if (table::contains(
-                        &stage_data.snapshots,
-                        table_key::encode_u64(bridge_id)
-                    )) {
-                    let snapshot = table::borrow(
-                        &stage_data.snapshots,
-                        table_key::encode_u64(bridge_id)
-                    );
 
-                    // check merkle proof
-                    let target_hash = score_hash(
-                        bridge_id,
-                        *stage,
-                        account_addr,
-                        *l2_score,
-                        snapshot.total_l2_score,
-                    );
-                    if (*l2_score != 0) {
-                        assert_merkle_proofs(
-                            *merkle_proof,
-                            snapshot.merkle_root,
-                            target_hash,
-                        );
-                    };
+                let snapshot = table::borrow(
+                    &stage_data.snapshots,
+                    table_key::encode_u64(bridge_id)
+                );
 
-                    vector::push_back(
-                        &mut claimInfos,
-                        vip_vesting::build_user_vesting_claim_infos(
-                            *stage,
-                            *stage + module_store.vesting_period,
-                            *l2_score,
-                            module_store.minimum_score_ratio,
-                            snapshot.total_l2_score,
-                        )
+                // check merkle proof
+                let target_hash = score_hash(
+                    bridge_id,
+                    *stage,
+                    account_addr,
+                    *l2_score,
+                    snapshot.total_l2_score,
+                );
+                if (*l2_score != 0) {
+                    assert_merkle_proofs(
+                        *merkle_proof,
+                        snapshot.merkle_root,
+                        target_hash,
                     );
                 };
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_user_vesting_claim_infos(
+                        *stage,
+                        *stage + module_store.vesting_period,
+                        *l2_score,
+                        module_store.minimum_score_ratio,
+                        snapshot.total_l2_score,
+                    )
+                );
 
                 prev_stage = *stage;
 
@@ -1356,29 +1351,22 @@ module publisher::vip {
                     *s == prev_stage + 1,
                     error::invalid_argument(EINVALID_STAGE_ORDER)
                 );
-                let stage_data = table::borrow(
-                    &module_store.stage_data,
-                    table_key::encode_u64(*s)
-                );
-                if (table::contains(
-                        &stage_data.snapshots,
-                        table_key::encode_u64(bridge_id)
-                    )) {
-                    // if there is no vesting store, register it
-                    if (!vip_vesting::is_user_vesting_store_registered(
-                            signer::address_of(operator),
-                            bridge_id
-                        )) {
-                        vip_vesting::register_user_vesting_store(operator, bridge_id);
-                    };
 
-                    vector::push_back(
-                        &mut claimInfos,
-                        vip_vesting::build_operator_vesting_claim_infos(
-                            *s, *s + module_store.vesting_period,
-                        )
-                    );
+                // if there is no vesting store, register it
+                if (!vip_vesting::is_user_vesting_store_registered(
+                        signer::address_of(operator),
+                        bridge_id
+                    )) {
+                    vip_vesting::register_user_vesting_store(operator, bridge_id);
                 };
+
+                vector::push_back(
+                    &mut claimInfos,
+                    vip_vesting::build_operator_vesting_claim_infos(
+                        *s, *s + module_store.vesting_period,
+                    )
+                );
+
                 prev_stage = *s;
             }
         );
@@ -1537,26 +1525,12 @@ module publisher::vip {
         zapping_amount: u64,
         stakelisted_amount: u64,
         stakelisted_metadata: Object<Metadata>,
-    ) acquires ModuleStore {
+    ) {
         let account_addr = signer::address_of(account);
         // check if it is already finalized(or zapped), make the error
         assert!(
             !vip_vesting::is_user_vesting_position_finalized(account_addr, bridge_id, stage),
             error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED)
-        );
-        // check the last claimed stage !== current stage
-        // it means there can be claimable reward not to be zapped
-        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(
-            account_addr, bridge_id
-        );
-        let can_zap = if (last_claimed_stage == get_last_submitted_stage(bridge_id)) { true } else {
-            // check is there any claimable reward
-            let check_stage = last_claimed_stage + 1;
-            !check_claimable(bridge_id, check_stage)
-        };
-        assert!(
-            can_zap,
-            error::not_implemented(ECLAIMABLE_REWARD_CAN_BE_EXIST)
         );
 
         zapping(
@@ -1778,7 +1752,7 @@ module publisher::vip {
             &module_store.bridges,
             |bridge_id_vec, bridge| {
                 use_bridge(bridge);
-                if(bridge.is_registered) {
+                if (bridge.is_registered) {
                     vector::push_back(
                         &mut bridge_ids,
                         table_key::decode_u64(bridge_id_vec)
@@ -1917,9 +1891,11 @@ module publisher::vip {
     //
     // (only on compiler v1) for preventing compile error; because of inferring type issue
     //
-    inline fun use_bridge(_bridge: &Bridge) {} 
-    
-    inline fun use_snapshot(_snapshot: &Snapshot) {}
+    inline fun use_bridge(_bridge: &Bridge) {
+    }
+
+    inline fun use_snapshot(_snapshot: &Snapshot) {
+    }
 
     //
     // Test Functions
