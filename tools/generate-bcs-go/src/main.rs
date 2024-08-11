@@ -27,11 +27,11 @@ use move_core_types::{
 fn main() {
     let mut tracer = Tracer::new(TracerConfig::default());
     tracer.trace_simple_type::<Identifier>().unwrap();
+    tracer.trace_simple_type::<AccountAddress>().unwrap();
     tracer.trace_simple_type::<StructTag>().unwrap();
     tracer.trace_simple_type::<TypeTag>().unwrap();
     tracer.trace_simple_type::<ModuleId>().unwrap();
     tracer.trace_simple_type::<ResourceKey>().unwrap();
-    tracer.trace_simple_type::<AccountAddress>().unwrap();
     tracer.trace_simple_type::<StakingDelta>().unwrap();
     tracer.trace_simple_type::<CosmosCoin>().unwrap();
     tracer.trace_simple_type::<IBCHeight>().unwrap();
@@ -50,6 +50,11 @@ fn main() {
     tracer.trace_simple_type::<Script>().unwrap();
     tracer.trace_simple_type::<Env>().unwrap();
     tracer.trace_simple_type::<TableInfo>().unwrap();
+
+    // aliases within StructTag
+    tracer
+        .ignore_aliases("StructTag", &["type_params"])
+        .unwrap();
 
     let registry = tracer.registry().unwrap();
 

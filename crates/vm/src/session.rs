@@ -1,5 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 
+use initia_move_json::StructResolver;
 use initia_move_natives::{
     account::NativeAccountContext,
     code::{NativeCodeContext, PublishRequest},
@@ -14,8 +18,9 @@ use initia_move_types::{
 };
 
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
-use move_core_types::vm_status::StatusCode;
-use move_vm_runtime::{session::Session, session_cache::SessionCache};
+use move_core_types::{language_storage::TypeTag, vm_status::StatusCode};
+use move_vm_runtime::session::Session;
+use move_vm_types::loaded_data::runtime_types::{StructNameIndex, StructType, Type};
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
@@ -23,7 +28,6 @@ pub type SessionOutput<'r> = (
     StakingChangeSet,
     CosmosMessages,
     Accounts,
-    SessionCache<'r>,
 );
 
 pub struct SessionExt<'r, 'l> {
@@ -36,8 +40,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     }
 
     pub fn finish(self) -> VMResult<SessionOutput<'r>> {
-        let (change_set, session_cache, mut extensions) =
-            self.inner.finish_with_extensions_with_session_cache()?;
+        let (change_set, mut extensions) = self.inner.finish_with_extensions()?;
         let event_context: NativeEventContext = extensions.remove::<NativeEventContext>();
         let events = event_context.into_events();
 
@@ -68,13 +71,22 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             staking_change_set,
             cosmos_messages,
             new_accounts,
-            session_cache,
         ))
     }
 
     pub fn extract_publish_request(&mut self) -> Option<PublishRequest> {
         let ctx = self.get_native_extensions().get_mut::<NativeCodeContext>();
         ctx.requested_module_bundle.take()
+    }
+}
+
+impl StructResolver for SessionExt<'_, '_> {
+    fn get_struct_type(&self, index: StructNameIndex) -> Option<Arc<StructType>> {
+        self.inner.get_struct_type(index)
+    }
+
+    fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
+        self.inner.get_type_tag(ty)
     }
 }
 

@@ -1,7 +1,11 @@
+use core::str;
 use std::collections::BTreeMap;
 
 use initia_move_types::{
-    metadata::{KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0},
+    metadata::{
+        KnownAttributeKind, RuntimeModuleMetadataV0, COMPILATION_METADATA_KEY,
+        INITIA_METADATA_KEY_V0,
+    },
     module::ModuleBundle,
 };
 use move_binary_format::{
@@ -12,6 +16,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::identifier::{IdentStr, Identifier};
+use move_model::metadata::CompilationMetadata;
 use move_vm_runtime::session::Session;
 
 use super::{
@@ -79,6 +84,7 @@ fn validate_module_metadata(module: &CompiledModule) -> Result<(), MetaDataValid
 /// Check if the metadata has unknown key/data types
 fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> {
     let mut exist = false;
+    let mut compilation_key_exist = false;
     for data in module.metadata.iter() {
         if data.key == *INITIA_METADATA_KEY_V0 {
             if exist {
@@ -90,6 +96,13 @@ fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> 
                 bcs::from_bytes::<RuntimeModuleMetadataV0>(&data.value)
                     .map_err(|e| MalformedError::DeserializedError(data.key.clone(), e))?;
             }
+        } else if data.key == *COMPILATION_METADATA_KEY {
+            if compilation_key_exist {
+                return Err(MalformedError::DuplicateKey);
+            }
+            compilation_key_exist = true;
+            bcs::from_bytes::<CompilationMetadata>(&data.value)
+                .map_err(|e| MalformedError::DeserializedError(data.key.clone(), e))?;
         } else {
             return Err(MalformedError::UnknownKey(data.key.clone()));
         }

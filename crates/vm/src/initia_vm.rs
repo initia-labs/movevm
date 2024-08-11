@@ -9,16 +9,15 @@ use move_core_types::{
     ident_str,
     identifier::Identifier,
     language_storage::ModuleId,
-    value::MoveValue,
+    value::{MoveTypeLayout, MoveValue},
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
     config::VMConfig,
     module_traversal::{TraversalContext, TraversalStorage},
+    move_vm::MoveVM,
     native_extensions::NativeContextExtensions,
-    runtime::VMRuntime,
     session::SerializedReturnValues,
-    session_cache::SessionCache,
 };
 use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
 
@@ -48,7 +47,6 @@ use initia_move_types::{
     account::Accounts,
     cosmos::CosmosMessages,
     env::Env,
-    event::ContractEvent,
     gas_usage::GasUsageSet,
     json_event::JsonEvents,
     message::{Message, MessageOutput, MessagePayload},
@@ -72,43 +70,31 @@ use crate::{
 
 #[derive(Clone)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct MoveVM {
-    runtime: Arc<VMRuntime>,
+pub struct InitiaVM {
+    move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
 }
 
-impl Default for MoveVM {
+impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new(500 * 1024 * 1024, 100 * 1024 * 1024)
+        Self::new()
     }
 }
 
-impl MoveVM {
-    pub fn new(mut module_cache_capacity: usize, mut script_cache_capacity: usize) -> Self {
-        // enforce minimum module cache capacity
-        if module_cache_capacity < 500 * 1024 * 1024 {
-            module_cache_capacity = 500 * 1024 * 1024;
-        }
-        // enforce minimum script cache capacity
-        if script_cache_capacity < 100 * 1024 * 1024 {
-            script_cache_capacity = 100 * 1024 * 1024;
-        }
-
+impl InitiaVM {
+    pub fn new() -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
-        let runtime = VMRuntime::new(
+        let move_vm = MoveVM::new_with_config(
             all_natives(gas_params, misc_params),
             VMConfig {
                 verifier_config: verifier_config(),
-                module_cache_capacity,
-                script_cache_capacity,
                 ..Default::default()
             },
-        )
-        .expect("should be able to create Move runtime; check if there are duplicated natives");
+        );
 
         Self {
-            runtime: Arc::new(runtime),
+            move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
         }
     }
@@ -154,7 +140,7 @@ impl MoveVM {
         extensions.add(NativeOracleContext::new(api));
 
         SessionExt::new(
-            self.runtime
+            self.move_vm
                 .new_session_with_extensions(resolver, extensions),
         )
     }
@@ -279,20 +265,22 @@ impl MoveVM {
         table_view_impl: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
+        // flush loader cache if invalidated
+        self.move_vm.flush_loader_cache_if_invalidated();
+
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let func_inst =
+        let func =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
-        let metadata = get_vm_metadata(&session, view_fn.module())
-            .map_err(|e| e.finish(Location::Undefined))?;
+        let metadata = get_vm_metadata(&session, view_fn.module());
         let args = validate_view_function(
             &mut session,
             state_view_impl,
             view_fn.args().to_vec(),
             view_fn.function(),
-            &func_inst,
+            &func,
             metadata.as_ref(),
             view_fn.is_json(),
         )?;
@@ -309,10 +297,22 @@ impl MoveVM {
             &mut traversal_context,
         )?;
 
+        // load fully annotated type layouts for return value serialization
+        // after the execution of the function
+        let ret_ty_layouts = func
+            .return_tys()
+            .iter()
+            .map(|ty| {
+                let ty_tag = session.get_type_tag(ty)?;
+                session.get_fully_annotated_type_layout(&ty_tag)
+            })
+            .collect::<VMResult<Vec<_>>>()?;
+
         let session_output = session.finish()?;
-        let (events, _, _, _, _, session_cache) = session_output;
-        let json_events = self.serialize_events_to_json(events, &session_cache)?;
-        let ret = serialize_response_to_json(res)?.expect("view function must return value");
+        let (events, _, _, _, _) = session_output;
+        let json_events = JsonEvents::new(events.into_iter().map(|e| e.into_inner()).collect());
+        let ret = serialize_response_to_json(&ret_ty_layouts, res)?
+            .expect("view function must return value");
 
         Ok(ViewOutput::new(ret, json_events.into_inner()))
     }
@@ -333,6 +333,9 @@ impl MoveVM {
         gas_meter: &mut InitiaGasMeter,
         traversal_context: &mut TraversalContext,
     ) -> Result<MessageOutput, VMStatus> {
+        // flush loader cache if invalidated
+        self.move_vm.flush_loader_cache_if_invalidated();
+
         let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
 
         match payload {
@@ -413,6 +416,9 @@ impl MoveVM {
                 publish_request,
                 traversal_context,
             )?;
+
+            // mark loader cache as invalid until loader v2 is implemented
+            self.move_vm.mark_loader_cache_as_invalid();
         }
 
         let session_output = session.finish()?;
@@ -420,10 +426,6 @@ impl MoveVM {
         // Charge for gas cost for write set ops
         gas_meter.charge_write_set_gas(&session_output.1)?;
         let output = self.success_message_cleanup(session_output, gas_meter)?;
-
-        // flush unused module and script cache
-        self.runtime.flush_unused_module_cache();
-        self.runtime.flush_unused_script_cache();
 
         Ok(output)
     }
@@ -625,9 +627,8 @@ impl MoveVM {
         session_output: SessionOutput,
         gas_meter: &mut InitiaGasMeter,
     ) -> VMResult<MessageOutput> {
-        let (events, write_set, staking_change_set, cosmos_messages, new_accounts, session_cache) =
-            session_output;
-        let json_events = self.serialize_events_to_json(events, &session_cache)?;
+        let (events, write_set, staking_change_set, cosmos_messages, new_accounts) = session_output;
+        let json_events = JsonEvents::new(events.into_iter().map(|e| e.into_inner()).collect());
         let gas_usage_set = gas_meter.into_usage_set();
 
         Ok(get_message_output(
@@ -656,54 +657,34 @@ impl MoveVM {
         }
         Ok(result)
     }
-
-    pub fn serialize_events_to_json(
-        &self,
-        events: Vec<ContractEvent>,
-        session_cache: &SessionCache,
-    ) -> VMResult<JsonEvents> {
-        let mut res = vec![];
-        for event in events.into_iter() {
-            let ty_layout = self
-                .runtime
-                .get_fully_annotated_type_layout(session_cache, event.type_tag())?;
-
-            let move_val =
-                MoveValue::simple_deserialize(event.event_data(), &ty_layout).map_err(|_| {
-                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
-                })?;
-            let serde_value = serialize_move_value_to_json_value(&move_val)?;
-            res.push((event.type_tag().clone(), serde_value.to_string()));
-        }
-
-        Ok(JsonEvents::new(res))
-    }
 }
 
-fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Option<String>> {
+fn serialize_response_to_json(
+    ty_layouts: &[MoveTypeLayout],
+    response: SerializedReturnValues,
+) -> VMResult<Option<String>> {
     if Vec::len(&response.mutable_reference_outputs) != 0 {
-        Err(
+        return Err(
             PartialVMError::new(StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR)
                 .with_message("mutable reference outputs are not allowed".to_string())
                 .finish(Location::Undefined),
-        )
+        );
+    }
+
+    let mut serde_vals = vec![];
+    for ((blob, _), ty_layout) in response.return_values.iter().zip(ty_layouts) {
+        let move_val = MoveValue::simple_deserialize(blob, ty_layout).map_err(|_| {
+            PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
+        })?;
+        let serde_value = serialize_move_value_to_json_value(&move_val)?;
+        serde_vals.push(serde_value);
+    }
+    if serde_vals.is_empty() {
+        Ok(None)
+    } else if serde_vals.len() == 1 {
+        Ok(Some(serde_vals.first().unwrap().to_string()))
     } else {
-        let mut serde_vals = vec![];
-        for return_val in response.return_values.iter() {
-            let (blob, type_layout) = return_val;
-            let move_val = MoveValue::simple_deserialize(blob, type_layout).map_err(|_| {
-                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
-            })?;
-            let serde_value = serialize_move_value_to_json_value(&move_val)?;
-            serde_vals.push(serde_value);
-        }
-        if serde_vals.is_empty() {
-            Ok(None)
-        } else if serde_vals.len() == 1 {
-            Ok(Some(serde_vals.first().unwrap().to_string()))
-        } else {
-            Ok(Some(serde_json::Value::Array(serde_vals).to_string()))
-        }
+        Ok(Some(serde_json::Value::Array(serde_vals).to_string()))
     }
 }
 

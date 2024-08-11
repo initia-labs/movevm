@@ -18,7 +18,7 @@ use initia_move_types::access_path::AccessPath;
 use initia_move_types::message::{Message, MessageOutput};
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::{entry_function::EntryFunction, script::Script};
-use initia_move_vm::MoveVM;
+use initia_move_vm::InitiaVM;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
@@ -38,7 +38,7 @@ use std::{fs, io};
 pub struct MoveHarness {
     /// The executor being used.
     pub chain: MockChain,
-    pub vm: MoveVM,
+    pub vm: InitiaVM,
     pub api: MockAPI,
 }
 
@@ -60,7 +60,7 @@ impl Default for MoveHarness {
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
-        let vm = MoveVM::default();
+        let vm = InitiaVM::new();
         let chain = MockChain::new();
         let api = MockAPI::empty();
 
@@ -403,24 +403,6 @@ impl MoveHarness {
         let mut state = self.chain.create_state();
         let inner_output = output.into_inner();
         state.push_write_set(inner_output.1);
-
-        if should_commit {
-            self.chain.commit(state);
-        }
-    }
-
-    // commit only module checksum to test module cache
-    pub fn commit_module_checksum(&mut self, output: MessageOutput, should_commit: bool) {
-        let mut state = self.chain.create_state();
-        let (_, write_set, _, _, _, _) = output.into_inner();
-        let write_set = write_set
-            .into_iter()
-            .filter(|v| {
-                let (_, data_path) = v.0.clone().into_inner();
-                data_path.is_code_checksum()
-            })
-            .collect();
-        state.push_write_set(write_set);
 
         if should_commit {
             self.chain.commit(state);

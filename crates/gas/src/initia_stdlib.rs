@@ -53,9 +53,8 @@ crate::macros::define_gas_parameters!(
     [crypto_secp256k1_per_sig_deserialize: InternalGasPerArg, "crypto.secp256k1.per_sig_deserialize", 1378],
 
     // Note(Gas): These are storage operations so the values should not be multiplied.
-    [event_write_module_event_to_store_base: InternalGas, "event.write_module_event_to_store.base", 20006],
-    // TODO(Gas): the on-chain name is wrong...
-    [event_write_module_event_to_store_per_abstract_value_unit: InternalGasPerAbstractValueUnit, "event.write_module_event_to_store.per_abstract_memory_unit", 61],
+    [event_emit_base: InternalGas, "event.emit.base", 20006],
+    [event_emit_per_abstract_memory_unit: InternalGasPerAbstractValueUnit, "event.emit.per_abstract_memory_unit", 61],
 
     [keccak_keccak256_base: InternalGas, "keccak.keccak256.base", 14704],
     [keccak_keccak256_per_byte: InternalGasPerByte, "keccak.keccak256.per_byte", 165],

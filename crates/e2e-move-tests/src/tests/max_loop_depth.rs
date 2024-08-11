@@ -18,6 +18,5 @@ fn module_loop_depth_just_above_limit() {
     let mut h = MoveHarness::new();
     h.initialize();
     let status = h.publish_package(&acc, path).expect_err("should error");
-
     assert!(status.status_code() == StatusCode::LOOP_MAX_DEPTH_REACHED);
 }

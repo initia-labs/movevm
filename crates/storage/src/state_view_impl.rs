@@ -14,7 +14,7 @@ use move_core_types::value::MoveTypeLayout;
 use move_core_types::vm_status::StatusCode;
 use move_vm_types::resolver::{resource_size, ModuleResolver, ResourceResolver};
 
-use initia_move_types::access_path::{AccessPath, DataPath};
+use initia_move_types::access_path::AccessPath;
 
 pub struct StateViewImpl<'block, S> {
     state_view: &'block S,
@@ -51,26 +51,6 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
         let ap = AccessPath::from(module_id);
 
         self.get(&ap)
-    }
-
-    fn get_checksum(&self, module_id: &ModuleId) -> PartialVMResult<Option<[u8; 32]>> {
-        let ap = AccessPath::new(
-            *module_id.address(),
-            DataPath::CodeChecksum(module_id.name().into()),
-        );
-
-        // TODO - make it clear remove expect
-        self.get(&ap).map(|v| {
-            v.map(|v| {
-                let v: Vec<u8> = v.into();
-                v.try_into()
-                    .expect("failed to convert checksum bytes to [u8; 32]")
-            })
-        })
-    }
-
-    fn get_check_compat(&self) -> PartialVMResult<bool> {
-        Ok(true)
     }
 }
 

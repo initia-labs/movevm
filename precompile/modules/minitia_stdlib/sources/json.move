@@ -5,9 +5,9 @@ module minitia_std::json {
     //
     // NOTE: key `tt` is converted for `@type`
     // NOTE: key `mm` is converted for `move`
-    native public fun marshal<T: copy + drop>(value: &T): vector<u8>;
-    native public fun marshal_to_string<T: copy + drop>(value: &T): String;
-    native public fun unmarshal<T: copy + drop>(json: vector<u8>): T;
+    native public fun marshal<T: drop>(value: &T): vector<u8>;
+    native public fun marshal_to_string<T: drop>(value: &T): String;
+    native public fun unmarshal<T: drop>(json: vector<u8>): T;
 
     #[test_only]
     use std::string;

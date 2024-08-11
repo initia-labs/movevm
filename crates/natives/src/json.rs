@@ -1,4 +1,5 @@
-use move_core_types::gas_algebra::NumBytes;
+use move_binary_format::errors::PartialVMError;
+use move_core_types::{gas_algebra::NumBytes, vm_status::StatusCode};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -6,7 +7,7 @@ use move_vm_types::{
 };
 
 use smallvec::{smallvec, SmallVec};
-use std::{collections::VecDeque, ops::Deref};
+use std::collections::VecDeque;
 
 use initia_move_json::{deserialize_json_to_value, serialize_move_value_to_json_value};
 
@@ -21,8 +22,6 @@ use crate::{
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 
 // native errors always start from 100
-const UNABLE_TO_MARSHAL: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 1;
-const UNABLE_TO_UNMARSHAL: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 2;
 const EUNABLE_TO_MARSHAL_DELAYED_FIELD: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 3;
 const EUNABLE_TO_UNMARSHAL_DELAYED_FIELD: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 4;
 
@@ -52,9 +51,9 @@ fn native_marshal_internal(
     let annotated_layout = context.type_to_fully_annotated_layout(ty)?;
     let decorated_value = move_value.decorate(&annotated_layout);
     let serde_value = serialize_move_value_to_json_value(&decorated_value).map_err(|_| {
-        SafeNativeError::Abort {
-            abort_code: UNABLE_TO_MARSHAL,
-        }
+        SafeNativeError::InvariantViolation(PartialVMError::new(
+            StatusCode::VALUE_SERIALIZATION_ERROR,
+        ))
     })?;
 
     let serde_bytes = serde_value.to_string().into_bytes();
@@ -99,9 +98,7 @@ fn native_unmarshal(
     debug_assert_eq!(arguments.len(), 1);
 
     let ty = &ty_args[0];
-    let (_, has_identifier_mappings) = context
-        .deref()
-        .type_to_type_layout_with_identifier_mappings(ty)?;
+    let (_, has_identifier_mappings) = context.type_to_type_layout_with_identifier_mappings(ty)?;
     if has_identifier_mappings {
         return Err(SafeNativeError::Abort {
             abort_code: EUNABLE_TO_UNMARSHAL_DELAYED_FIELD,
@@ -112,9 +109,9 @@ fn native_unmarshal(
     let serde_bytes = safely_pop_arg!(arguments, Vec<u8>);
 
     let value = deserialize_json_to_value(&annotated_layout, &serde_bytes).map_err(|_| {
-        SafeNativeError::Abort {
-            abort_code: UNABLE_TO_UNMARSHAL,
-        }
+        SafeNativeError::InvariantViolation(PartialVMError::new(
+            StatusCode::VALUE_DESERIALIZATION_ERROR,
+        ))
     })?;
 
     context.charge(

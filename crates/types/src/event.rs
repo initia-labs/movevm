@@ -7,12 +7,11 @@ pub struct ContractEvent {
     /// The type of the data
     type_tag: TypeTag,
     /// The data payload of the event
-    #[serde(with = "serde_bytes")]
-    event_data: Vec<u8>,
+    event_data: String,
 }
 
 impl ContractEvent {
-    pub fn new(type_tag: TypeTag, event_data: Vec<u8>) -> Self {
+    pub fn new(type_tag: TypeTag, event_data: String) -> Self {
         Self {
             type_tag,
             event_data,
@@ -27,8 +26,12 @@ impl ContractEvent {
         &self.type_tag
     }
 
-    pub fn event_data(&self) -> &[u8] {
+    pub fn event_data(&self) -> &str {
         &self.event_data
+    }
+
+    pub fn into_inner(self) -> (TypeTag, String) {
+        (self.type_tag, self.event_data)
     }
 }
 
@@ -37,8 +40,7 @@ impl std::fmt::Debug for ContractEvent {
         write!(
             f,
             "ModuleEvent {{ type: {:?}, event_data: {:?} }}",
-            self.type_tag,
-            hex::encode(&self.event_data)
+            self.type_tag, &self.event_data
         )
     }
 }

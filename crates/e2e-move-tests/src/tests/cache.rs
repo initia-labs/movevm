@@ -1,27 +1,27 @@
 use crate::MoveHarness;
 use move_core_types::account_address::AccountAddress;
 
-#[test]
-fn test_tx_module_cache() {
-    let mut h = MoveHarness::new();
-    let path = "src/tests/basic_coin.data/pack";
+// revive this at loader v2
+// #[test]
+// fn test_tx_module_cache() {
+//     let mut h = MoveHarness::new();
+//     let path = "src/tests/basic_coin.data/pack";
 
-    h.initialize();
+//     h.initialize();
 
-    // publish basic coin
-    let output = h
-        .publish_package(&AccountAddress::ONE, path)
-        .expect("should success");
-    h.commit_module_checksum(output, true);
+//     // publish basic coin
+//     let _ = h
+//         .publish_package(&AccountAddress::ONE, path)
+//         .expect("should success");
 
-    let view_function = h.create_view_function(
-        str::parse("0x1::BasicCoin::number").unwrap(),
-        vec![],
-        vec![],
-    );
-    let view_output = h.run_view_function(view_function).expect("should success");
-    assert_eq!("\"123\"".to_string(), view_output);
-}
+//     let view_function = h.create_view_function(
+//         str::parse("0x1::BasicCoin::number").unwrap(),
+//         vec![],
+//         vec![],
+//     );
+//     let view_output = h.run_view_function(view_function).expect("should success");
+//     assert_eq!("\"123\"".to_string(), view_output);
+// }
 
 #[test]
 fn test_redeploy_should_update_module_cache() {

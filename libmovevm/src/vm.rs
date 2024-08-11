@@ -15,13 +15,13 @@ use initia_move_types::errors::BackendError;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_types::write_set::WriteSet;
 use initia_move_types::{message::Message, module::ModuleBundle};
-use initia_move_vm::MoveVM;
+use initia_move_vm::InitiaVM;
 
 use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
 
 pub(crate) fn initialize_vm(
-    vm: &mut MoveVM,
+    vm: &mut InitiaVM,
     db_handle: Db,
     api: GoApi,
     env: Env,
@@ -49,7 +49,7 @@ pub(crate) fn initialize_vm(
 }
 
 pub(crate) fn execute_contract(
-    vm: &mut MoveVM,
+    vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: Db,
     api: GoApi,
@@ -78,7 +78,7 @@ pub(crate) fn execute_contract(
 }
 
 pub(crate) fn execute_script(
-    vm: &mut MoveVM,
+    vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: Db,
     api: GoApi,
@@ -109,7 +109,7 @@ pub(crate) fn execute_script(
 
 // execute view function
 pub(crate) fn execute_view_function(
-    vm: &mut MoveVM,
+    vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: Db,
     api: GoApi,

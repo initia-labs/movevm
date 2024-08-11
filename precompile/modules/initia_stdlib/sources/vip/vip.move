@@ -989,8 +989,8 @@ module initia_std::vip {
             &mut module_store.stage_data,
             table_key::encode_u64(challenge_stage)
         );
-        let snapshot = table::borrow(
-            &stage_data.snapshots,
+        let snapshot = table::borrow_mut(
+            &mut stage_data.snapshots,
             table_key::encode_u64(bridge_id)
         );
         assert!(
@@ -1020,17 +1020,11 @@ module initia_std::vip {
             agent: new_agent,
             api_uri: new_api_uri,
         };
-        // upsert snapshot data
-        table::upsert(
-            &mut stage_data.snapshots,
-            table_key::encode_u64(bridge_id),
-            Snapshot {
-                create_time: snapshot.create_time,
-                upsert_time: execution_time,
-                merkle_root: new_merkle_root,
-                total_l2_score: new_l2_total_score,
-            }
-        );
+
+        // update snapshot data
+        snapshot.upsert_time = execution_time;
+        snapshot.merkle_root = new_merkle_root;
+        snapshot.total_l2_score = new_l2_total_score;
 
         event::emit(
             ExecuteChallengeEvent {

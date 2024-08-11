@@ -10,7 +10,7 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use move_vm_runtime::native_functions::{NativeContext, NativeFunctionTable};
-use move_vm_types::values::Vector;
+use move_vm_types::values::{Struct, Vector};
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{GlobalValue, Reference, StructRef, Value},
@@ -601,7 +601,19 @@ fn native_new_table_iter(
         order,
     });
 
-    Ok(smallvec![Value::iter_reference(context_iterator_id as u64)])
+    // Creating fresh GlobalValue to create local reference to the iterator
+    //
+    // Self::Fresh { fields } => Ok(ValueImpl::ContainerRef(ContainerRef::Local(
+    //   Container::Struct(Rc::clone(fields)),
+    // ))),
+    //
+    let iter_value = Value::struct_(Struct::pack(vec![Value::u64(context_iterator_id as u64)]));
+
+    let mut gv = GlobalValue::none();
+    gv.move_to(iter_value)
+        .map_err(|_| partial_extension_error("failed to create iterator"))?;
+
+    Ok(smallvec![gv.borrow_global()?])
 }
 
 /// Check the `next_key` exist or not and store

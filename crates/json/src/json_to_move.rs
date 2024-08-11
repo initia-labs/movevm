@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use bigdecimal::{self, num_bigint::ToBigInt, BigDecimal, Signed};
 use bytes::Bytes;
@@ -6,25 +6,33 @@ use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     ident_str,
-    language_storage::StructTag,
+    language_storage::{StructTag, TypeTag},
     metadata::Metadata,
-    parser::parse_struct_tag,
     u256::U256,
     value::{MoveTypeLayout, MoveValue},
 };
 use move_vm_types::{
-    loaded_data::runtime_types::Type::{self, *},
-    resolver::{MoveResolver, ResourceResolver},
+    loaded_data::runtime_types::{
+        StructNameIndex, StructType,
+        Type::{self, *},
+    },
+    resolver::ResourceResolver,
 };
 
 use serde_json::Value as JSONValue;
 
 use crate::errors::{deserialization_error, deserialization_error_with_msg};
 
+pub trait StructResolver {
+    fn get_struct_type(&self, index: StructNameIndex) -> Option<Arc<StructType>>;
+    fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag>;
+}
+
 // deserialize json argument to JSONValue and convert to MoveValue,
 // and then do bcs serialization.
-pub fn deserialize_json_args<M: MoveResolver>(
-    move_resolver: &M,
+pub fn deserialize_json_args<S: StructResolver, R: ResourceResolver>(
+    struct_resolver: &S,
+    resource_resolver: &R,
     ty: &Type,
     arg: &[u8],
 ) -> VMResult<Vec<u8>> {
@@ -39,14 +47,15 @@ pub fn deserialize_json_args<M: MoveResolver>(
     let json_val: JSONValue =
         serde_json::from_slice(arg).map_err(deserialization_error_with_msg)?;
 
-    let move_val = convert_json_value_to_move_value(move_resolver, ty, json_val, 1)?;
+    let move_val =
+        convert_json_value_to_move_value(struct_resolver, resource_resolver, ty, json_val, 1)?;
     bcs::to_bytes(&move_val).map_err(deserialization_error_with_msg)
 }
 
 // convert JSONValue to MoveValue.
-fn convert_json_value_to_move_value<R: ResourceResolver>(
-    // whether to support object json => object move value
-    resolver: &R,
+fn convert_json_value_to_move_value<S: StructResolver, R: ResourceResolver>(
+    struct_resolver: &S,
+    resource_resolver: &R,
     ty: &Type,
     json_val: JSONValue,
     depth: usize,
@@ -109,7 +118,8 @@ fn convert_json_value_to_move_value<R: ResourceResolver>(
             let mut vec = Vec::new();
             for json_val in json_vals {
                 vec.push(convert_json_value_to_move_value(
-                    resolver,
+                    struct_resolver,
+                    resource_resolver,
                     ty,
                     json_val,
                     depth + 1,
@@ -117,8 +127,11 @@ fn convert_json_value_to_move_value<R: ResourceResolver>(
             }
             MoveValue::Vector(vec)
         }
-        Struct { id, .. } => {
-            let full_name = format!("{}::{}", id.module_id.short_str_lossless(), id.name);
+        Struct { idx, .. } => {
+            let st = struct_resolver
+                .get_struct_type(*idx)
+                .ok_or_else(deserialization_error)?;
+            let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
             match full_name.as_str() {
                 "0x1::string::String" => MoveValue::vector_u8(
                     json_val.as_str().ok_or_else(deserialization_error)?.into(),
@@ -187,15 +200,18 @@ fn convert_json_value_to_move_value<R: ResourceResolver>(
                 }
             }
         }
-        StructInstantiation { id, ty_args, .. } => {
+        StructInstantiation { idx, ty_args, .. } => {
             if ty_args.len() != 1 {
                 return Err(deserialization_error_with_msg(
                     "invalid type arguments length",
                 ));
             }
 
+            let st = struct_resolver
+                .get_struct_type(*idx)
+                .ok_or_else(deserialization_error)?;
             let ty = ty_args.first().ok_or_else(deserialization_error)?;
-            let full_name = format!("{}::{}", id.module_id.short_str_lossless(), id.name);
+            let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
             match full_name.as_str() {
                 "0x1::option::Option" => {
                     if json_val.is_null() {
@@ -203,7 +219,8 @@ fn convert_json_value_to_move_value<R: ResourceResolver>(
                     }
 
                     return Ok(MoveValue::Vector(vec![convert_json_value_to_move_value(
-                        resolver,
+                        struct_resolver,
+                        resource_resolver,
                         ty,
                         json_val,
                         depth + 1,
@@ -218,7 +235,7 @@ fn convert_json_value_to_move_value<R: ResourceResolver>(
                     // verify a object
                     // 1) address is holding object core resource
                     // 2) object is holding inner type resource
-                    verify_object(resolver, addr, ty)?;
+                    verify_object(struct_resolver, resource_resolver, addr, ty)?;
 
                     MoveValue::Address(addr)
                 }
@@ -234,13 +251,14 @@ fn convert_json_value_to_move_value<R: ResourceResolver>(
 }
 
 // verify object address is holding object core and inner type resources.
-fn verify_object<R: ResourceResolver>(
-    resolver: &R,
+fn verify_object<S: StructResolver, R: ResourceResolver>(
+    struct_resolver: &S,
+    resource_resolver: &R,
     addr: AccountAddress,
     inner_type: &Type,
 ) -> VMResult<()> {
     // verify a object hold object core
-    if resolver
+    if resource_resolver
         .get_resource_bytes_with_metadata_and_layout(
             &addr,
             &StructTag {
@@ -260,10 +278,16 @@ fn verify_object<R: ResourceResolver>(
     }
 
     // verify a object hold inner type
-    let inner_type_st = parse_struct_tag(inner_type.to_string().as_str())
+    let inner_type_tag = struct_resolver
+        .get_type_tag(inner_type)
         .map_err(deserialization_error_with_msg)?;
+    let inner_type_st = if let TypeTag::Struct(inner_type_st) = inner_type_tag {
+        inner_type_st
+    } else {
+        return Err(deserialization_error_with_msg("invalid object inner type"));
+    };
 
-    if resolver
+    if resource_resolver
         .get_resource_bytes_with_metadata_and_layout(&addr, &inner_type_st, &[], None)
         .map_err(deserialization_error_with_msg)?
         .0
@@ -273,7 +297,6 @@ fn verify_object<R: ResourceResolver>(
             "object does not hold the type",
         ));
     }
-
     Ok(())
 }
 
@@ -301,18 +324,24 @@ mod json_arg_testing {
     use bytes::Bytes;
     use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
     use initia_move_types::access_path::{AccessPath, DataPath};
-    use move_binary_format::file_format::{Ability, AbilitySet};
+    use move_binary_format::{
+        errors::{Location, PartialVMError},
+        file_format::{Ability, AbilitySet},
+    };
     use move_core_types::{
         ident_str,
+        identifier::Identifier,
         language_storage::{ModuleId, StructTag},
+        vm_status::StatusCode,
     };
-    use move_vm_types::loaded_data::runtime_types::{AbilityInfo, StructIdentifier};
-    use triomphe::Arc;
+    use move_vm_types::loaded_data::runtime_types::AbilityInfo;
+    use smallbitvec::SmallBitVec;
 
     use super::*;
 
     struct MockState {
         pub map: BTreeMap<Vec<u8>, Vec<u8>>,
+        pub structs: BTreeMap<StructNameIndex, Arc<StructType>>,
     }
 
     impl StateView for MockState {
@@ -324,9 +353,33 @@ mod json_arg_testing {
         }
     }
 
+    impl StructResolver for MockState {
+        fn get_struct_type(&self, index: StructNameIndex) -> Option<Arc<StructType>> {
+            self.structs.get(&index).cloned()
+        }
+        fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
+            match ty {
+                Struct { idx, .. } => {
+                    let st = self.structs.get(idx).ok_or_else(|| {
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .finish(Location::Undefined)
+                    })?;
+                    Ok(TypeTag::Struct(Box::new(StructTag {
+                        address: st.module.address,
+                        module: st.module.name.clone(),
+                        name: st.name.clone(),
+                        type_args: vec![],
+                    })))
+                }
+                _ => unimplemented!(),
+            }
+        }
+    }
+
     fn mock_state() -> MockState {
         MockState {
             map: BTreeMap::new(),
+            structs: BTreeMap::new(),
         }
     }
 
@@ -337,17 +390,17 @@ mod json_arg_testing {
 
         let ty = Type::U8;
         let arg = b"123";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
 
         assert_eq!(result, bcs::to_bytes(&123u8).unwrap());
 
         // invalid negative
         let arg = b"-123";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
 
         // invalid decimal
         let arg = b"123.4567";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
@@ -357,17 +410,17 @@ mod json_arg_testing {
 
         let ty = Type::U16;
         let arg = b"123";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
 
         assert_eq!(result, bcs::to_bytes(&123u16).unwrap());
 
         // invalid negative
         let arg = b"-123";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
 
         // invalid decimal
         let arg = b"123.4567";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
@@ -377,16 +430,16 @@ mod json_arg_testing {
 
         let ty = Type::U32;
         let arg = b"123";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&123u32).unwrap());
 
         // invalid negative
         let arg = b"-123";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
 
         // invalid decimal
         let arg = b"123.4567";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
@@ -396,16 +449,16 @@ mod json_arg_testing {
 
         let ty = Type::U64;
         let arg = b"\"123\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&123u64).unwrap());
 
         // invalid negative
         let arg = b"\"-123\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
 
         // invalid decimal
         let arg = b"\"123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
@@ -415,16 +468,16 @@ mod json_arg_testing {
 
         let ty = Type::U128;
         let arg = b"\"123\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&123u128).unwrap());
 
         // invalid negative
         let arg = b"\"-123\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
 
         // invalid decimal
         let arg = b"\"123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
@@ -434,16 +487,16 @@ mod json_arg_testing {
 
         let ty = Type::U256;
         let arg = b"\"123\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&U256::from(123u128)).unwrap());
 
         // invalid negative
         let arg = b"\"-123\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
 
         // invalid decimal
         let arg = b"\"123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
@@ -453,7 +506,7 @@ mod json_arg_testing {
 
         let ty = Type::Bool;
         let arg = b"true";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&true).unwrap());
     }
 
@@ -464,7 +517,7 @@ mod json_arg_testing {
 
         let ty = Type::Address;
         let arg = b"\"0x1\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(
             result,
             bcs::to_bytes(&"0x1".parse::<AccountAddress>().unwrap()).unwrap()
@@ -478,12 +531,12 @@ mod json_arg_testing {
 
         let ty = Type::Vector(triomphe::Arc::new(Type::U8));
         let arg = b"[0, 1, 2, 3]";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&vec![0u8, 1u8, 2u8, 3u8]).unwrap());
 
         // hex string to vector<u8>
         let arg = b"\"00010203\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes(&vec![0u8, 1u8, 2u8, 3u8]).unwrap());
     }
 
@@ -494,7 +547,7 @@ mod json_arg_testing {
 
         let ty = Type::Vector(triomphe::Arc::new(Type::Address));
         let arg = b"[\"0x1\", \"0x2\"]";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(
             result,
             bcs::to_bytes(&vec![
@@ -506,29 +559,55 @@ mod json_arg_testing {
 
         // invalid inner addresss
         let arg = b"[\"0xgg\"]";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
+    }
+
+    pub fn for_test(module_name: &str, name: &str) -> StructType {
+        use move_vm_types::loaded_data::runtime_types::StructLayout;
+
+        StructType {
+            idx: StructNameIndex(0),
+            layout: StructLayout::Single(vec![]),
+            phantom_ty_params_mask: SmallBitVec::new(),
+            abilities: AbilitySet::EMPTY,
+            ty_params: vec![],
+            name: Identifier::new(name).unwrap(),
+            module: ModuleId::new(AccountAddress::ONE, Identifier::new(module_name).unwrap()),
+        }
     }
 
     #[test]
     fn test_deserialize_json_args_string() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state
+            .structs
+            .insert(StructNameIndex(0), Arc::new(for_test("string", "String")));
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::Struct {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("string").into()),
-                name: ident_str!("String").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"hello\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes("hello").unwrap());
     }
 
     #[test]
     fn test_deserialize_json_args_object() {
         let mut mock_state = mock_state();
+        mock_state
+            .structs
+            .insert(StructNameIndex(0), Arc::new(for_test("object", "Object")));
+        mock_state.structs.insert(
+            StructNameIndex(1),
+            Arc::new(for_test("fungible_asset", "Metadata")),
+        );
+        mock_state.structs.insert(
+            StructNameIndex(2),
+            Arc::new(for_test("fungible_asset", "Metadata2")),
+        );
 
         // insert object core to object addr
         let obj_addr = AccountAddress::random();
@@ -564,19 +643,10 @@ mod json_arg_testing {
         );
 
         let ty = Type::StructInstantiation {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("object").into()),
-                name: ident_str!("Object").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
-            ty_args: Arc::new(vec![Type::Struct {
-                id: StructIdentifier {
-                    module_id: ModuleId::new(
-                        AccountAddress::ONE,
-                        ident_str!("fungible_asset").into(),
-                    ),
-                    name: ident_str!("Metadata").into(),
-                },
+            ty_args: triomphe::Arc::new(vec![Type::Struct {
+                idx: StructNameIndex(1),
                 ability: AbilityInfo::struct_(AbilitySet::singleton(Ability::Key)),
             }]),
         };
@@ -586,53 +656,46 @@ mod json_arg_testing {
 
         // valid object address
         let state_view = StateViewImpl::new(&mock_state);
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
-        assert_eq!(result, bcs::to_bytes(&obj_addr).unwrap());
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg);
+        assert_eq!(result.unwrap(), bcs::to_bytes(&obj_addr).unwrap());
 
         // invalid object address
         let wrong_object_addr_arg = b"\"0x1\"";
-        _ = deserialize_json_args(&state_view, &ty, wrong_object_addr_arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, wrong_object_addr_arg)
+            .unwrap_err();
 
         // invalid inner type
         let wrong_inner_ty = Type::StructInstantiation {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("object").into()),
-                name: ident_str!("Object").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
-            ty_args: Arc::new(vec![Type::Struct {
-                id: StructIdentifier {
-                    module_id: ModuleId::new(
-                        AccountAddress::ONE,
-                        ident_str!("fungible_asset").into(),
-                    ),
-                    name: ident_str!("Metadata2").into(),
-                },
+            ty_args: triomphe::Arc::new(vec![Type::Struct {
+                idx: StructNameIndex(2),
                 ability: AbilityInfo::struct_(AbilitySet::singleton(Ability::Key)),
             }]),
         };
-        _ = deserialize_json_args(&state_view, &wrong_inner_ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &wrong_inner_ty, arg).unwrap_err();
 
         // invalid address
         let arg = b"\"0xgg\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
     fn test_deserialize_json_args_option_some() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state
+            .structs
+            .insert(StructNameIndex(0), Arc::new(for_test("option", "Option")));
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::StructInstantiation {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("option").into()),
-                name: ident_str!("Option").into(),
-            },
-            ty_args: Arc::new(vec![Type::Address]),
+            idx: StructNameIndex(0),
+            ty_args: triomphe::Arc::new(vec![Type::Address]),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"0x1\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(
             result,
             bcs::to_bytes(&vec!["0x1".parse::<AccountAddress>().unwrap()]).unwrap()
@@ -640,24 +703,25 @@ mod json_arg_testing {
 
         // invalid inner value
         let arg = b"\"0xgg\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
     fn test_deserialize_json_args_option_none() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state
+            .structs
+            .insert(StructNameIndex(0), Arc::new(for_test("option", "Option")));
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::StructInstantiation {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("option").into()),
-                name: ident_str!("Option").into(),
-            },
-            ty_args: Arc::new(vec![Type::Address]),
+            idx: StructNameIndex(0),
+            ty_args: triomphe::Arc::new(vec![Type::Address]),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"null";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
         assert_eq!(
             result,
             bcs::to_bytes::<Vec<AccountAddress>>(&vec![]).unwrap()
@@ -666,18 +730,20 @@ mod json_arg_testing {
 
     #[test]
     fn test_deserialize_json_args_decimal_128() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state.structs.insert(
+            StructNameIndex(0),
+            Arc::new(for_test("decimal128", "Decimal128")),
+        );
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::Struct {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("decimal128").into()),
-                name: ident_str!("Decimal128").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"123.4567\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
 
         assert_eq!(
             result,
@@ -686,23 +752,25 @@ mod json_arg_testing {
 
         // invalid negative
         let arg = b"\"-123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
     fn test_deserialize_json_args_decimal_256() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state.structs.insert(
+            StructNameIndex(0),
+            Arc::new(for_test("decimal256", "Decimal256")),
+        );
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::Struct {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("decimal256").into()),
-                name: ident_str!("Decimal256").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"123.4567\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
 
         assert_eq!(
             result,
@@ -711,23 +779,25 @@ mod json_arg_testing {
 
         // invalid negative
         let arg = b"\"-123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
     fn test_deserialize_json_args_fixed_point32() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state.structs.insert(
+            StructNameIndex(0),
+            Arc::new(for_test("fixed_point32", "FixedPoint32")),
+        );
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::Struct {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("fixed_point32").into()),
-                name: ident_str!("FixedPoint32").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"123.4567\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
 
         assert_eq!(
             result,
@@ -736,23 +806,25 @@ mod json_arg_testing {
 
         // invalid negative
         let arg = b"\"-123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 
     #[test]
     fn test_deserialize_json_args_fixed_point64() {
-        let mock_state = mock_state();
+        let mut mock_state = mock_state();
+        mock_state.structs.insert(
+            StructNameIndex(0),
+            Arc::new(for_test("fixed_point64", "FixedPoint64")),
+        );
+
         let state_view = StateViewImpl::new(&mock_state);
 
         let ty = Type::Struct {
-            id: StructIdentifier {
-                module_id: ModuleId::new(AccountAddress::ONE, ident_str!("fixed_point64").into()),
-                name: ident_str!("FixedPoint64").into(),
-            },
+            idx: StructNameIndex(0),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"123.4567\"";
-        let result = deserialize_json_args(&state_view, &ty, arg).unwrap();
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
 
         assert_eq!(
             result,
@@ -761,6 +833,6 @@ mod json_arg_testing {
 
         // invalid negative
         let arg = b"\"-123.4567\"";
-        _ = deserialize_json_args(&state_view, &ty, arg).unwrap_err();
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
     }
 }

@@ -2,7 +2,7 @@
 
 mod session;
 
-pub use crate::move_vm::MoveVM;
+pub use crate::initia_vm::InitiaVM;
 
-mod move_vm;
+mod initia_vm;
 mod verifier;

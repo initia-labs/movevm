@@ -123,11 +123,15 @@ pub(crate) fn extract_event_metadata_from_module(
     session: &Session,
     module_id: &ModuleId,
 ) -> VMResult<HashSet<String>> {
-    let metadata = session
-        .load_module(module_id)
-        .map(|module| get_metadata_from_compiled_module(&module));
+    let metadata = session.load_module(module_id).map(|module| {
+        CompiledModule::deserialize_with_config(
+            &module,
+            &session.get_vm_config().deserializer_config,
+        )
+        .map(|module| get_metadata_from_compiled_module(&module))
+    });
 
-    if let Ok(Some(metadata)) = metadata {
+    if let Ok(Ok(Some(metadata))) = metadata {
         extract_event_metadata(&metadata)
     } else {
         Ok(HashSet::new())

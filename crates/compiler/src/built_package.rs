@@ -15,7 +15,7 @@ use move_core_types::{
     account_address::AccountAddress, language_storage::ModuleId, metadata::Metadata,
 };
 use move_docgen::DocgenOptions;
-use move_model::model::GlobalEnv;
+use move_model::{metadata::CompilerVersion, model::GlobalEnv};
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
     BuildConfig, ModelConfig,
@@ -79,6 +79,8 @@ impl BuiltPackage {
         new_config.architecture = None;
         new_config.generate_docs = false;
         new_config.generate_move_model = true;
+        // compiler configs
+        new_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
         new_config
             .compiler_config
             .known_attributes

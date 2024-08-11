@@ -19,6 +19,8 @@ use std::{collections::BTreeMap, io::Cursor};
 
 use initia_move_json::deserialize_json_args;
 
+use crate::session::SessionExt;
+
 pub(crate) struct FunctionId {
     module_id: ModuleId,
     func_name: &'static IdentStr,
@@ -111,7 +113,7 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
 ///
 /// after validation, add senders and non-signer arguments to generate the final args
 pub fn validate_combine_signer_and_txn_args<M: MoveResolver>(
-    session: &mut Session,
+    session: &mut SessionExt,
     state_view: &M,
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
@@ -211,8 +213,8 @@ pub(crate) fn is_valid_txn_arg(
     match typ {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
         Vector(inner) => is_valid_txn_arg(session, inner, allowed_structs),
-        Struct { id, .. } | StructInstantiation { id, .. } => {
-            session.get_struct_type(id).is_some_and(|st| {
+        Struct { idx, .. } | StructInstantiation { idx, .. } => {
+            session.get_struct_type(*idx).is_some_and(|st| {
                 let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
                 allowed_structs.contains_key(&full_name)
             })
@@ -226,7 +228,7 @@ pub(crate) fn is_valid_txn_arg(
 // construct arguments that require so.
 // TODO: This needs a more solid story and a tighter integration with the VM.
 pub(crate) fn construct_args<M: MoveResolver>(
-    session: &mut Session,
+    session: &mut SessionExt,
     state_view: &M,
     types: &[Type],
     args: Vec<Vec<u8>>,
@@ -267,7 +269,7 @@ fn invalid_signature() -> VMStatus {
 
 #[allow(clippy::too_many_arguments)]
 fn construct_arg<M: MoveResolver>(
-    session: &mut Session,
+    session: &mut SessionExt,
     state_view: &M,
     ty: &Type,
     allowed_structs: &ConstructorMap,
@@ -277,7 +279,8 @@ fn construct_arg<M: MoveResolver>(
     is_json: bool,
 ) -> Result<Vec<u8>, VMStatus> {
     if is_json {
-        return deserialize_json_args(state_view, ty, &arg).map_err(|e| e.into_vm_status());
+        return deserialize_json_args(session, state_view, ty, &arg)
+            .map_err(|e| e.into_vm_status());
     }
 
     use move_vm_types::loaded_data::runtime_types::Type::*;
@@ -367,8 +370,10 @@ pub(crate) fn recursively_construct_arg(
                 len -= 1;
             }
         }
-        Struct { id, .. } | StructInstantiation { id, .. } => {
-            let st = session.get_struct_type(id).ok_or_else(invalid_signature)?;
+        Struct { idx, .. } | StructInstantiation { idx, .. } => {
+            let st = session
+                .get_struct_type(*idx)
+                .ok_or_else(invalid_signature)?;
 
             let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
             let constructor = allowed_structs

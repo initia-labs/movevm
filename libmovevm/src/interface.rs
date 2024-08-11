@@ -11,18 +11,18 @@ use initia_move_types::message::Message;
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::script::Script;
 use initia_move_types::view_function::ViewFunction;
-use initia_move_vm::MoveVM;
+use initia_move_vm::InitiaVM;
 use move_core_types::account_address::AccountAddress;
 
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct vm_t {}
 
-pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut MoveVM> {
+pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut InitiaVM> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut MoveVM) };
+        let c = unsafe { &mut *(ptr as *mut InitiaVM) };
         Some(c)
     }
 }
@@ -40,19 +40,13 @@ pub fn to_gas_balance(ptr: *mut u64) -> Option<&'static mut u64> {
 pub extern "C" fn release_vm(vm: *mut vm_t) {
     if !vm.is_null() {
         // this will free cache when it goes out of scope
-        let _ = unsafe { Box::from_raw(vm as *mut MoveVM) };
+        let _ = unsafe { Box::from_raw(vm as *mut InitiaVM) };
     }
 }
 
 #[no_mangle]
-pub extern "C" fn allocate_vm(
-    module_cache_capacity: usize,
-    script_cache_capacity: usize,
-) -> *mut vm_t {
-    let vm = Box::into_raw(Box::new(MoveVM::new(
-        module_cache_capacity,
-        script_cache_capacity,
-    )));
+pub extern "C" fn allocate_vm() -> *mut vm_t {
+    let vm = Box::into_raw(Box::new(InitiaVM::new()));
     vm as *mut vm_t
 }
 
