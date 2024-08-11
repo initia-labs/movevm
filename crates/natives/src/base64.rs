@@ -37,7 +37,7 @@ fn native_encode(
     let bytes = safely_pop_arg!(arguments, Vec<u8>);
     context.charge(
         gas_params.base64_encode_base
-            + gas_params.base64_decode_unit * NumBytes::new(bytes.len() as u64),
+            + gas_params.base64_encode_unit * NumBytes::new(bytes.len() as u64),
     )?;
 
     let val = STANDARD.encode(bytes);
