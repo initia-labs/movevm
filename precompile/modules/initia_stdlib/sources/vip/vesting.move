@@ -304,10 +304,16 @@ module publisher::vip_vesting {
         let user_vestings = load_user_vestings_mut(bridge_id, account_addr);
         let stage_key = table_key::encode_u64(stage);
         assert!(
-            table::contains(user_vestings, stage_key),
+            table::contains(
+                user_vestings,
+                stage_key
+            ),
             error::not_found(EINVALID_STAGE)
         );
-        table::borrow_mut(user_vestings, stage_key)
+        table::borrow_mut(
+            user_vestings,
+            stage_key
+        )
     }
 
     inline fun load_operator_vestings_mut(bridge_id: u64, account_addr: address)
@@ -336,10 +342,16 @@ module publisher::vip_vesting {
         let operator_vestings = load_operator_vestings_mut(bridge_id, account_addr);
         let stage_key = table_key::encode_u64(stage);
         assert!(
-            table::contains(operator_vestings, stage_key),
+            table::contains(
+                operator_vestings,
+                stage_key
+            ),
             error::not_found(EINVALID_STAGE)
         );
-        table::borrow_mut(operator_vestings, stage_key)
+        table::borrow_mut(
+            operator_vestings,
+            stage_key
+        )
     }
 
     //
@@ -638,11 +650,17 @@ module publisher::vip_vesting {
         let stage_key = table_key::encode_u64(stage);
         // force claim_vesting
         assert!(
-            table::contains(user_vestings, stage_key),
+            table::contains(
+                user_vestings,
+                stage_key
+            ),
             error::not_found(EVESTING_NOT_FOUND)
         );
 
-        let user_vesting = table::borrow_mut(user_vestings, stage_key);
+        let user_vesting = table::borrow_mut(
+            user_vestings,
+            stage_key
+        );
 
         assert!(
             user_vesting.remaining_reward >= zapping_amount,
@@ -722,7 +740,7 @@ module publisher::vip_vesting {
         bridge_id: u64,
         stage: u64,
     ): bool acquires ModuleStore {
-        load_user_vesting_mut(bridge_id, account_addr, stage).finalized
+       load_user_vesting_mut(bridge_id, account_addr, stage).finalized
     }
 
     public fun is_operator_vesting_position_finalized(
@@ -1149,23 +1167,17 @@ module publisher::vip_vesting {
     //
     // (only on compiler v1) for preventing compile error; because of inferring type error
     //
-    inline fun use_mut_user_vesting(_value: &mut UserVesting) {
-    }
-
-    inline fun use_mut_operator_vesting(_value: &mut OperatorVesting) {
-    }
-
-    inline fun use_user_vesting_ref(_value: &UserVesting) {
-    }
-
-    inline fun use_operator_vesting_ref(_value: &OperatorVesting) {
-    }
-
-    inline fun use_user_vesting(_value: UserVesting) {
-    }
-
-    inline fun use_operator_vesting(_value: OperatorVesting) {
-    }
+    inline fun use_mut_user_vesting(_value: &mut UserVesting) {} 
+    
+    inline fun use_mut_operator_vesting(_value: &mut OperatorVesting) {} 
+    
+    inline fun use_user_vesting_ref(_value: &UserVesting) {} 
+    
+    inline fun use_operator_vesting_ref(_value: &OperatorVesting) {} 
+    
+    inline fun use_user_vesting(_value: UserVesting) {} 
+    
+    inline fun use_operator_vesting(_value: OperatorVesting) {}
 
     //
     // Tests
