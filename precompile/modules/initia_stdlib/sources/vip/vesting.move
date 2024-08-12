@@ -1188,7 +1188,7 @@ module initia_std::vip_vesting {
 
     #[test(chain = @0x1)]
     fun test_register_reward_store(chain: &signer,) {
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         initialize_coin(chain, string::utf8(b"uinit"));
 
         assert!(!is_user_reward_store_registered(1), 1);
@@ -1205,7 +1205,7 @@ module initia_std::vip_vesting {
 
     #[test(chain = @0x1)]
     fun test_add_reward_per_stage(chain: &signer,) {
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         initialize_coin(chain, string::utf8(b"uinit"));
 
         register_user_reward_store(chain, 1);
@@ -1228,7 +1228,7 @@ module initia_std::vip_vesting {
     #[test(chain = @0x1)]
     #[expected_failure(abort_code = 0x80001, location = initia_std::vip_reward)]
     fun failed_register_reward_store_twice(chain: &signer,) {
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         initialize_coin(chain, string::utf8(b"uinit"));
 
         register_user_reward_store(chain, 1);

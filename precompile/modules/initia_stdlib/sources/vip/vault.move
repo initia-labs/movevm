@@ -161,7 +161,7 @@ module initia_std::vip_vault {
     //
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain);
+    public fun init_module_for_test() {
+        init_module(&initia_std::account::create_signer_for_test(@initia_std));
     }
 }

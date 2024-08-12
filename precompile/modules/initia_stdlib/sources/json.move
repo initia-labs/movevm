@@ -1,11 +1,16 @@
 module initia_std::json {
     use std::string::String;
 
-    // Marshal and unmarshal data to and from JSON.
-    //
-    // NOTE: key `tt` is converted for `@type`
-    // NOTE: key `mm` is converted for `move`
+    /// Marshal data to JSON bytes.
+    ///
+    /// NOTE: key `tt` is converted for `@type`
+    /// NOTE: key `mm` is converted for `move`
     native public fun marshal<T: drop>(value: &T): vector<u8>;
+    
+    /// Marshal data to JSON string.
+    ///
+    /// NOTE: key `tt` is converted for `@type`
+    /// NOTE: key `mm` is converted for `move`
     native public fun marshal_to_string<T: drop>(value: &T): String;
     native public fun unmarshal<T: drop>(json: vector<u8>): T;
 

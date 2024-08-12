@@ -1634,16 +1634,17 @@ module initia_std::staking {
     use std::block::set_block_info;
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain);
+    public fun init_module_for_test() {
+        init_module(&initia_std::account::create_signer_for_test(@initia_std));
     }
 
     #[test_only]
-    public fun test_setup(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
-        let chain_addr = signer::address_of(chain);
+    public fun test_setup() acquires ModuleStore {
+        init_module_for_test();
+        let chain = &initia_std::account::create_signer_for_test(@initia_std);
+        let chain_addr = @initia_std;
 
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
 
         // initialize staking coin
         let (mint_cap, _burn_cap, _freeze_cap) =
@@ -1714,7 +1715,7 @@ module initia_std::staking {
         user1: &signer,
         user2: &signer,
     ) acquires DelegationStore, ModuleStore {
-        test_setup(chain);
+        test_setup();
 
         let user1_addr = signer::address_of(user1);
         let user2_addr = signer::address_of(user2);
@@ -1855,7 +1856,7 @@ module initia_std::staking {
 
     #[test(chain = @0x1, user = @0x1234)]
     public fun test_delegate(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
-        test_setup(chain);
+        test_setup();
 
         let user_addr = signer::address_of(user);
         let validator = string::utf8(b"validator");
@@ -1958,7 +1959,7 @@ module initia_std::staking {
 
     #[test(chain = @0x1, user = @0x1234)]
     public fun test_undelegate(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
-        test_setup(chain);
+        test_setup();
 
         let user_addr = signer::address_of(user);
         let validator = string::utf8(b"validator");
@@ -2105,7 +2106,7 @@ module initia_std::staking {
         user1: &signer,
         user2: &signer,
     ) acquires DelegationStore, ModuleStore {
-        test_setup(chain);
+        test_setup();
 
         let user1_addr = signer::address_of(user1);
         let user2_addr = signer::address_of(user2);
@@ -2196,10 +2197,10 @@ module initia_std::staking {
         );
     }
 
-    #[test(chain = @0x1)]
+    #[test]
     #[expected_failure(abort_code = 0x10007, location = Self)]
-    public fun test_destroy_not_empty_delegation(chain: &signer,) acquires ModuleStore {
-        test_setup(chain);
+    public fun test_destroy_not_empty_delegation() acquires ModuleStore {
+        test_setup();
 
         let delegation = Delegation {
             metadata: staking_metadata_for_test(),
@@ -2211,10 +2212,10 @@ module initia_std::staking {
         destroy_empty_delegation(delegation);
     }
 
-    #[test(chain = @0x1)]
+    #[test]
     #[expected_failure(abort_code = 0x10007, location = Self)]
-    public fun test_destroy_not_empty_unbonding(chain: &signer,) acquires ModuleStore {
-        test_setup(chain);
+    public fun test_destroy_not_empty_unbonding() acquires ModuleStore {
+        test_setup();
 
         let unbonding = Unbonding {
             metadata: staking_metadata_for_test(),
@@ -2226,10 +2227,10 @@ module initia_std::staking {
         destroy_empty_unbonding(unbonding);
     }
 
-    #[test(chain = @0x1)]
+    #[test]
     #[expected_failure(abort_code = 0x10008, location = Self)]
-    public fun test_merge_delegation_validator_mistmatch(chain: &signer,) acquires ModuleStore {
-        test_setup(chain);
+    public fun test_merge_delegation_validator_mistmatch() acquires ModuleStore {
+        test_setup();
 
         let delegation1 = Delegation {
             metadata: staking_metadata_for_test(),
@@ -2251,10 +2252,10 @@ module initia_std::staking {
         fungible_asset::destroy_zero(reward);
     }
 
-    #[test(chain = @0x1)]
+    #[test]
     #[expected_failure(abort_code = 0x10009, location = Self)]
-    public fun test_merge_unbonding_release_time(chain: &signer,) acquires ModuleStore {
-        test_setup(chain);
+    public fun test_merge_unbonding_release_time() acquires ModuleStore {
+        test_setup();
 
         let validator = string::utf8(b"validator");
         let unbonding1 = Unbonding {
@@ -2283,7 +2284,7 @@ module initia_std::staking {
     public fun test_claim_not_released_unbonding(
         chain: &signer, user: &signer,
     ) acquires ModuleStore, DelegationStore {
-        test_setup(chain);
+        test_setup();
 
         let user_addr = signer::address_of(user);
         let validator = string::utf8(b"validator");
@@ -2328,7 +2329,7 @@ module initia_std::staking {
 
     #[test(chain = @0x1, user = @0x1234)]
     public fun test_query_entry_functions(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
-        test_setup(chain);
+        test_setup();
 
         let user_addr = signer::address_of(user);
         let metadata = staking_metadata_for_test();
@@ -2506,9 +2507,9 @@ module initia_std::staking {
         );
     }
 
-    #[test(chain = @0x1)]
-    public fun test_share_to_amount(chain: &signer) acquires ModuleStore {
-        test_setup(chain);
+    #[test]
+    public fun test_share_to_amount() acquires ModuleStore {
+        test_setup();
 
         let metadata = staking_metadata_for_test();
         let validator = vector::singleton(1u8);
@@ -2518,9 +2519,9 @@ module initia_std::staking {
         assert!(amount == 1u64, 0);
     }
 
-    #[test(chain = @0x1)]
-    public fun test_amount_to_share(chain: &signer) acquires ModuleStore {
-        test_setup(chain);
+    #[test]
+    public fun test_amount_to_share() acquires ModuleStore {
+        test_setup();
 
         let metadata = staking_metadata_for_test();
         let validator = vector::singleton(1u8);
@@ -2532,7 +2533,7 @@ module initia_std::staking {
 
     #[test(chain = @0x1, user = @0x1234)]
     public fun test_slash_unbonding(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
-        test_setup(chain);
+        test_setup();
 
         let user_addr = signer::address_of(user);
         let validator = string::utf8(b"validator");

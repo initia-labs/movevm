@@ -59,7 +59,7 @@ module initia_std::managed_coin {
             error::not_found(EUNAUTHORIZED),
         );
 
-        let object_addr = object::object_address(metadata);
+        let object_addr = object::object_address(&metadata);
         assert!(
             exists<Capabilities>(object_addr),
             error::not_found(ENO_CAPABILITIES),
@@ -116,7 +116,7 @@ module initia_std::managed_coin {
             error::not_found(EUNAUTHORIZED),
         );
 
-        let object_addr = object::object_address(metadata);
+        let object_addr = object::object_address(&metadata);
         assert!(
             exists<Capabilities>(object_addr),
             error::not_found(ENO_CAPABILITIES),
@@ -142,7 +142,7 @@ module initia_std::managed_coin {
             error::not_found(EUNAUTHORIZED),
         );
 
-        let object_addr = object::object_address(metadata);
+        let object_addr = object::object_address(&metadata);
         assert!(
             exists<Capabilities>(object_addr),
             error::not_found(ENO_CAPABILITIES),
@@ -181,7 +181,7 @@ module initia_std::managed_coin {
     public entry fun test_end_to_end(
         source: signer, destination: signer, mod_account: signer
     ) acquires Capabilities {
-        primary_fungible_store::init_module_for_test(&mod_account);
+        primary_fungible_store::init_module_for_test();
 
         let source_addr = signer::address_of(&source);
         let destination_addr = signer::address_of(&destination);
@@ -253,7 +253,7 @@ module initia_std::managed_coin {
         destination: signer,
         mod_account: signer,
     ) acquires Capabilities {
-        primary_fungible_store::init_module_for_test(&mod_account);
+        primary_fungible_store::init_module_for_test();
 
         let source_addr = signer::address_of(&source);
 
@@ -283,7 +283,7 @@ module initia_std::managed_coin {
         destination: signer,
         mod_account: signer,
     ) acquires Capabilities {
-        primary_fungible_store::init_module_for_test(&mod_account);
+        primary_fungible_store::init_module_for_test();
 
         let source_addr = signer::address_of(&source);
 

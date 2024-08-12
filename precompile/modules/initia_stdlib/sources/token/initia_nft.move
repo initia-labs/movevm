@@ -249,7 +249,7 @@ module initia_std::initia_nft {
     // Nft accessors
 
     inline fun borrow<T: key>(nft: Object<T>): &InitiaNft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<InitiaNft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -270,7 +270,7 @@ module initia_std::initia_nft {
     // Nft mutators
 
     inline fun authorized_borrow<T: key>(nft: Object<T>, creator: &signer): &InitiaNft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<InitiaNft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -284,7 +284,7 @@ module initia_std::initia_nft {
     }
 
     public entry fun burn<T: key>(owner: &signer, nft: Object<T>) acquires InitiaNft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<InitiaNft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -294,7 +294,7 @@ module initia_std::initia_nft {
             error::permission_denied(ENOT_OWNER),
         );
 
-        let initia_nft = move_from<InitiaNft>(object::object_address(nft));
+        let initia_nft = move_from<InitiaNft>(object::object_address(&nft));
         assert!(
             option::is_some(&initia_nft.burn_ref),
             error::invalid_state(ECAN_NOT_BURN),
@@ -341,7 +341,7 @@ module initia_std::initia_nft {
     }
 
     inline fun borrow_collection<T: key>(nft: Object<T>): &InitiaNftCollection {
-        let collection_address = object::object_address(nft);
+        let collection_address = object::object_address(&nft);
         assert!(
             exists<InitiaNftCollection>(collection_address),
             error::not_found(ECOLLECTION_DOES_NOT_EXIST),
@@ -382,7 +382,7 @@ module initia_std::initia_nft {
     inline fun authorized_borrow_collection<T: key>(
         collection: Object<T>, creator: &signer
     ): &InitiaNftCollection {
-        let collection_address = object::object_address(collection);
+        let collection_address = object::object_address(&collection);
         assert!(
             exists<InitiaNftCollection>(collection_address),
             error::not_found(ECOLLECTION_DOES_NOT_EXIST),
@@ -563,7 +563,7 @@ module initia_std::initia_nft {
 
         create_collection_helper(creator, collection_name, true);
         let nft = mint_helper(creator, collection_name, token_id);
-        let nft_addr = object::object_address(nft);
+        let nft_addr = object::object_address(&nft);
 
         assert!(exists<InitiaNft>(nft_addr), 0);
         burn(creator, nft);

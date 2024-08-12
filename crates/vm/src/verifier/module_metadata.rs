@@ -2,21 +2,21 @@ use core::str;
 use std::collections::BTreeMap;
 
 use initia_move_types::{
-    metadata::{
-        KnownAttributeKind, RuntimeModuleMetadataV0, COMPILATION_METADATA_KEY,
-        INITIA_METADATA_KEY_V0,
-    },
+    metadata::{KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0},
     module::ModuleBundle,
 };
 use move_binary_format::{
     access::ModuleAccess,
     check_complexity::check_module_complexity,
-    errors::{Location, VMResult},
+    errors::{Location, PartialVMError, VMResult},
     file_format::{FunctionDefinition, FunctionHandle},
     CompiledModule,
 };
-use move_core_types::identifier::{IdentStr, Identifier};
-use move_model::metadata::CompilationMetadata;
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    vm_status::StatusCode,
+};
+use move_model::metadata::{CompilationMetadata, COMPILATION_METADATA_KEY};
 use move_vm_runtime::session::Session;
 
 use super::{
@@ -25,7 +25,8 @@ use super::{
         MetaDataValidationError,
     },
     event_validation::validate_module_events,
-    metadata::get_metadata_from_compiled_module,
+    metadata::{get_compilation_metadata_from_compiled_module, get_metadata_from_compiled_module},
+    native_validation::validate_module_natives,
 };
 
 pub(crate) fn validate_publish_request(
@@ -33,6 +34,9 @@ pub(crate) fn validate_publish_request(
     modules: &[CompiledModule],
     module_bundle: &ModuleBundle,
 ) -> VMResult<()> {
+    reject_unstable_bytecode(modules)?;
+    validate_module_natives(modules)?;
+
     for (module, blob) in modules.iter().zip(module_bundle.iter()) {
         let budget = 2048 + blob.code().len() as u64 * 20;
         check_module_complexity(module, budget).map_err(|e| e.finish(Location::Undefined))?;
@@ -105,6 +109,21 @@ fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> 
                 .map_err(|e| MalformedError::DeserializedError(data.key.clone(), e))?;
         } else {
             return Err(MalformedError::UnknownKey(data.key.clone()));
+        }
+    }
+
+    Ok(())
+}
+
+/// Check whether the bytecode can be published to mainnet based on the unstable tag in the metadata
+fn reject_unstable_bytecode(modules: &[CompiledModule]) -> VMResult<()> {
+    for module in modules {
+        if let Some(metadata) = get_compilation_metadata_from_compiled_module(module) {
+            if metadata.unstable {
+                return Err(PartialVMError::new(StatusCode::UNSTABLE_BYTECODE_REJECTED)
+                    .with_message("code marked unstable".to_string())
+                    .finish(Location::Undefined));
+            }
         }
     }
 

@@ -75,7 +75,7 @@ module initia_std::royalty {
 
     // Accessors
     public fun get<T: key>(maybe_royalty: Object<T>): Option<Royalty> acquires Royalty {
-        let obj_addr = object::object_address(maybe_royalty);
+        let obj_addr = object::object_address(&maybe_royalty);
         if (exists<Royalty>(obj_addr)) {
             option::some(*borrow_global<Royalty>(obj_addr))
         } else {

@@ -246,7 +246,7 @@ module initia_std::vip_zapping {
         event::emit<RewardClaimEvent>(
             RewardClaimEvent {
                 zid,
-                coin_metadata: object::object_address(
+                coin_metadata: object::object_address(&
                     fungible_asset::asset_metadata(&reward)
                 ),
                 reward_amount: fungible_asset::amount(&reward)
@@ -436,7 +436,7 @@ module initia_std::vip_zapping {
         let bond_amount = fungible_asset::amount(&lock_coin);
         let share = bond_amount;
         let coin_metadata =
-            object::object_address(fungible_asset::asset_metadata(&lock_coin));
+            object::object_address(&fungible_asset::asset_metadata(&lock_coin));
         let delegation = staking::delegate(validator, lock_coin);
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -569,7 +569,7 @@ module initia_std::vip_zapping {
         event::emit<ZappingClaimEvent>(
             ZappingClaimEvent {
                 zid,
-                coin_metadata: object::object_address(
+                coin_metadata: object::object_address(&
                     fungible_asset::asset_metadata(&reward)
                 ),
                 reward_amount: fungible_asset::amount(&reward),
@@ -673,8 +673,8 @@ module initia_std::vip_zapping {
     use initia_std::vip_reward;
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain);
+    public fun init_module_for_test() {
+        init_module(&initia_std::account::create_signer_for_test(@initia_std));
     }
 
     #[test_only]
@@ -703,9 +703,9 @@ module initia_std::vip_zapping {
         esinit_amount: u64,
         stakelisted_amount: u64,
     ): (Object<Metadata>, Object<Metadata>, Object<Metadata>, String) {
-        dex::init_module_for_test(chain);
-        staking::test_setup(chain);
-        init_module_for_test(chain);
+        dex::init_module_for_test();
+        staking::test_setup();
+        init_module_for_test();
 
         let (_burn_cap, _freeze_cap, mint_cap) =
             initialize_coin(chain, string::utf8(b"INIT"));

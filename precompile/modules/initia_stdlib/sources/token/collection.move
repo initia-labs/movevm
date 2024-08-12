@@ -297,7 +297,7 @@ module initia_std::collection {
         token_id: String,
         nft: address,
     ) acquires Collection, FixedSupply, UnlimitedSupply {
-        let collection_addr = object::object_address(collection);
+        let collection_addr = object::object_address(&collection);
         let collection = borrow_global_mut<Collection>(collection_addr);
         if (exists<FixedSupply>(collection_addr)) {
             let supply = borrow_global_mut<FixedSupply>(collection_addr);
@@ -328,7 +328,7 @@ module initia_std::collection {
         token_id: String,
         nft: address,
     ) acquires Collection, FixedSupply, UnlimitedSupply {
-        let collection_addr = object::object_address(collection);
+        let collection_addr = object::object_address(&collection);
         let collection = borrow_global_mut<Collection>(collection_addr);
         if (exists<FixedSupply>(collection_addr)) {
             let supply = borrow_global_mut<FixedSupply>(collection_addr);
@@ -350,7 +350,7 @@ module initia_std::collection {
     /// Creates a MutatorRef, which gates the ability to mutate any fields that support mutation.
     public fun generate_mutator_ref(ref: &ConstructorRef): MutatorRef {
         let object = object::object_from_constructor_ref<Collection>(ref);
-        MutatorRef { self: object::object_address(object) }
+        MutatorRef { self: object::object_address(&object) }
     }
 
     // Accessors
@@ -363,7 +363,7 @@ module initia_std::collection {
     }
 
     inline fun borrow<T: key>(collection: Object<T>): &Collection {
-        let collection_address = object::object_address(collection);
+        let collection_address = object::object_address(&collection);
         check_collection_exists(collection_address);
         borrow_global<Collection>(collection_address)
     }
@@ -371,7 +371,7 @@ module initia_std::collection {
     #[view]
     /// Provides the count of the current selection if supply tracking is used
     public fun count<T: key>(collection: Object<T>): Option<u64> acquires FixedSupply, UnlimitedSupply {
-        let collection_address = object::object_address(collection);
+        let collection_address = object::object_address(&collection);
         check_collection_exists(collection_address);
 
         if (exists<FixedSupply>(collection_address)) {

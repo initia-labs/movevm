@@ -256,7 +256,7 @@ module minitia_std::soul_bound_token {
     // Token accessors
 
     inline fun borrow<T: key>(nft: Object<T>): &SoulBoundToken {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<SoulBoundToken>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -288,7 +288,7 @@ module minitia_std::soul_bound_token {
     // Token mutators
 
     inline fun authorized_borrow<T: key>(nft: Object<T>, creator: &signer): &SoulBoundToken {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<SoulBoundToken>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -437,7 +437,7 @@ module minitia_std::soul_bound_token {
     }
 
     inline fun borrow_collection<T: key>(nft: Object<T>): &SoulBoundTokenCollection {
-        let collection_address = object::object_address(nft);
+        let collection_address = object::object_address(&nft);
         assert!(
             exists<SoulBoundTokenCollection>(collection_address),
             error::not_found(ECOLLECTION_DOES_NOT_EXIST),
@@ -490,7 +490,7 @@ module minitia_std::soul_bound_token {
     inline fun authorized_borrow_collection<T: key>(
         collection: Object<T>, creator: &signer
     ): &SoulBoundTokenCollection {
-        let collection_address = object::object_address(collection);
+        let collection_address = object::object_address(&collection);
         assert!(
             exists<SoulBoundTokenCollection>(collection_address),
             error::not_found(ECOLLECTION_DOES_NOT_EXIST),

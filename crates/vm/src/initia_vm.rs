@@ -2,6 +2,7 @@ use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
     errors::{Location, PartialVMError, VMResult},
+    file_format::CompiledScript,
     CompiledModule,
 };
 use move_core_types::{
@@ -63,6 +64,7 @@ use crate::{
         config::verifier_config, errors::metadata_validation_error,
         event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata,
         module_init::verify_module_init_function, module_metadata::validate_publish_request,
+        script::reject_unstable_bytecode_for_script,
         transaction_arg_validation::validate_combine_signer_and_txn_args,
         view_function::validate_view_function,
     },
@@ -272,7 +274,7 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let func =
+        let function =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
         let metadata = get_vm_metadata(&session, view_fn.module());
         let args = validate_view_function(
@@ -280,7 +282,7 @@ impl InitiaVM {
             state_view_impl,
             view_fn.args().to_vec(),
             view_fn.function(),
-            &func,
+            &function,
             metadata.as_ref(),
             view_fn.is_json(),
         )?;
@@ -299,7 +301,7 @@ impl InitiaVM {
 
         // load fully annotated type layouts for return value serialization
         // after the execution of the function
-        let ret_ty_layouts = func
+        let ret_ty_layouts = function
             .return_tys()
             .iter()
             .map(|ty| {
@@ -348,19 +350,32 @@ impl InitiaVM {
 
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
-                let func_inst = session.load_script(script.code(), script.ty_args())?;
+                let function = session.load_script(script.code(), script.ty_args())?;
 
-                verify_no_event_emission_in_script(
+                let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
                     &session.get_vm_config().deserializer_config,
-                )?;
+                ) {
+                    Ok(script) => script,
+                    Err(err) => {
+                        let msg = format!("[VM] deserializer for script returned error: {:?}", err);
+                        let partial_err =
+                            PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                                .with_message(msg)
+                                .finish(Location::Script);
+                        return Err(partial_err.into_vm_status());
+                    }
+                };
+
+                reject_unstable_bytecode_for_script(&compiled_script)?;
+                verify_no_event_emission_in_script(&compiled_script)?;
 
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     state_view_impl,
                     senders,
                     script.args().to_vec(),
-                    &func_inst,
+                    &function,
                     script.is_json(),
                 )?;
 
@@ -382,28 +397,37 @@ impl InitiaVM {
                     [(module_id.address(), module_id.name())],
                 )?;
 
-                let func_inst = session.load_function(
+                let function = session.load_function(
                     entry_fn.module(),
                     entry_fn.function(),
                     entry_fn.ty_args(),
                 )?;
+
+                // check if the entry function is a native function
+                if function.is_native() {
+                    return Err(
+                        PartialVMError::new(StatusCode::USER_DEFINED_NATIVE_NOT_ALLOWED)
+                            .with_message(
+                                "Executing user defined native entry function is not allowed"
+                                    .to_string(),
+                            )
+                            .finish(Location::Module(entry_fn.module().clone()))
+                            .into_vm_status(),
+                    );
+                }
+
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     state_view_impl,
                     senders,
                     entry_fn.args().to_vec(),
-                    &func_inst,
+                    &function,
                     entry_fn.is_json(),
                 )?;
 
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
 
-                let function = session.load_function(
-                    entry_fn.module(),
-                    entry_fn.function(),
-                    entry_fn.ty_args(),
-                )?;
                 session.execute_entry_function(function, args, gas_meter, traversal_context)
             }
         }?;

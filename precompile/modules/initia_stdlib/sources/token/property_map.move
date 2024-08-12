@@ -207,14 +207,14 @@ module initia_std::property_map {
     // Accessors
 
     public fun contains_key<T: key>(object: Object<T>, key: &String): bool acquires PropertyMap {
-        assert_exists(object::object_address(object));
-        let property_map = borrow_global<PropertyMap>(object::object_address(object));
+        assert_exists(object::object_address(&object));
+        let property_map = borrow_global<PropertyMap>(object::object_address(&object));
         simple_map::contains_key(&property_map.inner, key)
     }
 
     public fun length<T: key>(object: Object<T>): u64 acquires PropertyMap {
-        assert_exists(object::object_address(object));
-        let property_map = borrow_global<PropertyMap>(object::object_address(object));
+        assert_exists(object::object_address(&object));
+        let property_map = borrow_global<PropertyMap>(object::object_address(&object));
         simple_map::length(&property_map.inner)
     }
 
@@ -222,8 +222,8 @@ module initia_std::property_map {
     ///
     /// The preferred method is to use `read_<type>` where the type is already known.
     public fun read<T: key>(object: Object<T>, key: &String): (String, vector<u8>) acquires PropertyMap {
-        assert_exists(object::object_address(object));
-        let property_map = borrow_global<PropertyMap>(object::object_address(object));
+        assert_exists(object::object_address(&object));
+        let property_map = borrow_global<PropertyMap>(object::object_address(&object));
         let property_value = simple_map::borrow(&property_map.inner, key);
         let new_type = to_external_type(property_value.type);
         (new_type, property_value.value)
