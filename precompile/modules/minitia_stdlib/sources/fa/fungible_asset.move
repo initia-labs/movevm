@@ -118,10 +118,6 @@ module minitia_std::fungible_asset {
         project_uri: String,
     }
 
-    /// Defines a `FungibleAsset`, such that all `FungibleStore`s stores are untransferable at
-    /// the object layer.
-    struct Untransferable has key {}
-
     /// The store object that holds fungible assets of a specific type associated with an account.
     struct FungibleStore has key {
         /// The address of the base metadata object.
@@ -264,23 +260,6 @@ module minitia_std::fungible_asset {
 
         // return metadata object
         object::object_from_constructor_ref<Metadata>(constructor_ref)
-    }
-
-    /// Set that only untransferable stores can be created for this fungible asset.
-    public fun set_untransferable(constructor_ref: &ConstructorRef) {
-        let metadata_addr = object::address_from_constructor_ref(constructor_ref);
-        assert!(
-            exists<Metadata>(metadata_addr),
-            error::not_found(EFUNGIBLE_METADATA_EXISTENCE),
-        );
-        let metadata_signer = &object::generate_signer(constructor_ref);
-        move_to(metadata_signer, Untransferable {});
-    }
-
-    #[view]
-    /// Returns true if the FA is untransferable.
-    public fun is_untransferable<T: key>(metadata: Object<T>): bool {
-        exists<Untransferable>(object::object_address(&metadata))
     }
 
     /// Create a fungible asset store whose transfer rule would be overloaded by the provided function.
