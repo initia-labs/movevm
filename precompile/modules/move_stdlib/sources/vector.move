@@ -248,10 +248,12 @@ module std::vector {
 
         len = len - 1;
         while (i < len) swap(
-            v, i, {
+            v,
+            i,
+            {
                 i = i + 1;
                 i
-            }
+            },
         );
         pop_back(v)
     }
