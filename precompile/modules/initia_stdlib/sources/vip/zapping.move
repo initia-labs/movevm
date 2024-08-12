@@ -246,8 +246,8 @@ module initia_std::vip_zapping {
         event::emit<RewardClaimEvent>(
             RewardClaimEvent {
                 zid,
-                coin_metadata: object::object_address(&
-                    fungible_asset::asset_metadata(&reward)
+                coin_metadata: object::object_address(
+                    &fungible_asset::asset_metadata(&reward)
                 ),
                 reward_amount: fungible_asset::amount(&reward)
             },
@@ -569,8 +569,8 @@ module initia_std::vip_zapping {
         event::emit<ZappingClaimEvent>(
             ZappingClaimEvent {
                 zid,
-                coin_metadata: object::object_address(&
-                    fungible_asset::asset_metadata(&reward)
+                coin_metadata: object::object_address(
+                    &fungible_asset::asset_metadata(&reward)
                 ),
                 reward_amount: fungible_asset::amount(&reward),
                 delegation_reward_amount: staking::get_unclaimed_reward_from_delegation_response(

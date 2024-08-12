@@ -1,12 +1,12 @@
 module minitia_std::json {
     use std::string::String;
 
-/// Marshal data to JSON bytes.
+    /// Marshal data to JSON bytes.
     ///
     /// NOTE: key `tt` is converted for `@type`
     /// NOTE: key `mm` is converted for `move`
     native public fun marshal<T: drop>(value: &T): vector<u8>;
-    
+
     /// Marshal data to JSON string.
     ///
     /// NOTE: key `tt` is converted for `@type`

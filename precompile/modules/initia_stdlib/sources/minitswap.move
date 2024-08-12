@@ -774,8 +774,8 @@ module initia_std::minitswap {
                 if (option::is_some(&pools.virtual_pool)) {
                     let vp =
                         borrow_global<VirtualPool>(
-                            object::object_address(&
-                                *option::borrow(&pools.virtual_pool)
+                            object::object_address(
+                                &*option::borrow(&pools.virtual_pool)
                             ),
                         );
                     option::some(
@@ -1972,8 +1972,8 @@ module initia_std::minitswap {
         let module_signer =
             object::generate_signer_for_extending(&module_store.extend_ref);
         let pool_addr =
-            object::object_address(&
-                *option::borrow(
+            object::object_address(
+                &*option::borrow(
                     &table::borrow(&module_store.pools, metadata).virtual_pool
                 ),
             );
@@ -1985,8 +1985,8 @@ module initia_std::minitswap {
     inline fun borrow_all(metadata: Object<Metadata>): (&ModuleStore, &VirtualPool) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_addr =
-            object::object_address(&
-                *option::borrow(
+            object::object_address(
+                &*option::borrow(
                     &table::borrow(&module_store.pools, metadata).virtual_pool
                 ),
             );

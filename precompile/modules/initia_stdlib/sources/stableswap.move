@@ -717,8 +717,8 @@ module initia_std::stableswap {
         liquidity_token: FungibleAsset, min_return_amounts: vector<Option<u64>>
     ): vector<FungibleAsset> acquires Pool {
         let pool_addr =
-            object::object_address(&
-                fungible_asset::metadata_from_asset(&liquidity_token)
+            object::object_address(
+                &fungible_asset::metadata_from_asset(&liquidity_token)
             );
         let pool_obj = object::address_to_object<Pool>(pool_addr);
         let liquidity_amount = fungible_asset::amount(&liquidity_token);
@@ -790,8 +790,8 @@ module initia_std::stableswap {
     ): FungibleAsset acquires Pool {
         // get pool infos
         let pool_addr =
-            object::object_address(&
-                fungible_asset::metadata_from_asset(&liquidity_token)
+            object::object_address(
+                &fungible_asset::metadata_from_asset(&liquidity_token)
             );
         let pool_obj = object::address_to_object<Pool>(pool_addr);
         let liquidity_amount = fungible_asset::amount(&liquidity_token);

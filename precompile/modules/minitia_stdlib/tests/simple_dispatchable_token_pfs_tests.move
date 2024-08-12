@@ -2,9 +2,20 @@
 module minitia_std::simple_token_pfs_tests {
     use minitia_std::fungible_asset::{create_test_token};
     use minitia_std::primary_fungible_store::{
-        balance, burn, deposit, mint, transfer, transfer_assert_minimum_deposit,
-        withdraw, init_test_metadata_with_primary_store_enabled, is_frozen, set_frozen_flag,
-        transfer_with_ref, deposit_with_ref, withdraw_with_ref, primary_store_exists,
+        balance,
+        burn,
+        deposit,
+        mint,
+        transfer,
+        transfer_assert_minimum_deposit,
+        withdraw,
+        init_test_metadata_with_primary_store_enabled,
+        is_frozen,
+        set_frozen_flag,
+        transfer_with_ref,
+        deposit_with_ref,
+        withdraw_with_ref,
+        primary_store_exists,
         ensure_primary_store_exists,
     };
     use 0xcafe::simple_token;
@@ -32,11 +43,11 @@ module minitia_std::simple_token_pfs_tests {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_basic_flow(
-        creator: &signer,
-        aaron: &signer,
+        creator: &signer, aaron: &signer,
     ) {
         let (creator_ref, metadata) = create_test_token(creator);
-        let (mint_ref, transfer_ref, burn_ref) = init_test_metadata_with_primary_store_enabled(&creator_ref);
+        let (mint_ref, transfer_ref, burn_ref) =
+            init_test_metadata_with_primary_store_enabled(&creator_ref);
         simple_token::initialize(creator, &creator_ref);
 
         let creator_address = signer::address_of(creator);
@@ -62,11 +73,11 @@ module minitia_std::simple_token_pfs_tests {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_basic_flow_with_min_balance(
-        creator: &signer,
-        aaron: &signer,
+        creator: &signer, aaron: &signer,
     ) {
         let (creator_ref, metadata) = create_test_token(creator);
-        let (mint_ref, _transfer_ref, _) = init_test_metadata_with_primary_store_enabled(&creator_ref);
+        let (mint_ref, _transfer_ref, _) =
+            init_test_metadata_with_primary_store_enabled(&creator_ref);
         simple_token::initialize(creator, &creator_ref);
 
         let creator_address = signer::address_of(creator);

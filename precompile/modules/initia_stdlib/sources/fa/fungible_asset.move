@@ -140,8 +140,8 @@ module initia_std::fungible_asset {
     }
 
     struct DispatchFunctionStore has key {
-		withdraw_function: Option<FunctionInfo>,
-		deposit_function: Option<FunctionInfo>,
+        withdraw_function: Option<FunctionInfo>,
+        deposit_function: Option<FunctionInfo>,
         derived_balance_function: Option<FunctionInfo>,
     }
 
@@ -269,11 +269,13 @@ module initia_std::fungible_asset {
     /// Set that only untransferable stores can be created for this fungible asset.
     public fun set_untransferable(constructor_ref: &ConstructorRef) {
         let metadata_addr = object::address_from_constructor_ref(constructor_ref);
-        assert!(exists<Metadata>(metadata_addr), error::not_found(EFUNGIBLE_METADATA_EXISTENCE));
+        assert!(
+            exists<Metadata>(metadata_addr),
+            error::not_found(EFUNGIBLE_METADATA_EXISTENCE),
+        );
         let metadata_signer = &object::generate_signer(constructor_ref);
         move_to(metadata_signer, Untransferable {});
     }
-
 
     #[view]
     /// Returns true if the FA is untransferable.
@@ -289,65 +291,73 @@ module initia_std::fungible_asset {
         derived_balance_function: Option<FunctionInfo>,
     ) {
         // Verify that caller type matches callee type so wrongly typed function cannot be registered.
-        option::for_each_ref(&withdraw_function, |withdraw_function| {
-            let dispatcher_withdraw_function_info = function_info::new_function_info_from_address(
-                @initia_std,
-                string::utf8(b"dispatchable_fungible_asset"),
-                string::utf8(b"dispatchable_withdraw"),
-            );
+        option::for_each_ref(
+            &withdraw_function,
+            |withdraw_function| {
+                let dispatcher_withdraw_function_info =
+                    function_info::new_function_info_from_address(
+                        @initia_std,
+                        string::utf8(b"dispatchable_fungible_asset"),
+                        string::utf8(b"dispatchable_withdraw"),
+                    );
 
-            assert!(
-                function_info::check_dispatch_type_compatibility(
-                    &dispatcher_withdraw_function_info,
-                    withdraw_function
-                ),
-                error::invalid_argument(
-                    EWITHDRAW_FUNCTION_SIGNATURE_MISMATCH
-                )
-            );
-        });
+                assert!(
+                    function_info::check_dispatch_type_compatibility(
+                        &dispatcher_withdraw_function_info,
+                        withdraw_function,
+                    ),
+                    error::invalid_argument(EWITHDRAW_FUNCTION_SIGNATURE_MISMATCH),
+                );
+            },
+        );
 
-        option::for_each_ref(&deposit_function, |deposit_function| {
-            let dispatcher_deposit_function_info = function_info::new_function_info_from_address(
-                @initia_std,
-                string::utf8(b"dispatchable_fungible_asset"),
-                string::utf8(b"dispatchable_deposit"),
-            );
-            // Verify that caller type matches callee type so wrongly typed function cannot be registered.
-            assert!(
-                function_info::check_dispatch_type_compatibility(
-                    &dispatcher_deposit_function_info,
-                    deposit_function
-                ),
-                error::invalid_argument(
-                    EDEPOSIT_FUNCTION_SIGNATURE_MISMATCH
-                )
-            );
-        });
+        option::for_each_ref(
+            &deposit_function,
+            |deposit_function| {
+                let dispatcher_deposit_function_info =
+                    function_info::new_function_info_from_address(
+                        @initia_std,
+                        string::utf8(b"dispatchable_fungible_asset"),
+                        string::utf8(b"dispatchable_deposit"),
+                    );
+                // Verify that caller type matches callee type so wrongly typed function cannot be registered.
+                assert!(
+                    function_info::check_dispatch_type_compatibility(
+                        &dispatcher_deposit_function_info,
+                        deposit_function,
+                    ),
+                    error::invalid_argument(EDEPOSIT_FUNCTION_SIGNATURE_MISMATCH),
+                );
+            },
+        );
 
-        option::for_each_ref(&derived_balance_function, |balance_function| {
-            let dispatcher_derived_balance_function_info = function_info::new_function_info_from_address(
-                @initia_std,
-                string::utf8(b"dispatchable_fungible_asset"),
-                string::utf8(b"dispatchable_derived_balance"),
-            );
-            // Verify that caller type matches callee type so wrongly typed function cannot be registered.
-            assert!(
-                function_info::check_dispatch_type_compatibility(
-                    &dispatcher_derived_balance_function_info,
-                    balance_function
-                ),
-                error::invalid_argument(
-                    EDERIVED_BALANCE_FUNCTION_SIGNATURE_MISMATCH
-                )
-            );
-        });
+        option::for_each_ref(
+            &derived_balance_function,
+            |balance_function| {
+                let dispatcher_derived_balance_function_info =
+                    function_info::new_function_info_from_address(
+                        @initia_std,
+                        string::utf8(b"dispatchable_fungible_asset"),
+                        string::utf8(b"dispatchable_derived_balance"),
+                    );
+                // Verify that caller type matches callee type so wrongly typed function cannot be registered.
+                assert!(
+                    function_info::check_dispatch_type_compatibility(
+                        &dispatcher_derived_balance_function_info,
+                        balance_function,
+                    ),
+                    error::invalid_argument(
+                        EDERIVED_BALANCE_FUNCTION_SIGNATURE_MISMATCH
+                    ),
+                );
+            },
+        );
         register_dispatch_function_sanity_check(constructor_ref);
         assert!(
             !exists<DispatchFunctionStore>(
                 object::address_from_constructor_ref(constructor_ref)
             ),
-            error::already_exists(EALREADY_REGISTERED)
+            error::already_exists(EALREADY_REGISTERED),
         );
 
         let store_obj = &object::generate_signer(constructor_ref);
@@ -359,70 +369,68 @@ module initia_std::fungible_asset {
                 withdraw_function,
                 deposit_function,
                 derived_balance_function,
-            }
+            },
         );
     }
 
     /// Define the derived supply dispatch with the provided function.
     public(friend) fun register_derive_supply_dispatch_function(
-        constructor_ref: &ConstructorRef,
-        dispatch_function: Option<FunctionInfo>
+        constructor_ref: &ConstructorRef, dispatch_function: Option<FunctionInfo>
     ) {
         // Verify that caller type matches callee type so wrongly typed function cannot be registered.
-        option::for_each_ref(&dispatch_function, |supply_function| {
-            let function_info = function_info::new_function_info_from_address(
-                @initia_std,
-                string::utf8(b"dispatchable_fungible_asset"),
-                string::utf8(b"dispatchable_derived_supply"),
-            );
-            // Verify that caller type matches callee type so wrongly typed function cannot be registered.
-            assert!(
-                function_info::check_dispatch_type_compatibility(
-                    &function_info,
-                    supply_function
-                ),
-                error::invalid_argument(
-                    EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH
-                )
-            );
-        });
+        option::for_each_ref(
+            &dispatch_function,
+            |supply_function| {
+                let function_info =
+                    function_info::new_function_info_from_address(
+                        @initia_std,
+                        string::utf8(b"dispatchable_fungible_asset"),
+                        string::utf8(b"dispatchable_derived_supply"),
+                    );
+                // Verify that caller type matches callee type so wrongly typed function cannot be registered.
+                assert!(
+                    function_info::check_dispatch_type_compatibility(
+                        &function_info,
+                        supply_function,
+                    ),
+                    error::invalid_argument(
+                        EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH
+                    ),
+                );
+            },
+        );
         register_dispatch_function_sanity_check(constructor_ref);
         assert!(
             !exists<DeriveSupply>(
                 object::address_from_constructor_ref(constructor_ref)
             ),
-            error::already_exists(EALREADY_REGISTERED)
+            error::already_exists(EALREADY_REGISTERED),
         );
-
 
         let store_obj = &object::generate_signer(constructor_ref);
 
         // Store the overload function hook.
         move_to<DeriveSupply>(
             store_obj,
-            DeriveSupply {
-                dispatch_function
-            }
+            DeriveSupply { dispatch_function },
         );
     }
 
     /// Check the requirements for registering a dispatchable function.
     inline fun register_dispatch_function_sanity_check(
         constructor_ref: &ConstructorRef,
-    )  {
+    ) {
         // Cannot register hook for APT.
         assert!(
             object::address_from_constructor_ref(constructor_ref) != @initia_std,
-            error::permission_denied(EAPT_NOT_DISPATCHABLE)
+            error::permission_denied(EAPT_NOT_DISPATCHABLE),
         );
         assert!(
             !object::can_generate_delete_ref(constructor_ref),
-            error::invalid_argument(EOBJECT_IS_DELETABLE)
+            error::invalid_argument(EOBJECT_IS_DELETABLE),
         );
         assert!(
-            exists<Metadata>(
-                object::address_from_constructor_ref(constructor_ref)
-            ),
+            exists<Metadata>(object::address_from_constructor_ref(constructor_ref)),
             error::not_found(EFUNGIBLE_METADATA_EXISTENCE),
         );
     }
@@ -452,11 +460,12 @@ module initia_std::fungible_asset {
     /// Creates a mutate metadata ref that can be used to change the metadata information of fungible assets from the
     /// given fungible object's constructor ref.
     /// This can only be called at object creation time as constructor_ref is only available then.
-    public fun generate_mutate_metadata_ref(constructor_ref: &ConstructorRef): MutateMetadataRef {
+    public fun generate_mutate_metadata_ref(
+        constructor_ref: &ConstructorRef
+    ): MutateMetadataRef {
         let metadata = object::object_from_constructor_ref<Metadata>(constructor_ref);
         MutateMetadataRef { metadata }
     }
-
 
     #[view]
     /// Retrun true if given address has Metadata else return false
@@ -573,7 +582,7 @@ module initia_std::fungible_asset {
     public fun deposit_dispatch_function<T: key>(store: Object<T>): Option<FunctionInfo> acquires FungibleStore, DispatchFunctionStore {
         let fa_store = borrow_store_resource(&store);
         let metadata_addr = object::object_address(&fa_store.metadata);
-        if(exists<DispatchFunctionStore>(metadata_addr)) {
+        if (exists<DispatchFunctionStore>(metadata_addr)) {
             borrow_global<DispatchFunctionStore>(metadata_addr).deposit_function
         } else {
             option::none()
@@ -583,17 +592,17 @@ module initia_std::fungible_asset {
     fun has_deposit_dispatch_function(metadata: Object<Metadata>): bool acquires DispatchFunctionStore {
         let metadata_addr = object::object_address(&metadata);
         // Short circuit on APT for better perf
-        if(metadata_addr != @initia_std && exists<DispatchFunctionStore>(metadata_addr)) {
-            option::is_some(&borrow_global<DispatchFunctionStore>(metadata_addr).deposit_function)
-        } else {
-            false
-        }
+        if (metadata_addr != @initia_std && exists<DispatchFunctionStore>(metadata_addr)) {
+            option::is_some(
+                &borrow_global<DispatchFunctionStore>(metadata_addr).deposit_function
+            )
+        } else { false }
     }
 
     public fun withdraw_dispatch_function<T: key>(store: Object<T>): Option<FunctionInfo> acquires FungibleStore, DispatchFunctionStore {
         let fa_store = borrow_store_resource(&store);
         let metadata_addr = object::object_address(&fa_store.metadata);
-        if(exists<DispatchFunctionStore>(metadata_addr)) {
+        if (exists<DispatchFunctionStore>(metadata_addr)) {
             borrow_global<DispatchFunctionStore>(metadata_addr).withdraw_function
         } else {
             option::none()
@@ -604,13 +613,15 @@ module initia_std::fungible_asset {
         let metadata_addr = object::object_address(&metadata);
         // Short circuit on APT for better perf
         if (metadata_addr != @initia_std && exists<DispatchFunctionStore>(metadata_addr)) {
-            option::is_some(&borrow_global<DispatchFunctionStore>(metadata_addr).withdraw_function)
-        } else {
-            false
-        }
+            option::is_some(
+                &borrow_global<DispatchFunctionStore>(metadata_addr).withdraw_function
+            )
+        } else { false }
     }
 
-    public(friend) fun derived_balance_dispatch_function<T: key>(store: Object<T>): Option<FunctionInfo> acquires FungibleStore, DispatchFunctionStore {
+    public(friend) fun derived_balance_dispatch_function<T: key>(
+        store: Object<T>
+    ): Option<FunctionInfo> acquires FungibleStore, DispatchFunctionStore {
         let fa_store = borrow_store_resource(&store);
         let metadata_addr = object::object_address(&fa_store.metadata);
         if (exists<DispatchFunctionStore>(metadata_addr)) {
@@ -620,7 +631,9 @@ module initia_std::fungible_asset {
         }
     }
 
-    public(friend) fun derived_supply_dispatch_function<T: key>(metadata: Object<T>): Option<FunctionInfo> acquires DeriveSupply {
+    public(friend) fun derived_supply_dispatch_function<T: key>(
+        metadata: Object<T>
+    ): Option<FunctionInfo> acquires DeriveSupply {
         let metadata_addr = object::object_address(&metadata);
         if (exists<DeriveSupply>(metadata_addr)) {
             borrow_global<DeriveSupply>(metadata_addr).dispatch_function
@@ -720,26 +733,28 @@ module initia_std::fungible_asset {
         store: Object<T>,
         abort_on_dispatch: bool,
     ) acquires FungibleStore, DispatchFunctionStore {
-        assert!(object::owns(store, signer::address_of(owner)), error::permission_denied(ENOT_STORE_OWNER));
+        assert!(
+            object::owns(store, signer::address_of(owner)),
+            error::permission_denied(ENOT_STORE_OWNER),
+        );
         let fa_store = borrow_store_resource(&store);
         assert!(
             !abort_on_dispatch || !has_withdraw_dispatch_function(fa_store.metadata),
-            error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS)
+            error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS),
         );
         assert!(!fa_store.frozen, error::permission_denied(ESTORE_IS_FROZEN));
     }
 
     /// Deposit `amount` of the fungible asset to `store`.
     public fun deposit_sanity_check<T: key>(
-        store: Object<T>,
-        abort_on_dispatch: bool
+        store: Object<T>, abort_on_dispatch: bool
     ) acquires FungibleStore, DispatchFunctionStore {
         let fa_store = borrow_store_resource(&store);
         assert!(
             !abort_on_dispatch || !has_deposit_dispatch_function(fa_store.metadata),
-            error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS)
+            error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS),
         );
-        
+
         assert!(!fa_store.frozen, error::permission_denied(ESTORE_IS_FROZEN));
 
         // cannot deposit to blocked account
@@ -910,19 +925,19 @@ module initia_std::fungible_asset {
         let metadata_address = object::object_address(&metadata_ref.metadata);
         let mutable_metadata = borrow_global_mut<Metadata>(metadata_address);
 
-        if (option::is_some(&name)){
+        if (option::is_some(&name)) {
             mutable_metadata.name = option::extract(&mut name);
         };
-        if (option::is_some(&symbol)){
+        if (option::is_some(&symbol)) {
             mutable_metadata.symbol = option::extract(&mut symbol);
         };
-        if (option::is_some(&decimals)){
+        if (option::is_some(&decimals)) {
             mutable_metadata.decimals = option::extract(&mut decimals);
         };
-        if (option::is_some(&icon_uri)){
+        if (option::is_some(&icon_uri)) {
             mutable_metadata.icon_uri = option::extract(&mut icon_uri);
         };
-        if (option::is_some(&project_uri)){
+        if (option::is_some(&project_uri)) {
             mutable_metadata.project_uri = option::extract(&mut project_uri);
         };
     }
@@ -993,11 +1008,19 @@ module initia_std::fungible_asset {
         );
     }
 
-    public(friend) fun deposit_internal(store_addr: address, fa: FungibleAsset) acquires FungibleStore {
+    public(friend) fun deposit_internal(
+        store_addr: address, fa: FungibleAsset
+    ) acquires FungibleStore {
         let FungibleAsset { metadata, amount } = fa;
-        assert!(exists<FungibleStore>(store_addr), error::not_found(EFUNGIBLE_STORE_EXISTENCE));
+        assert!(
+            exists<FungibleStore>(store_addr),
+            error::not_found(EFUNGIBLE_STORE_EXISTENCE),
+        );
         let store = borrow_global_mut<FungibleStore>(store_addr);
-        assert!(metadata == store.metadata, error::invalid_argument(EFUNGIBLE_ASSET_AND_STORE_MISMATCH));
+        assert!(
+            metadata == store.metadata,
+            error::invalid_argument(EFUNGIBLE_ASSET_AND_STORE_MISMATCH),
+        );
 
         if (amount == 0) return;
 
@@ -1009,7 +1032,9 @@ module initia_std::fungible_asset {
     }
 
     /// Extract `amount` of the fungible asset from `store`.
-    public(friend) fun withdraw_internal(store_addr: address, amount: u64,): FungibleAsset acquires FungibleStore {
+    public(friend) fun withdraw_internal(
+        store_addr: address, amount: u64,
+    ): FungibleAsset acquires FungibleStore {
         let store = borrow_global_mut<FungibleStore>(store_addr);
         let metadata = store.metadata;
         if (amount == 0) return zero(metadata);
@@ -1124,7 +1149,7 @@ module initia_std::fungible_asset {
         let mint_ref = generate_mint_ref(constructor_ref);
         let burn_ref = generate_burn_ref(constructor_ref);
         let transfer_ref = generate_transfer_ref(constructor_ref);
-        let mutate_metadata_ref= generate_mutate_metadata_ref(constructor_ref);
+        let mutate_metadata_ref = generate_mutate_metadata_ref(constructor_ref);
         (mint_ref, transfer_ref, burn_ref, mutate_metadata_ref)
     }
 
@@ -1184,7 +1209,8 @@ module initia_std::fungible_asset {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_e2e_basic_flow(creator: &signer, aaron: &signer,) acquires FungibleStore, Supply, DispatchFunctionStore, Metadata {
-        let (mint_ref, transfer_ref, burn_ref, mutate_metadata_ref, test_token) = create_fungible_asset(creator);
+        let (mint_ref, transfer_ref, burn_ref, mutate_metadata_ref, test_token) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
         let creator_store = create_test_store(creator, metadata);
         let aaron_store = create_test_store(aaron, metadata);
@@ -1222,19 +1248,23 @@ module initia_std::fungible_asset {
             option::some(string::utf8(b"mutated_symbol")),
             option::none(),
             option::none(),
-            option::none()
+            option::none(),
         );
         assert!(name(metadata) == string::utf8(b"mutated_name"), 8);
         assert!(symbol(metadata) == string::utf8(b"mutated_symbol"), 9);
         assert!(decimals(metadata) == 0, 10);
-        assert!(icon_uri(metadata) == string::utf8(b"http://www.example.com/favicon.ico"), 11);
+        assert!(
+            icon_uri(metadata) == string::utf8(b"http://www.example.com/favicon.ico"),
+            11,
+        );
         assert!(project_uri(metadata) == string::utf8(b"http://www.example.com"), 12);
     }
 
     #[test(creator = @0xcafe)]
     #[expected_failure(abort_code = 0x50003, location = Self)]
     fun test_frozen(creator: &signer) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
 
         let creator_store = create_test_store(creator, mint_ref.metadata);
         let fa = mint(&mint_ref, 100);
@@ -1244,7 +1274,8 @@ module initia_std::fungible_asset {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_transfer_with_ref(creator: &signer, aaron: &signer,) acquires FungibleStore, Supply {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
         let creator_store = create_test_store(creator, metadata);
         let aaron_store = create_test_store(aaron, metadata);
@@ -1267,7 +1298,8 @@ module initia_std::fungible_asset {
 
     #[test(creator = @0xcafe)]
     fun test_merge_and_exact(creator: &signer) acquires Supply {
-        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let fa = mint(&mint_ref, 100);
         let cash = extract(&mut fa, 80);
         assert!(fa.amount == 20, 1);
@@ -1304,7 +1336,8 @@ module initia_std::fungible_asset {
     fun test_freeze_module_account_store(
         creator: &signer, module_acc: &signer
     ) acquires FungibleStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
@@ -1328,7 +1361,8 @@ module initia_std::fungible_asset {
     fun test_burn_module_account_funds(
         creator: &signer, module_acc: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
@@ -1350,7 +1384,8 @@ module initia_std::fungible_asset {
     fun test_withdraw_module_account_funds_with_ref(
         creator: &signer, module_acc: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
@@ -1373,7 +1408,8 @@ module initia_std::fungible_asset {
     fun test_deposit_blocked_account(
         creator: &signer, blocked_acc: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, _transfer_ref, _burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, _transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);
@@ -1394,7 +1430,8 @@ module initia_std::fungible_asset {
     fun test_deposit_blocked_account_with_ref(
         creator: &signer, blocked_acc: &signer
     ) acquires FungibleStore, Supply {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) = create_fungible_asset(creator);
+        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
+            create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);

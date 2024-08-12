@@ -307,7 +307,9 @@ module initia_std::primary_fungible_store {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
-        dispatchable_fungible_asset::transfer(sender, sender_store, recipient_store, amount);
+        dispatchable_fungible_asset::transfer(
+            sender, sender_store, recipient_store, amount
+        );
 
         // create cosmos side account
         if (!account::exists_at(recipient)) {
@@ -324,14 +326,15 @@ module initia_std::primary_fungible_store {
         amount: u64,
         expected: u64,
     ) acquires DeriveRefPod, ModuleStore {
-        let sender_store = ensure_primary_store_exists(signer::address_of(sender), metadata);
+        let sender_store =
+            ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
         dispatchable_fungible_asset::transfer_assert_minimum_deposit(
             sender,
             sender_store,
             recipient_store,
             amount,
-            expected
+            expected,
         );
     }
 
@@ -472,9 +475,7 @@ module initia_std::primary_fungible_store {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_default_behavior(
-        creator: &signer, aaron: &signer
-    ) acquires DeriveRefPod, ModuleStore {
+    fun test_default_behavior(creator: &signer, aaron: &signer) acquires DeriveRefPod, ModuleStore {
         let (creator_ref, metadata) = create_test_token(creator);
         init_test_metadata_with_primary_store_enabled(&creator_ref);
         let creator_address = signer::address_of(creator);
@@ -504,10 +505,7 @@ module initia_std::primary_fungible_store {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_basic_flow(
-        creator: &signer,
-        aaron: &signer,
-    ) acquires DeriveRefPod, ModuleStore {
+    fun test_basic_flow(creator: &signer, aaron: &signer,) acquires DeriveRefPod, ModuleStore {
         let (creator_ref, metadata) = create_test_token(creator);
         let (mint_ref, transfer_ref, burn_ref) =
             init_test_metadata_with_primary_store_enabled(&creator_ref);

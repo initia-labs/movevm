@@ -40,17 +40,13 @@ module initia_std::function_info {
     ): FunctionInfo {
         assert!(
             is_identifier(string::bytes(&module_name)),
-            EINVALID_IDENTIFIER
+            EINVALID_IDENTIFIER,
         );
         assert!(
             is_identifier(string::bytes(&function_name)),
-            EINVALID_IDENTIFIER
+            EINVALID_IDENTIFIER,
         );
-        FunctionInfo {
-            module_address,
-            module_name,
-            function_name,
-        }
+        FunctionInfo { module_address, module_name, function_name, }
     }
 
     /// Check if the dispatch target function meets the type requirements of the disptach entry point.
@@ -64,8 +60,7 @@ module initia_std::function_info {
     ///
     /// dispatch_target also needs to be public so the type signature will remain unchanged.
     public(friend) fun check_dispatch_type_compatibility(
-        framework_function: &FunctionInfo,
-        dispatch_target: &FunctionInfo,
+        framework_function: &FunctionInfo, dispatch_target: &FunctionInfo,
     ): bool {
         load_function_impl(dispatch_target);
         check_dispatch_type_compatibility_impl(framework_function, dispatch_target)

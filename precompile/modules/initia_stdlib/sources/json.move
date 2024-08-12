@@ -6,7 +6,7 @@ module initia_std::json {
     /// NOTE: key `tt` is converted for `@type`
     /// NOTE: key `mm` is converted for `move`
     native public fun marshal<T: drop>(value: &T): vector<u8>;
-    
+
     /// Marshal data to JSON string.
     ///
     /// NOTE: key `tt` is converted for `@type`

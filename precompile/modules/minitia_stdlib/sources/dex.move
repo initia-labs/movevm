@@ -515,8 +515,8 @@ module minitia_std::dex {
                     PairKey {
                         coin_a: object::object_address(&coin_a_start_after),
                         coin_b: object::object_address(&coin_b_start_after),
-                        liquidity_token: object::object_address(&
-                            liquidity_token_start_after
+                        liquidity_token: object::object_address(
+                            &liquidity_token_start_after
                         ),
                     },
                 )
