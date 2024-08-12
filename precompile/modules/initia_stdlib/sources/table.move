@@ -224,22 +224,27 @@ module initia_std::table {
         (key, &mut box.val)
     }
 
-    public inline fun get_last_key_and_value<K: copy + drop, V>(table: &Table<K,V>): (K,&V) {
+    public inline fun get_last_key_and_value<K: copy + drop, V>(table: &Table<K, V>): (K, &V) {
         let iter = iter(
             table,
             option::none(),
             option::none(),
             2
         );
-        if(!prepare<K, V>(&mut iter)) {
-            abort(error::invalid_argument(ENOT_FOUND))
+        if (!prepare<K, V>(&mut iter)) {
+            abort(
+                error::invalid_argument(ENOT_FOUND)
+            )
         };
-        let(key, value) = next<K,V>(&mut iter);
+        let (key, value) = next<K, V>(&mut iter);
 
         (key, value)
     }
 
-    public inline fun loop_table_mut<K: copy + drop, V>(mut_table: &mut Table<K, V>, f: |K, &mut V| bool) {
+    public inline fun loop_table_mut<K: copy + drop, V>(
+        mut_table: &mut Table<K, V>,
+        f: |K, &mut V| bool
+    ) {
         let iter = iter_mut(
             mut_table,
             option::none(),
@@ -250,7 +255,7 @@ module initia_std::table {
             if (!prepare_mut<K, V>(&mut iter)) { break };
             let (key, value) = next_mut<K, V>(&mut iter);
             let stop = f(key, value);
-            if (stop) {break}
+            if (stop) { break }
         }
     }
 
@@ -264,10 +269,11 @@ module initia_std::table {
         loop {
             if (!prepare<K, V>(&mut iter)) { break };
             let (key, value) = next<K, V>(&mut iter);
-            let stop =  f(key, value);
-            if (stop) {break}
+            let stop = f(key, value);
+            if (stop) { break }
         }
     }
+
     // ======================================================================================================
     // Internal API
 

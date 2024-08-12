@@ -1133,6 +1133,7 @@ module publisher::vip_test {
             1000
         );
     }
+
     // FIX: DEPRECATED
     // #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     // fun claim_re_registered_bridge_reward(
@@ -1638,6 +1639,7 @@ module publisher::vip_test {
             usdc_metadata()
         )
     }
+
     // FIX: DEPRECATED
     // #[test(chain = @0x1, publisher = @publisher, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
     // fun zapping_and_claim_re_registered_bridge_reward(
