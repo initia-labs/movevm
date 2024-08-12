@@ -18,6 +18,12 @@ module std::vector {
     /// The length of the vectors are not equal.
     const EVECTORS_LENGTH_MISMATCH: u64 = 0x20002;
 
+    /// The step provided in `range` is invalid, must be greater than zero.
+    const EINVALID_STEP: u64 = 0x20003;
+
+    /// The range in `slice` is invalid.
+    const EINVALID_SLICE_RANGE: u64 = 0x20004;
+
     #[bytecode_instruction]
     /// Create an empty vector.
     native public fun empty<Element>(): vector<Element>;
@@ -242,12 +248,10 @@ module std::vector {
 
         len = len - 1;
         while (i < len) swap(
-            v,
-            i,
-            {
+            v, i, {
                 i = i + 1;
                 i
-            },
+            }
         );
         pop_back(v)
     }
@@ -325,9 +329,7 @@ module std::vector {
 
     /// Apply the function to each pair of elements in the two given vectors, consuming them.
     public inline fun zip<Element1, Element2>(
-        v1: vector<Element1>,
-        v2: vector<Element2>,
-        f: |Element1, Element2|
+        v1: vector<Element1>, v2: vector<Element2>, f: |Element1, Element2|
     ) {
         // We need to reverse the vectors to consume it efficiently
         reverse(&mut v1);
@@ -347,10 +349,7 @@ module std::vector {
         // due to how inline functions work.
         assert!(len == length(&v2), 0x20002);
         while (len > 0) {
-            f(
-                pop_back(&mut v1),
-                pop_back(&mut v2),
-            );
+            f(pop_back(&mut v1), pop_back(&mut v2));
             len = len - 1;
         };
         destroy_empty(v1);
@@ -475,11 +474,7 @@ module std::vector {
         assert!(length(v1) == length(v2), 0x20002);
 
         let result = vector<NewElement>[];
-        zip_ref(
-            v1,
-            v2,
-            |e1, e2| push_back(&mut result, f(e1, e2)),
-        );
+        zip_ref(v1, v2, |e1, e2| push_back(&mut result, f(e1, e2)));
         result
     }
 
@@ -503,11 +498,7 @@ module std::vector {
         assert!(length(&v1) == length(&v2), 0x20002);
 
         let result = vector<NewElement>[];
-        zip(
-            v1,
-            v2,
-            |e1, e2| push_back(&mut result, f(e1, e2)),
-        );
+        zip(v1, v2, |e1, e2| push_back(&mut result, f(e1, e2)));
         result
     }
 
@@ -633,6 +624,34 @@ module std::vector {
     /// when used in the context of destroying a vector.
     public inline fun destroy<Element>(v: vector<Element>, d: |Element|) {
         for_each_reverse(v, |e| d(e))
+    }
+
+    public fun range(start: u64, end: u64): vector<u64> {
+        range_with_step(start, end, 1)
+    }
+
+    public fun range_with_step(start: u64, end: u64, step: u64): vector<u64> {
+        assert!(step > 0, EINVALID_STEP);
+
+        let vec = vector[];
+        while (start < end) {
+            push_back(&mut vec, start);
+            start = start + step;
+        };
+        vec
+    }
+
+    public fun slice<Element: copy>(
+        v: &vector<Element>, start: u64, end: u64
+    ): vector<Element> {
+        assert!(start <= end && end <= length(v), EINVALID_SLICE_RANGE);
+
+        let vec = vector[];
+        while (start < end) {
+            push_back(&mut vec, *borrow(v, start));
+            start = start + 1;
+        };
+        vec
     }
 
     // =================================================================
