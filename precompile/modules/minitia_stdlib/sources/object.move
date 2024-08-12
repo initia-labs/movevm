@@ -179,8 +179,8 @@ module minitia_std::object {
     }
 
     /// Derives an object address from source material: sha3_256([creator address | seed | 0xFE]).
-    public fun create_object_address(source: address, seed: vector<u8>): address {
-        let bytes = bcs::to_bytes(&source);
+    public fun create_object_address(source: &address, seed: vector<u8>): address {
+        let bytes = bcs::to_bytes(source);
         vector::append(&mut bytes, seed);
         vector::push_back(&mut bytes, OBJECT_FROM_SEED_ADDRESS_SCHEME);
         from_bcs::to_address(hash::sha3_256(bytes))
@@ -218,18 +218,22 @@ module minitia_std::object {
         address_to_object<Y>(object.inner)
     }
 
-    /// Create a new named object and return the ConstructorRef. Named objects can be queried globally
-    /// by knowing the user generated seed used to create them.
-    public fun create_named_object(
-        creator: &signer, seed: vector<u8>, can_delete: bool
+    /// Create a new named object and return the ConstructorRef.
+    /// Named objects can be queried globally by knowing the user generated seed used to create them.
+    public fun create_named_object(creator: &signer, seed: vector<u8>): ConstructorRef acquires Tombstone {
+        let creator_address = signer::address_of(creator);
+        let obj_addr = create_object_address(&creator_address, seed);
+        create_object_internal(creator_address, obj_addr, false)
+    }
+
+    /// Create a new object that can be deleted and return the ConstructorRef.
+    /// Named objects can be queried globally by knowing the user generated seed used to create them.
+    public fun create_deletable_named_object(
+        creator: &signer, seed: vector<u8>
     ): ConstructorRef acquires Tombstone {
         let creator_address = signer::address_of(creator);
-        let obj_addr = create_object_address(creator_address, seed);
-        create_object_internal(
-            creator_address,
-            obj_addr,
-            can_delete,
-        )
+        let obj_addr = create_object_address(&creator_address, seed);
+        create_object_internal(creator_address, obj_addr, true)
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.
@@ -618,7 +622,7 @@ module minitia_std::object {
 
     #[test_only]
     public fun create_hero(creator: &signer): (ConstructorRef, Object<Hero>) acquires Tombstone {
-        let hero_constructor_ref = create_named_object(creator, b"hero", true);
+        let hero_constructor_ref = create_deletable_named_object(creator, b"hero");
         let hero_signer = generate_signer(&hero_constructor_ref);
         move_to(&hero_signer, Hero { weapon: option::none(), });
 
@@ -634,7 +638,7 @@ module minitia_std::object {
 
     #[test_only]
     public fun create_weapon(creator: &signer): (ConstructorRef, Object<Weapon>) acquires Tombstone {
-        let weapon_constructor_ref = create_named_object(creator, b"weapon", true);
+        let weapon_constructor_ref = create_deletable_named_object(creator, b"weapon");
         let weapon_signer = generate_signer(&weapon_constructor_ref);
         move_to(&weapon_signer, Weapon {});
         let weapon = object_from_constructor_ref<Weapon>(&weapon_constructor_ref);

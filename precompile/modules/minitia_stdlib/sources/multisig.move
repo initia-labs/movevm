@@ -220,12 +220,9 @@ module minitia_std::multisig {
             vector::length(&members) >= threshold,
             error::invalid_argument(EINVALID_THRESHOLD),
         );
-        let constructor_ref =
-            object::create_named_object(
-                account,
-                *string::bytes(&name),
-                false,
-            );
+        let constructor_ref = object::create_named_object(
+            account, *string::bytes(&name)
+        );
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let multisig_signer = object::generate_signer(&constructor_ref);
         let multisig_addr = signer::address_of(&multisig_signer);
@@ -702,7 +699,7 @@ module minitia_std::multisig {
             option::none(),
             option::none(),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         create_proposal(
             &account4,
@@ -741,7 +738,7 @@ module minitia_std::multisig {
             option::none(),
             option::none(),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         create_proposal(
             &account1,
@@ -782,7 +779,7 @@ module minitia_std::multisig {
             option::some(10),
             option::some(10),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         set_block_info(100, 100);
         create_proposal(
@@ -825,7 +822,7 @@ module minitia_std::multisig {
             option::some(10),
             option::some(10),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         set_block_info(100, 100);
         create_proposal(
@@ -868,7 +865,7 @@ module minitia_std::multisig {
             option::none(),
             option::none(),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         create_proposal(
             &account1,
@@ -913,7 +910,7 @@ module minitia_std::multisig {
             option::none(),
             option::none(),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         create_proposal(
             &account1,
@@ -966,7 +963,7 @@ module minitia_std::multisig {
             option::none(),
             option::none(),
         );
-        let multisig_addr = object::create_object_address(addr1, b"multisig wallet");
+        let multisig_addr = object::create_object_address(&addr1, b"multisig wallet");
 
         create_proposal_with_json(
             &account1,

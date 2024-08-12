@@ -140,13 +140,13 @@ module initia_std::vip_vesting {
     ) {
         let seed = generate_vesting_store_seed<Vesting>(bridge_id);
         let vesting_addr =
-            object::create_object_address(signer::address_of(account), seed);
+            object::create_object_address(&signer::address_of(account), seed);
         assert!(
             !exists<VestingStore<Vesting>>(vesting_addr),
             error::already_exists(EVESTING_STORE_ALREADY_EXISTS),
         );
 
-        let constructor_ref = object::create_named_object(account, seed, false);
+        let constructor_ref = object::create_named_object(account, seed);
         let transfer_ref = object::generate_transfer_ref(&constructor_ref);
         object::disable_ungated_transfer(&transfer_ref);
         let object = object::generate_signer(&constructor_ref);
@@ -208,7 +208,7 @@ module initia_std::vip_vesting {
         account: address, bridge_id: u64
     ): address {
         let seed = generate_vesting_store_seed<Vesting>(bridge_id);
-        object::create_object_address(account, seed)
+        object::create_object_address(&account, seed)
     }
 
     fun get_vesting_store_address<Vesting: copy + drop + store>(

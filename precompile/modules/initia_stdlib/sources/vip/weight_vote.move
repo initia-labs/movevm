@@ -262,7 +262,7 @@ module initia_std::vip_weight_vote {
             error::already_exists(EMODULE_STORE_ALREADY_EXISTS),
         );
 
-        let object = object::create_named_object(chain, b"vip_proposal", false);
+        let object = object::create_named_object(chain, b"vip_proposal");
         let extend_ref = object::generate_extend_ref(&object);
 
         move_to(

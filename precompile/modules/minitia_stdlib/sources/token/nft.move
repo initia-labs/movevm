@@ -147,7 +147,7 @@ module minitia_std::nft {
         let creator_address = signer::address_of(creator);
         let seed = create_nft_seed(&collection_name, &token_id);
 
-        let constructor_ref = object::create_named_object(creator, seed, true);
+        let constructor_ref = object::create_deletable_named_object(creator, seed);
         create_common(
             &constructor_ref,
             creator_address,
@@ -165,7 +165,7 @@ module minitia_std::nft {
         creator: address, collection: &String, token_id: &String
     ): address {
         object::create_object_address(
-            creator,
+            &creator,
             create_nft_seed(collection, token_id),
         )
     }

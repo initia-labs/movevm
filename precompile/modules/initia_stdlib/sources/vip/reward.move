@@ -76,7 +76,7 @@ module initia_std::vip_reward {
         bridge_id: u64
     ): address {
         let seed = generate_reward_store_seed<Vesting>(bridge_id);
-        object::create_object_address(@initia_std, seed)
+        object::create_object_address(&@initia_std, seed)
     }
 
     //
@@ -88,13 +88,13 @@ module initia_std::vip_reward {
     ) {
         let seed = generate_reward_store_seed<Vesting>(bridge_id);
         let reward_store_addr =
-            object::create_object_address(signer::address_of(chain), seed);
+            object::create_object_address(&signer::address_of(chain), seed);
         assert!(
             !exists<RewardStore>(reward_store_addr),
             error::already_exists(EREWARD_STORE_ALREADY_EXISTS),
         );
 
-        let constructor_ref = object::create_named_object(chain, seed, false);
+        let constructor_ref = object::create_named_object(chain, seed);
         let object = object::generate_signer(&constructor_ref);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let reward_store =

@@ -124,7 +124,6 @@ module initia_std::coin {
             &object::create_named_object(
                 creator,
                 *string::bytes(&symbol),
-                false,
             );
 
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
@@ -325,7 +324,7 @@ module initia_std::coin {
 
     #[view]
     public fun metadata_address(creator: address, symbol: String): address {
-        object::create_object_address(creator, *string::bytes(&symbol))
+        object::create_object_address(&creator, *string::bytes(&symbol))
     }
 
     #[view]

@@ -2517,12 +2517,12 @@ module initia_std::minitswap {
     }
 
     fun init_metadata(): Object<Metadata> {
-        let addr = object::create_object_address(@initia_std, b"uinit");
+        let addr = object::create_object_address(&@initia_std, b"uinit");
         object::address_to_object<Metadata>(addr)
     }
 
     fun share_token_metadata(): Object<Metadata> {
-        let addr = object::create_object_address(@initia_std, SYMBOL);
+        let addr = object::create_object_address(&@initia_std, SYMBOL);
         object::address_to_object<Metadata>(addr)
     }
 
@@ -2578,7 +2578,7 @@ module initia_std::minitswap {
         let op_denom = get_op_denom(op_bridge_id, string::utf8(b"uinit"));
         let ibc_denom = get_ibc_denom(ibc_channel, op_denom);
         let ibc_token_address =
-            object::create_object_address(@initia_std, *string::bytes(&ibc_denom));
+            object::create_object_address(&@initia_std, *string::bytes(&ibc_denom));
         assert!(
             object::object_address(ibc_op_init_metadata) == ibc_token_address,
             error::invalid_argument(EINVAILD_METADATA),

@@ -750,7 +750,7 @@ module minitia_std::fungible_asset {
 
     #[test_only]
     public fun create_test_token(creator: &signer): (ConstructorRef, Object<TestToken>) {
-        let creator_ref = object::create_named_object(creator, b"TEST", false);
+        let creator_ref = object::create_named_object(creator, b"TEST");
         let object_signer = object::generate_signer(&creator_ref);
         move_to(&object_signer, TestToken {});
 

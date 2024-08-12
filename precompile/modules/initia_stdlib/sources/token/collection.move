@@ -139,7 +139,7 @@ module initia_std::collection {
             error::invalid_argument(EMAX_SUPPLY_CANNOT_BE_ZERO),
         );
         let collection_seed = create_collection_seed(&name);
-        let constructor_ref = object::create_named_object(creator, collection_seed, false);
+        let constructor_ref = object::create_named_object(creator, collection_seed);
 
         let supply = FixedSupply { current_supply: 0, max_supply, total_minted: 0, };
 
@@ -164,7 +164,7 @@ module initia_std::collection {
         uri: String,
     ): ConstructorRef {
         let collection_seed = create_collection_seed(&name);
-        let constructor_ref = object::create_named_object(creator, collection_seed, false);
+        let constructor_ref = object::create_named_object(creator, collection_seed);
 
         let supply = UnlimitedSupply { current_supply: 0, total_minted: 0, };
 
@@ -190,7 +190,7 @@ module initia_std::collection {
         uri: String,
     ): ConstructorRef {
         let collection_seed = create_collection_seed(&name);
-        let constructor_ref = object::create_named_object(creator, collection_seed, false);
+        let constructor_ref = object::create_named_object(creator, collection_seed);
 
         create_collection_internal<FixedSupply>(
             creator,
@@ -279,7 +279,7 @@ module initia_std::collection {
 
     /// Generates the collections address based upon the creators address and the collection's name
     public fun create_collection_address(creator: address, name: &String): address {
-        object::create_object_address(creator, create_collection_seed(name))
+        object::create_object_address(&creator, create_collection_seed(name))
     }
 
     /// Named objects are derived from a seed, the collection's seed is its name.

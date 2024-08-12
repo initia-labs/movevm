@@ -108,7 +108,8 @@ module initia_std::vip_operator {
     ) {
         check_chain_permission(chain);
         let seed = generate_operator_store_seed(operator, bridge_id);
-        let operator_addr = object::create_object_address(signer::address_of(chain), seed);
+        let operator_addr =
+            object::create_object_address(&signer::address_of(chain), seed);
         assert!(
             !exists<OperatorStore>(operator_addr),
             error::already_exists(EOPERATOR_STORE_ALREADY_EXISTS),
@@ -120,7 +121,7 @@ module initia_std::vip_operator {
             &commission_rate,
         );
 
-        let constructor_ref = object::create_named_object(chain, seed, false);
+        let constructor_ref = object::create_named_object(chain, seed);
         let transfer_ref = object::generate_transfer_ref(&constructor_ref);
         object::disable_ungated_transfer(&transfer_ref);
         let object = object::generate_signer(&constructor_ref);
@@ -201,7 +202,7 @@ module initia_std::vip_operator {
         operator_addr: address, bridge_id: u64
     ): address {
         let seed = generate_operator_store_seed(operator_addr, bridge_id);
-        object::create_object_address(@initia_std, seed)
+        object::create_object_address(&@initia_std, seed)
     }
 
     //

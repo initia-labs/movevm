@@ -44,9 +44,9 @@ module initia_std::vip_vault {
     fun init_module(chain: &signer) {
         let seed = generate_vault_store_seed();
         let vault_store_addr =
-            object::create_object_address(signer::address_of(chain), seed);
+            object::create_object_address(&signer::address_of(chain), seed);
 
-        let constructor_ref = object::create_named_object(chain, seed, false);
+        let constructor_ref = object::create_named_object(chain, seed);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
 
         move_to(
