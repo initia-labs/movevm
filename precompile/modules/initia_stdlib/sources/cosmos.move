@@ -11,7 +11,7 @@ module initia_std::cosmos {
     use initia_std::json;
 
     struct VoteRequest has copy, drop {
-        tt: String,
+        _type_:String,
         proposal_id: u64,
         voter: String,
         option: u64,
@@ -29,7 +29,7 @@ module initia_std::cosmos {
             sender,
             json::marshal(
                 &VoteRequest {
-                    tt: string::utf8(b"/cosmos.gov.v1.MsgVote"),
+                    _type_:string::utf8(b"/cosmos.gov.v1.MsgVote"),
                     proposal_id,
                     voter,
                     option,

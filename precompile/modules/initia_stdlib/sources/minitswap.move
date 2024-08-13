@@ -2352,7 +2352,7 @@ module initia_std::minitswap {
     }
 
     struct IBCMemo has copy, drop {
-        mm: MemoMove,
+        _move_:MemoMove,
         wasm: Option<MemoWasm>,
     }
 
@@ -2407,7 +2407,7 @@ module initia_std::minitswap {
         amount: u64,
     ): (String, String) {
         let memo = IBCMemo {
-            mm: MemoMove {
+            _move_:MemoMove {
                 message: option::none(),
                 async_callback: MemoAsyncCallback {
                     id: batch_index,
@@ -2421,7 +2421,7 @@ module initia_std::minitswap {
         // set hook message
         let ibc_receiver =
             if (vm_type == MOVE) {
-                memo.mm.message = option::some(
+                memo._move_.message = option::some(
                     MemoMoveMessage {
                         module_address: hook_contract,
                         module_name: string::utf8(b"minitswap_hook"),
@@ -2465,7 +2465,7 @@ module initia_std::minitswap {
     }
 
     struct FinalizeTokenWithdrawalRequest has copy, drop {
-        tt: String,
+        _type_:String,
         bridge_id: u64,
         output_index: u64,
         withdrawal_proofs: vector<String>,
@@ -2500,7 +2500,7 @@ module initia_std::minitswap {
     ): vector<u8> {
         json::marshal(
             &FinalizeTokenWithdrawalRequest {
-                tt: string::utf8(b"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal"),
+                _type_:string::utf8(b"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal"),
                 bridge_id,
                 output_index,
                 withdrawal_proofs,

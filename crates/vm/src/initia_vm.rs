@@ -108,9 +108,15 @@ impl InitiaVM {
     pub fn create_gas_meter(&self, balance: impl Into<Gas>) -> InitiaGasMeter {
         InitiaGasMeter::new(self.gas_params.clone(), balance)
     }
+
     #[inline(always)]
     fn allow_unstable(&self) -> bool {
         self.initia_vm_config.allow_unstable
+    }
+
+    #[inline(always)]
+    pub fn deserialize_config(&self) -> &DeserializerConfig {
+        &self.move_vm.vm_config().deserializer_config
     }
 
     fn create_session<
@@ -362,7 +368,7 @@ impl InitiaVM {
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
-                    &DeserializerConfig::default(),
+                    self.deserialize_config(),
                 ) {
                     Ok(script) => script,
                     Err(err) => {
@@ -681,7 +687,7 @@ impl InitiaVM {
         for module_blob in module_bundle.iter() {
             match CompiledModule::deserialize_with_config(
                 module_blob.code(),
-                &DeserializerConfig::default(),
+                self.deserialize_config(),
             ) {
                 Ok(module) => {
                     result.push(module);

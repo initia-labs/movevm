@@ -85,8 +85,8 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                     let mut fields_map: Map<String, JSONValue> = Map::new();
                     for (id, mv) in fields.iter() {
                         let field_name = match id.as_str() {
-                            "tt" => "@type",
-                            "mm" => "move",
+                            "_type_" => "@type",
+                            "_move_" => "move",
                             v => v,
                         };
 

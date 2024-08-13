@@ -31,7 +31,8 @@ pub(crate) fn initialize_vm(
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
-    let state_view_impl = StateViewImpl::new(&storage);
+    let state_view_impl =
+        StateViewImpl::new_with_deserialize_config(&storage, vm.deserialize_config().clone());
     let output = vm.initialize(
         &api,
         &env,
@@ -59,7 +60,8 @@ pub(crate) fn execute_contract(
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
-    let state_view_impl = StateViewImpl::new(&storage);
+    let state_view_impl =
+        StateViewImpl::new_with_deserialize_config(&storage, vm.deserialize_config().clone());
 
     let output = vm.execute_message(
         gas_meter,
@@ -89,7 +91,8 @@ pub(crate) fn execute_script(
     let mut table_storage = GoTableStorage::new(&db_handle);
 
     // NOTE - storage passed as mut for iterator implementation
-    let state_view_impl = StateViewImpl::new(&storage);
+    let state_view_impl =
+        StateViewImpl::new_with_deserialize_config(&storage, vm.deserialize_config().clone());
 
     let output = vm.execute_message(
         gas_meter,
@@ -119,7 +122,8 @@ pub(crate) fn execute_view_function(
     let storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
-    let state_view_impl = StateViewImpl::new(&storage);
+    let state_view_impl =
+        StateViewImpl::new_with_deserialize_config(&storage, vm.deserialize_config().clone());
 
     let output = vm.execute_view_function(
         gas_meter,

@@ -210,8 +210,8 @@ pub fn convert_json_value_to_value(
                             .iter()
                             .map(|f| {
                                 let field_name = match f.name.as_str() {
-                                    "tt" => "@type",
-                                    "mm" => "move",
+                                    "_type_" => "@type",
+                                    "_move_" => "move",
                                     v => v,
                                 };
 

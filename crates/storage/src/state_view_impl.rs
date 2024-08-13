@@ -19,11 +19,25 @@ use initia_move_types::access_path::AccessPath;
 
 pub struct StateViewImpl<'block, S> {
     state_view: &'block S,
+    deserialize_config: DeserializerConfig,
 }
 
 impl<'block, S: StateView> StateViewImpl<'block, S> {
     pub fn new(state_view: &'block S) -> Self {
-        Self { state_view }
+        Self {
+            state_view,
+            deserialize_config: DeserializerConfig::default(),
+        }
+    }
+
+    pub fn new_with_deserialize_config(
+        state_view: &'block S,
+        deserialize_config: DeserializerConfig,
+    ) -> Self {
+        Self {
+            state_view,
+            deserialize_config,
+        }
     }
 }
 
@@ -43,7 +57,7 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
         };
         let module = match CompiledModule::deserialize_with_config(
             &module_bytes,
-            &DeserializerConfig::default(),
+            &self.deserialize_config,
         ) {
             Ok(module) => module,
             _ => return vec![],
