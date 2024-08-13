@@ -48,7 +48,6 @@ crate::macros::define_gas_parameters!(
 
     [crypto_secp256k1_base: InternalGas, "crypto.secp256k1.base", 551],
     [crypto_secp256k1_per_ecdsa_recover: InternalGasPerArg, "crypto.secp256k1.per_ecdsa_recover", 5918360],
-    [crypto_secp256k1_per_sig_verify: InternalGasPerArg, "crypto.secp256k1.per_sig_verify", 981492],
     [crypto_secp256k1_per_pubkey_deserialize: InternalGasPerArg, "crypto.secp256k1.per_pubkey_deserialize", 139688],
     [crypto_secp256k1_per_sig_deserialize: InternalGasPerArg, "crypto.secp256k1.per_sig_deserialize", 1378],
 
