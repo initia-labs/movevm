@@ -105,9 +105,9 @@ pub struct CompilerBuildConfig {
     /// bytecode version. set 0 to unset and to use default
     pub bytecode_version: u32,
     /// Compiler version. set 0 to unset and to use default
-    pub compiler_version: u8,
+    pub compiler_version: u32,
     /// language version. set 0 to unset and to use default
-    pub language_version: u8,
+    pub language_version: u32,
 }
 
 impl From<CompilerBuildConfig> for BuildConfig {

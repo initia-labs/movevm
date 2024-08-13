@@ -55,11 +55,11 @@ pub fn build_model(package_path: &Path, build_config: BuildConfig) -> anyhow::Re
     let compiler_version = build_config
         .compiler_config
         .compiler_version
-        .unwrap_or_else(|| CompilerVersion::V2_0);
+        .unwrap_or(CompilerVersion::V2_0);
     let language_version = build_config
         .compiler_config
         .language_version
-        .unwrap_or_else(|| LanguageVersion::V2_0);
+        .unwrap_or(LanguageVersion::V2_0);
 
     build_config.move_model_for_package(
         package_path,

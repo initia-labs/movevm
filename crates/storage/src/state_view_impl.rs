@@ -3,6 +3,7 @@
 use super::state_view::StateView;
 
 use bytes::Bytes;
+use move_binary_format::deserializer::DeserializerConfig;
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_binary_format::CompiledModule;
 use move_bytecode_utils::compiled_module_viewer::CompiledModuleView;
@@ -40,7 +41,10 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
             Ok(Some(bytes)) => bytes,
             _ => return vec![],
         };
-        let module = match CompiledModule::deserialize(&module_bytes) {
+        let module = match CompiledModule::deserialize_with_config(
+            &module_bytes,
+            &DeserializerConfig::default(),
+        ) {
             Ok(module) => module,
             _ => return vec![],
         };

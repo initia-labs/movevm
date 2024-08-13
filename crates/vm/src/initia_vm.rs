@@ -77,7 +77,6 @@ use crate::{
 pub struct InitiaVM {
     move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
-    deserializer_config: DeserializerConfig,
     initia_vm_config: InitiaVMConfig,
 }
 
@@ -97,13 +96,11 @@ impl InitiaVM {
             verifier_config: verifier_config(),
             ..Default::default()
         };
-        let deserializer_config = vm_config.deserializer_config.clone();
         let move_vm = MoveVM::new_with_config(all_natives(gas_params, misc_params), vm_config);
 
         Self {
             move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
-            deserializer_config,
             initia_vm_config,
         }
     }
@@ -111,12 +108,6 @@ impl InitiaVM {
     pub fn create_gas_meter(&self, balance: impl Into<Gas>) -> InitiaGasMeter {
         InitiaGasMeter::new(self.gas_params.clone(), balance)
     }
-
-    #[inline(always)]
-    fn deserializer_config(&self) -> &DeserializerConfig {
-        &self.deserializer_config
-    }
-
     #[inline(always)]
     fn allow_unstable(&self) -> bool {
         self.initia_vm_config.allow_unstable
@@ -371,7 +362,7 @@ impl InitiaVM {
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
-                    &self.deserializer_config,
+                    &DeserializerConfig::default(),
                 ) {
                     Ok(script) => script,
                     Err(err) => {
@@ -690,7 +681,7 @@ impl InitiaVM {
         for module_blob in module_bundle.iter() {
             match CompiledModule::deserialize_with_config(
                 module_blob.code(),
-                self.deserializer_config(),
+                &DeserializerConfig::default(),
             ) {
                 Ok(module) => {
                     result.push(module);

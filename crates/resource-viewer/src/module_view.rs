@@ -4,7 +4,7 @@
 use anyhow::anyhow;
 use initia_move_storage::state_view::StateView;
 use initia_move_types::access_path::AccessPath;
-use move_binary_format::CompiledModule;
+use move_binary_format::{deserializer::DeserializerConfig, CompiledModule};
 use move_bytecode_utils::compiled_module_viewer::CompiledModuleView;
 use move_core_types::language_storage::ModuleId;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -40,14 +40,17 @@ impl<'a, S: StateView> CompiledModuleView for ModuleView<'a, S> {
                 .map_err(|e| anyhow!("Error retrieving module {:?}: {:?}", module_id, e))?
             {
                 Some(bytes) => {
-                    let compiled_module =
-                        CompiledModule::deserialize(&bytes).map_err(|status| {
-                            anyhow!(
-                                "Module {:?} deserialize with error code {:?}",
-                                module_id,
-                                status
-                            )
-                        })?;
+                    let compiled_module = CompiledModule::deserialize_with_config(
+                        &bytes,
+                        &DeserializerConfig::default(),
+                    )
+                    .map_err(|status| {
+                        anyhow!(
+                            "Module {:?} deserialize with error code {:?}",
+                            module_id,
+                            status
+                        )
+                    })?;
 
                     let compiled_module = Arc::new(compiled_module);
                     module_cache.insert(module_id.clone(), compiled_module.clone());

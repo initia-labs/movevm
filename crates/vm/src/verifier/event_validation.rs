@@ -4,6 +4,7 @@
 use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
+    deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMError, VMResult},
     file_format::{
         Bytecode, CompiledScript,
@@ -123,11 +124,8 @@ pub(crate) fn extract_event_metadata_from_module(
     module_id: &ModuleId,
 ) -> VMResult<HashSet<String>> {
     let metadata = session.load_module(module_id).map(|module| {
-        CompiledModule::deserialize_with_config(
-            &module,
-            &session.get_vm_config().deserializer_config,
-        )
-        .map(|module| get_metadata_from_compiled_module(&module))
+        CompiledModule::deserialize_with_config(&module, &DeserializerConfig::default())
+            .map(|module| get_metadata_from_compiled_module(&module))
     });
 
     if let Ok(Ok(Some(metadata))) = metadata {
