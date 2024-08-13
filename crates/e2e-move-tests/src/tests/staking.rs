@@ -106,7 +106,7 @@ fn test_simple_staking() {
 
     let test_mint_to = (
         vec![std_addr],
-        "0x1::managed_coin::mint",
+        "0x1::managed_coin::mint_to",
         vec![],
         vec![
             std_addr.to_vec(),
@@ -119,7 +119,7 @@ fn test_simple_staking() {
 
     let test_mint_to = (
         vec![std_addr],
-        "0x1::managed_coin::mint",
+        "0x1::managed_coin::mint_to",
         vec![],
         vec![
             std_addr.to_vec(),
