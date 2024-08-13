@@ -7,6 +7,10 @@ repository = "https://github.com/initia-labs/movevm"
 edition = { workspace = true }
 rust-version = { workspace = true }
 
+[features]
+default = []
+backtraces = []
+
 [dependencies]
 anyhow = { workspace = true }
 bcs = { workspace = true }

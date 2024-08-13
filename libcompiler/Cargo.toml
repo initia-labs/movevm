@@ -22,8 +22,6 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
-# This feature requires Rust nightly because it depends on the unstable backtrace feature.
-backtraces = []
 
 [dependencies]
 errno = { workspace = true }

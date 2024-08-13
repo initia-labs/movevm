@@ -22,8 +22,6 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-# This feature requires Rust nightly because it depends on the unstable backtrace feature.
-backtraces = []
 
 [dependencies]
 anyhow = { workspace = true }
@@ -40,7 +38,7 @@ log = { workspace = true, features = [
     "release_max_level_warn",
 ] }
 
-initia-move-vm = { workspace = true, features = ["backtraces"] }
+initia-move-vm = { workspace = true }
 initia-move-natives = { workspace = true }
 initia-move-types = { workspace = true }
 initia-move-gas = { workspace = true }

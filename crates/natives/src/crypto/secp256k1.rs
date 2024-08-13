@@ -4,7 +4,7 @@ use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
 
 use libsecp256k1::{
-    recover, util::MESSAGE_SIZE, util::SIGNATURE_SIZE, Message, PublicKey, RecoveryId, Signature,
+    recover, util::MESSAGE_SIZE, util::SIGNATURE_SIZE, Message, RecoveryId, Signature,
 };
 
 use smallvec::{smallvec, SmallVec};
@@ -102,7 +102,7 @@ pub fn native_recover_public_key(
 use rand_core::OsRng;
 
 #[cfg(feature = "testing")]
-use libsecp256k1::{sign, SecretKey};
+use libsecp256k1::{sign, PublicKey, SecretKey};
 
 #[cfg(feature = "testing")]
 pub fn native_test_only_generate_keys(
