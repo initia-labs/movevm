@@ -8,7 +8,7 @@ module initia_std::secp256k1 {
     //
 
     /// An error occurred while deserializing, for example due to wrong input size.
-    const E_DESERIALIZE: u64 = 1;   // This code must be the same, if ever returned from the native Rust implementation.
+    const E_DESERIALIZE: u64 = 1; // This code must be the same, if ever returned from the native Rust implementation.
 
     //
     // constants
@@ -43,7 +43,10 @@ module initia_std::secp256k1 {
 
     /// Constructs an ECDSASignature struct from the given 64 bytes.
     public fun ecdsa_signature_from_bytes(bytes: vector<u8>): ECDSASignature {
-        assert!(std::vector::length(&bytes) == SIGNATURE_NUM_BYTES, std::error::invalid_argument(E_DESERIALIZE));
+        assert!(
+            std::vector::length(&bytes) == SIGNATURE_NUM_BYTES,
+            std::error::invalid_argument(E_DESERIALIZE),
+        );
         ECDSASignature { bytes }
     }
 
@@ -54,13 +57,20 @@ module initia_std::secp256k1 {
 
     /// Constructs an ECDSARawPublicKey struct, given a 64-byte raw representation.
     public fun ecdsa_raw_public_key_from_bytes(bytes: vector<u8>): ECDSARawPublicKey {
-        assert!(std::vector::length(&bytes) == RAW_PUBLIC_KEY_NUM_BYTES, std::error::invalid_argument(E_DESERIALIZE));
+        assert!(
+            std::vector::length(&bytes) == RAW_PUBLIC_KEY_NUM_BYTES,
+            std::error::invalid_argument(E_DESERIALIZE),
+        );
         ECDSARawPublicKey { bytes }
     }
 
     /// Constructs an ECDSACompressedPublicKey struct, given a 33-byte raw representation.
-    public fun ecdsa_compressed_public_key_from_bytes(bytes: vector<u8>): ECDSACompressedPublicKey {
-        assert!(std::vector::length(&bytes) == COMPRESSED_PUBLIC_KEY_SIZE, std::error::invalid_argument(E_DESERIALIZE));
+    public fun ecdsa_compressed_public_key_from_bytes(bytes: vector<u8>)
+        : ECDSACompressedPublicKey {
+        assert!(
+            std::vector::length(&bytes) == COMPRESSED_PUBLIC_KEY_SIZE,
+            std::error::invalid_argument(E_DESERIALIZE),
+        );
         ECDSACompressedPublicKey { bytes }
     }
 
@@ -70,7 +80,9 @@ module initia_std::secp256k1 {
     }
 
     /// Serializes an ECDSARawPublicKey struct to 64-bytes.
-    public fun ecdsa_compressed_public_key_to_bytes(pk: &ECDSACompressedPublicKey): vector<u8> {
+    public fun ecdsa_compressed_public_key_to_bytes(
+        pk: &ECDSACompressedPublicKey
+    ): vector<u8> {
         pk.bytes
     }
 

@@ -451,6 +451,8 @@ module initia_std::primary_fungible_store {
 
     #[test_only]
     public fun init_module_for_test() {
+        if (exists<ModuleStore>(@initia_std)) { return };
+
         init_module(&account::create_signer_for_test(@initia_std));
     }
 

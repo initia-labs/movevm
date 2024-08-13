@@ -332,12 +332,6 @@ module minitia_std::coin {
     }
 
     #[view]
-    public fun is_coin_initialized(metadata: Object<Metadata>): bool {
-        let metadata_addr = object::object_address(&metadata);
-        exists<ManagingRefs>(metadata_addr)
-    }
-
-    #[view]
     public fun is_coin(metadata_addr: address): bool {
         exists<ManagingRefs>(metadata_addr)
     }

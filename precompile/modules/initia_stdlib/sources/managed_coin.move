@@ -8,7 +8,7 @@ module initia_std::managed_coin {
     use std::option::Option;
 
     use initia_std::object::{Self, Object};
-    use initia_std::fungible_asset::Metadata;
+    use initia_std::fungible_asset::{Metadata, FungibleAsset};
     use initia_std::coin::{Self, BurnCapability, FreezeCapability, MintCapability};
 
     //
@@ -128,13 +128,12 @@ module initia_std::managed_coin {
         coin::burn(&capabilities.burn_cap, to_burn);
     }
 
-    /// Create new metadata coins and deposit them into dst_addr's account.
-    public entry fun mint(
+    /// Create new metadata coins.
+    public fun mint(
         account: &signer,
-        dst_addr: address,
         metadata: Object<Metadata>,
         amount: u64,
-    ) acquires Capabilities {
+    ): FungibleAsset acquires Capabilities {
         let account_addr = signer::address_of(account);
 
         assert!(
@@ -149,11 +148,19 @@ module initia_std::managed_coin {
         );
 
         let capabilities = borrow_global<Capabilities>(object_addr);
-        coin::mint_to(
-            &capabilities.mint_cap,
-            dst_addr,
-            amount,
-        );
+        coin::mint(&capabilities.mint_cap, amount)
+    }
+
+    /// Create new metadata coins and deposit them into dst_addr's account.
+    public entry fun mint_to(
+        account: &signer,
+        dst_addr: address,
+        metadata: Object<Metadata>,
+        amount: u64,
+    ) acquires Capabilities {
+        let fa = mint(account, metadata, amount);
+
+        coin::deposit(dst_addr, fa);
     }
 
     //
@@ -197,15 +204,15 @@ module initia_std::managed_coin {
         );
 
         let metadata = test_metadata();
-        assert!(coin::is_coin_initialized(metadata), 0);
+        assert!(coin::is_coin(object::object_address(&metadata)), 0);
 
-        mint(
+        mint_to(
             &mod_account,
             source_addr,
             metadata,
             50,
         );
-        mint(
+        mint_to(
             &mod_account,
             destination_addr,
             metadata,
@@ -268,7 +275,7 @@ module initia_std::managed_coin {
         );
 
         let metadata = test_metadata();
-        mint(
+        mint_to(
             &destination,
             source_addr,
             metadata,
@@ -298,7 +305,7 @@ module initia_std::managed_coin {
         );
 
         let metadata = test_metadata();
-        mint(
+        mint_to(
             &mod_account,
             source_addr,
             metadata,

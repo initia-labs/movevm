@@ -451,6 +451,8 @@ module minitia_std::primary_fungible_store {
 
     #[test_only]
     public fun init_module_for_test() {
+        if (exists<ModuleStore>(@minitia_std)) { return };
+
         init_module(&account::create_signer_for_test(@minitia_std));
     }
 

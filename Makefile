@@ -84,7 +84,7 @@ fmt:
 	cargo fmt
 
 move-fmt: install-move-fmt
-	movefmt ./precompile/modules/**/sources/*.move ./precompile/modules/**/sources/**/*.move ./precompile/modules/**/tests/*.move ./precompile/modules/**/tests/**/*.move
+	movefmt ./precompile/modules/**/sources/*.move ./precompile/modules/**/sources/**/*.move ./precompile/modules/**/tests/*.move
 
 install-move-fmt:
 	cargo install --git https://github.com/movebit/movefmt --branch develop movefmt

@@ -42,9 +42,7 @@ module minitia_std::simple_token_pfs_tests {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_basic_flow(
-        creator: &signer, aaron: &signer,
-    ) {
+    fun test_basic_flow(creator: &signer, aaron: &signer,) {
         let (creator_ref, metadata) = create_test_token(creator);
         let (mint_ref, transfer_ref, burn_ref) =
             init_test_metadata_with_primary_store_enabled(&creator_ref);
