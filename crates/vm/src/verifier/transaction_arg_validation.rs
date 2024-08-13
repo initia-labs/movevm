@@ -1,5 +1,3 @@
-use initia_move_storage::state_view::StateView;
-use initia_move_storage::state_view_impl::StateViewImpl;
 use move_binary_format::errors::{Location, PartialVMError};
 use move_binary_format::file_format::FunctionDefinitionIndex;
 use move_binary_format::file_format_common::read_uleb128_as_u64;
@@ -8,15 +6,20 @@ use move_core_types::identifier::{IdentStr, Identifier};
 use move_core_types::language_storage::ModuleId;
 use move_core_types::vm_status::VMStatus;
 use move_core_types::{account_address::AccountAddress, value::MoveValue, vm_status::StatusCode};
-use move_vm_runtime::session::{LoadedFunctionInstantiation, Session};
+use move_vm_runtime::module_traversal::{TraversalContext, TraversalStorage};
+use move_vm_runtime::session::Session;
+use move_vm_runtime::LoadedFunction;
 use move_vm_types::gas::{GasMeter, UnmeteredGasMeter};
 use move_vm_types::loaded_data::runtime_types::Type;
 
+use move_vm_types::resolver::MoveResolver;
 use once_cell::sync::Lazy;
 use std::io::Read;
 use std::{collections::BTreeMap, io::Cursor};
 
-use crate::json::json_to_move::deserialize_json_args;
+use initia_move_json::deserialize_json_args;
+
+use crate::session::SessionExt;
 
 pub(crate) struct FunctionId {
     module_id: ModuleId,
@@ -109,16 +112,16 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
 /// 3. check arg types are allowed after signers
 ///
 /// after validation, add senders and non-signer arguments to generate the final args
-pub fn validate_combine_signer_and_txn_args<S: StateView>(
-    session: &mut Session,
-    state_view: &StateViewImpl<'_, S>,
+pub fn validate_combine_signer_and_txn_args<M: MoveResolver>(
+    session: &mut SessionExt,
+    state_view: &M,
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
-    func: &LoadedFunctionInstantiation,
+    func: &LoadedFunction,
     is_json: bool,
 ) -> Result<Vec<Vec<u8>>, VMStatus> {
     // entry function should not return
-    if !func.return_.is_empty() {
+    if !func.return_tys().is_empty() {
         return Err(VMStatus::error(
             StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
             None,
@@ -126,7 +129,7 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
     }
     let mut signer_param_cnt = 0;
     // find all signer params at the beginning
-    for ty in func.parameters.iter() {
+    for ty in func.param_tys().iter() {
         match ty {
             Type::Signer => signer_param_cnt += 1,
             Type::Reference(inner_type) => {
@@ -139,13 +142,13 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
     }
 
     let allowed_structs = &ALLOWED_STRUCTS;
+    let ty_builder = session.get_ty_builder();
+
     // Need to keep this here to ensure we return the historic correct error code for replay
-    for ty in func.parameters[signer_param_cnt..].iter() {
-        let valid = is_valid_txn_arg(
-            session,
-            &ty.subst(&func.type_arguments).unwrap(),
-            allowed_structs,
-        );
+    for ty in func.param_tys()[signer_param_cnt..].iter() {
+        let subst_res = ty_builder.create_ty_with_subst(ty, func.ty_args());
+        let ty = subst_res.map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
+        let valid = is_valid_txn_arg(session, &ty, allowed_structs);
         if !valid {
             return Err(VMStatus::error(
                 StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
@@ -154,7 +157,7 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
         }
     }
 
-    if (signer_param_cnt + args.len()) != func.parameters.len() {
+    if (signer_param_cnt + args.len()) != func.param_tys().len() {
         return Err(VMStatus::error(
             StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH,
             None,
@@ -178,9 +181,9 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
     let args = construct_args(
         session,
         state_view,
-        &func.parameters[signer_param_cnt..],
+        &func.param_tys()[signer_param_cnt..],
         args,
-        &func.type_arguments,
+        func.ty_args(),
         allowed_structs,
         false,
         is_json,
@@ -210,8 +213,8 @@ pub(crate) fn is_valid_txn_arg(
     match typ {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
         Vector(inner) => is_valid_txn_arg(session, inner, allowed_structs),
-        Struct { id, .. } | StructInstantiation { id, .. } => {
-            session.get_struct_type(id).is_some_and(|st| {
+        Struct { idx, .. } | StructInstantiation { idx, .. } => {
+            session.get_struct_type(*idx).is_some_and(|st| {
                 let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
                 allowed_structs.contains_key(&full_name)
             })
@@ -224,9 +227,9 @@ pub(crate) fn is_valid_txn_arg(
 // Construct arguments. Walk through the arguments and according to the signature
 // construct arguments that require so.
 // TODO: This needs a more solid story and a tighter integration with the VM.
-pub(crate) fn construct_args<S: StateView>(
-    session: &mut Session,
-    state_view: &StateViewImpl<'_, S>,
+pub(crate) fn construct_args<M: MoveResolver>(
+    session: &mut SessionExt,
+    state_view: &M,
     types: &[Type],
     args: Vec<Vec<u8>>,
     ty_args: &[Type],
@@ -240,11 +243,15 @@ pub(crate) fn construct_args<S: StateView>(
     if types.len() != args.len() {
         return Err(invalid_signature());
     }
+
+    let ty_builder = session.get_ty_builder();
     for (ty, arg) in types.iter().zip(args) {
+        let subst_res = ty_builder.create_ty_with_subst(ty, ty_args);
+        let ty = subst_res.map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
         let arg = construct_arg(
             session,
             state_view,
-            &ty.subst(ty_args).unwrap(),
+            &ty,
             allowed_structs,
             arg,
             &mut gas_meter,
@@ -261,9 +268,9 @@ fn invalid_signature() -> VMStatus {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_arg<S: StateView>(
-    session: &mut Session,
-    state_view: &StateViewImpl<'_, S>,
+fn construct_arg<M: MoveResolver>(
+    session: &mut SessionExt,
+    state_view: &M,
     ty: &Type,
     allowed_structs: &ConstructorMap,
     arg: Vec<u8>,
@@ -272,7 +279,8 @@ fn construct_arg<S: StateView>(
     is_json: bool,
 ) -> Result<Vec<u8>, VMStatus> {
     if is_json {
-        return deserialize_json_args(state_view, ty, &arg).map_err(|e| e.into_vm_status());
+        return deserialize_json_args(session, state_view, ty, &arg)
+            .map_err(|e| e.into_vm_status());
     }
 
     use move_vm_types::loaded_data::runtime_types::Type::*;
@@ -362,8 +370,10 @@ pub(crate) fn recursively_construct_arg(
                 len -= 1;
             }
         }
-        Struct { id, .. } | StructInstantiation { id, .. } => {
-            let st = session.get_struct_type(id).ok_or_else(invalid_signature)?;
+        Struct { idx, .. } | StructInstantiation { idx, .. } => {
+            let st = session
+                .get_struct_type(*idx)
+                .ok_or_else(invalid_signature)?;
 
             let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
             let constructor = allowed_structs
@@ -460,17 +470,22 @@ fn validate_and_construct(
         *max_invocations -= 1;
     }
 
-    let (function, instantiation) = session.load_function_with_type_arg_inference(
+    let function = session.load_function_with_type_arg_inference(
         &constructor.module_id,
         constructor.func_name,
         expected_type,
     )?;
     let mut args = vec![];
-    for param_type in &instantiation.parameters {
+    let ty_builder = session.get_ty_builder();
+    for param_ty in function.param_tys() {
         let mut arg = vec![];
+        let arg_ty = ty_builder
+            .create_ty_with_subst(param_ty, function.ty_args())
+            .unwrap();
+
         recursively_construct_arg(
             session,
-            &param_type.subst(&instantiation.type_arguments).unwrap(),
+            &arg_ty,
             allowed_structs,
             cursor,
             initial_cursor_len,
@@ -481,8 +496,13 @@ fn validate_and_construct(
         )?;
         args.push(arg);
     }
-    let serialized_result =
-        session.execute_instantiated_function(function, instantiation, args, gas_meter)?;
+    let storage = TraversalStorage::new();
+    let serialized_result = session.execute_loaded_function(
+        function,
+        args,
+        gas_meter,
+        &mut TraversalContext::new(&storage),
+    )?;
     let mut ret_vals = serialized_result.return_values;
     // We know ret_vals.len() == 1
     let deserialize_error = VMStatus::error(

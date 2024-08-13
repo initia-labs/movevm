@@ -41,8 +41,8 @@ pub fn native_verify(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.crypto.ed25519;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.crypto_ed25519_base)?;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -51,7 +51,7 @@ pub fn native_verify(
     let pubkey = safely_pop_arg!(arguments, Vec<u8>);
     let msg = safely_pop_arg!(arguments, Vec<u8>);
 
-    context.charge(gas_params.per_pubkey_deserialize * NumArgs::one())?;
+    context.charge(gas_params.crypto_ed25519_per_pubkey_deserialize * NumArgs::one())?;
     let vk = match read_pubkey(&pubkey) {
         Ok(pk) => match VerificationKey::try_from(VerificationKeyBytes::from(pk)) {
             Ok(vk) => vk,
@@ -60,16 +60,16 @@ pub fn native_verify(
         Err(_) => return Ok(smallvec![Value::bool(false)]),
     };
 
-    context.charge(gas_params.per_sig_deserialize * NumArgs::one())?;
+    context.charge(gas_params.crypto_ed25519_per_sig_deserialize * NumArgs::one())?;
     let sig = match read_signature(&signature) {
         Ok(sig) => Signature::from(sig),
         Err(_) => return Ok(smallvec![Value::bool(false)]),
     };
 
     context.charge(
-        gas_params.per_sig_verify * NumArgs::one()
-            + gas_params.per_msg_hashing_base * NumArgs::one()
-            + gas_params.per_msg_byte_hashing * NumBytes::new(msg.len() as u64),
+        gas_params.crypto_ed25519_per_sig_verify * NumArgs::one()
+            + gas_params.crypto_ed25519_per_msg_hashing_base * NumArgs::one()
+            + gas_params.crypto_ed25519_per_msg_byte_hashing * NumBytes::new(msg.len() as u64),
     )?;
     match vk.verify(&sig, &msg) {
         Ok(()) => Ok(smallvec![Value::bool(true)]),
@@ -158,8 +158,8 @@ pub fn native_batch_verify(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.crypto.ed25519;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.crypto_ed25519_base)?;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -193,22 +193,23 @@ pub fn native_batch_verify(
         .zip(public_keys.iter())
         .zip(signatures.iter())
     {
-        context.charge(gas_params.per_pubkey_deserialize * NumArgs::one())?;
+        context.charge(gas_params.crypto_ed25519_per_pubkey_deserialize * NumArgs::one())?;
         let vk_bytes = match read_pubkey(public_key) {
             Ok(pk) => VerificationKeyBytes::from(pk),
             Err(_) => return Ok(smallvec![Value::bool(false)]),
         };
 
-        context.charge(gas_params.per_sig_deserialize * NumArgs::one())?;
+        context.charge(gas_params.crypto_ed25519_per_sig_deserialize * NumArgs::one())?;
         let sig = match read_signature(signature) {
             Ok(sig) => Signature::from(sig),
             Err(_) => return Ok(smallvec![Value::bool(false)]),
         };
 
         context.charge(
-            gas_params.per_sig_verify * NumArgs::one()
-                + gas_params.per_msg_hashing_base * NumArgs::one()
-                + gas_params.per_msg_byte_hashing * NumBytes::new(message.len() as u64),
+            gas_params.crypto_ed25519_per_sig_verify * NumArgs::one()
+                + gas_params.crypto_ed25519_per_msg_hashing_base * NumArgs::one()
+                + gas_params.crypto_ed25519_per_msg_byte_hashing
+                    * NumBytes::new(message.len() as u64),
         )?;
         batch.queue((vk_bytes, sig, message));
     }

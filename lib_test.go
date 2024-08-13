@@ -55,7 +55,10 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	kvStore := api.NewLookup()
 	blockTime := uint64(time.Now().Unix())
 
-	vm := vm.NewVM(500*1024*1024, 100*1024*1024)
+	vm, err := vm.NewVM(types.InitiaVMConfig{
+		AllowUnstable: true,
+	})
+	require.NoError(t, err)
 	_, err = vm.Initialize(
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),
@@ -411,7 +414,7 @@ func Test_DecodeScript(t *testing.T) {
 	vm, _ := initializeVM(t, true)
 	defer vm.Destroy()
 
-	f, err := os.ReadFile("./precompile/binaries/tests/main.mv")
+	f, err := os.ReadFile("./precompile/binaries/tests/main_0.mv")
 	require.NoError(t, err)
 
 	bz, err := api.DecodeScriptBytes(f)
@@ -425,7 +428,7 @@ func Test_ExecuteScript(t *testing.T) {
 
 	publishModuleBundle(t, vm, kvStore)
 
-	f, err := os.ReadFile("./precompile/binaries/tests/main.mv")
+	f, err := os.ReadFile("./precompile/binaries/tests/main_0.mv")
 	require.NoError(t, err)
 
 	testAccount, err := types.NewAccountAddress("0x2")

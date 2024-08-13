@@ -125,7 +125,7 @@ fn native_delegate(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.staking.delegate;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -134,8 +134,10 @@ fn native_delegate(
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
-    context
-        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
+    context.charge(
+        gas_params.staking_delegate_base
+            + gas_params.staking_delegate_per_byte * NumBytes::new((validator.len()) as u64),
+    )?;
 
     let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
     let staking_data = staking_context.staking_data.borrow_mut();
@@ -176,7 +178,7 @@ fn native_undelegate(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.staking.undelegate;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -185,8 +187,10 @@ fn native_undelegate(
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
-    context
-        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
+    context.charge(
+        gas_params.staking_undelegate_base
+            + gas_params.staking_undelegate_per_byte * NumBytes::new((validator.len()) as u64),
+    )?;
 
     let staking_context = context.extensions_mut().get_mut::<NativeStakingContext>();
     let staking_data = staking_context.staking_data.borrow_mut();
@@ -241,11 +245,7 @@ fn native_share_to_amount(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .staking
-        .share_to_amount;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -254,8 +254,10 @@ fn native_share_to_amount(
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
-    context
-        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
+    context.charge(
+        gas_params.staking_share_to_amount_base
+            + gas_params.staking_share_to_amount_per_byte * NumBytes::new((validator.len()) as u64),
+    )?;
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
 
@@ -281,11 +283,7 @@ fn native_amount_to_share(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .staking
-        .amount_to_share;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -294,8 +292,10 @@ fn native_amount_to_share(
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
-    context
-        .charge(gas_params.base + gas_params.per_byte * NumBytes::new((validator.len()) as u64))?;
+    context.charge(
+        gas_params.staking_amount_to_share_base
+            + gas_params.staking_amount_to_share_per_byte * NumBytes::new((validator.len()) as u64),
+    )?;
 
     let staking_context = context.extensions().get::<NativeStakingContext>();
 

@@ -29,14 +29,14 @@ fn native_borrow_address(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.move_stdlib.signer.borrow_address;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
     let signer_reference = safely_pop_arg!(arguments, SignerRef);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.signer_borrow_address_base)?;
 
     Ok(smallvec![signer_reference.borrow_signer()?])
 }

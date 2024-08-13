@@ -13,14 +13,12 @@ use move_package::BuildConfig;
 use crate::test_utils::mock_chain::{MockAPI, MockChain, MockState, MockTableState};
 use crate::test_utils::parser::MemberId;
 use initia_move_gas::Gas;
-use initia_move_storage::{
-    state_view::StateView, state_view_impl::StateViewImpl, table_view_impl::TableViewImpl,
-};
+use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
 use initia_move_types::access_path::AccessPath;
 use initia_move_types::message::{Message, MessageOutput};
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::{entry_function::EntryFunction, script::Script};
-use initia_move_vm::MoveVM;
+use initia_move_vm::InitiaVM;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use std::path::PathBuf;
@@ -40,7 +38,7 @@ use std::{fs, io};
 pub struct MoveHarness {
     /// The executor being used.
     pub chain: MockChain,
-    pub vm: MoveVM,
+    pub vm: InitiaVM,
     pub api: MockAPI,
 }
 
@@ -62,7 +60,7 @@ impl Default for MoveHarness {
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
-        let vm = MoveVM::default();
+        let vm = InitiaVM::default();
         let chain = MockChain::new();
         let api = MockAPI::empty();
 
@@ -71,10 +69,8 @@ impl MoveHarness {
 
     pub fn initialize(&mut self) {
         let state = self.chain.create_state();
-        let mut table_state = MockTableState::new(&state);
-
         let resolver = StateViewImpl::new(&state);
-        let mut table_resolver = TableViewImpl::new(&mut table_state);
+        let mut table_resolver = MockTableState::new(&state);
 
         let env = Env::new(
             0,
@@ -162,10 +158,8 @@ impl MoveHarness {
         view_fn: ViewFunction,
         state: &MockState,
     ) -> Result<ViewOutput, VMStatus> {
-        let mut table_state = MockTableState::new(state);
-
         let resolver = StateViewImpl::new(state);
-        let mut table_resolver = TableViewImpl::new(&mut table_state);
+        let mut table_resolver = MockTableState::new(state);
 
         let gas_limit = Gas::new(100_000_000u64);
         let mut gas_meter = self.vm.create_gas_meter(gas_limit);
@@ -327,10 +321,9 @@ impl MoveHarness {
         );
 
         let state = self.chain.create_state();
-        let mut table_state = MockTableState::new(&state);
 
         let resolver = StateViewImpl::new(&state);
-        let mut table_resolver = TableViewImpl::new(&mut table_state);
+        let mut table_resolver = MockTableState::new(&state);
 
         let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> =
             Gas::new(100_000_000u64);
@@ -358,10 +351,8 @@ impl MoveHarness {
             Self::generate_random_hash().try_into().unwrap(),
         );
 
-        let mut table_state = MockTableState::new(state);
-
         let resolver = StateViewImpl::new(state);
-        let mut table_resolver = TableViewImpl::new(&mut table_state);
+        let mut table_resolver = MockTableState::new(state);
 
         let gas_limit = Gas::new(100_000_000u64);
         let mut gas_meter = self.vm.create_gas_meter(gas_limit);
@@ -412,24 +403,6 @@ impl MoveHarness {
         let mut state = self.chain.create_state();
         let inner_output = output.into_inner();
         state.push_write_set(inner_output.1);
-
-        if should_commit {
-            self.chain.commit(state);
-        }
-    }
-
-    // commit only module checksum to test module cache
-    pub fn commit_module_checksum(&mut self, output: MessageOutput, should_commit: bool) {
-        let mut state = self.chain.create_state();
-        let (_, write_set, _, _, _, _) = output.into_inner();
-        let write_set = write_set
-            .into_iter()
-            .filter(|v| {
-                let (_, data_path) = v.0.clone().into_inner();
-                data_path.is_code_checksum()
-            })
-            .collect();
-        state.push_write_set(write_set);
 
         if should_commit {
             self.chain.commit(state);

@@ -17,12 +17,6 @@ use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-/// Whether unconditional code upgrade with no compatibility check is allowed. This
-/// publication mode should only be used for modules which aren't shared with user others.
-/// The developer is responsible for not breaking memory layout of any resources he already
-/// stored on chain.
-const UPGRADE_POLICY_ARBITRARY: u8 = 0;
-
 /// Whether a compatibility check should be performed for upgrades. The check only passes if
 /// a new module has (a) the same public functions (b) for existing resources, no layout change.
 const _UPGRADE_POLICY_COMPATIBLE: u8 = 1;
@@ -85,7 +79,6 @@ pub struct PublishRequest {
     pub destination: AccountAddress,
     pub module_bundle: ModuleBundle,
     pub expected_modules: Option<Vec<String>>,
-    pub check_compat: bool,
 }
 
 /***************************************************************************************************
@@ -113,16 +106,17 @@ fn native_request_publish(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.code.request_publish;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
-    debug_assert!(arguments.len() == 4);
+    debug_assert!(arguments.len() == 3);
 
-    context.charge(gas_params.base_cost)?;
+    context.charge(gas_params.code_request_publish_base_cost)?;
 
-    let policy = safely_pop_arg!(arguments, u8);
     let mut code: Vec<Vec<u8>> = vec![];
     for module_code in safely_pop_vec_arg!(arguments, Vec<u8>) {
-        context.charge(gas_params.per_byte * NumBytes::new(module_code.len() as u64))?;
+        context.charge(
+            gas_params.code_request_publish_per_byte * NumBytes::new(module_code.len() as u64),
+        )?;
         code.push(module_code);
     }
 
@@ -130,7 +124,9 @@ fn native_request_publish(
     for name in safely_pop_vec_arg!(arguments, Struct) {
         let str_bytes = get_string(name)?;
 
-        context.charge(gas_params.per_byte * NumBytes::new(str_bytes.len() as u64))?;
+        context.charge(
+            gas_params.code_request_publish_per_byte * NumBytes::new(str_bytes.len() as u64),
+        )?;
         expected_modules.push(String::from_utf8(str_bytes).map_err(|_| {
             SafeNativeError::Abort {
                 abort_code: EUNABLE_TO_PARSE_STRING,
@@ -151,7 +147,6 @@ fn native_request_publish(
         destination,
         module_bundle: ModuleBundle::new(code),
         expected_modules: Some(expected_modules),
-        check_compat: policy != UPGRADE_POLICY_ARBITRARY,
     });
 
     Ok(smallvec![])

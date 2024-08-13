@@ -44,8 +44,9 @@ module initia_std::string_utils {
         native_format_list(fmt, &list2(a, b))
     }
 
-    public fun format3<T0: drop, T1: drop, T2: drop>(fmt: &vector<u8>, a: T0, b: T1, c: T2)
-        : String {
+    public fun format3<T0: drop, T1: drop, T2: drop>(
+        fmt: &vector<u8>, a: T0, b: T1, c: T2
+    ): String {
         native_format_list(fmt, &list3(a, b, c))
     }
 
@@ -56,10 +57,7 @@ module initia_std::string_utils {
         c: T2,
         d: T3
     ): String {
-        native_format_list(
-            fmt,
-            &list4(a, b, c, d)
-        )
+        native_format_list(fmt, &list4(a, b, c, d))
     }
 
     // Helper struct to allow passing a generic heterogeneous list of values to native_format_list.
@@ -72,7 +70,7 @@ module initia_std::string_utils {
 
     // Create a pair of values.
     fun cons<T, N>(car: T, cdr: N): Cons<T, N> {
-        Cons {car, cdr}
+        Cons { car, cdr }
     }
 
     // Create a nil value.
@@ -109,35 +107,32 @@ module initia_std::string_utils {
     fun test_format() {
         assert!(
             to_string(&1u64) == std::string::utf8(b"1"),
-            1
+            1,
         );
         assert!(
             to_string(&false) == std::string::utf8(b"false"),
-            2
+            2,
         );
         assert!(
             to_string(&1u256) == std::string::utf8(b"1"),
-            3
+            3,
         );
         assert!(
             to_string(&vector[1, 2, 3]) == std::string::utf8(b"[ 1, 2, 3 ]"),
-            4
+            4,
         );
         assert!(
-            to_string(
-                &cons(std::string::utf8(b"My string"), 2)
-            ) == std::string::utf8(
-                b"Cons { car: \"My string\", cdr: 2 }"
-            ),
-            5
+            to_string(&cons(std::string::utf8(b"My string"), 2))
+                == std::string::utf8(b"Cons { car: \"My string\", cdr: 2 }"),
+            5,
         );
         assert!(
             to_string(&std::option::none<u64>()) == std::string::utf8(b"None"),
-            6
+            6,
         );
         assert!(
             to_string(&std::option::some(1)) == std::string::utf8(b"Some(1)"),
-            7
+            7,
         );
     }
 
@@ -147,11 +142,11 @@ module initia_std::string_utils {
             &b"a = {} b = {} c = {}",
             1,
             2,
-            std::string::utf8(b"My string")
+            std::string::utf8(b"My string"),
         );
         assert!(
             s == std::string::utf8(b"a = 1 b = 2 c = \"My string\""),
-            1
+            1,
         );
     }
 
@@ -183,10 +178,7 @@ module initia_std::string_utils {
     #[test]
     #[expected_failure(abort_code = EARGS_MISMATCH)]
     fun test_format_list_not_valid_list() {
-        let l = cons(
-            1,
-            FakeCons {car: 2, cdr: cons(3, nil())}
-        );
+        let l = cons(1, FakeCons { car: 2, cdr: cons(3, nil()) });
         native_format_list(&b"a = {} b = {} c = {}", &l);
     }
 
@@ -213,7 +205,7 @@ module initia_std::string_utils {
         let s = format3(&b"{{a = {} b = {} c = {}}}", 1, 2, 3);
         assert!(
             s == std::string::utf8(b"{a = 1 b = 2 c = 3}"),
-            1
+            1,
         );
     }
 }

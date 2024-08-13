@@ -1,4 +1,5 @@
 use better_any::{Tid, TidAble};
+use initia_move_gas::NumArgs;
 use initia_move_types::cosmos::{
     CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
     MoveMessage, StakingMessage, StargateMessage,
@@ -49,14 +50,14 @@ fn native_stargate(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.stargate;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_stargate_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 2);
 
     let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(data.len() as u64))?;
+    context.charge(gas_params.cosmos_stargate_per_byte * NumBytes::new(data.len() as u64))?;
 
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
     let message = CosmosMessage::Stargate(StargateMessage { sender, data });
@@ -73,8 +74,8 @@ fn native_move_execute(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.move_execute;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_move_execute_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 7);
@@ -83,14 +84,18 @@ fn native_move_execute(
 
     let mut msg_args: Vec<Vec<u8>> = vec![];
     for msg_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
-        context.charge(gas_params.per_byte * NumBytes::new(msg_arg.len() as u64))?;
+        context.charge(
+            gas_params.cosmos_move_execute_per_byte * NumBytes::new(msg_arg.len() as u64),
+        )?;
 
         msg_args.push(msg_arg);
     }
 
     let mut msg_type_args: Vec<String> = vec![];
     for msg_type_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
-        context.charge(gas_params.per_byte * NumBytes::new(msg_type_arg.len() as u64))?;
+        context.charge(
+            gas_params.cosmos_move_execute_per_byte * NumBytes::new(msg_type_arg.len() as u64),
+        )?;
 
         let msg_type_arg = std::str::from_utf8(&msg_type_arg)
             .map_err(|_| partial_extension_error("failed to deserialize type args"))?
@@ -99,10 +104,14 @@ fn native_move_execute(
     }
 
     let function_name = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(function_name.len() as u64))?;
+    context.charge(
+        gas_params.cosmos_move_execute_per_byte * NumBytes::new(function_name.len() as u64),
+    )?;
 
     let module_name = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(module_name.len() as u64))?;
+    context.charge(
+        gas_params.cosmos_move_execute_per_byte * NumBytes::new(module_name.len() as u64),
+    )?;
 
     let module_address = safely_pop_arg!(arguments, AccountAddress);
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
@@ -137,8 +146,8 @@ fn native_move_script(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.move_script;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_move_script_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 5);
@@ -147,14 +156,17 @@ fn native_move_script(
 
     let mut msg_args: Vec<Vec<u8>> = vec![];
     for msg_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
-        context.charge(gas_params.per_byte * NumBytes::new(msg_arg.len() as u64))?;
+        context
+            .charge(gas_params.cosmos_move_script_per_byte * NumBytes::new(msg_arg.len() as u64))?;
 
         msg_args.push(msg_arg);
     }
 
     let mut msg_type_args: Vec<String> = vec![];
     for msg_type_arg in safely_pop_vec_arg!(arguments, Vec<u8>) {
-        context.charge(gas_params.per_byte * NumBytes::new(msg_type_arg.len() as u64))?;
+        context.charge(
+            gas_params.cosmos_move_script_per_byte * NumBytes::new(msg_type_arg.len() as u64),
+        )?;
 
         let msg_type_arg = std::str::from_utf8(&msg_type_arg)
             .map_err(|_| partial_extension_error("failed to deserialize type args"))?
@@ -163,7 +175,8 @@ fn native_move_script(
     }
 
     let code_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(code_bytes.len() as u64))?;
+    context
+        .charge(gas_params.cosmos_move_script_per_byte * NumBytes::new(code_bytes.len() as u64))?;
 
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
     let message = CosmosMessage::Move(MoveMessage::Script {
@@ -186,8 +199,8 @@ fn native_delegate(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.delegate;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_delegate_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 4);
@@ -195,7 +208,9 @@ fn native_delegate(
     let amount = safely_pop_arg!(arguments, u64);
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator_address = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(validator_address.len() as u64))?;
+    context.charge(
+        gas_params.cosmos_delegate_per_byte * NumBytes::new(validator_address.len() as u64),
+    )?;
 
     let delegator_address: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
@@ -221,12 +236,8 @@ fn native_fund_community_pool(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .cosmos
-        .fund_community_pool;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_fund_community_pool_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
@@ -252,28 +263,30 @@ fn native_transfer(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.transfer;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_transfer_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 10);
 
     let memo = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(memo.len() as u64))?;
+    context.charge(gas_params.cosmos_transfer_per_byte * NumBytes::new(memo.len() as u64))?;
 
     let timeout_timestamp = safely_pop_arg!(arguments, u64);
     let revision_height = safely_pop_arg!(arguments, u64);
     let revision_number = safely_pop_arg!(arguments, u64);
     let source_channel = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+    context
+        .charge(gas_params.cosmos_transfer_per_byte * NumBytes::new(source_channel.len() as u64))?;
 
     let source_port = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+    context
+        .charge(gas_params.cosmos_transfer_per_byte * NumBytes::new(source_channel.len() as u64))?;
 
     let token_amount = safely_pop_arg!(arguments, u64);
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let receiver = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(receiver.len() as u64))?;
+    context.charge(gas_params.cosmos_transfer_per_byte * NumBytes::new(receiver.len() as u64))?;
 
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
@@ -320,33 +333,40 @@ fn native_nft_transfer(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.nft_transfer;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_nft_transfer_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 10);
 
     let memo = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(memo.len() as u64))?;
+    context.charge(gas_params.cosmos_nft_transfer_per_byte * NumBytes::new(memo.len() as u64))?;
 
     let timeout_timestamp = safely_pop_arg!(arguments, u64);
     let revision_height = safely_pop_arg!(arguments, u64);
     let revision_number = safely_pop_arg!(arguments, u64);
     let source_channel = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+    context.charge(
+        gas_params.cosmos_nft_transfer_per_byte * NumBytes::new(source_channel.len() as u64),
+    )?;
 
     let source_port = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(source_port.len() as u64))?;
+    context.charge(
+        gas_params.cosmos_nft_transfer_per_byte * NumBytes::new(source_port.len() as u64),
+    )?;
 
     let token_ids = safely_pop_vec_arg!(arguments, Vec<u8>);
     context.charge(
-        gas_params.per_byte
+        gas_params.cosmos_nft_transfer_per_byte
             * NumBytes::new(token_ids.iter().map(|v| v.len()).sum::<usize>() as u64),
     )?;
+    context
+        .charge(gas_params.cosmos_nft_transfer_per_token * NumArgs::new(token_ids.len() as u64))?;
 
     let collection = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let receiver = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(receiver.len() as u64))?;
+    context
+        .charge(gas_params.cosmos_nft_transfer_per_byte * NumBytes::new(receiver.len() as u64))?;
 
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 
@@ -402,8 +422,8 @@ fn native_pay_fee(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.cosmos.pay_fee;
-    context.charge(gas_params.base)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_pay_fee_base)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 9);
@@ -415,10 +435,11 @@ fn native_pay_fee(
     let recv_fee_amount = safely_pop_arg!(arguments, u64);
     let recv_fee_metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let source_channel = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(source_channel.len() as u64))?;
+    context
+        .charge(gas_params.cosmos_pay_fee_per_byte * NumBytes::new(source_channel.len() as u64))?;
 
     let source_port = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
-    context.charge(gas_params.per_byte * NumBytes::new(source_port.len() as u64))?;
+    context.charge(gas_params.cosmos_pay_fee_per_byte * NumBytes::new(source_port.len() as u64))?;
 
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
 

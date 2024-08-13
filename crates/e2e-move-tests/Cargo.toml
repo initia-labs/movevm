@@ -36,6 +36,7 @@ move-unit-test = { workspace = true }
 move-vm-types = { workspace = true }
 move-cli = { workspace = true }
 move-vm-runtime = { workspace = true }
+move-model = { workspace = true }
 
 [features]
 default = []

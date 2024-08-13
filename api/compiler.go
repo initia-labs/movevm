@@ -39,6 +39,8 @@ func BuildContract(arg compiler.CompilerArgument) ([]byte, error) {
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 
@@ -77,6 +79,8 @@ func TestContract(arg compiler.CompilerArgument, testConfig testtypes.TestConfig
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 	testOpt := C.CompilerTestOption{
@@ -123,6 +127,8 @@ func CoverageSummary(arg compiler.CompilerArgument, coverageSummaryConfig covera
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 	coverageSummaryOpt := C.CompilerCoverageSummaryOption{
@@ -168,6 +174,8 @@ func CoverageSource(arg compiler.CompilerArgument, coverageSourceConfig coverage
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 	coverageSourceOpt := C.CompilerCoverageSourceOption{
@@ -212,6 +220,8 @@ func CoverageBytecode(arg compiler.CompilerArgument, coverageBytecodeConfig cove
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 	coverageBytecodeOpt := C.CompilerCoverageBytecodeOption{
@@ -258,6 +268,8 @@ func ProveContract(arg compiler.CompilerArgument, proveConfig provetypes.ProveCo
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 	proveOpt := C.CompilerProveOption{
@@ -317,6 +329,8 @@ func Docgen(arg compiler.CompilerArgument, docgenOption docgentypes.DocgenConfig
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 	docgenOpt := C.CompilerDocgenOption{
@@ -365,6 +379,8 @@ func CreateContractPackage(arg compiler.CompilerArgument, name string) ([]byte, 
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 
@@ -404,6 +420,8 @@ func CleanContractPackage(arg compiler.CompilerArgument, cleanCache, cleanByprod
 			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
 			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
 			bytecode_version:           cu32(buildConfig.BytecodeVersion),
+			compiler_version:           cu32(buildConfig.CompilerVersion),
+			language_version:           cu32(buildConfig.LanguageVersion),
 		},
 	}
 

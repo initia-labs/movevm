@@ -1,12 +1,8 @@
-use crate::{
-    access_path::{AccessPath, DataPath},
-    table::TableChangeSet,
-};
+use crate::{access_path::AccessPath, table::TableChangeSet};
 use move_core_types::{
     effects::{ChangeSet, Op},
     language_storage::ModuleId,
 };
-use sha3::{Digest, Sha3_256};
 use std::collections::{btree_map, BTreeMap};
 
 pub type WriteOp = Op<Vec<u8>>;
@@ -25,16 +21,6 @@ impl WriteSet {
             }
 
             for (name, blob_opt) in modules.into_iter() {
-                // compute and write checksum changes
-                let checksum_ap = AccessPath::new(addr, DataPath::CodeChecksum(name.clone()));
-                let checksum_op = blob_opt.map_ref(|blob| {
-                    let mut sha3_256 = Sha3_256::new();
-                    sha3_256.update(blob);
-                    let checksum: [u8; 32] = sha3_256.finalize().into();
-                    checksum.to_vec()
-                });
-                write_set.insert(checksum_ap, checksum_op);
-
                 // write module bytes changes
                 let module_id = ModuleId::new(addr, name);
                 let ap = AccessPath::from(&module_id);

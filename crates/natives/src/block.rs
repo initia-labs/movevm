@@ -35,8 +35,8 @@ fn native_get_block_info(
     _ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.block.get_block_info;
-    context.charge(gas_params.base_cost)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.block_get_block_info_base_cost)?;
 
     let block_context = context.extensions().get::<NativeBlockContext>();
     Ok(smallvec![

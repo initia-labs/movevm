@@ -3,17 +3,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
-use initia_move_compiler::TestInitiaGasMeter;
-use initia_move_gas::{
-    InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters,
-};
+
+use initia_move_gas::{MiscGasParameters, NativeGasParameters};
 use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
     query::NativeQueryContext, staking::NativeStakingContext, table::NativeTableContext,
     transaction_context::NativeTransactionContext,
 };
-use move_cli::base::test::{run_move_unit_tests_with_gas_meter, UnitTestResult};
+use initia_move_types::metadata;
+
+use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
 use move_core_types::effects::ChangeSet;
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
@@ -51,18 +51,22 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
     configure_for_unit_test();
 
     let gas_limit = 1_000_000_000u64;
-    let gas_params = InitiaGasParameters::initial();
-    let gas_meter = TestInitiaGasMeter::new(gas_params, gas_limit.into());
+    let native_gas_params = NativeGasParameters::zeros();
+    let misc_gas_params = MiscGasParameters::zeros();
 
-    let native_gas_params = NativeGasParameters::initial();
-    let misc_gas_params = MiscGasParameters::initial();
-    let res = run_move_unit_tests_with_gas_meter(
+    let mut build_config = move_package::BuildConfig {
+        test_mode: true,
+        install_dir: Some(tempdir().unwrap().path().to_path_buf()),
+        ..Default::default()
+    };
+    build_config
+        .compiler_config
+        .known_attributes
+        .clone_from(metadata::get_all_attribute_names());
+
+    let res = run_move_unit_tests(
         &pkg_path,
-        move_package::BuildConfig {
-            test_mode: true,
-            install_dir: Some(tempdir().unwrap().path().to_path_buf()),
-            ..Default::default()
-        },
+        build_config,
         UnitTestingConfig::default_with_bound(Some(gas_limit)),
         all_natives(native_gas_params, misc_gas_params),
         ChangeSet::new(),
@@ -70,7 +74,6 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         None,
         /* compute_coverage */ false,
         &mut std::io::stdout(),
-        Some(gas_meter),
     )
     .unwrap();
 

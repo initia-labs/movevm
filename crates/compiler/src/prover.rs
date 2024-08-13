@@ -122,7 +122,7 @@ impl ProverOptions {
             },
             ..Default::default()
         };
-        let model = build_model(package_path, build_config)?;
+        let mut model = build_model(package_path, build_config)?;
         let mut options = self.convert_options();
         // Need to ensure a distinct output.bpl file for concurrent execution. In non-test
         // mode, we actually want to use the static output.bpl for debugging purposes
@@ -152,7 +152,7 @@ impl ProverOptions {
                 )],
             });
         let mut writer = StandardStream::stderr(ColorChoice::Auto);
-        move_prover::run_move_prover_with_model(&model, &mut writer, options, Some(now))?;
+        move_prover::run_move_prover_with_model(&mut model, &mut writer, options, Some(now))?;
         Ok(())
     }
 

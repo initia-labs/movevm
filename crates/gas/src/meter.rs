@@ -2,6 +2,7 @@
 //! parameters and traits to help manipulate them.
 
 use crate::storage::StorageGasParameters;
+use crate::traits::{FromOnChainGasSchedule, InitialGasSchedule, ToOnChainGasSchedule};
 use crate::{
     algebra::Gas, instr::InstructionGasParameters, misc::MiscGasParameters,
     transaction::TransactionGasParameters,
@@ -36,39 +37,17 @@ use std::collections::BTreeMap;
 ///
 pub const GAS_UNIT_SCALING_FACTOR: u64 = 100;
 
-/// A trait for converting from a map representation of the on-chain gas schedule.
-pub trait FromOnChainGasSchedule: Sized {
-    /// Constructs a value of this type from a map representation of the on-chain gas schedule.
-    /// `None` should be returned when the gas schedule is missing some required entries.
-    /// Unused entries should be safely ignored.
-    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Option<Self>;
-}
-
-/// A trait for converting to a list of entries of the on-chain gas schedule.
-pub trait ToOnChainGasSchedule {
-    /// Converts `self` into a list of entries of the on-chain gas schedule.
-    /// Each entry is a key-value pair where the key is a string representing the name of the
-    /// parameter, where the value is the gas parameter itself.
-    fn to_on_chain_gas_schedule(&self) -> Vec<(String, u64)>;
-}
-
-/// A trait for defining an initial value to be used in the genesis.
-pub trait InitialGasSchedule: Sized {
-    /// Returns the initial value of this type, which is used in the genesis.
-    fn initial() -> Self;
-}
-
 /// Gas parameters for all native functions.
 #[derive(Debug, Clone)]
 pub struct NativeGasParameters {
-    pub move_stdlib: move_stdlib::natives::GasParameters,
-    pub initia_stdlib: crate::initia::GasParameters,
-    pub table: crate::table::GasParameters,
+    pub move_stdlib: crate::move_stdlib::MoveStdlibGasParameters,
+    pub initia_stdlib: crate::initia_stdlib::InitiaStdlibGasParameters,
+    pub table: crate::table::TableGasParameters,
 }
 
 impl FromOnChainGasSchedule for NativeGasParameters {
-    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Option<Self> {
-        Some(Self {
+    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Result<Self, String> {
+        Ok(Self {
             move_stdlib: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,
             initia_stdlib: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,
             table: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,
@@ -88,9 +67,9 @@ impl ToOnChainGasSchedule for NativeGasParameters {
 impl NativeGasParameters {
     pub fn zeros() -> Self {
         Self {
-            move_stdlib: move_stdlib::natives::GasParameters::zeros(),
-            initia_stdlib: crate::initia::GasParameters::zeros(),
-            table: crate::table::GasParameters::zeros(),
+            move_stdlib: crate::move_stdlib::MoveStdlibGasParameters::zeros(),
+            initia_stdlib: crate::initia_stdlib::InitiaStdlibGasParameters::zeros(),
+            table: crate::table::TableGasParameters::zeros(),
         }
     }
 }
@@ -117,8 +96,8 @@ pub struct InitiaGasParameters {
 }
 
 impl FromOnChainGasSchedule for InitiaGasParameters {
-    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Option<Self> {
-        Some(Self {
+    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Result<Self, String> {
+        Ok(Self {
             misc: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,
             instr: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,
             txn: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,

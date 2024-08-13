@@ -7,110 +7,147 @@ module minitia_std::secp256k1 {
     // Error codes
     //
 
-    /// Wrong number of bytes were given as pubkey.
-    const E_WRONG_PUBKEY_SIZE: u64 = 1;
-
-    /// Wrong number of bytes were given as signature.
-    const E_WRONG_SIGNATURE_SIZE: u64 = 2;
-
-    /// Wrong number of bytes were given as message.
-    const E_WRONG_MESSAGE_SIZE: u64 = 3;
+    /// An error occurred while deserializing, for example due to wrong input size.
+    const E_DESERIALIZE: u64 = 1; // This code must be the same, if ever returned from the native Rust implementation.
 
     //
     // constants
     //
 
-    /// The size of a secp256k1-based ECDSA compressed-public key, in bytes.
-    const PUBLIC_KEY_SIZE: u64 = 33;
+    /// The size of a secp256k1-based ECDSA public key, in bytes.
+    const RAW_PUBLIC_KEY_NUM_BYTES: u64 = 64;
+
+    /// The size of a secp256k1-based ECDSA compressed public key, in bytes.
+    const COMPRESSED_PUBLIC_KEY_SIZE: u64 = 33;
 
     /// The size of a secp256k1-based ECDSA signature, in bytes.
-    const SIGNATURE_SIZE: u64 = 64;
+    const SIGNATURE_NUM_BYTES: u64 = 64;
 
     /// The size of a hashed message for secp256k1-based ECDSA signing
     const MESSAGE_SIZE: u64 = 32;
 
-    /// A secp256k1-based ECDSA public key.
-    /// It can be raw or compressed public key.
-    struct PublicKey has copy, drop, store {
+    /// A 64-byte ECDSA public key.
+    struct ECDSARawPublicKey has copy, drop, store {
         bytes: vector<u8>
     }
 
-    /// A secp256k1-based ECDSA signature.
-    struct Signature has copy, drop, store {
+    /// A 33-byte ECDSA public key.
+    struct ECDSACompressedPublicKey has copy, drop, store {
         bytes: vector<u8>
     }
 
-    /// Constructs an PublicKey struct, given 33-byte representation.
-    public fun public_key_from_bytes(bytes: vector<u8>): PublicKey {
-        assert!(
-            std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
-            std::error::invalid_argument(PUBLIC_KEY_SIZE),
-        );
-        PublicKey { bytes }
+    /// A 64-byte ECDSA signature.
+    struct ECDSASignature has copy, drop, store {
+        bytes: vector<u8>
     }
 
-    /// Constructs an Signature struct from the given 64 bytes.
-    public fun signature_from_bytes(bytes: vector<u8>): Signature {
+    /// Constructs an ECDSASignature struct from the given 64 bytes.
+    public fun ecdsa_signature_from_bytes(bytes: vector<u8>): ECDSASignature {
         assert!(
-            std::vector::length(&bytes) == SIGNATURE_SIZE,
-            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE)
+            std::vector::length(&bytes) == SIGNATURE_NUM_BYTES,
+            std::error::invalid_argument(E_DESERIALIZE),
         );
-        Signature { bytes }
+        ECDSASignature { bytes }
     }
 
-    /// Serializes an PublicKey struct to bytes.
-    public fun public_key_to_bytes(pk: &PublicKey): vector<u8> {
+    /// Constructs an ECDSARawPublicKey struct, given a 64-byte raw representation.
+    public fun ecdsa_raw_public_key_from_64_bytes(bytes: vector<u8>): ECDSARawPublicKey {
+        ecdsa_raw_public_key_from_bytes(bytes)
+    }
+
+    /// Constructs an ECDSARawPublicKey struct, given a 64-byte raw representation.
+    public fun ecdsa_raw_public_key_from_bytes(bytes: vector<u8>): ECDSARawPublicKey {
+        assert!(
+            std::vector::length(&bytes) == RAW_PUBLIC_KEY_NUM_BYTES,
+            std::error::invalid_argument(E_DESERIALIZE),
+        );
+        ECDSARawPublicKey { bytes }
+    }
+
+    /// Constructs an ECDSACompressedPublicKey struct, given a 33-byte raw representation.
+    public fun ecdsa_compressed_public_key_from_bytes(bytes: vector<u8>)
+        : ECDSACompressedPublicKey {
+        assert!(
+            std::vector::length(&bytes) == COMPRESSED_PUBLIC_KEY_SIZE,
+            std::error::invalid_argument(E_DESERIALIZE),
+        );
+        ECDSACompressedPublicKey { bytes }
+    }
+
+    /// Serializes an ECDSARawPublicKey struct to 64-bytes.
+    public fun ecdsa_raw_public_key_to_bytes(pk: &ECDSARawPublicKey): vector<u8> {
         pk.bytes
     }
 
-    /// Serializes an Signature struct to bytes.
-    public fun signature_to_bytes(sig: &Signature): vector<u8> {
+    /// Serializes an ECDSARawPublicKey struct to 64-bytes.
+    public fun ecdsa_compressed_public_key_to_bytes(
+        pk: &ECDSACompressedPublicKey
+    ): vector<u8> {
+        pk.bytes
+    }
+
+    /// Serializes an ECDSASignature struct to 64-bytes.
+    public fun ecdsa_signature_to_bytes(sig: &ECDSASignature): vector<u8> {
         sig.bytes
     }
 
-    /// Returns `true` only the signature can verify the public key on the message
-    public fun verify(
-        message: vector<u8>,
-        public_key: &PublicKey,
-        signature: &Signature,
-    ): bool {
-        assert!(
-            std::vector::length(&message) == MESSAGE_SIZE,
-            std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),
-        );
-
-        return verify_internal(
-            message,
-            public_key.bytes,
-            signature.bytes
-        )
-    }
-
-    /// Recovers the signer's (33-byte) compressed public key from a secp256k1 ECDSA `signature` given the `recovery_id`
-    /// and the signed `message` (32 byte digest).
+    /// Recovers the signer's raw (64-byte) public key from a secp256k1 ECDSA `signature` given the `recovery_id` and the signed
+    /// `message` (32 byte digest).
     ///
     /// Note that an invalid signature, or a signature from a different message, will result in the recovery of an
     /// incorrect public key. This recovery algorithm can only be used to check validity of a signature if the signer's
     /// public key (or its hash) is known beforehand.
-    public fun recover_public_key(
+    public fun ecdsa_recover(
         message: vector<u8>,
         recovery_id: u8,
-        signature: &Signature,
-    ): Option<PublicKey> {
+        signature: &ECDSASignature,
+    ): Option<ECDSARawPublicKey> {
         assert!(
             std::vector::length(&message) == MESSAGE_SIZE,
-            std::error::invalid_argument(E_WRONG_MESSAGE_SIZE),
+            std::error::invalid_argument(E_DESERIALIZE),
         );
 
-        let (pk, success) = recover_public_key_internal(
-            recovery_id,
-            message,
-            signature.bytes
-        );
+        let (pk, success) =
+            recover_public_key_internal(
+                recovery_id,
+                message,
+                signature.bytes,
+                false,
+            );
         if (success) {
-            std::option::some(public_key_from_bytes(pk))
+            std::option::some(ecdsa_raw_public_key_from_bytes(pk))
         } else {
-            std::option::none<PublicKey>()
+            std::option::none<ECDSARawPublicKey>()
+        }
+    }
+
+    /// Recovers the signer's raw (64-byte) public key from a secp256k1 ECDSA `signature` given the `recovery_id` and the signed
+    /// `message` (32 byte digest).
+    ///
+    /// Note that an invalid signature, or a signature from a different message, will result in the recovery of an
+    /// incorrect public key. This recovery algorithm can only be used to check validity of a signature if the signer's
+    /// public key (or its hash) is known beforehand.
+    public fun ecdsa_recover_compressed(
+        message: vector<u8>,
+        recovery_id: u8,
+        signature: &ECDSASignature,
+    ): Option<ECDSACompressedPublicKey> {
+        assert!(
+            std::vector::length(&message) == MESSAGE_SIZE,
+            std::error::invalid_argument(E_DESERIALIZE),
+        );
+
+        let (pk, success) =
+            recover_public_key_internal(
+                recovery_id,
+                message,
+                signature.bytes,
+                true,
+            );
+        if (success) {
+            std::option::some(ecdsa_compressed_public_key_from_bytes(pk))
+        } else {
+            std::option::none<ECDSACompressedPublicKey>()
         }
     }
 
@@ -118,79 +155,73 @@ module minitia_std::secp256k1 {
     // Native functions
     //
 
-    /// Returns `true` if `signature` verifies on `public_key` and `message`
-    /// and returns `false` otherwise.
-    native fun verify_internal(
-        message: vector<u8>,
-        public_key: vector<u8>,
-        signature: vector<u8>,
-    ): bool;
-
     /// Returns `(public_key, true)` if `signature` verifies on `message` under the recovered `public_key`
     /// and returns `([], false)` otherwise.
     native fun recover_public_key_internal(
-        recovery_id: u8,
-        message: vector<u8>,
-        signature: vector<u8>,
+        recovery_id: u8, message: vector<u8>, signature: vector<u8>, compressed: bool,
     ): (vector<u8>, bool);
 
     #[test_only]
     /// Generates an secp256k1 ECDSA key pair.
-    native public fun generate_keys(): (vector<u8>, vector<u8>);
+    native public fun generate_keys(compressed: bool): (vector<u8>, vector<u8>);
 
     #[test_only]
     /// Generates an secp256k1 ECDSA signature for a given byte array using a given signing key.
-    native public fun sign(
-        message: vector<u8>,
-        secrete_key: vector<u8>
-    ): (u8, vector<u8>);
+    native public fun sign(message: vector<u8>, secrete_key: vector<u8>): (u8, vector<u8>);
 
     //
     // Tests
     //
 
     #[test]
-    fun test_gen_sign_verify() {
-        use std::hash;
-
-        let (sk, vk) = generate_keys();
-        let pk = public_key_from_bytes(vk);
-
-        let msg: vector<u8> = hash::sha2_256(b"test initia secp256k1");
-        let (_rid, sig_bytes) = sign(msg, sk);
-        let sig = signature_from_bytes(sig_bytes);
-        assert!(verify(msg, &pk, &sig), 1);
-    }
-
-    #[test]
     fun test_gen_sign_recover() {
         use std::hash;
 
-        let (sk, vk) = generate_keys();
-        let pk = public_key_from_bytes(vk);
+        let (sk, vk) = generate_keys(false);
+        let pk = ecdsa_raw_public_key_from_bytes(vk);
 
         let msg: vector<u8> = hash::sha2_256(b"test initia secp256k1");
         let (rid, sig_bytes) = sign(msg, sk);
-        let sig = signature_from_bytes(sig_bytes);
-        let recovered_pk = recover_public_key(msg, rid, &sig);
-        assert!(
-            std::option::is_some(&recovered_pk),
-            1
-        );
+        let sig = ecdsa_signature_from_bytes(sig_bytes);
+        let recovered_pk = ecdsa_recover(msg, rid, &sig);
+        assert!(std::option::is_some(&recovered_pk), 1);
         assert!(
             std::option::extract(&mut recovered_pk).bytes == pk.bytes,
-            2
+            2,
         );
 
         let wrong_msg: vector<u8> = hash::sha2_256(b"test initia");
-        let recovered_pk = recover_public_key(wrong_msg, rid, &sig);
-        assert!(
-            std::option::is_some(&recovered_pk),
-            3
-        );
+        let recovered_pk = ecdsa_recover(wrong_msg, rid, &sig);
+        assert!(std::option::is_some(&recovered_pk), 3);
         assert!(
             std::option::extract(&mut recovered_pk).bytes != pk.bytes,
-            4
+            4,
+        );
+    }
+
+    #[test]
+    fun test_gen_sign_recover_compressed() {
+        use std::hash;
+
+        let (sk, vk) = generate_keys(true);
+        let pk = ecdsa_compressed_public_key_from_bytes(vk);
+
+        let msg: vector<u8> = hash::sha2_256(b"test initia secp256k1");
+        let (rid, sig_bytes) = sign(msg, sk);
+        let sig = ecdsa_signature_from_bytes(sig_bytes);
+        let recovered_pk = ecdsa_recover_compressed(msg, rid, &sig);
+        assert!(std::option::is_some(&recovered_pk), 1);
+        assert!(
+            std::option::extract(&mut recovered_pk).bytes == pk.bytes,
+            2,
+        );
+
+        let wrong_msg: vector<u8> = hash::sha2_256(b"test initia");
+        let recovered_pk = ecdsa_recover_compressed(wrong_msg, rid, &sig);
+        assert!(std::option::is_some(&recovered_pk), 3);
+        assert!(
+            std::option::extract(&mut recovered_pk).bytes != pk.bytes,
+            4,
         );
     }
 }

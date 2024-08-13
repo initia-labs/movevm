@@ -1,7 +1,7 @@
 // Copyright © Aptos Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-use initia_move_gas::{gas_params::string_utils::FormatGasParameters, NumBytes};
+use initia_move_gas::{initia_stdlib::InitiaStdlibGasParameters, NumBytes};
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::TypeTag,
@@ -28,8 +28,8 @@ const EARGS_MISMATCH: u64 = 1;
 const EINVALID_FORMAT: u64 = 2;
 const EUNABLE_TO_FORMAT_DELAYED_FIELD: u64 = 3;
 
-struct FormatContext<'a, 'b, 'c, 'd, 'e, 'f> {
-    context: &'d mut SafeNativeContext<'a, 'b, 'c, 'e, 'f>,
+struct FormatContext<'a, 'b, 'c, 'd, 'e> {
+    context: &'d mut SafeNativeContext<'a, 'b, 'c, 'e>,
     should_charge_gas: bool,
     max_depth: usize,
     max_len: usize,
@@ -94,7 +94,7 @@ impl MoveLayout for MoveTypeLayout {
 }
 
 fn format_vector<'a>(
-    gas_params: &FormatGasParameters,
+    gas_params: &InitiaStdlibGasParameters,
     context: &mut FormatContext,
     fields: impl Iterator<Item = &'a (impl MoveLayout + 'a)>,
     values: Vec<Value>,
@@ -127,7 +127,7 @@ fn format_vector<'a>(
 }
 
 fn native_format_impl(
-    gas_params: &FormatGasParameters,
+    gas_params: &InitiaStdlibGasParameters,
     context: &mut FormatContext,
     layout: &MoveTypeLayout,
     val: Value,
@@ -135,7 +135,9 @@ fn native_format_impl(
     out: &mut String,
 ) -> SafeNativeResult<()> {
     if context.should_charge_gas {
-        context.context.charge(gas_params.base)?;
+        context
+            .context
+            .charge(gas_params.string_utils_format_base)?;
     }
     let mut suffix = "";
     match layout {
@@ -224,9 +226,9 @@ fn native_format_impl(
             {
                 let v = strct.unpack()?.next().unwrap().value_as::<Vec<u8>>()?;
                 if context.should_charge_gas {
-                    context
-                        .context
-                        .charge(gas_params.per_byte * NumBytes::new(v.len() as u64))?;
+                    context.context.charge(
+                        gas_params.string_utils_format_per_byte * NumBytes::new(v.len() as u64),
+                    )?;
                 }
                 write!(
                     out,
@@ -310,6 +312,47 @@ fn native_format_impl(
             )?;
             out.push('}');
         }
+        MoveTypeLayout::Struct(MoveStructLayout::RuntimeVariants(variants)) => {
+            let struct_value = val.value_as::<Struct>()?;
+            let (tag, elems) = struct_value.unpack_with_tag()?;
+            if (tag as usize) >= variants.len() {
+                return Err(SafeNativeError::Abort {
+                    abort_code: EINVALID_FORMAT,
+                });
+            }
+            out.push_str(&format!("#{}{{", tag));
+            format_vector(
+                gas_params,
+                context,
+                variants[tag as usize].iter(),
+                elems.collect(),
+                depth,
+                !context.single_line,
+                out,
+            )?;
+            out.push('}');
+        }
+        MoveTypeLayout::Struct(MoveStructLayout::WithVariants(variants)) => {
+            let struct_value = val.value_as::<Struct>()?;
+            let (tag, elems) = struct_value.unpack_with_tag()?;
+            if (tag as usize) >= variants.len() {
+                return Err(SafeNativeError::Abort {
+                    abort_code: EINVALID_FORMAT,
+                });
+            }
+            let variant = &variants[tag as usize];
+            out.push_str(&format!("{}{{", variant.name));
+            format_vector(
+                gas_params,
+                context,
+                variant.fields.iter(),
+                elems.collect(),
+                depth,
+                !context.single_line,
+                out,
+            )?;
+            out.push('}');
+        }
 
         // This is unreachable because we check layout at the start. Still, return
         // an error to be safe.
@@ -330,7 +373,7 @@ fn native_format(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.string_utils.format;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.len() == 1);
 
@@ -374,7 +417,7 @@ fn native_format_list(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.string_utils.format;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.len() == 1);
     let mut list_ty = &ty_args[0];
@@ -391,7 +434,7 @@ fn native_format_list(
         abort_code: EINVALID_FORMAT,
     })?;
 
-    context.charge(gas_params.per_byte * NumBytes::new(fmt.len() as u64))?;
+    context.charge(gas_params.string_utils_format_per_byte * NumBytes::new(fmt.len() as u64))?;
 
     let match_list_ty = |context: &mut SafeNativeContext, list_ty, name| {
         if let TypeTag::Struct(struct_tag) = context

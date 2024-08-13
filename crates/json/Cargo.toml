@@ -1,0 +1,36 @@
+[package]
+name = "initia-move-json"
+version = "0.1.0"
+edition = "2021"
+rust-version = { workspace = true }
+description = "json encoding decoding for move"
+homepage = "https://www.initia.co"
+repository = "https://github.com/initia-labs/movevm/tree/main/crates/vm"
+license = "BUSL-1.1"
+exclude = [".gitignore"]
+
+[features]
+default = []
+backtraces = []
+
+[dependencies]
+initia-move-types = { workspace = true }
+
+## Move Dependencies
+move-core-types = { workspace = true }
+move-vm-types = { workspace = true }
+move-binary-format = { workspace = true }
+
+bigdecimal = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+bcs = { workspace = true }
+bytes = { workspace = true }
+smallbitvec = { workspace = true }
+
+[dev-dependencies]
+triomphe = { workspace = true }
+bytes = { workspace = true }
+anyhow = { workspace = true }
+
+initia-move-storage = { workspace = true }

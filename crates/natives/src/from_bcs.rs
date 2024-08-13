@@ -28,7 +28,7 @@ fn native_from_bytes(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.from_bcs.from_bytes;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert_eq!(ty_args.len(), 1);
     debug_assert_eq!(arguments.len(), 1);
@@ -37,7 +37,10 @@ fn native_from_bytes(
     let layout = context.type_to_type_layout(&ty_args[0])?;
     let bytes = safely_pop_arg!(arguments, Vec<u8>);
 
-    context.charge(gas_params.base + gas_params.unit * NumBytes::new(bytes.len() as u64))?;
+    context.charge(
+        gas_params.from_bcs_from_bytes_base
+            + gas_params.from_bcs_from_bytes_unit * NumBytes::new(bytes.len() as u64),
+    )?;
 
     let val = match Value::simple_deserialize(&bytes, &layout) {
         Some(val) => val,

@@ -1,65 +1,59 @@
+use core::str;
 use std::collections::BTreeMap;
 
-use initia_move_types::metadata::{
-    KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0,
+use initia_move_types::{
+    metadata::{KnownAttributeKind, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0},
+    module::ModuleBundle,
 };
 use move_binary_format::{
     access::ModuleAccess,
-    errors::VMResult,
-    file_format::{IdentifierIndex, SignatureToken, StructFieldInformation, TableIndex},
-    normalized::Function,
+    check_complexity::check_module_complexity,
+    errors::{Location, PartialVMError, VMResult},
+    file_format::{FunctionDefinition, FunctionHandle},
     CompiledModule,
 };
-use move_core_types::identifier::Identifier;
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    vm_status::StatusCode,
+};
+use move_model::metadata::{CompilationMetadata, COMPILATION_METADATA_KEY};
 use move_vm_runtime::session::Session;
 
 use super::{
     errors::{
-        entry_function_validation_error, metadata_validation_error, AttributeValidationError,
-        EntryFunctionValidationError, MalformedError, MetaDataValidationError,
+        metadata_validation_error, AttributeValidationError, MalformedError,
+        MetaDataValidationError,
     },
     event_validation::validate_module_events,
-    metadata::get_metadata_from_compiled_module,
+    metadata::{get_compilation_metadata_from_compiled_module, get_metadata_from_compiled_module},
+    native_validation::validate_module_natives,
 };
-
-// For measuring complexity of a CompiledModule w.r.t. to metadata evaluation.
-// This is for the size of types.
-/// Cost of one node in a type.
-const NODE_COST: usize = 10;
-/// Cost of one character in the name of struct referred from a type node.
-const IDENT_CHAR_COST: usize = 1;
-/// Overall budget for module complexity, calibrated via tests
-const COMPLEXITY_BUDGET: usize = 200000000;
 
 pub(crate) fn validate_publish_request(
     session: &Session,
     modules: &[CompiledModule],
+    module_bundle: &ModuleBundle,
+    allow_unstable: bool,
 ) -> VMResult<()> {
-    for m in modules {
-        validate_module_metadata(m).map_err(|e| metadata_validation_error(&e.to_string()))?;
-        validate_entry_function(m).map_err(|e| entry_function_validation_error(&e.to_string()))?;
-        validate_module_events(session, modules)
-            .map_err(|e| metadata_validation_error(&e.to_string()))?;
+    if !allow_unstable {
+        reject_unstable_bytecode(modules)?;
     }
 
-    Ok(())
-}
+    validate_module_natives(modules)?;
 
-fn validate_entry_function(module: &CompiledModule) -> Result<(), EntryFunctionValidationError> {
-    for func_def in module.function_defs.iter() {
-        if func_def.is_entry {
-            let (_, func) = Function::new(module, func_def);
-            if !func.return_.is_empty() {
-                return Err(EntryFunctionValidationError::NonEmptyReturnValue);
-            }
-        }
+    for (module, blob) in modules.iter().zip(module_bundle.iter()) {
+        let budget = 2048 + blob.code().len() as u64 * 20;
+        check_module_complexity(module, budget).map_err(|e| e.finish(Location::Undefined))?;
+        validate_module_metadata(module).map_err(|e| metadata_validation_error(&e.to_string()))?;
     }
+
+    validate_module_events(session, modules)
+        .map_err(|e| metadata_validation_error(&e.to_string()))?;
 
     Ok(())
 }
 
 fn validate_module_metadata(module: &CompiledModule) -> Result<(), MetaDataValidationError> {
-    check_module_complexity(module)?;
     check_metadata_format(module)?;
 
     let metadata = if let Some(metadata) = get_metadata_from_compiled_module(module) {
@@ -71,13 +65,17 @@ fn validate_module_metadata(module: &CompiledModule) -> Result<(), MetaDataValid
     let functions = module
         .function_defs
         .iter()
-        .map(|func_def| Function::new(module, func_def))
+        .map(|func_def| {
+            let func_handle = module.function_handle_at(func_def.function);
+            let name = module.identifier_at(func_handle.name);
+            (name, (func_handle, func_def))
+        })
         .collect::<BTreeMap<_, _>>();
 
     for (fun, attrs) in &metadata.fun_attributes {
         for attr in attrs {
             if attr.is_view_function() {
-                is_valid_view_function(&functions, fun)?
+                is_valid_view_function(module, &functions, fun)?
             } else {
                 return Err(AttributeValidationError {
                     key: fun.clone(),
@@ -94,6 +92,7 @@ fn validate_module_metadata(module: &CompiledModule) -> Result<(), MetaDataValid
 /// Check if the metadata has unknown key/data types
 fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> {
     let mut exist = false;
+    let mut compilation_key_exist = false;
     for data in module.metadata.iter() {
         if data.key == *INITIA_METADATA_KEY_V0 {
             if exist {
@@ -105,6 +104,13 @@ fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> 
                 bcs::from_bytes::<RuntimeModuleMetadataV0>(&data.value)
                     .map_err(|e| MalformedError::DeserializedError(data.key.clone(), e))?;
             }
+        } else if data.key == *COMPILATION_METADATA_KEY {
+            if compilation_key_exist {
+                return Err(MalformedError::DuplicateKey);
+            }
+            compilation_key_exist = true;
+            bcs::from_bytes::<CompilationMetadata>(&data.value)
+                .map_err(|e| MalformedError::DeserializedError(data.key.clone(), e))?;
         } else {
             return Err(MalformedError::UnknownKey(data.key.clone()));
         }
@@ -113,13 +119,30 @@ fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> 
     Ok(())
 }
 
-fn is_valid_view_function(
-    functions: &BTreeMap<Identifier, Function>,
+/// Check whether the bytecode can be published to mainnet based on the unstable tag in the metadata
+fn reject_unstable_bytecode(modules: &[CompiledModule]) -> VMResult<()> {
+    for module in modules {
+        if let Some(metadata) = get_compilation_metadata_from_compiled_module(module) {
+            if metadata.unstable {
+                return Err(PartialVMError::new(StatusCode::UNSTABLE_BYTECODE_REJECTED)
+                    .with_message("code marked unstable".to_string())
+                    .finish(Location::Undefined));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn is_valid_view_function(
+    module: &CompiledModule,
+    functions: &BTreeMap<&IdentStr, (&FunctionHandle, &FunctionDefinition)>,
     fun: &str,
 ) -> Result<(), AttributeValidationError> {
     if let Ok(ident_fun) = Identifier::new(fun) {
-        if let Some(mod_fun) = functions.get(&ident_fun) {
-            if !mod_fun.return_.is_empty() {
+        if let Some((func_handle, _func_def)) = functions.get(ident_fun.as_ident_str()) {
+            let sig = module.signature_at(func_handle.return_);
+            if !sig.0.is_empty() {
                 return Ok(());
             }
         }
@@ -129,102 +152,4 @@ fn is_valid_view_function(
         key: fun.to_string(),
         attribute: KnownAttributeKind::ViewFunction as u8,
     })
-}
-
-/// Checks the complexity of a module.
-fn check_module_complexity(module: &CompiledModule) -> Result<(), MetaDataValidationError> {
-    let mut meter: usize = 0;
-    for sig in module.signatures() {
-        for tok in &sig.0 {
-            check_sigtok_complexity(module, &mut meter, tok)?
-        }
-    }
-    for handle in module.function_handles() {
-        check_ident_complexity(module, &mut meter, handle.name)?;
-        for tok in &safe_get_table(module.signatures(), handle.parameters.0)?.0 {
-            check_sigtok_complexity(module, &mut meter, tok)?
-        }
-        for tok in &safe_get_table(module.signatures(), handle.return_.0)?.0 {
-            check_sigtok_complexity(module, &mut meter, tok)?
-        }
-    }
-    for handle in module.struct_handles() {
-        check_ident_complexity(module, &mut meter, handle.name)?;
-    }
-    for def in module.struct_defs() {
-        if let StructFieldInformation::Declared(fields) = &def.field_information {
-            for field in fields {
-                check_ident_complexity(module, &mut meter, field.name)?;
-                check_sigtok_complexity(module, &mut meter, &field.signature.0)?
-            }
-        }
-    }
-    for def in module.function_defs() {
-        if let Some(unit) = &def.code {
-            for tok in &safe_get_table(module.signatures(), unit.locals.0)?.0 {
-                check_sigtok_complexity(module, &mut meter, tok)?
-            }
-        }
-    }
-    Ok(())
-}
-
-// Iterate -- without recursion -- through the nodes of a signature token. Any sub-nodes are
-// dealt with via the iterator
-fn check_sigtok_complexity(
-    module: &CompiledModule,
-    meter: &mut usize,
-    tok: &SignatureToken,
-) -> Result<(), MetaDataValidationError> {
-    for node in tok.preorder_traversal() {
-        // Count the node.
-        *meter = meter.saturating_add(NODE_COST);
-        match node {
-            SignatureToken::Struct(idx) | SignatureToken::StructInstantiation(idx, _) => {
-                let shandle = safe_get_table(module.struct_handles(), idx.0)?;
-                let mhandle = safe_get_table(module.module_handles(), shandle.module.0)?;
-                // Count identifier sizes
-                check_ident_complexity(module, meter, shandle.name)?;
-                check_ident_complexity(module, meter, mhandle.name)?
-            }
-            _ => {}
-        }
-        check_budget(*meter)?
-    }
-    Ok(())
-}
-
-fn check_ident_complexity(
-    module: &CompiledModule,
-    meter: &mut usize,
-    idx: IdentifierIndex,
-) -> Result<(), MetaDataValidationError> {
-    *meter = meter.saturating_add(
-        safe_get_table(module.identifiers(), idx.0)?
-            .len()
-            .saturating_mul(IDENT_CHAR_COST),
-    );
-    check_budget(*meter)
-}
-
-fn safe_get_table<A>(table: &[A], idx: TableIndex) -> Result<&A, MetaDataValidationError> {
-    let idx = idx as usize;
-    if idx < table.len() {
-        Ok(&table[idx])
-    } else {
-        Err(MetaDataValidationError::Malformed(
-            MalformedError::IndexOutOfRange,
-        ))
-    }
-}
-
-fn check_budget(meter: usize) -> Result<(), MetaDataValidationError> {
-    let budget = COMPLEXITY_BUDGET;
-    if meter > budget {
-        Err(MetaDataValidationError::Malformed(
-            MalformedError::ModuleTooComplex,
-        ))
-    } else {
-        Ok(())
-    }
 }

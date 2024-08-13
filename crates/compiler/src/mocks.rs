@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Error};
 use initia_move_natives::{
     account::AccountAPI, oracle::OracleAPI, query::QueryAPI, staking::StakingAPI,
-    table::TableResolver,
 };
+use initia_move_storage::table_resolver::TableResolver;
 use initia_move_types::table::TableHandle;
 use move_core_types::{account_address::AccountAddress, u256::U256};
 

@@ -1,30 +1,33 @@
-use move_stdlib::natives::GasParameters;
+use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte};
 
-#[cfg(all(test, not(feature = "testing")))]
-const UNIT_TEST_ENTRIES: usize = 0;
+crate::macros::define_gas_parameters!(
+    MoveStdlibGasParameters,
+    "move_stdlib",
+    NativeGasParameters => .move_stdlib,
+    [
+        // Note(Gas): these initial values are guesswork.
+        [bcs_to_bytes_per_byte_serialized: InternalGasPerByte, "bcs.to_bytes.per_byte_serialized", 36],
+        [bcs_to_bytes_failure: InternalGas, "bcs.to_bytes.failure", 3676],
+        [bcs_serialized_size_base: InternalGas, "bcs.serialized_size.base", 735],
+        [bcs_serialized_size_per_byte_serialized: InternalGasPerByte, "bcs.serialized_size.per_byte_serialized", 36],
+        [bcs_serialized_size_failure: InternalGas, "bcs.serialized_size.failure", 3676],
 
-#[cfg(all(test, feature = "testing"))]
-const UNIT_TEST_ENTRIES: usize = 2;
+        [hash_sha2_256_base: InternalGas, "hash.sha2_256.base", 11028],
+        [hash_sha2_256_per_byte: InternalGasPerByte, "hash.sha2_256.per_byte", 183],
+        [hash_sha3_256_base: InternalGas, "hash.sha3_256.base", 14704],
+        [hash_sha3_256_per_byte: InternalGasPerByte, "hash.sha3_256.per_byte", 165],
 
-crate::natives::define_gas_parameters_for_natives!(GasParameters, "move_stdlib", [
-    [.bcs.to_bytes.per_byte_serialized, "bcs.to_bytes.per_byte_serialized", 36],
-    [.bcs.to_bytes.failure, "bcs.to_bytes.failure", 3676],
+        // Note(Gas): this initial value is guesswork.
+        [signer_borrow_address_base: InternalGas, "signer.borrow_address.base", 735],
 
-    [.hash.sha2_256.base, "hash.sha2_256.base", 11028],
-    [.hash.sha2_256.per_byte, "hash.sha2_256.per_byte", 183],
-    [.hash.sha3_256.base, "hash.sha3_256.base", 14704],
-    [.hash.sha3_256.per_byte, "hash.sha3_256.per_byte", 165],
-
-    // Note(Gas): this initial value is guesswork.
-    [.signer.borrow_address.base, "signer.borrow_address.base", 735],
-
-    // Note(Gas): these initial values are guesswork.
-    [.string.check_utf8.base, "string.check_utf8.base", 1102],
-    [.string.check_utf8.per_byte, "string.check_utf8.per_byte", 29],
-    [.string.is_char_boundary.base, "string.is_char_boundary.base", 1102],
-    [.string.sub_string.base, "string.sub_string.base", 1470],
-    [.string.sub_string.per_byte, "string.sub_string.per_byte", 11],
-    [.string.index_of.base, "string.index_of.base", 1470],
-    [.string.index_of.per_byte_pattern, "string.index_of.per_byte_pattern", 73],
-    [.string.index_of.per_byte_searched, "string.index_of.per_byte_searched", 36],
-], allow_unmapped = 1 /* bcs */ + 2 /* hash */ + 8 /* vector */ + 2 /* type_name */ + UNIT_TEST_ENTRIES);
+        // Note(Gas): these initial values are guesswork.
+        [string_check_utf8_base: InternalGas, "string.check_utf8.base", 1102],
+        [string_check_utf8_per_byte: InternalGasPerByte, "string.check_utf8.per_byte", 29],
+        [string_is_char_boundary_base: InternalGas, "string.is_char_boundary.base", 1102],
+        [string_sub_string_base: InternalGas, "string.sub_string.base", 1470],
+        [string_sub_string_per_byte: InternalGasPerByte, "string.sub_string.per_byte", 11],
+        [string_index_of_base: InternalGas, "string.index_of.base", 1470],
+        [string_index_of_per_byte_pattern: InternalGasPerByte, "string.index_of.per_byte_pattern", 73],
+        [string_index_of_per_byte_searched: InternalGasPerByte, "string.index_of.per_byte_searched", 36],
+    ]
+);

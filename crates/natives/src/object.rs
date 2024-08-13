@@ -21,12 +21,12 @@ fn native_exists_at(
     mut ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.object.exists_at;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert_eq!(ty_args.len(), 1);
     debug_assert_eq!(arguments.len(), 1);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.object_exists_at_base)?;
 
     let type_ = ty_args.pop().unwrap();
     let address = safely_pop_arg!(arguments, AccountAddress);
@@ -36,7 +36,10 @@ fn native_exists_at(
         .map_err(|e| e.to_partial())?;
 
     if let Some(num_bytes) = num_bytes {
-        context.charge(gas_params.per_item_loaded + gas_params.per_byte_loaded * num_bytes)?;
+        context.charge(
+            gas_params.object_exists_at_per_item_loaded
+                + gas_params.object_exists_at_per_byte_loaded * num_bytes,
+        )?;
     }
 
     Ok(smallvec![Value::bool(exists)])

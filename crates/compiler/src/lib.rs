@@ -12,13 +12,11 @@ pub mod new;
 pub mod prover;
 pub mod test_package;
 
-mod gas_meter;
 mod mocks;
 
 pub use clean::Clean;
 pub use command::Command;
 pub use compiler::execute;
-pub use gas_meter::TestInitiaGasMeter;
 pub use new::New;
 
 #[cfg(test)]

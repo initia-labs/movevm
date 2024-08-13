@@ -7,11 +7,12 @@ rust-version = { workspace = true }
 
 [dependencies]
 initia-move-types = { workspace = true }
-initia-move-natives = { workspace = true }
 
 move-binary-format = { workspace = true }
 move-core-types = { workspace = true }
 move-vm-runtime = { workspace = true }
+move-vm-types = { workspace = true }
+move-bytecode-utils = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }

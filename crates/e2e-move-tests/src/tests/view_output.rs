@@ -45,7 +45,7 @@ fn test_view_output() {
                 address: deployer_addr,
                 module: module_name,
                 name: struct_name,
-                type_params: vec![]
+                type_args: vec![]
             })),
             "{\"arg\":\"hello world\",\"type_arg\":\"u256\"}".to_string()
         )])

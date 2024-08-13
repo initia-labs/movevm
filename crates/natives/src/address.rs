@@ -21,8 +21,8 @@ fn native_to_string(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.address.to_string;
-    context.charge(gas_params.base_cost)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.address_to_string_base_cost)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
@@ -39,14 +39,15 @@ fn native_from_string(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.address.from_string;
-    context.charge(gas_params.base_cost)?;
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.address_from_string_base_cost)?;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
     let raw_value = get_string(safely_pop_arg!(arguments, Struct))?;
-    context.charge(gas_params.per_byte * NumBytes::new(raw_value.len() as u64))?;
+    context
+        .charge(gas_params.address_from_string_per_byte * NumBytes::new(raw_value.len() as u64))?;
 
     let value = String::from_utf8(raw_value)
         .map_err(|_| partial_extension_error("failed to deserialize arg"))?;

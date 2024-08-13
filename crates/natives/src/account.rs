@@ -105,16 +105,12 @@ fn native_get_account_info(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .account
-        .get_account_info;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
-    context.charge(gas_params.base_cost)?;
+    context.charge(gas_params.account_get_account_info_base)?;
 
     let address = safely_pop_arg!(arguments, AccountAddress);
     let account_context = context.extensions().get::<NativeAccountContext>();
@@ -170,16 +166,12 @@ fn native_create_account(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .account
-        .create_account;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
-    context.charge(gas_params.base_cost)?;
+    context.charge(gas_params.account_create_account_base_cost)?;
 
     let account_type = safely_pop_arg!(arguments, u8);
     if !AccountType::is_valid(account_type) {
@@ -217,16 +209,12 @@ fn native_create_address(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .account
-        .create_address;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
-    context.charge(gas_params.base_cost)?;
+    context.charge(gas_params.account_create_address_base_cost)?;
 
     let bytes = safely_pop_arg!(arguments, Vec<u8>);
     let address = AccountAddress::from_bytes(bytes);
@@ -251,16 +239,12 @@ fn native_create_signer(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .initia_stdlib
-        .account
-        .create_signer;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
-    context.charge(gas_params.base_cost)?;
+    context.charge(gas_params.account_create_signer_base_cost)?;
 
     let address = safely_pop_arg!(arguments, AccountAddress);
     Ok(smallvec![Value::signer(address)])

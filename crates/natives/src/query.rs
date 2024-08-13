@@ -66,7 +66,7 @@ fn native_query_custom(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.query.custom;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 2);
@@ -76,8 +76,9 @@ fn native_query_custom(
 
     // charge gas before execution
     context.charge(
-        gas_params.base
-            + gas_params.per_byte * NumBytes::new((name_bytes.len() + data.len()) as u64),
+        gas_params.query_custom_base
+            + gas_params.query_custom_per_byte
+                * NumBytes::new((name_bytes.len() + data.len()) as u64),
     )?;
 
     let name = String::from_utf8(name_bytes).map_err(|_| SafeNativeError::Abort {
@@ -143,7 +144,7 @@ fn native_query_stargate(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.query.stargate;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 2);
@@ -153,8 +154,9 @@ fn native_query_stargate(
 
     // charge gas before execution
     context.charge(
-        gas_params.base
-            + gas_params.per_byte * NumBytes::new((path_bytes.len() + data.len()) as u64),
+        gas_params.query_stargate_base
+            + gas_params.query_stargate_per_byte
+                * NumBytes::new((path_bytes.len() + data.len()) as u64),
     )?;
 
     let path = String::from_utf8(path_bytes).map_err(|_| SafeNativeError::Abort {

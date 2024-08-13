@@ -41,14 +41,15 @@ fn native_check_utf8(
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.move_stdlib.string.check_utf8;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(args.len() == 1);
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
 
     context.charge(
-        gas_params.base + gas_params.per_byte * NumBytes::new(s_ref.as_slice().len() as u64),
+        gas_params.string_check_utf8_base
+            + gas_params.string_check_utf8_per_byte * NumBytes::new(s_ref.as_slice().len() as u64),
     )?;
 
     let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
@@ -68,15 +69,11 @@ fn native_is_char_boundary(
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context
-        .native_gas_params
-        .move_stdlib
-        .string
-        .is_char_boundary;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(args.len() == 2);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.string_is_char_boundary_base)?;
 
     let i = safely_pop_arg!(args, u64);
     let s_arg = safely_pop_arg!(args, VectorRef);
@@ -100,11 +97,11 @@ fn native_sub_string(
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.move_stdlib.string.sub_string;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(args.len() == 3);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.string_sub_string_base)?;
 
     let j = safely_pop_arg!(args, u64) as usize;
     let i = safely_pop_arg!(args, u64) as usize;
@@ -114,7 +111,7 @@ fn native_sub_string(
         return Err(SafeNativeError::Abort { abort_code: 1 });
     }
 
-    context.charge(gas_params.per_byte * NumBytes::new((j - i) as u64))?;
+    context.charge(gas_params.string_sub_string_per_byte * NumBytes::new((j - i) as u64))?;
 
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
@@ -138,17 +135,18 @@ fn native_index_of(
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.move_stdlib.string.index_of;
+    let gas_params = &context.native_gas_params.move_stdlib;
 
     debug_assert!(args.len() == 2);
 
-    context.charge(gas_params.base)?;
+    context.charge(gas_params.string_index_of_base)?;
 
     let r_arg = safely_pop_arg!(args, VectorRef);
     let r_ref = r_arg.as_bytes_ref();
     let r_str = unsafe { std::str::from_utf8_unchecked(r_ref.as_slice()) };
 
-    context.charge(gas_params.per_byte_pattern * NumBytes::new(r_str.len() as u64))?;
+    context
+        .charge(gas_params.string_index_of_per_byte_pattern * NumBytes::new(r_str.len() as u64))?;
 
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
@@ -160,7 +158,7 @@ fn native_index_of(
 
     // TODO(Gas): What is the algorithm used for the search?
     //            Ideally it should be something like KMP with O(n) time complexity...
-    context.charge(gas_params.per_byte_searched * NumBytes::new(pos as u64))?;
+    context.charge(gas_params.string_index_of_per_byte_searched * NumBytes::new(pos as u64))?;
 
     Ok(smallvec![Value::u64(pos as u64)])
 }

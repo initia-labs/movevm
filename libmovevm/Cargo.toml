@@ -45,8 +45,10 @@ initia-move-natives = { workspace = true }
 initia-move-types = { workspace = true }
 initia-move-gas = { workspace = true }
 initia-move-storage = { workspace = true }
+initia-move-resource-viewer = { workspace = true }
 
 move-core-types = { workspace = true }
+move-vm-types = { workspace = true }
 move-resource-viewer = { workspace = true }
 move-binary-format = { workspace = true }
 

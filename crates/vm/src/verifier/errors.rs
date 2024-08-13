@@ -3,18 +3,6 @@ use move_core_types::vm_status::StatusCode;
 
 use thiserror::Error;
 
-pub fn entry_function_validation_error(msg: &str) -> VMError {
-    PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
-        .with_message(format!("entry_function validation error: {}", msg))
-        .finish(Location::Undefined)
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
-pub enum EntryFunctionValidationError {
-    #[error("entry function cannot return values")]
-    NonEmptyReturnValue,
-}
-
 pub fn metadata_validation_error(msg: &str) -> VMError {
     PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
         .with_message(format!("metadata and code bundle mismatch: {}", msg))
@@ -29,10 +17,6 @@ pub enum MalformedError {
     DeserializedError(Vec<u8>, bcs::Error),
     #[error("Duplicate key for metadata")]
     DuplicateKey,
-    #[error("Module too complex")]
-    ModuleTooComplex,
-    #[error("Index out of range")]
-    IndexOutOfRange,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]

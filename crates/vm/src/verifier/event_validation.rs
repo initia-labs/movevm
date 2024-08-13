@@ -4,7 +4,6 @@
 use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
-    deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMError, VMResult},
     file_format::{
         Bytecode, CompiledScript,
@@ -123,11 +122,15 @@ pub(crate) fn extract_event_metadata_from_module(
     session: &Session,
     module_id: &ModuleId,
 ) -> VMResult<HashSet<String>> {
-    let metadata = session
-        .load_module(module_id)
-        .map(|module| get_metadata_from_compiled_module(&module));
+    let metadata = session.load_module(module_id).map(|module| {
+        CompiledModule::deserialize_with_config(
+            &module,
+            &session.get_vm_config().deserializer_config,
+        )
+        .map(|module| get_metadata_from_compiled_module(&module))
+    });
 
-    if let Ok(Some(metadata)) = metadata {
+    if let Ok(Ok(Some(metadata))) = metadata {
         extract_event_metadata(&metadata)
     } else {
         Ok(HashSet::new())
@@ -149,19 +152,7 @@ pub(crate) fn extract_event_metadata(
     Ok(event_structs)
 }
 
-pub(crate) fn verify_no_event_emission_in_script(
-    script_code: &[u8],
-    config: &DeserializerConfig,
-) -> VMResult<()> {
-    let script = match CompiledScript::deserialize_with_config(script_code, config) {
-        Ok(script) => script,
-        Err(err) => {
-            let msg = format!("[VM] deserializer for script returned error: {:?}", err);
-            return Err(PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
-                .with_message(msg)
-                .finish(Location::Script));
-        }
-    };
+pub(crate) fn verify_no_event_emission_in_script(script: &CompiledScript) -> VMResult<()> {
     for bc in &script.code().code {
         if let Bytecode::CallGeneric(index) = bc {
             let func_instantiation = &script.function_instantiation_at(*index);

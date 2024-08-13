@@ -12,6 +12,7 @@
 /// ```
 module minitia_std::from_bcs {
     use std::string::{Self, String};
+    use std::vector;
 
     /// UTF8 check failed in conversion from bytes to string
     const EINVALID_UTF8: u64 = 0x1;
@@ -57,7 +58,17 @@ module minitia_std::from_bcs {
     }
 
     public fun to_vector_string(v: vector<u8>): vector<String> {
-        from_bytes<vector<String>>(v)
+        let vec_string = from_bytes<vector<String>>(v);
+        vector::for_each_ref(
+            &vec_string,
+            |s| {
+                assert!(
+                    string::internal_check_utf8(string::bytes(s)),
+                    EINVALID_UTF8,
+                );
+            },
+        );
+        vec_string
     }
 
     public fun to_string(v: vector<u8>): String {
@@ -65,7 +76,7 @@ module minitia_std::from_bcs {
         let s = from_bytes<String>(v);
         assert!(
             string::internal_check_utf8(string::bytes(&s)),
-            EINVALID_UTF8
+            EINVALID_UTF8,
         );
         s
     }
@@ -86,7 +97,8 @@ module minitia_std::from_bcs {
     #[test]
     fun test_address() {
         let addr = @0x01;
-        let addr_vec = x"0000000000000000000000000000000000000000000000000000000000000001";
+        let addr_vec =
+            x"0000000000000000000000000000000000000000000000000000000000000001";
         let addr_out = to_address(addr_vec);
         let addr_vec_out = bcs::to_bytes(&addr_out);
         assert!(addr == addr_out, 0);

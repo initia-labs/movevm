@@ -15,8 +15,8 @@ use std::ops::{Deref, DerefMut};
 /// Major features include incremental gas charging and less ambiguous error handling. For this
 /// reason, native functions should always use [`SafeNativeContext`] instead of [`NativeContext`].
 #[allow(unused)]
-pub struct SafeNativeContext<'a, 'b, 'c, 'd, 'e> {
-    pub(crate) inner: &'c mut NativeContext<'a, 'b, 'd, 'e>,
+pub struct SafeNativeContext<'a, 'b, 'c, 'd> {
+    pub(crate) inner: &'c mut NativeContext<'a, 'b, 'd>,
 
     pub(crate) native_gas_params: &'c NativeGasParameters,
     pub(crate) misc_gas_params: &'c MiscGasParameters,
@@ -25,21 +25,21 @@ pub struct SafeNativeContext<'a, 'b, 'c, 'd, 'e> {
     pub(crate) gas_used: InternalGas,
 }
 
-impl<'a, 'b, 'c, 'd, 'e> Deref for SafeNativeContext<'a, 'b, 'c, 'd, 'e> {
-    type Target = NativeContext<'a, 'b, 'd, 'e>;
+impl<'a, 'b, 'c, 'd> Deref for SafeNativeContext<'a, 'b, 'c, 'd> {
+    type Target = NativeContext<'a, 'b, 'd>;
 
     fn deref(&self) -> &Self::Target {
         self.inner
     }
 }
 
-impl<'a, 'b, 'c, 'd, 'e> DerefMut for SafeNativeContext<'a, 'b, 'c, 'd, 'e> {
+impl<'a, 'b, 'c, 'd> DerefMut for SafeNativeContext<'a, 'b, 'c, 'd> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner
     }
 }
 
-impl<'a, 'b, 'c, 'd, 'e> SafeNativeContext<'a, 'b, 'c, 'd, 'e> {
+impl<'a, 'b, 'c, 'd> SafeNativeContext<'a, 'b, 'c, 'd> {
     /// Always remember: first charge gas, then execute!
     ///
     /// In other words, this function **MUST** always be called **BEFORE** executing **any**

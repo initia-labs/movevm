@@ -3,8 +3,8 @@ use crate::move_api::move_types::{MoveModuleBytecode, MoveScriptBytecode};
 use crate::result::to_vec;
 use crate::{error::Error, Db, GoStorage};
 
-use initia_move_storage::state_view_impl::StateViewImpl;
 use move_binary_format::access::ModuleAccess;
+use move_binary_format::deserializer::DeserializerConfig;
 use move_binary_format::internals::ModuleIndex;
 use move_binary_format::CompiledModule;
 use move_core_types::identifier::Identifier;
@@ -16,8 +16,9 @@ pub(crate) fn convert_module_name(
     precompiled: &[u8],
     module_name: &[u8],
 ) -> Result<Vec<u8>, Error> {
-    let mut m = CompiledModule::deserialize(precompiled)
-        .map_err(|e| Error::backend_failure(e.to_string()))?;
+    let mut m =
+        CompiledModule::deserialize_with_config(precompiled, &DeserializerConfig::default())
+            .map_err(|e| Error::backend_failure(e.to_string()))?;
 
     // convert module name
     let module_name_index = m.self_handle().name.into_index();
@@ -38,8 +39,8 @@ struct ModuleInfoResponse {
 }
 
 pub(crate) fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, Error> {
-    let m =
-        CompiledModule::deserialize(compiled).map_err(|e| Error::backend_failure(e.to_string()))?;
+    let m = CompiledModule::deserialize_with_config(compiled, &DeserializerConfig::default())
+        .map_err(|e| Error::backend_failure(e.to_string()))?;
 
     let module_info = ModuleInfoResponse {
         address: m.address().to_vec(),
@@ -70,8 +71,7 @@ pub(crate) fn decode_move_resource(
     let storage = GoStorage::new(&db_handle);
     let struct_tag: StructTag = bcs::from_bytes(struct_tag).unwrap();
 
-    let state_view_impl = StateViewImpl::new(&storage);
-    let converter = MoveConverter::new(&state_view_impl);
+    let converter = MoveConverter::new(&storage);
     let resource = converter
         .try_into_resource(&struct_tag, blob)
         .map_err(|e| Error::BackendFailure { msg: e.to_string() })?;
@@ -88,8 +88,7 @@ pub(crate) fn decode_move_value(
     let storage = GoStorage::new(&db_handle);
     let type_tag: TypeTag = bcs::from_bytes(type_tag).unwrap();
 
-    let state_view_impl = StateViewImpl::new(&storage);
-    let converter = MoveConverter::new(&state_view_impl);
+    let converter = MoveConverter::new(&storage);
     let value = converter
         .try_into_value(&type_tag, blob)
         .map_err(|e| Error::BackendFailure { msg: e.to_string() })?;

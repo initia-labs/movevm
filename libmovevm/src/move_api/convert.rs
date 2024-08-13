@@ -1,24 +1,24 @@
 use crate::move_api::move_types::{MoveResource, MoveValue};
 
 use anyhow::Result;
-use move_core_types::{
-    language_storage::{StructTag, TypeTag},
-    resolver::ModuleResolver,
-};
-use move_resource_viewer::MoveValueAnnotator;
+
+use initia_move_resource_viewer::InitiaValueAnnotator;
+use initia_move_storage::state_view::StateView;
+
+use move_core_types::language_storage::{StructTag, TypeTag};
 
 /// The Move converter for converting Move types to JSON
 ///
 /// This reads the underlying BCS types and ABIs to convert them into
 /// JSON outputs
-pub struct MoveConverter<'a, R: ?Sized> {
-    inner: MoveValueAnnotator<'a, R>,
+pub struct MoveConverter<'a, S> {
+    inner: InitiaValueAnnotator<'a, S>,
 }
 
-impl<'a, R: ModuleResolver + ?Sized> MoveConverter<'a, R> {
-    pub fn new(inner: &'a R) -> Self {
+impl<'a, S: StateView> MoveConverter<'a, S> {
+    pub fn new(state_view: &'a S) -> Self {
         Self {
-            inner: MoveValueAnnotator::new(inner),
+            inner: InitiaValueAnnotator::new(state_view),
         }
     }
 

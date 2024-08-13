@@ -23,10 +23,10 @@ const EXPECTED_STRUCT_TYPE_TAG: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 
 fn type_of_internal(struct_tag: &StructTag) -> Result<SmallVec<[Value; 1]>, std::fmt::Error> {
     let mut name = struct_tag.name.to_string();
-    if let Some(first_ty) = struct_tag.type_params.first() {
+    if let Some(first_ty) = struct_tag.type_args.first() {
         write!(name, "<")?;
         write!(name, "{}", first_ty)?;
-        for ty in struct_tag.type_params.iter().skip(1) {
+        for ty in struct_tag.type_args.iter().skip(1) {
             write!(name, ", {}", ty)?;
         }
         write!(name, ">")?;
@@ -53,14 +53,15 @@ fn native_type_of(
     ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.type_info.type_of;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.len() == 1);
     debug_assert!(_arguments.is_empty());
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
     context.charge(
-        gas_params.base + gas_params.unit * NumBytes::new(type_tag.to_string().len() as u64),
+        gas_params.type_info_type_of_base
+            + gas_params.type_info_type_of_unit * NumBytes::new(type_tag.to_string().len() as u64),
     )?;
 
     if let TypeTag::Struct(struct_tag) = type_tag {
@@ -85,7 +86,7 @@ fn native_type_name(
     ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.type_info.type_name;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.len() == 1);
     debug_assert!(_arguments.is_empty());
@@ -94,7 +95,9 @@ fn native_type_name(
     let type_name = type_tag.to_string();
 
     context.charge(
-        gas_params.base + gas_params.unit * NumBytes::new(type_name.to_string().len() as u64),
+        gas_params.type_info_type_name_base
+            + gas_params.type_info_type_name_unit
+                * NumBytes::new(type_name.to_string().len() as u64),
     )?;
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
@@ -132,7 +135,7 @@ mod tests {
             address: AccountAddress::random(),
             module: Identifier::new("DummyModule").unwrap(),
             name: Identifier::new("DummyStruct").unwrap(),
-            type_params: vec![TypeTag::Vector(Box::new(TypeTag::U8))],
+            type_args: vec![TypeTag::Vector(Box::new(TypeTag::U8))],
         };
 
         let dummy_as_strings = dummy_st.to_string();

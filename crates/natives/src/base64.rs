@@ -29,13 +29,16 @@ fn native_encode(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.base64.encode;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert_eq!(arguments.len(), 1);
 
     let bytes = safely_pop_arg!(arguments, Vec<u8>);
-    context.charge(gas_params.base + gas_params.unit * NumBytes::new(bytes.len() as u64))?;
+    context.charge(
+        gas_params.base64_encode_base
+            + gas_params.base64_encode_unit * NumBytes::new(bytes.len() as u64),
+    )?;
 
     let val = STANDARD.encode(bytes);
     Ok(smallvec![Value::vector_u8(val.as_bytes().to_vec())])
@@ -52,13 +55,16 @@ fn native_decode(
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib.base64.decode;
+    let gas_params = &context.native_gas_params.initia_stdlib;
 
     debug_assert!(ty_args.is_empty());
     debug_assert_eq!(arguments.len(), 1);
 
     let bytes = safely_pop_arg!(arguments, Vec<u8>);
-    context.charge(gas_params.base + gas_params.unit * NumBytes::new(bytes.len() as u64))?;
+    context.charge(
+        gas_params.base64_decode_base
+            + gas_params.base64_decode_unit * NumBytes::new(bytes.len() as u64),
+    )?;
 
     let val = match STANDARD.decode(bytes) {
         Ok(val) => val,

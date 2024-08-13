@@ -1,11 +1,11 @@
-use crate::verifier::transaction_arg_validation;
-use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
+use crate::{session::SessionExt, verifier::transaction_arg_validation};
 use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_core_types::{
     identifier::IdentStr,
     vm_status::{StatusCode, VMStatus},
 };
-use move_vm_runtime::session::{LoadedFunctionInstantiation, Session};
+use move_vm_runtime::LoadedFunction;
+use move_vm_types::resolver::MoveResolver;
 
 use super::transaction_arg_validation::ALLOWED_STRUCTS;
 
@@ -27,12 +27,12 @@ pub fn determine_is_view(
 
 /// Validate view function call. This checks whether the function is marked as a view
 /// function, and validates the arguments.
-pub(crate) fn validate_view_function<S: StateView>(
-    session: &mut Session,
-    state_view: &StateViewImpl<'_, S>,
+pub(crate) fn validate_view_function<M: MoveResolver>(
+    session: &mut SessionExt,
+    move_resolver: &M,
     args: Vec<Vec<u8>>,
     fun_name: &IdentStr,
-    fun_inst: &LoadedFunctionInstantiation,
+    func: &LoadedFunction,
     module_metadata: Option<&RuntimeModuleMetadataV0>,
     is_string: bool,
 ) -> Result<Vec<Vec<u8>>, VMStatus> {
@@ -46,7 +46,7 @@ pub(crate) fn validate_view_function<S: StateView>(
     }
 
     // Must return values
-    if fun_inst.return_.is_empty() {
+    if func.return_tys().is_empty() {
         return Err(VMStatus::error(
             StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
             Some("view function must return values".to_string()),
@@ -56,10 +56,10 @@ pub(crate) fn validate_view_function<S: StateView>(
     let allowed_structs = &ALLOWED_STRUCTS;
     let args = transaction_arg_validation::construct_args(
         session,
-        state_view,
-        &fun_inst.parameters,
+        move_resolver,
+        func.param_tys(),
         args,
-        &fun_inst.type_arguments,
+        func.ty_args(),
         allowed_structs,
         true,
         is_string,

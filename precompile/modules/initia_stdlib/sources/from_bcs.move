@@ -64,9 +64,9 @@ module initia_std::from_bcs {
             |s| {
                 assert!(
                     string::internal_check_utf8(string::bytes(s)),
-                    EINVALID_UTF8
+                    EINVALID_UTF8,
                 );
-            }
+            },
         );
         vec_string
     }
@@ -76,7 +76,7 @@ module initia_std::from_bcs {
         let s = from_bytes<String>(v);
         assert!(
             string::internal_check_utf8(string::bytes(&s)),
-            EINVALID_UTF8
+            EINVALID_UTF8,
         );
         s
     }
@@ -97,7 +97,8 @@ module initia_std::from_bcs {
     #[test]
     fun test_address() {
         let addr = @0x01;
-        let addr_vec = x"0000000000000000000000000000000000000000000000000000000000000001";
+        let addr_vec =
+            x"0000000000000000000000000000000000000000000000000000000000000001";
         let addr_out = to_address(addr_vec);
         let addr_vec_out = bcs::to_bytes(&addr_out);
         assert!(addr == addr_out, 0);
@@ -109,18 +110,5 @@ module initia_std::from_bcs {
     fun test_address_fail() {
         let bad_vec = b"01";
         to_address(bad_vec);
-    }
-
-    #[test_only]
-    use std::address;
-
-    #[test]
-    #[expected_failure(abort_code = EINVALID_UTF8)]
-    fun zellic_invalid_utf8_to_vector_string() {
-        let invalid_utf8 = b"\x01\x03\xE0\x80\x80";
-        let res = to_vector_string(invalid_utf8);
-        assert!(!vector::is_empty(&res), 0);
-
-        address::from_string(vector::pop_back(&mut res));
     }
 }

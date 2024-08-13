@@ -1,15 +1,16 @@
 use std::collections::BTreeMap;
 
 use crate::algebra::{AbstractValueSize, AbstractValueSizePerArg};
-use crate::meter::{FromOnChainGasSchedule, InitialGasSchedule, ToOnChainGasSchedule};
+use crate::traits::{FromOnChainGasSchedule, InitialGasSchedule, ToOnChainGasSchedule};
 use move_core_types::u256::U256;
 use move_core_types::{account_address::AccountAddress, gas_algebra::NumArgs};
 use move_vm_types::delayed_values::delayed_field_id::DelayedFieldID;
 use move_vm_types::views::{ValueView, ValueVisitor};
 
-crate::params::define_gas_parameters!(
+crate::macros::define_gas_parameters!(
     AbstractValueSizeGasParameters,
     "misc.abs_val",
+    InitiaGasParameters => .misc.abs_val,
     [
         // abstract value size
         [u8: AbstractValueSize, "u8", 40],
@@ -498,8 +499,8 @@ pub struct MiscGasParameters {
 }
 
 impl FromOnChainGasSchedule for MiscGasParameters {
-    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Option<Self> {
-        Some(Self {
+    fn from_on_chain_gas_schedule(gas_schedule: &BTreeMap<String, u64>) -> Result<Self, String> {
+        Ok(Self {
             abs_val: FromOnChainGasSchedule::from_on_chain_gas_schedule(gas_schedule)?,
         })
     }
