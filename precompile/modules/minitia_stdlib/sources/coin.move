@@ -185,7 +185,7 @@ module minitia_std::coin {
     /// Mint FAs as the owner of metadat object.
     public fun mint(mint_cap: &MintCapability, amount: u64,): FungibleAsset acquires ManagingRefs {
         let metadata = mint_cap.metadata;
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
@@ -203,7 +203,7 @@ module minitia_std::coin {
         amount: u64,
     ) acquires ManagingRefs {
         let metadata = mint_cap.metadata;
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
@@ -217,7 +217,7 @@ module minitia_std::coin {
     /// Burn FAs as the owner of metadat object.
     public fun burn(burn_cap: &BurnCapability, fa: FungibleAsset,) acquires ManagingRefs {
         let metadata = burn_cap.metadata;
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
@@ -233,7 +233,7 @@ module minitia_std::coin {
         freeze_cap: &FreezeCapability, account_addr: address,
     ) acquires ManagingRefs {
         let metadata = freeze_cap.metadata;
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
@@ -253,7 +253,7 @@ module minitia_std::coin {
         freeze_cap: &FreezeCapability, account_addr: address,
     ) acquires ManagingRefs {
         let metadata = freeze_cap.metadata;
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
@@ -333,7 +333,7 @@ module minitia_std::coin {
 
     #[view]
     public fun is_coin_initialized(metadata: Object<Metadata>): bool {
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
         exists<ManagingRefs>(metadata_addr)
     }
 
@@ -350,7 +350,7 @@ module minitia_std::coin {
 
     #[view]
     public fun metadata_to_denom(metadata: Object<Metadata>): String {
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
         let symbol = symbol(metadata);
         let std_metadata_addr = metadata_address(@minitia_std, symbol);
 
@@ -401,7 +401,7 @@ module minitia_std::coin {
 
     #[test(chain = @0x1, not_chain = @0x2)]
     fun test_denom_metadata_convert(chain: signer, not_chain: signer,) {
-        minitia_std::primary_fungible_store::init_module_for_test(&chain);
+        minitia_std::primary_fungible_store::init_module_for_test();
         initialized_coin(&chain, string::utf8(b"INIT"));
         initialized_coin(&not_chain, string::utf8(b"INIT"));
         let metadata = metadata(

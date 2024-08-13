@@ -19,9 +19,12 @@ func ReleaseVM(vm VM) {
 }
 
 // AllocateVM call ffi(`allocate_vm`) to allocate vm instance
-func AllocateVM() VM {
+func AllocateVM(config []byte) VM {
+	c := makeView(config)
+	defer runtime.KeepAlive(c)
+
 	return VM{
-		ptr: C.allocate_vm(),
+		ptr: C.allocate_vm(c),
 	}
 }
 

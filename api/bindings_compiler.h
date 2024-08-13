@@ -137,6 +137,14 @@ typedef struct {
    * bytecode version. set 0 to unset and to use default
    */
   uint32_t bytecode_version;
+  /**
+   * Compiler version. set 0 to unset and to use default
+   */
+  uint32_t compiler_version;
+  /**
+   * language version. set 0 to unset and to use default
+   */
+  uint32_t language_version;
 } CompilerBuildConfig;
 
 typedef struct {

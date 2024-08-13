@@ -18,4 +18,5 @@ mod serde_helper;
 pub mod staking_change_set;
 pub mod table;
 pub mod view_function;
+pub mod vm_config;
 pub mod write_set;

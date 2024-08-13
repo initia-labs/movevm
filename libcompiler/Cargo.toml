@@ -7,7 +7,7 @@ homepage = "https://initia.xyz/"
 repository = "https://github.com/initia-labs/movevm"
 exclude = [".gitignore"]
 
-edition = { workspace =  true }
+edition = { workspace = true }
 rust-version = { workspace = true }
 
 [lib]
@@ -39,6 +39,7 @@ move-core-types = { workspace = true }
 move-cli = { workspace = true }
 move-docgen = { workspace = true }
 move-package = { workspace = true }
+move-model = { workspace = true }
 
 [build-dependencies]
 cbindgen = { workspace = true }

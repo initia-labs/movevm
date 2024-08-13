@@ -185,7 +185,7 @@ module initia_std::nft {
     /// Creates a MutatorRef, which gates the ability to mutate any fields that support mutation.
     public fun generate_mutator_ref(ref: &ConstructorRef): MutatorRef {
         let object = object::object_from_constructor_ref<Nft>(ref);
-        MutatorRef { self: object::object_address(object) }
+        MutatorRef { self: object::object_address(&object) }
     }
 
     /// Creates a BurnRef, which gates the ability to burn the given nft.
@@ -202,7 +202,7 @@ module initia_std::nft {
     // Accessors
 
     inline fun borrow<T: key>(nft: Object<T>): &Nft acquires Nft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<Nft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),

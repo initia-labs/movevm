@@ -1278,7 +1278,7 @@ module initia_std::vip_weight_vote {
             100,
         );
         set_block_info(100, 101);
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         let (mint_cap, _, _) =
             coin::initialize(
                 chain,
@@ -1289,7 +1289,7 @@ module initia_std::vip_weight_vote {
                 string::utf8(b""),
                 string::utf8(b""),
             );
-        vip::init_module_for_test(chain);
+        vip::init_module_for_test();
         vip::register(
             chain,
             @0x2,

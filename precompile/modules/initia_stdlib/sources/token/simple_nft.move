@@ -175,7 +175,7 @@ module initia_std::simple_nft {
     // Nft accessors
 
     inline fun borrow<T: key>(nft: Object<T>): &SimpleNft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<SimpleNft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -192,7 +192,7 @@ module initia_std::simple_nft {
     // Nft mutators
 
     inline fun authorized_borrow<T: key>(nft: Object<T>, creator: &signer): &SimpleNft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<SimpleNft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -206,7 +206,7 @@ module initia_std::simple_nft {
     }
 
     public entry fun burn<T: key>(owner: &signer, nft: Object<T>) acquires SimpleNft {
-        let nft_address = object::object_address(nft);
+        let nft_address = object::object_address(&nft);
         assert!(
             exists<SimpleNft>(nft_address),
             error::not_found(ENFT_DOES_NOT_EXIST),
@@ -216,7 +216,7 @@ module initia_std::simple_nft {
             error::permission_denied(ENOT_OWNER),
         );
 
-        let simple_nft = move_from<SimpleNft>(object::object_address(nft));
+        let simple_nft = move_from<SimpleNft>(object::object_address(&nft));
         let SimpleNft { property_mutator_ref } = simple_nft;
         property_map::burn(property_mutator_ref);
         initia_nft::burn(owner, nft);
@@ -337,7 +337,7 @@ module initia_std::simple_nft {
     }
 
     inline fun borrow_collection<T: key>(nft: Object<T>): &SimpleNftCollection {
-        let collection_address = object::object_address(nft);
+        let collection_address = object::object_address(&nft);
         assert!(
             exists<SimpleNftCollection>(collection_address),
             error::not_found(ECOLLECTION_DOES_NOT_EXIST),
@@ -384,7 +384,7 @@ module initia_std::simple_nft {
     inline fun authorized_borrow_collection<T: key>(
         collection: Object<T>, creator: &signer
     ): &SimpleNftCollection {
-        let collection_address = object::object_address(collection);
+        let collection_address = object::object_address(&collection);
         assert!(
             exists<SimpleNftCollection>(collection_address),
             error::not_found(ECOLLECTION_DOES_NOT_EXIST),

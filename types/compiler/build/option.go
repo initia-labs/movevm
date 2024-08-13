@@ -31,6 +31,12 @@ type BuildConfig struct {
 
 	// Bytecode version to compile move code. set 0 to unset and to use default
 	BytecodeVersion uint32
+
+	// Compiler version to compile move code. set 0 to unset and to use default
+	CompilerVersion uint32
+
+	// Language version to compile move code. set 0 to unset and to use default
+	LanguageVersion uint32
 }
 
 // DefaultBuildConfig returns with all-false set (except PackagePath which is set to current(.)) BuildConfig
@@ -98,5 +104,17 @@ func WithSkipFetchLatestGitDeps() func(*BuildConfig) {
 func WithBytecodeVersion(ver uint32) func(*BuildConfig) {
 	return func(bc *BuildConfig) {
 		bc.BytecodeVersion = ver
+	}
+}
+
+func WithCompilerVersion(ver uint32) func(*BuildConfig) {
+	return func(bc *BuildConfig) {
+		bc.CompilerVersion = ver
+	}
+}
+
+func WithLanguageVersion(ver uint32) func(*BuildConfig) {
+	return func(bc *BuildConfig) {
+		bc.LanguageVersion = ver
 	}
 }

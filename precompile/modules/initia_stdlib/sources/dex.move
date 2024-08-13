@@ -221,7 +221,7 @@ module initia_std::dex {
 
     #[view]
     public fun get_pair_metadata(pair: Object<Config>,): PairMetadataResponse acquires Pool {
-        let pool = borrow_global_mut<Pool>(object::object_address(pair));
+        let pool = borrow_global_mut<Pool>(object::object_address(&pair));
         let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
         let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
 
@@ -248,7 +248,7 @@ module initia_std::dex {
             pool_info(pair, false);
 
         let pair_key = generate_pair_key(pair);
-        let base_addr = object::object_address(base_coin);
+        let base_addr = object::object_address(&base_coin);
         assert!(
             base_addr == pair_key.coin_a || base_addr == pair_key.coin_b,
             error::invalid_argument(ECOIN_TYPE),
@@ -284,7 +284,7 @@ module initia_std::dex {
         offer_amount: u64,
     ): u64 acquires Config, Pool {
         let pair_key = generate_pair_key(pair);
-        let offer_address = object::object_address(offer_metadata);
+        let offer_address = object::object_address(&offer_metadata);
         assert!(
             offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
             error::invalid_argument(ECOIN_TYPE),
@@ -333,7 +333,7 @@ module initia_std::dex {
         return_amount: u64,
     ): u64 acquires Config, Pool {
         let pair_key = generate_pair_key(pair);
-        let offer_address = object::object_address(offer_metadata);
+        let offer_address = object::object_address(&offer_metadata);
         assert!(
             offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
             error::invalid_argument(ECOIN_TYPE),
@@ -377,7 +377,7 @@ module initia_std::dex {
     #[view]
     /// get pool info
     public fun get_pool_info(pair: Object<Config>): PoolInfoResponse acquires Pool {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
         PoolInfoResponse {
             coin_a_amount: fungible_asset::balance(pool.coin_a_store),
@@ -396,7 +396,7 @@ module initia_std::dex {
     #[view]
     /// get config
     public fun get_config(pair: Object<Config>): ConfigResponse acquires Config {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
 
         ConfigResponse { weights: config.weights, swap_fee_rate: config.swap_fee_rate, }
@@ -411,7 +411,7 @@ module initia_std::dex {
 
     #[view]
     public fun get_current_weight(pair: Object<Config>): CurrentWeightResponse acquires Config {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
         CurrentWeightResponse { coin_a_weight, coin_b_weight, }
@@ -513,10 +513,10 @@ module initia_std::dex {
                     );
                 option::some(
                     PairKey {
-                        coin_a: object::object_address(coin_a_start_after),
-                        coin_b: object::object_address(coin_b_start_after),
+                        coin_a: object::object_address(&coin_a_start_after),
+                        coin_b: object::object_address(&coin_b_start_after),
                         liquidity_token: object::object_address(
-                            liquidity_token_start_after
+                            &liquidity_token_start_after
                         ),
                     },
                 )
@@ -808,7 +808,7 @@ module initia_std::dex {
     ) acquires Config, Pool, ModuleStore {
         check_chain_permission(chain);
 
-        let config = borrow_global_mut<Config>(object::object_address(pair));
+        let config = borrow_global_mut<Config>(object::object_address(&pair));
         assert!(
             decimal128::val(&swap_fee_rate) <= MAX_FEE_RATE,
             error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE),
@@ -859,7 +859,7 @@ module initia_std::dex {
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
     ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let pool = borrow_global_mut<Pool>(pair_addr);
         let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
         let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
@@ -1072,13 +1072,13 @@ module initia_std::dex {
         provide_coin: FungibleAsset,
         min_liquidity_amount: Option<u64>,
     ): FungibleAsset acquires Config, CoinCapabilities, Pool {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         check_lbp_ended(&config.weights);
 
         // provide coin type must be one of coin a or coin b coin type
         let provide_metadata = fungible_asset::metadata_from_asset(&provide_coin);
-        let provide_address = object::object_address(provide_metadata);
+        let provide_address = object::object_address(&provide_metadata);
         let pair_key = generate_pair_key(pair);
         assert!(
             provide_address == pair_key.coin_a || provide_address == pair_key.coin_b,
@@ -1187,7 +1187,7 @@ module initia_std::dex {
     public fun swap(pair: Object<Config>, offer_coin: FungibleAsset,): FungibleAsset acquires Config, Pool {
         let offer_amount = fungible_asset::amount(&offer_coin);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_coin);
-        let offer_address = object::object_address(offer_metadata);
+        let offer_address = object::object_address(&offer_metadata);
         let pair_key = generate_pair_key(pair);
         assert!(
             offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
@@ -1220,7 +1220,7 @@ module initia_std::dex {
             );
 
         // apply swap result to pool
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let pool = borrow_global_mut<Pool>(pair_addr);
         let config = borrow_global<Config>(pair_addr);
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
@@ -1395,7 +1395,7 @@ module initia_std::dex {
         coin_b: FungibleAsset,
         min_liquidity_amount: Option<u64>,
     ): FungibleAsset acquires Config, Pool, CoinCapabilities {
-        let pool_addr = object::object_address(pair);
+        let pool_addr = object::object_address(&pair);
         let config = borrow_global_mut<Config>(pool_addr);
         let pool = borrow_global_mut<Pool>(pool_addr);
         check_lbp_ended(&config.weights);
@@ -1455,7 +1455,7 @@ module initia_std::dex {
 
     fun coin_address(fa: &FungibleAsset): address {
         let metadata = fungible_asset::asset_metadata(fa);
-        object::object_address(metadata)
+        object::object_address(&metadata)
     }
 
     fun check_lbp_ended(weights: &Weights) {
@@ -1468,13 +1468,13 @@ module initia_std::dex {
     }
 
     fun generate_pair_key<T: key>(pair: Object<T>): PairKey acquires Pool {
-        let addr = object::object_address(pair);
+        let addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(addr);
         let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
         let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
         PairKey {
-            coin_a: object::object_address(coin_a_metadata),
-            coin_b: object::object_address(coin_b_metadata),
+            coin_a: object::object_address(&coin_a_metadata),
+            coin_b: object::object_address(&coin_b_metadata),
             liquidity_token: addr
         }
     }
@@ -1534,7 +1534,7 @@ module initia_std::dex {
         : (
         u64, u64, Decimal128, Decimal128, Decimal128
     ) acquires Config, Pool {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         if (lbp_assertion) {
             // assert LBP start time
@@ -1638,7 +1638,7 @@ module initia_std::dex {
     }
 
     public fun pool_metadata(pair: Object<Config>): (Object<Metadata>, Object<Metadata>) acquires Pool {
-        let pair_addr = object::object_address(pair);
+        let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
         (
             fungible_asset::store_metadata(pool.coin_a_store),
@@ -1728,8 +1728,8 @@ module initia_std::dex {
     }
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain);
+    public fun init_module_for_test() {
+        init_module(&initia_std::account::create_signer_for_test(@initia_std));
     }
 
     #[test_only]
@@ -1771,7 +1771,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun end_to_end(chain: signer,) acquires Config, CoinCapabilities, ModuleStore, Pool {
         init_module(&chain);
-        initia_std::primary_fungible_store::init_module_for_test(&chain);
+        initia_std::primary_fungible_store::init_module_for_test();
 
         let chain_addr = signer::address_of(&chain);
 
@@ -1924,7 +1924,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun lbp_end_to_end(chain: signer,) acquires Config, CoinCapabilities, ModuleStore, Pool {
         init_module(&chain);
-        initia_std::primary_fungible_store::init_module_for_test(&chain);
+        initia_std::primary_fungible_store::init_module_for_test();
 
         let chain_addr = signer::address_of(&chain);
 
@@ -2109,7 +2109,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore {
         init_module(&chain);
-        initia_std::primary_fungible_store::init_module_for_test(&chain);
+        initia_std::primary_fungible_store::init_module_for_test();
 
         let chain_addr = signer::address_of(&chain);
 
@@ -2120,9 +2120,9 @@ module initia_std::dex {
         let a_metadata = coin::metadata(chain_addr, string::utf8(b"A"));
         let b_metadata = coin::metadata(chain_addr, string::utf8(b"B"));
         let c_metadata = coin::metadata(chain_addr, string::utf8(b"C"));
-        let a_addr = object::object_address(a_metadata);
-        let b_addr = object::object_address(b_metadata);
-        let c_addr = object::object_address(c_metadata);
+        let a_addr = object::object_address(&a_metadata);
+        let b_addr = object::object_address(&b_metadata);
+        let c_addr = object::object_address(&c_metadata);
 
         coin::mint_to(
             &coin_a_mint_cap,
@@ -2154,7 +2154,7 @@ module initia_std::dex {
         );
         let lp_1_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL1"));
         let pair_1 = object::convert<Metadata, Config>(lp_1_metadata);
-        let pair_1_addr = object::object_address(pair_1);
+        let pair_1_addr = object::object_address(&pair_1);
 
         create_pair_script(
             &chain,
@@ -2170,7 +2170,7 @@ module initia_std::dex {
         );
         let lp_2_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL2"));
         let pair_2 = object::convert<Metadata, Config>(lp_2_metadata);
-        let pair_2_addr = object::object_address(pair_2);
+        let pair_2_addr = object::object_address(&pair_2);
 
         create_pair_script(
             &chain,
@@ -2186,7 +2186,7 @@ module initia_std::dex {
         );
         let lp_3_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL3"));
         let pair_3 = object::convert<Metadata, Config>(lp_3_metadata);
-        let pair_3_addr = object::object_address(pair_3);
+        let pair_3_addr = object::object_address(&pair_3);
 
         create_pair_script(
             &chain,
@@ -2202,7 +2202,7 @@ module initia_std::dex {
         );
         let lp_4_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL4"));
         let pair_4 = object::convert<Metadata, Config>(lp_4_metadata);
-        let pair_4_addr = object::object_address(pair_4);
+        let pair_4_addr = object::object_address(&pair_4);
 
         let (_, timestamp) = get_block_info();
         let weight = decimal128::from_ratio(5, 10);

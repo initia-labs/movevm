@@ -209,7 +209,7 @@ module minitia_std::object {
     native fun exists_at<T: key>(object: address): bool;
 
     /// Returns the address of within an ObjectId.
-    public fun object_address<T: key>(object: Object<T>): address {
+    public fun object_address<T: key>(object: &Object<T>): address {
         object.inner
     }
 
@@ -568,7 +568,7 @@ module minitia_std::object {
     #[view]
     /// Return true if the provided address has indirect or direct ownership of the provided object.
     public fun owns<T: key>(object: Object<T>, owner: address): bool acquires ObjectCore {
-        let current_address = object_address(object);
+        let current_address = object_address(&object);
         if (current_address == owner) {
             return true
         };
@@ -652,7 +652,7 @@ module minitia_std::object {
         weapon: Object<Weapon>,
     ) acquires Hero, ObjectCore {
         transfer_to_object(owner, weapon, hero);
-        let hero_obj = borrow_global_mut<Hero>(object_address(hero));
+        let hero_obj = borrow_global_mut<Hero>(object_address(&hero));
         option::fill(&mut hero_obj.weapon, weapon);
         event::emit(HeroEquipEvent { weapon_id: option::some(weapon) });
     }
@@ -668,7 +668,7 @@ module minitia_std::object {
             weapon,
             signer::address_of(owner),
         );
-        let hero = borrow_global_mut<Hero>(object_address(hero));
+        let hero = borrow_global_mut<Hero>(object_address(&hero));
         option::extract(&mut hero.weapon);
         event::emit(HeroEquipEvent { weapon_id: option::none() });
     }

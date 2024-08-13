@@ -400,8 +400,8 @@ module minitia_std::vip_score {
     //
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain);
+    public fun init_module_for_test() {
+        init_module(&minitia_std::account::create_signer_for_test(@minitia_std));
     }
 
     #[test(chain = @0x1, deployer = @0x2, user = @0x123)]
@@ -409,7 +409,7 @@ module minitia_std::vip_score {
     fun failed_remove_deployer_script(
         chain: &signer, deployer: &signer, user: address
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
 
         add_deployer_script(chain, signer::address_of(deployer));
         prepare_stage(deployer, 1);
@@ -425,7 +425,7 @@ module minitia_std::vip_score {
     fun failed_decrease_score_isufficient(
         chain: &signer, deployer: &signer, user: address
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         add_deployer_script(chain, signer::address_of(deployer));
         prepare_stage(deployer, 1);
 
@@ -439,7 +439,7 @@ module minitia_std::vip_score {
     fun failed_decrease_score_invalid_stage(
         chain: &signer, deployer: &signer, user: address
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         add_deployer_script(chain, signer::address_of(deployer));
         prepare_stage(deployer, 1);
 
@@ -455,7 +455,7 @@ module minitia_std::vip_score {
     fun failed_add_deployer_script_already_exist(
         chain: &signer, deployer: &signer
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         add_deployer_script(chain, signer::address_of(deployer));
         add_deployer_script(chain, signer::address_of(deployer));
     }
@@ -465,14 +465,14 @@ module minitia_std::vip_score {
     fun failed_remove_deployer_script_not_found(
         chain: &signer, deployer: &signer
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         remove_deployer_script(chain, signer::address_of(deployer));
     }
 
     #[test(chain = @0x1, deployer = @0x2)]
     #[expected_failure(abort_code = 0x10006, location = Self)]
     fun failed_not_match_length(chain: &signer, deployer: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         add_deployer_script(chain, signer::address_of(deployer));
 
         update_score_script(
@@ -488,7 +488,7 @@ module minitia_std::vip_score {
     fun failed_finalized_stage(
         chain: &signer, deployer: &signer, user: address
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         add_deployer_script(chain, signer::address_of(deployer));
         prepare_stage(deployer, 1);
 
@@ -506,7 +506,7 @@ module minitia_std::vip_score {
         user_a: address,
         user_b: address
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
 
         add_deployer_script(chain, signer::address_of(deployer_a));
         add_deployer_script(chain, signer::address_of(deployer_b));
@@ -555,7 +555,7 @@ module minitia_std::vip_score {
 
     #[test(chain = @0x1, deployer = @0x2)]
     fun test_update_score_script(chain: &signer, deployer: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         let stage = 1;
         add_deployer_script(chain, signer::address_of(deployer));
         let scores = vector::empty<u64>();
@@ -573,12 +573,12 @@ module minitia_std::vip_score {
 
     }
 
-    #[test(chain = @0x1, non_deployer = @0x3)]
+    #[test(non_deployer = @0x3)]
     #[expected_failure(abort_code = 0x10001, location = Self)]
     fun failed_update_score_script_by_non_deployer(
-        chain: &signer, non_deployer: &signer
+        non_deployer: &signer
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         let stage = 1;
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();
@@ -596,7 +596,7 @@ module minitia_std::vip_score {
     fun failed_update_score_script_by_skip_finalize_previous_stage(
         chain: &signer, deployer: &signer
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         let init_stage = 1;
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();
@@ -615,7 +615,7 @@ module minitia_std::vip_score {
     fun test_init_stage_3_and_update_score_script(
         chain: &signer, deployer: &signer
     ) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         let init_stage = 3;
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();

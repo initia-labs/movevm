@@ -12,6 +12,7 @@
 /// 4. The fungible asset metadata object calls `deposit` on the recipient's primary store to deposit `amount` of
 /// fungible asset to it. This emits an deposit event.
 module initia_std::primary_fungible_store {
+    use initia_std::dispatchable_fungible_asset;
     use initia_std::fungible_asset::{
         Self,
         FungibleAsset,
@@ -93,7 +94,7 @@ module initia_std::primary_fungible_store {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         table::add(
             &mut module_store.issuers,
-            object::object_address(metadata),
+            object::object_address(&metadata),
             object::owner(metadata),
         );
     }
@@ -113,7 +114,7 @@ module initia_std::primary_fungible_store {
     public fun create_primary_store<T: key>(
         owner_addr: address, metadata: Object<T>,
     ): Object<FungibleStore> acquires DeriveRefPod, ModuleStore {
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
         object::address_to_object<Metadata>(metadata_addr);
 
         let derive_ref = &borrow_global<DeriveRefPod>(metadata_addr).metadata_derive_ref;
@@ -159,7 +160,7 @@ module initia_std::primary_fungible_store {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         *table::borrow(
             &module_store.issuers,
-            object::object_address(metadata),
+            object::object_address(&metadata),
         )
     }
 
@@ -168,7 +169,7 @@ module initia_std::primary_fungible_store {
     public fun primary_store_address<T: key>(
         owner: address, metadata: Object<T>
     ): address {
-        let metadata_addr = object::object_address(metadata);
+        let metadata_addr = object::object_address(&metadata);
         object::create_user_derived_object_address(owner, metadata_addr)
     }
 
@@ -281,14 +282,14 @@ module initia_std::primary_fungible_store {
         };
 
         let store = primary_store(signer::address_of(owner), metadata);
-        fungible_asset::withdraw(owner, store, amount)
+        dispatchable_fungible_asset::withdraw(owner, store, amount)
     }
 
     /// Deposit fungible asset `fa` to the given account's primary store.
     public fun deposit(owner: address, fa: FungibleAsset) acquires DeriveRefPod, ModuleStore {
         let metadata = fungible_asset::asset_metadata(&fa);
         let store = ensure_primary_store_exists(owner, metadata);
-        fungible_asset::deposit(store, fa);
+        dispatchable_fungible_asset::deposit(store, fa);
 
         // create cosmos side account
         if (!account::exists_at(owner)) {
@@ -306,17 +307,35 @@ module initia_std::primary_fungible_store {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
-        fungible_asset::transfer(
-            sender,
-            sender_store,
-            recipient_store,
-            amount,
+        dispatchable_fungible_asset::transfer(
+            sender, sender_store, recipient_store, amount
         );
 
         // create cosmos side account
         if (!account::exists_at(recipient)) {
             let _acc_num = account::create_account(recipient);
         };
+    }
+
+    /// Transfer `amount` of fungible asset from sender's primary store to receiver's primary store.
+    /// Use the minimum deposit assertion api to make sure receipient will receive a minimum amount of fund.
+    public entry fun transfer_assert_minimum_deposit<T: key>(
+        sender: &signer,
+        metadata: Object<T>,
+        recipient: address,
+        amount: u64,
+        expected: u64,
+    ) acquires DeriveRefPod, ModuleStore {
+        let sender_store =
+            ensure_primary_store_exists(signer::address_of(sender), metadata);
+        let recipient_store = ensure_primary_store_exists(recipient, metadata);
+        dispatchable_fungible_asset::transfer_assert_minimum_deposit(
+            sender,
+            sender_store,
+            recipient_store,
+            amount,
+            expected,
+        );
     }
 
     /// Mint to the primary store of `owner`.
@@ -431,14 +450,15 @@ module initia_std::primary_fungible_store {
     use std::string;
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain)
+    public fun init_module_for_test() {
+        init_module(&account::create_signer_for_test(@initia_std));
     }
 
     #[test_only]
     public fun init_test_metadata_with_primary_store_enabled(
         constructor_ref: &ConstructorRef
     ): (MintRef, TransferRef, BurnRef) acquires ModuleStore {
+        init_module_for_test();
         create_primary_store_enabled_fungible_asset(
             constructor_ref,
             option::some(100), // max supply
@@ -454,11 +474,8 @@ module initia_std::primary_fungible_store {
         (mint_ref, transfer_ref, burn_ref)
     }
 
-    #[test(creator = @0xcafe, aaron = @0xface, mod_account = @0x1)]
-    fun test_default_behavior(
-        creator: &signer, aaron: &signer, mod_account: &signer
-    ) acquires DeriveRefPod, ModuleStore {
-        init_module_for_test(mod_account);
+    #[test(creator = @0xcafe, aaron = @0xface)]
+    fun test_default_behavior(creator: &signer, aaron: &signer) acquires DeriveRefPod, ModuleStore {
         let (creator_ref, metadata) = create_test_token(creator);
         init_test_metadata_with_primary_store_enabled(&creator_ref);
         let creator_address = signer::address_of(creator);
@@ -487,13 +504,8 @@ module initia_std::primary_fungible_store {
         );
     }
 
-    #[test(creator = @0xcafe, aaron = @0xface, mod_account = @0x1)]
-    fun test_basic_flow(
-        creator: &signer,
-        aaron: &signer,
-        mod_account: &signer,
-    ) acquires DeriveRefPod, ModuleStore {
-        init_module_for_test(mod_account);
+    #[test(creator = @0xcafe, aaron = @0xface)]
+    fun test_basic_flow(creator: &signer, aaron: &signer,) acquires DeriveRefPod, ModuleStore {
         let (creator_ref, metadata) = create_test_token(creator);
         let (mint_ref, transfer_ref, burn_ref) =
             init_test_metadata_with_primary_store_enabled(&creator_ref);

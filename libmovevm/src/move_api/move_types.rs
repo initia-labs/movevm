@@ -2,6 +2,7 @@ use anyhow::{bail, format_err};
 use initia_move_types::module::Module;
 use move_binary_format::{
     access::ModuleAccess,
+    deserializer::DeserializerConfig,
     file_format::{
         Ability, AbilitySet, CompiledModule, CompiledScript, StructTypeParameter, Visibility,
     },
@@ -1098,7 +1099,10 @@ impl MoveModuleBytecode {
     }
 
     pub fn try_parse_abi(self) -> anyhow::Result<MoveModule> {
-        let module = CompiledModule::deserialize(self.bytecode.inner())?;
+        let module = CompiledModule::deserialize_with_config(
+            self.bytecode.inner(),
+            &DeserializerConfig::default(),
+        )?;
         Ok(module.into())
     }
 }
@@ -1133,7 +1137,10 @@ impl MoveScriptBytecode {
     }
 
     pub fn try_parse_abi(self) -> anyhow::Result<MoveFunction> {
-        let script = CompiledScript::deserialize(self.bytecode.inner())?;
+        let script = CompiledScript::deserialize_with_config(
+            self.bytecode.inner(),
+            &DeserializerConfig::default(),
+        )?;
         Ok((&script).into())
     }
 }

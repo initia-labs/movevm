@@ -181,8 +181,8 @@ module initia_std::vip_tvl_manager {
     #[test_only]
     const DEFAULT_SKIP_FOR_TEST: u64 = 100;
     #[test_only]
-    public fun init_module_for_test(chain: &signer) {
-        init_module(chain)
+    public fun init_module_for_test() {
+        init_module(&initia_std::account::create_signer_for_test(@initia_std));
     }
 
     #[test_only]
@@ -191,9 +191,9 @@ module initia_std::vip_tvl_manager {
         block::set_block_info(height, curr_time + period);
     }
 
-    #[test(chain = @0x1)]
-    public fun add_snapshot_for_test(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+    #[test]
+    public fun add_snapshot_for_test() acquires ModuleStore {
+        init_module_for_test();
         let balance = 1_000_000_000_000;
         add_snapshot(
             DEFAULT_EPOCH_FOR_TEST,
@@ -209,9 +209,9 @@ module initia_std::vip_tvl_manager {
         assert!(average_tvl == balance, 0);
     }
 
-    #[test(chain = @0x1)]
-    public fun add_multi_snapshot_for_test(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+    #[test]
+    public fun add_multi_snapshot_for_test() acquires ModuleStore {
+        init_module_for_test();
         let balance1 = 1_000_000_000_000;
         let balance2 = 2_000_000_000_000;
         let balance3 = 3_000_000_000_000;

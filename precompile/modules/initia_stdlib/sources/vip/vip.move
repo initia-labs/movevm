@@ -2079,8 +2079,9 @@ module initia_std::vip {
     }
 
     #[test_only]
-    public fun init_module_for_test(chain: &signer) acquires ModuleStore {
-        vip_vault::init_module_for_test(chain);
+    public fun init_module_for_test() acquires ModuleStore {
+        let chain = &initia_std::account::create_signer_for_test(@initia_std);
+        vip_vault::init_module_for_test();
         vip_vault::update_reward_per_stage(chain, DEFAULT_REWARD_PER_STAGE_FOR_TEST);
         init_module(chain);
         update_agent_by_chain(
@@ -2168,11 +2169,11 @@ module initia_std::vip {
         vip_l2_score_contract: string::String,
         mint_amount: u64,
     ): u64 acquires ModuleStore {
-        primary_fungible_store::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
+        vip_tvl_manager::init_module_for_test();
         let (burn_cap, freeze_cap, mint_cap, _) =
             initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test();
 
         test_register_bridge(
             chain,
@@ -2486,9 +2487,9 @@ module initia_std::vip {
     fun test_update_vip_weight(chain: &signer, operator: &signer,) acquires ModuleStore {
         let init_stage = 1;
         let mint_amount = 1_000_000_000;
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test();
 
         coin::mint_to(
             &mint_cap,
@@ -3464,10 +3465,10 @@ module initia_std::vip {
     fun test_fund_reward_script(chain: &signer, operator: &signer,) acquires ModuleStore {
         let init_stage = 1;
         let mint_amount = 100_000_000_000_000;
-        primary_fungible_store::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
+        vip_tvl_manager::init_module_for_test();
         let (_, _, mint_cap, _) = initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test();
 
         coin::mint_to(
             &mint_cap,
@@ -3627,11 +3628,11 @@ module initia_std::vip {
         receiver: &signer
     ) acquires ModuleStore, TestCapability {
         let init_stage = 1;
-        primary_fungible_store::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
+        vip_tvl_manager::init_module_for_test();
         let (burn_cap, freeze_cap, mint_cap, _) =
             initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test();
 
         move_to(
             chain,
@@ -4252,7 +4253,7 @@ module initia_std::vip {
 
     #[test(chain = @0x1, operator = @0x111)]
     fun test_update_challenge_period(chain: &signer) acquires ModuleStore {
-        init_module_for_test(chain);
+        init_module_for_test();
         update_challenge_period(chain, DEFAULT_NEW_CHALLENGE_PERIOD);
         assert!(
             get_module_store().challenge_period == DEFAULT_NEW_CHALLENGE_PERIOD,
@@ -4339,10 +4340,10 @@ module initia_std::vip {
     #[expected_failure(abort_code = 0x10015, location = Self)]
     fun failed_update_vip_weights(chain: &signer, operator: &signer) acquires ModuleStore {
         let init_stage = 1;
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         let (burn_cap, freeze_cap, mint_cap, _) =
             initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test();
 
         move_to(
             chain,
@@ -4399,10 +4400,10 @@ module initia_std::vip {
     #[expected_failure(abort_code = 0x10015, location = Self)]
     fun failed_update_vip_weight(chain: &signer, operator: &signer) acquires ModuleStore {
         let init_stage = 1;
-        primary_fungible_store::init_module_for_test(chain);
+        primary_fungible_store::init_module_for_test();
         let (burn_cap, freeze_cap, mint_cap, _) =
             initialize_coin(chain, string::utf8(b"uinit"));
-        init_module_for_test(chain);
+        init_module_for_test();
 
         move_to(
             chain,
@@ -4553,12 +4554,12 @@ module initia_std::vip {
         mint_amount: u64,
     ): (u64, Object<Metadata>, Object<Metadata>, Object<Metadata>, string::String) acquires ModuleStore {
         let init_stage = 1;
-        dex::init_module_for_test(chain);
-        staking::init_module_for_test(chain);
-        primary_fungible_store::init_module_for_test(chain);
-        vip_zapping::init_module_for_test(chain);
-        vip_tvl_manager::init_module_for_test(chain);
-        init_module_for_test(chain);
+        dex::init_module_for_test();
+        staking::init_module_for_test();
+        primary_fungible_store::init_module_for_test();
+        vip_zapping::init_module_for_test();
+        vip_tvl_manager::init_module_for_test();
+        init_module_for_test();
 
         let (_burn_cap, _freeze_cap, mint_cap, _) =
             initialize_coin(chain, string::utf8(b"uinit"));

@@ -1,4 +1,5 @@
 use log::LevelFilter;
+use move_model::metadata::{CompilerVersion, LanguageVersion};
 use std::{path::Path, str::FromStr};
 
 use initia_move_compiler::{self, prover::ProverOptions};
@@ -103,6 +104,10 @@ pub struct CompilerBuildConfig {
     pub skip_fetch_latest_git_deps: bool,
     /// bytecode version. set 0 to unset and to use default
     pub bytecode_version: u32,
+    /// Compiler version. set 0 to unset and to use default
+    pub compiler_version: u32,
+    /// language version. set 0 to unset and to use default
+    pub language_version: u32,
 }
 
 impl From<CompilerBuildConfig> for BuildConfig {
@@ -122,6 +127,16 @@ impl From<CompilerBuildConfig> for BuildConfig {
                     None
                 } else {
                     Some(val.bytecode_version)
+                },
+                compiler_version: match val.compiler_version {
+                    1 => Some(CompilerVersion::V1),
+                    2 => Some(CompilerVersion::V2_0),
+                    _ => None,
+                },
+                language_version: match val.language_version {
+                    1 => Some(LanguageVersion::V1),
+                    2 => Some(LanguageVersion::V2_0),
+                    _ => None,
                 },
                 ..Default::default()
             },
