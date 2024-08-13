@@ -5,13 +5,11 @@ use codespan_reporting::{
 };
 use move_docgen::DocgenOptions;
 use move_model::model::GlobalEnv;
-use move_package::BuildConfig;
 use std::{path::PathBuf, sync::Mutex};
 
 #[derive(Debug, Clone, Default)]
 pub struct DocgenPackage {
     pub package_path: PathBuf,
-    pub build_config: BuildConfig,
     pub docgen_options: DocgenOptions,
 }
 

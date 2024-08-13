@@ -962,6 +962,47 @@ func BcsDeserializeIdentifier(input []byte) (Identifier, error) {
 	return obj, err
 }
 
+type InitiaVMConfig struct {
+	AllowUnstable bool
+}
+
+func (obj *InitiaVMConfig) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeBool(obj.AllowUnstable); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *InitiaVMConfig) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeInitiaVMConfig(deserializer serde.Deserializer) (InitiaVMConfig, error) {
+	var obj InitiaVMConfig
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.AllowUnstable = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeInitiaVMConfig(input []byte) (InitiaVMConfig, error) {
+	if input == nil {
+		var obj InitiaVMConfig
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeInitiaVMConfig(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type JsonEvent struct {
 	TypeTag TypeTag
 	EventData string

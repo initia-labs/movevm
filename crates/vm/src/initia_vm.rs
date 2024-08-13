@@ -1,6 +1,7 @@
 use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
+    deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMResult},
     file_format::CompiledScript,
     CompiledModule,
@@ -55,6 +56,7 @@ use initia_move_types::{
     module::ModuleBundle,
     staking_change_set::StakingChangeSet,
     view_function::{ViewFunction, ViewOutput},
+    vm_config::InitiaVMConfig,
     write_set::WriteSet,
 };
 
@@ -75,34 +77,49 @@ use crate::{
 pub struct InitiaVM {
     move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
+    deserializer_config: DeserializerConfig,
+    initia_vm_config: InitiaVMConfig,
 }
 
 impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new()
+        Self::new(InitiaVMConfig {
+            allow_unstable: true,
+        })
     }
 }
 
 impl InitiaVM {
-    pub fn new() -> Self {
+    pub fn new(initia_vm_config: InitiaVMConfig) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
-        let move_vm = MoveVM::new_with_config(
-            all_natives(gas_params, misc_params),
-            VMConfig {
-                verifier_config: verifier_config(),
-                ..Default::default()
-            },
-        );
+        let vm_config = VMConfig {
+            verifier_config: verifier_config(),
+            ..Default::default()
+        };
+        let deserializer_config = vm_config.deserializer_config.clone();
+        let move_vm = MoveVM::new_with_config(all_natives(gas_params, misc_params), vm_config);
 
         Self {
             move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
+            deserializer_config,
+            initia_vm_config,
         }
     }
 
     pub fn create_gas_meter(&self, balance: impl Into<Gas>) -> InitiaGasMeter {
         InitiaGasMeter::new(self.gas_params.clone(), balance)
+    }
+
+    #[inline(always)]
+    fn deserializer_config(&self) -> &DeserializerConfig {
+        &self.deserializer_config
+    }
+
+    #[inline(always)]
+    fn allow_unstable(&self) -> bool {
+        self.initia_vm_config.allow_unstable
     }
 
     fn create_session<
@@ -354,7 +371,7 @@ impl InitiaVM {
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
-                    &session.get_vm_config().deserializer_config,
+                    &self.deserializer_config,
                 ) {
                     Ok(script) => script,
                     Err(err) => {
@@ -367,7 +384,10 @@ impl InitiaVM {
                     }
                 };
 
-                reject_unstable_bytecode_for_script(&compiled_script)?;
+                if !self.allow_unstable() {
+                    reject_unstable_bytecode_for_script(&compiled_script)?;
+                }
+
                 verify_no_event_emission_in_script(&compiled_script)?;
 
                 let args = validate_combine_signer_and_txn_args(
@@ -469,10 +489,6 @@ impl InitiaVM {
             expected_modules,
         } = publish_request;
 
-        // TODO: unfortunately we need to deserialize the entire bundle here to handle
-        // `init_module` and verify some deployment conditions, while the VM need to do
-        // the deserialization again. Consider adding an API to MoveVM which allows to
-        // directly pass CompiledModule.
         let modules = self.deserialize_module_bundle(&module_bundle)?;
         let modules: &Vec<CompiledModule> =
             traversal_context.referenced_module_bundles.alloc(modules);
@@ -544,7 +560,7 @@ impl InitiaVM {
         }
 
         // validate modules are properly compiled with metadata
-        validate_publish_request(session, modules, &module_bundle)?;
+        validate_publish_request(session, modules, &module_bundle, self.allow_unstable())?;
 
         if let Some(expected_modules) = expected_modules {
             for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
@@ -672,7 +688,10 @@ impl InitiaVM {
     ) -> VMResult<Vec<CompiledModule>> {
         let mut result = vec![];
         for module_blob in module_bundle.iter() {
-            match CompiledModule::deserialize(module_blob.code()) {
+            match CompiledModule::deserialize_with_config(
+                module_blob.code(),
+                self.deserializer_config(),
+            ) {
                 Ok(module) => {
                     result.push(module);
                 }

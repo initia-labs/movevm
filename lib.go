@@ -11,9 +11,14 @@ type VM struct {
 }
 
 // NewVm return VM instance
-func NewVM() VM {
-	inner := api.AllocateVM()
-	return VM{inner}
+func NewVM(config types.InitiaVMConfig) (VM, error) {
+	configBz, err := config.BcsSerialize()
+	if err != nil {
+		return VM{}, err
+	}
+
+	inner := api.AllocateVM(configBz)
+	return VM{inner}, nil
 }
 
 // Initialize deploys std libs and move libs

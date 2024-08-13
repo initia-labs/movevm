@@ -33,8 +33,12 @@ pub(crate) fn validate_publish_request(
     session: &Session,
     modules: &[CompiledModule],
     module_bundle: &ModuleBundle,
+    allow_unstable: bool,
 ) -> VMResult<()> {
-    reject_unstable_bytecode(modules)?;
+    if !allow_unstable {
+        reject_unstable_bytecode(modules)?;
+    }
+
     validate_module_natives(modules)?;
 
     for (module, blob) in modules.iter().zip(module_bundle.iter()) {

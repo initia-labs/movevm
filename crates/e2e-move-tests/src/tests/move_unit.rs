@@ -15,7 +15,6 @@ use initia_move_types::metadata;
 
 use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
 use move_core_types::effects::ChangeSet;
-use move_model::metadata::CompilerVersion;
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
 
@@ -60,8 +59,6 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         install_dir: Some(tempdir().unwrap().path().to_path_buf()),
         ..Default::default()
     };
-    // compiler configs
-    build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
     build_config
         .compiler_config
         .known_attributes
