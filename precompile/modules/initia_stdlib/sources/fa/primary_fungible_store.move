@@ -91,12 +91,15 @@ module initia_std::primary_fungible_store {
             },
         );
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        table::add(
-            &mut module_store.issuers,
-            object::object_address(&metadata),
-            object::owner(metadata),
-        );
+        // record issuers for cosmos side query
+        if (exists<ModuleStore>(@initia_std)) {
+            let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+            table::add(
+                &mut module_store.issuers,
+                object::object_address(&metadata),
+                object::owner(metadata),
+            );
+        }
     }
 
     /// Ensure that the primary store object for the given address exists. If it doesn't, create it.
@@ -126,27 +129,30 @@ module initia_std::primary_fungible_store {
         object::disable_ungated_transfer(transfer_ref);
 
         let store = fungible_asset::create_store(constructor_ref, metadata);
+        let store_addr = object::address_from_constructor_ref(constructor_ref);
 
-        // add owner store to table for balances query
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        if (!table::contains(
-                &module_store.user_stores,
-                owner_addr,
-            )) {
+        // record owner store to table for cosmos side query
+        if (exists<ModuleStore>(@initia_std)) {
+            let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+            if (!table::contains(
+                    &module_store.user_stores,
+                    owner_addr,
+                )) {
+                table::add(
+                    &mut module_store.user_stores,
+                    owner_addr,
+                    table::new(),
+                );
+            };
+
+            let user_stores = table::borrow_mut(&mut module_store.user_stores, owner_addr);
+
             table::add(
-                &mut module_store.user_stores,
-                owner_addr,
-                table::new(),
+                user_stores,
+                metadata_addr,
+                store_addr,
             );
         };
-
-        let user_stores = table::borrow_mut(&mut module_store.user_stores, owner_addr);
-        let store_addr = object::address_from_constructor_ref(constructor_ref);
-        table::add(
-            user_stores,
-            metadata_addr,
-            store_addr,
-        );
 
         // emit store created event
         event::emit(
@@ -156,6 +162,7 @@ module initia_std::primary_fungible_store {
     }
 
     #[view]
+    /// Get the address of the issuer for the given metadata object.
     public fun issuer<T: key>(metadata: Object<T>): address acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         *table::borrow(
@@ -206,6 +213,7 @@ module initia_std::primary_fungible_store {
     }
 
     #[view]
+    /// Get the balances of `account`'s primary store of all fungible assets.
     public fun balances(
         account: address,
         start_after: Option<address>,

@@ -6,11 +6,8 @@ module minitia_std::aptos_coin {
     use minitia_std::coin;
     use minitia_std::option;
     use minitia_std::string;
-    use minitia_std::primary_fungible_store;
 
     public fun mint_apt_fa_for_test(amount: u64): FungibleAsset {
-        primary_fungible_store::init_module_for_test();
-
         if (!coin::is_coin_by_symbol(@minitia_std, string::utf8(b"uinit"))) {
             managed_coin::initialize(
                 &account::create_signer_for_test(@minitia_std),
