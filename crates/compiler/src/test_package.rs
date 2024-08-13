@@ -9,7 +9,7 @@ use move_cli::base::{
     test::{run_move_unit_tests, Test, UnitTestResult},
 };
 use move_core_types::effects::ChangeSet;
-use move_model::metadata::CompilerVersion;
+use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
@@ -27,12 +27,18 @@ impl TestPackage {
         new_build_config.test_mode = true;
         new_build_config.generate_docs = false;
         new_build_config.generate_move_model = true;
-        // compiler configs
-        new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
         new_build_config
             .compiler_config
             .known_attributes
             .clone_from(metadata::get_all_attribute_names());
+
+        // use v2 as default
+        if new_build_config.compiler_config.compiler_version.is_none() {
+            new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
+        }
+        if new_build_config.compiler_config.language_version.is_none() {
+            new_build_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
+        }
 
         configure_for_unit_test();
 

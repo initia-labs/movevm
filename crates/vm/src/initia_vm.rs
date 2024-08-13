@@ -1,7 +1,9 @@
 use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
+    deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMResult},
+    file_format::CompiledScript,
     CompiledModule,
 };
 use move_core_types::{
@@ -54,6 +56,7 @@ use initia_move_types::{
     module::ModuleBundle,
     staking_change_set::StakingChangeSet,
     view_function::{ViewFunction, ViewOutput},
+    vm_config::InitiaVMConfig,
     write_set::WriteSet,
 };
 
@@ -63,6 +66,7 @@ use crate::{
         config::verifier_config, errors::metadata_validation_error,
         event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata,
         module_init::verify_module_init_function, module_metadata::validate_publish_request,
+        script::reject_unstable_bytecode_for_script,
         transaction_arg_validation::validate_combine_signer_and_txn_args,
         view_function::validate_view_function,
     },
@@ -73,34 +77,46 @@ use crate::{
 pub struct InitiaVM {
     move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
+    initia_vm_config: InitiaVMConfig,
 }
 
 impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new()
+        Self::new(InitiaVMConfig {
+            allow_unstable: true,
+        })
     }
 }
 
 impl InitiaVM {
-    pub fn new() -> Self {
+    pub fn new(initia_vm_config: InitiaVMConfig) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
-        let move_vm = MoveVM::new_with_config(
-            all_natives(gas_params, misc_params),
-            VMConfig {
-                verifier_config: verifier_config(),
-                ..Default::default()
-            },
-        );
+        let vm_config = VMConfig {
+            verifier_config: verifier_config(),
+            ..Default::default()
+        };
+        let move_vm = MoveVM::new_with_config(all_natives(gas_params, misc_params), vm_config);
 
         Self {
             move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
+            initia_vm_config,
         }
     }
 
     pub fn create_gas_meter(&self, balance: impl Into<Gas>) -> InitiaGasMeter {
         InitiaGasMeter::new(self.gas_params.clone(), balance)
+    }
+
+    #[inline(always)]
+    fn allow_unstable(&self) -> bool {
+        self.initia_vm_config.allow_unstable
+    }
+
+    #[inline(always)]
+    pub fn deserialize_config(&self) -> &DeserializerConfig {
+        &self.move_vm.vm_config().deserializer_config
     }
 
     fn create_session<
@@ -272,7 +288,7 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let func =
+        let function =
             session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
         let metadata = get_vm_metadata(&session, view_fn.module());
         let args = validate_view_function(
@@ -280,7 +296,7 @@ impl InitiaVM {
             state_view_impl,
             view_fn.args().to_vec(),
             view_fn.function(),
-            &func,
+            &function,
             metadata.as_ref(),
             view_fn.is_json(),
         )?;
@@ -299,7 +315,7 @@ impl InitiaVM {
 
         // load fully annotated type layouts for return value serialization
         // after the execution of the function
-        let ret_ty_layouts = func
+        let ret_ty_layouts = function
             .return_tys()
             .iter()
             .map(|ty| {
@@ -348,19 +364,35 @@ impl InitiaVM {
 
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
-                let func_inst = session.load_script(script.code(), script.ty_args())?;
+                let function = session.load_script(script.code(), script.ty_args())?;
 
-                verify_no_event_emission_in_script(
+                let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
-                    &session.get_vm_config().deserializer_config,
-                )?;
+                    self.deserialize_config(),
+                ) {
+                    Ok(script) => script,
+                    Err(err) => {
+                        let msg = format!("[VM] deserializer for script returned error: {:?}", err);
+                        let partial_err =
+                            PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                                .with_message(msg)
+                                .finish(Location::Script);
+                        return Err(partial_err.into_vm_status());
+                    }
+                };
+
+                if !self.allow_unstable() {
+                    reject_unstable_bytecode_for_script(&compiled_script)?;
+                }
+
+                verify_no_event_emission_in_script(&compiled_script)?;
 
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     state_view_impl,
                     senders,
                     script.args().to_vec(),
-                    &func_inst,
+                    &function,
                     script.is_json(),
                 )?;
 
@@ -382,28 +414,37 @@ impl InitiaVM {
                     [(module_id.address(), module_id.name())],
                 )?;
 
-                let func_inst = session.load_function(
+                let function = session.load_function(
                     entry_fn.module(),
                     entry_fn.function(),
                     entry_fn.ty_args(),
                 )?;
+
+                // check if the entry function is a native function
+                if function.is_native() {
+                    return Err(
+                        PartialVMError::new(StatusCode::USER_DEFINED_NATIVE_NOT_ALLOWED)
+                            .with_message(
+                                "Executing user defined native entry function is not allowed"
+                                    .to_string(),
+                            )
+                            .finish(Location::Module(entry_fn.module().clone()))
+                            .into_vm_status(),
+                    );
+                }
+
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     state_view_impl,
                     senders,
                     entry_fn.args().to_vec(),
-                    &func_inst,
+                    &function,
                     entry_fn.is_json(),
                 )?;
 
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
 
-                let function = session.load_function(
-                    entry_fn.module(),
-                    entry_fn.function(),
-                    entry_fn.ty_args(),
-                )?;
                 session.execute_entry_function(function, args, gas_meter, traversal_context)
             }
         }?;
@@ -445,10 +486,6 @@ impl InitiaVM {
             expected_modules,
         } = publish_request;
 
-        // TODO: unfortunately we need to deserialize the entire bundle here to handle
-        // `init_module` and verify some deployment conditions, while the VM need to do
-        // the deserialization again. Consider adding an API to MoveVM which allows to
-        // directly pass CompiledModule.
         let modules = self.deserialize_module_bundle(&module_bundle)?;
         let modules: &Vec<CompiledModule> =
             traversal_context.referenced_module_bundles.alloc(modules);
@@ -520,7 +557,7 @@ impl InitiaVM {
         }
 
         // validate modules are properly compiled with metadata
-        validate_publish_request(session, modules, &module_bundle)?;
+        validate_publish_request(session, modules, &module_bundle, self.allow_unstable())?;
 
         if let Some(expected_modules) = expected_modules {
             for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
@@ -648,7 +685,10 @@ impl InitiaVM {
     ) -> VMResult<Vec<CompiledModule>> {
         let mut result = vec![];
         for module_blob in module_bundle.iter() {
-            match CompiledModule::deserialize(module_blob.code()) {
+            match CompiledModule::deserialize_with_config(
+                module_blob.code(),
+                self.deserialize_config(),
+            ) {
                 Ok(module) => {
                     result.push(module);
                 }

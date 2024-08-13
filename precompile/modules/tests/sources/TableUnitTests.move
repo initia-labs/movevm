@@ -94,10 +94,10 @@ module TestAccount::TableUnitTests {
         let v = *T::borrow(t_ref, 43);
         assert!(v == 1013, 110);
 
-        let S {t: local_t} = move_from<S<u64, u128>>(@0x42);
+        let S { t: local_t } = move_from<S<u64, u128>>(@0x42);
         assert!(*T::borrow(&local_t, 43) == 1013, 111);
 
-        move_to(&s, S {t: local_t});
+        move_to(&s, S { t: local_t });
     }
 
     #[test(s = @0x42)]
@@ -107,17 +107,14 @@ module TestAccount::TableUnitTests {
         T::add(
             &mut t,
             42,
-            vector::singleton<address>(@0x1012)
+            vector::singleton<address>(@0x1012),
         );
         assert!(T::contains(&t, 42), 101);
         assert!(!T::contains(&t, 0), 102);
-        assert!(
-            vector::length(T::borrow(&t, 42)) == 1,
-            103
-        );
+        assert!(vector::length(T::borrow(&t, 42)) == 1, 103);
         assert!(
             *vector::borrow(T::borrow(&t, 42), 0) == @0x1012,
-            104
+            104,
         );
 
         move_to(&s, S { t });
@@ -125,13 +122,10 @@ module TestAccount::TableUnitTests {
         let s = borrow_global_mut<S<u8, vector<address>>>(@0x42);
         let v_mut_ref = T::borrow_mut(&mut s.t, 42);
         vector::push_back(v_mut_ref, @0x1013);
-        assert!(
-            vector::length(T::borrow(&s.t, 42)) == 2,
-            105
-        );
+        assert!(vector::length(T::borrow(&s.t, 42)) == 2, 105);
         assert!(
             *vector::borrow(T::borrow(&s.t, 42), 1) == @0x1013,
-            106
+            106,
         );
 
         let v = T::remove(&mut s.t, 42);
@@ -147,12 +141,9 @@ module TestAccount::TableUnitTests {
         let val_1 = 11;
         let val_2 = 45;
 
-        T::add(&mut t, @0xAB, Balance {value: val_1});
+        T::add(&mut t, @0xAB, Balance { value: val_1 });
         assert!(T::contains(&t, @0xAB), 101);
-        assert!(
-            *&T::borrow(&t, @0xAB).value == val_1,
-            102
-        );
+        assert!(*&T::borrow(&t, @0xAB).value == val_1, 102);
 
         move_to(&s, S { t });
 
@@ -161,22 +152,22 @@ module TestAccount::TableUnitTests {
         T::add(
             global_t,
             @0xCD,
-            Balance {value: val_2}
+            Balance { value: val_2 },
         );
         assert!(
             *&T::borrow(global_t, @0xAB).value == val_1,
-            103
+            103,
         );
         assert!(
             *&T::borrow(global_t, @0xCD).value == val_2,
-            104
+            104,
         );
 
         let entry_mut_ref = T::borrow_mut(global_t, @0xCD);
         *&mut entry_mut_ref.value = entry_mut_ref.value - 1;
         assert!(
             *&T::borrow(global_t, @0xCD).value == val_2 - 1,
-            105
+            105,
         );
 
         let Balance { value } = T::remove(global_t, @0xAB);
@@ -202,42 +193,36 @@ module TestAccount::TableUnitTests {
         T::add(&mut t, @0x12, t1);
         T::add(&mut t, @0x34, t2);
 
-        assert!(
-            T::contains(T::borrow(&t, @0x12), @0xAB),
-            101
-        );
-        assert!(
-            T::contains(T::borrow(&t, @0x34), @0xCD),
-            102
-        );
+        assert!(T::contains(T::borrow(&t, @0x12), @0xAB), 101);
+        assert!(T::contains(T::borrow(&t, @0x34), @0xCD), 102);
         assert!(
             *T::borrow(T::borrow(&t, @0x12), @0xAB) == val_1,
-            103
+            103,
         );
         assert!(
             *T::borrow(T::borrow(&t, @0x34), @0xCD) == val_2,
-            104
+            104,
         );
 
         T::add(
             T::borrow_mut(&mut t, @0x12),
             @0xEF,
-            val_3
+            val_3,
         );
         assert!(
             *T::borrow(T::borrow(&t, @0x12), @0xEF) == val_3,
-            105
+            105,
         );
         assert!(
             *T::borrow(T::borrow(&t, @0x12), @0xAB) == val_1,
-            106
+            106,
         );
 
         let val = T::remove(T::borrow_mut(&mut t, @0x34), @0xCD);
         assert!(val == val_2, 107);
         assert!(
             !T::contains(T::borrow(&t, @0x34), @0xCD),
-            108
+            108,
         );
 
         move_to(&s, S { t });
@@ -333,7 +318,7 @@ module TestAccount::TableUnitTests {
             &t,
             option::some(1),
             option::some(5),
-            1
+            1,
         );
 
         assert!(T::prepare<u64, u64>(iter), 101);

@@ -13,6 +13,7 @@ pub mod code;
 pub mod cosmos;
 pub mod crypto;
 pub mod debug;
+pub mod dispatchable_fungible_asset;
 pub mod event;
 pub mod from_bcs;
 pub mod function_info;
@@ -72,6 +73,11 @@ pub fn initia_move_natives(
     add_natives_from_module!("query", query::make_all(builder));
     add_natives_from_module!("oracle", oracle::make_all(builder));
     add_natives_from_module!("string_utils", string_utils::make_all(builder));
+    add_natives_from_module!("function_info", function_info::make_all(builder));
+    add_natives_from_module!(
+        "dispatchable_fungible_asset",
+        dispatchable_fungible_asset::make_all(builder)
+    );
 
     make_table_from_iter(initia_std_addr, natives)
 }

@@ -38,6 +38,7 @@ module initia_std::query {
     struct ProposalRequest has copy, drop {
         proposal_id: u64,
     }
+
     struct ProposalResponse has copy, drop {
         id: u64,
         title: String,
@@ -46,38 +47,27 @@ module initia_std::query {
         submit_time: String,
         emergency: bool,
     }
+
     #[view]
     public fun get_proposal(proposal_id: u64): (u64, String, String, String) {
-        let response = query_stargate(
-            b"/initia.gov.v1.Query/Proposal",
-            json::marshal(&ProposalRequest {
-                proposal_id,
-            })
-        );
+        let response =
+            query_stargate(
+                b"/initia.gov.v1.Query/Proposal",
+                json::marshal(&ProposalRequest { proposal_id, }),
+            );
         let res = json::unmarshal<ProposalResponse>(response);
-        (
-            res.id,
-            res.title,
-            res.summary,
-            string::utf8(response)
-        )
+        (res.id, res.title, res.summary, string::utf8(response))
     }
 
     #[view]
     public fun get_proposal_status(proposal_id: u64): (u64, String, String, bool) {
-        let response = query_stargate(
-            b"/initia.gov.v1.Query/Proposal",
-            json::marshal(&ProposalRequest {
-                proposal_id,
-            })
-        );
+        let response =
+            query_stargate(
+                b"/initia.gov.v1.Query/Proposal",
+                json::marshal(&ProposalRequest { proposal_id, }),
+            );
         let res = json::unmarshal<ProposalResponse>(response);
-        (
-            res.id,
-            res.status,
-            res.submit_time,
-            res.emergency
-        )
+        (res.id, res.status, res.submit_time, res.emergency)
     }
 
     /// query_custom examples are in initia_stdlib::address module
@@ -86,9 +76,7 @@ module initia_std::query {
 
     #[test_only]
     native public fun set_query_response(
-        path_or_name: vector<u8>,
-        data: vector<u8>,
-        response: vector<u8>
+        path_or_name: vector<u8>, data: vector<u8>, response: vector<u8>
     );
 
     #[test]

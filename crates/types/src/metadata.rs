@@ -16,8 +16,6 @@ pub const METADATA_V0_MIN_FILE_FORMAT_VERSION: u32 = 6;
 /// Initia specific metadata (`initia::` here).
 pub static INITIA_METADATA_KEY_V0: &[u8] = "initia::metadata_v0".as_bytes();
 
-pub static COMPILATION_METADATA_KEY: &[u8] = "compilation_metadata".as_bytes();
-
 /// V1 of Initia specific metadata attached to the metadata section of file_format.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RuntimeModuleMetadataV0 {

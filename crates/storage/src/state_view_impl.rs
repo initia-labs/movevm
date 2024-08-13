@@ -3,6 +3,7 @@
 use super::state_view::StateView;
 
 use bytes::Bytes;
+use move_binary_format::deserializer::DeserializerConfig;
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_binary_format::CompiledModule;
 use move_bytecode_utils::compiled_module_viewer::CompiledModuleView;
@@ -18,11 +19,25 @@ use initia_move_types::access_path::AccessPath;
 
 pub struct StateViewImpl<'block, S> {
     state_view: &'block S,
+    deserialize_config: DeserializerConfig,
 }
 
 impl<'block, S: StateView> StateViewImpl<'block, S> {
     pub fn new(state_view: &'block S) -> Self {
-        Self { state_view }
+        Self {
+            state_view,
+            deserialize_config: DeserializerConfig::default(),
+        }
+    }
+
+    pub fn new_with_deserialize_config(
+        state_view: &'block S,
+        deserialize_config: DeserializerConfig,
+    ) -> Self {
+        Self {
+            state_view,
+            deserialize_config,
+        }
     }
 }
 
@@ -40,7 +55,10 @@ impl<'block, S: StateView> ModuleResolver for StateViewImpl<'block, S> {
             Ok(Some(bytes)) => bytes,
             _ => return vec![],
         };
-        let module = match CompiledModule::deserialize(&module_bytes) {
+        let module = match CompiledModule::deserialize_with_config(
+            &module_bytes,
+            &self.deserialize_config,
+        ) {
             Ok(module) => module,
             _ => return vec![],
         };

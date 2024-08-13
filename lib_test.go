@@ -55,7 +55,10 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	kvStore := api.NewLookup()
 	blockTime := uint64(time.Now().Unix())
 
-	vm := vm.NewVM()
+	vm, err := vm.NewVM(types.InitiaVMConfig{
+		AllowUnstable: true,
+	})
+	require.NoError(t, err)
 	_, err = vm.Initialize(
 		kvStore,
 		api.NewEmptyMockAPI(blockTime),

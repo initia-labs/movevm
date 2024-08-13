@@ -17,6 +17,7 @@ use initia_move_types::{
     staking_change_set::StakingDelta,
     table::TableInfo,
     view_function::{ViewFunction, ViewOutput},
+    vm_config::InitiaVMConfig,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -50,6 +51,7 @@ fn main() {
     tracer.trace_simple_type::<Script>().unwrap();
     tracer.trace_simple_type::<Env>().unwrap();
     tracer.trace_simple_type::<TableInfo>().unwrap();
+    tracer.trace_simple_type::<InitiaVMConfig>().unwrap();
 
     // aliases within StructTag
     tracer

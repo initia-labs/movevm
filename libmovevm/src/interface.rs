@@ -11,6 +11,7 @@ use initia_move_types::message::Message;
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::script::Script;
 use initia_move_types::view_function::ViewFunction;
+use initia_move_types::vm_config::InitiaVMConfig;
 use initia_move_vm::InitiaVM;
 use move_core_types::account_address::AccountAddress;
 
@@ -45,8 +46,9 @@ pub extern "C" fn release_vm(vm: *mut vm_t) {
 }
 
 #[no_mangle]
-pub extern "C" fn allocate_vm() -> *mut vm_t {
-    let vm = Box::into_raw(Box::new(InitiaVM::new()));
+pub extern "C" fn allocate_vm(config_payload: ByteSliceView) -> *mut vm_t {
+    let config: InitiaVMConfig = bcs::from_bytes(config_payload.read().unwrap()).unwrap();
+    let vm = Box::into_raw(Box::new(InitiaVM::new(config)));
     vm as *mut vm_t
 }
 

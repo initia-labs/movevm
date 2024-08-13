@@ -17,12 +17,12 @@ module minitia_std::event {
     }
 
     #[test_only]
-    struct TestEvent has copy, drop{
+    struct TestEvent has copy, drop {
         value: u64,
     }
 
     #[test_only]
-    struct TestEvent2 has copy, drop{
+    struct TestEvent2 has copy, drop {
         value: u64,
     }
 

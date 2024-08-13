@@ -23,7 +23,7 @@ module std::BasicCoin {
         if (!exists<Coin<CoinType>>(account_addr)) {
             move_to(
                 &account,
-                Coin<CoinType> {value, test: true}
+                Coin<CoinType> { value, test: true },
             );
         } else {
             let coin = borrow_global_mut<Coin<CoinType>>(account_addr);
@@ -32,10 +32,7 @@ module std::BasicCoin {
 
         // emit event
         event::emit(
-            MintEvent {
-                amount: value,
-                coin_type: type_info::type_name<CoinType>(),
-            }
+            MintEvent { amount: value, coin_type: type_info::type_name<CoinType>(), },
         );
     }
 
@@ -47,7 +44,7 @@ module std::BasicCoin {
 
     #[view]
     public fun number(): u64 {
-         123
+        123
     }
 
     #[view]

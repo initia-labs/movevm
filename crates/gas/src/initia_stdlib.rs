@@ -109,4 +109,11 @@ crate::macros::define_gas_parameters!(
 
     [string_utils_format_base: InternalGas, "string_utils.format.base", 1102],
     [string_utils_format_per_byte: InternalGasPerByte, "string_utils.format.per_byte", 3],
+
+    // TODO(Gas): Fix my cost
+    [function_info_check_is_identifier_base: InternalGas, "function_info.is_identifier.base", 551],
+    [function_info_check_is_identifier_per_byte: InternalGasPerByte, "function_info.is_identifier.per_byte" , 3],
+    [function_info_check_dispatch_type_compatibility_impl_base: InternalGas, "function_info.check_dispatch_type_compatibility_impl.base", 1002],
+    [function_info_load_function_base: InternalGas, "function_info.load_function.base", 551],
+    [dispatchable_fungible_asset_dispatch_base: InternalGas, "dispatchable_fungible_asset.dispatch.base", 551],
 ]);

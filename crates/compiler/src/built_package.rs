@@ -15,7 +15,10 @@ use move_core_types::{
     account_address::AccountAddress, language_storage::ModuleId, metadata::Metadata,
 };
 use move_docgen::DocgenOptions;
-use move_model::{metadata::CompilerVersion, model::GlobalEnv};
+use move_model::{
+    metadata::{CompilerVersion, LanguageVersion},
+    model::GlobalEnv,
+};
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
     BuildConfig, ModelConfig,
@@ -49,13 +52,22 @@ pub struct BuiltPackage {
 }
 
 pub fn build_model(package_path: &Path, build_config: BuildConfig) -> anyhow::Result<GlobalEnv> {
+    let compiler_version = build_config
+        .compiler_config
+        .compiler_version
+        .unwrap_or(CompilerVersion::V2_0);
+    let language_version = build_config
+        .compiler_config
+        .language_version
+        .unwrap_or(LanguageVersion::V2_0);
+
     build_config.move_model_for_package(
         package_path,
         ModelConfig {
             target_filter: None,
             all_files_as_targets: false,
-            compiler_version: move_model::metadata::CompilerVersion::V2_0,
-            language_version: move_model::metadata::LanguageVersion::V2_0,
+            compiler_version,
+            language_version,
         },
     )
 }
@@ -79,12 +91,18 @@ impl BuiltPackage {
         new_config.architecture = None;
         new_config.generate_docs = false;
         new_config.generate_move_model = true;
-        // compiler configs
-        new_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
         new_config
             .compiler_config
             .known_attributes
             .clone_from(metadata::get_all_attribute_names());
+
+        // use v2 as default
+        if new_config.compiler_config.compiler_version.is_none() {
+            new_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
+        }
+        if new_config.compiler_config.language_version.is_none() {
+            new_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
+        }
 
         let (mut package, model_opt) =
             new_config.compile_package_no_exit(&package_path, &mut stderr())?;
@@ -137,7 +155,6 @@ impl BuiltPackage {
 
             DocgenPackage {
                 docgen_options: docgen,
-                build_config: config.clone(),
                 package_path: package_path.clone(),
             }
             .generate_docs(dep_paths, model)?

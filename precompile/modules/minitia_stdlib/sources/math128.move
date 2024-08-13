@@ -31,11 +31,7 @@ module minitia_std::math128 {
 
     /// Returns a * b / c going through u128 to prevent intermediate overflow
     public fun mul_div(a: u128, b: u128, c: u128): u128 {
-        (
-            (
-                (a as u256) * (b as u256) / (c as u256)
-            ) as u128
-        )
+        (((a as u256) * (b as u256) / (c as u256)) as u128)
     }
 
     /// Return x clamped to the interval [lower, upper].
@@ -45,7 +41,8 @@ module minitia_std::math128 {
 
     /// Return the value of n raised to power e
     public fun pow(n: u128, e: u128): u128 {
-        if (e == 0) { 1 } else {
+        if (e == 0) { 1 }
+        else {
             let p = 1;
             while (e > 1) {
                 if (e % 2 == 1) {
@@ -63,7 +60,7 @@ module minitia_std::math128 {
         let res = 0;
         assert!(
             x != 0,
-            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2)
+            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2),
         );
         // Effectively the position of the most significant set bit
         let n = 64;
@@ -170,9 +167,9 @@ module minitia_std::math128 {
         assert!(
             ceil_div(
                 (((1u256 << 128) - 9) as u128),
-                11
+                11,
             ) == 30934760629176223951215873402888019223,
-            0
+            0,
         );
     }
 
@@ -228,7 +225,7 @@ module minitia_std::math128 {
     #[test]
     public entry fun test_floor_log2() {
         let idx: u8 = 0;
-        while (idx <128) {
+        while (idx < 128) {
             assert!(floor_log2(1 << idx) == idx, 0);
             idx = idx + 1;
         };
@@ -238,7 +235,7 @@ module minitia_std::math128 {
                 floor_log2(
                     (((1u256 << idx) - 1) as u128)
                 ) == idx - 1,
-                0
+                0,
             );
             idx = idx + 1;
         };
@@ -247,36 +244,30 @@ module minitia_std::math128 {
     #[test]
     public entry fun test_log2() {
         let idx: u8 = 0;
-        while (idx <128) {
+        while (idx < 128) {
             let res = log2(1 << idx);
             assert!(
                 fixed_point32::get_raw_value(res) == (idx as u64) << 32,
-                0
+                0,
             );
             idx = idx + 1;
         };
         idx = 10;
         while (idx <= 128) {
-            let res = log2(
-                (((1u256 << idx) - 1) as u128)
-            );
+            let res = log2((((1u256 << idx) - 1) as u128));
             // idx + log2 (1 - 1/2^idx) = idx + ln (1-1/2^idx)/ln2
             // Use 3rd order taylor to approximate expected result
             let expected = (idx as u128) << 32;
-            let taylor1 = (
-                (1 << 32) / ((1u256 << idx)) as u128
-            );
+            let taylor1 = ((1 << 32) / ((1u256 << idx)) as u128);
             let taylor2 = (taylor1 * taylor1) >> 32;
             let taylor3 = (taylor2 * taylor1) >> 32;
-            let expected = expected - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) /
-                2977044472;
+            let expected = expected
+                - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) / 2977044472;
             // verify it matches to 8 significant digits
             assert_approx_the_same(
-                (
-                    fixed_point32::get_raw_value(res) as u128
-                ),
+                (fixed_point32::get_raw_value(res) as u128),
                 expected,
-                8
+                8,
             );
             idx = idx + 1;
         };
@@ -285,11 +276,11 @@ module minitia_std::math128 {
     #[test]
     public entry fun test_log2_64() {
         let idx: u8 = 0;
-        while (idx <128) {
+        while (idx < 128) {
             let res = log2_64(1 << idx);
             assert!(
                 fixed_point64::get_raw_value(res) == (idx as u128) << 64,
-                0
+                0,
             );
             idx = idx + 1;
         };
@@ -305,16 +296,15 @@ module minitia_std::math128 {
             let taylor2 = (taylor1 * taylor1) >> 64;
             let taylor3 = (taylor2 * taylor1) >> 64;
             let taylor4 = (taylor3 * taylor1) >> 64;
-            let expected = expected - (
-                (
-                    taylor1 + taylor2 / 2 + taylor3 / 3 + taylor4 / 4
-                ) << 64
-            ) / 12786308645202655660;
+            let expected =
+                expected
+                    - ((taylor1 + taylor2 / 2 + taylor3 / 3 + taylor4 / 4) << 64)
+                        / 12786308645202655660;
             // verify it matches to 8 significant digits
             assert_approx_the_same(
                 fixed_point64::get_raw_value(res),
                 (expected as u128),
-                14
+                14,
             );
             idx = idx + 1;
         };
@@ -334,9 +324,7 @@ module minitia_std::math128 {
         let result = sqrt(1 << 126);
         assert!(result == 1 << 63, 0);
 
-        let result = sqrt(
-            (((1u256 << 128) - 1) as u128)
-        );
+        let result = sqrt((((1u256 << 128) - 1) as u128));
         assert!(result == (1u128 << 64) - 1, 0);
 
         let result = sqrt((1u128 << 127));

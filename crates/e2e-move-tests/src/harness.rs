@@ -60,7 +60,7 @@ impl Default for MoveHarness {
 impl MoveHarness {
     /// Creates a new harness.
     pub fn new() -> Self {
-        let vm = InitiaVM::new();
+        let vm = InitiaVM::default();
         let chain = MockChain::new();
         let api = MockAPI::empty();
 

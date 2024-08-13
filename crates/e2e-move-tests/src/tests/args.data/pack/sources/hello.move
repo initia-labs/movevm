@@ -20,7 +20,7 @@ module 0xCAFE::test {
 
     #[view]
     public fun get_object(obj: Object<ModuleData<String>>): String acquires ModuleData {
-        let addr = object::object_address(obj);
+        let addr = object::object_address(&obj);
 
         borrow_global<ModuleData<String>>(addr).state
     }

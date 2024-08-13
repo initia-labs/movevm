@@ -61,6 +61,22 @@ typedef struct {
 } vm_t;
 
 /**
+ * A view into an externally owned byte slice (Go `[]byte`).
+ * Use this for the current call only. A view cannot be copied for safety reasons.
+ * If you need a copy, use [`ByteSliceView::to_owned`].
+ *
+ * Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
+ */
+typedef struct {
+  /**
+   * True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
+   */
+  bool is_nil;
+  const uint8_t *ptr;
+  size_t len;
+} ByteSliceView;
+
+/**
  * An optional Vector type that requires explicit creation and destruction
  * and can be sent via FFI.
  * It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
@@ -104,22 +120,6 @@ typedef struct {
   size_t len;
   size_t cap;
 } UnmanagedVector;
-
-/**
- * A view into an externally owned byte slice (Go `[]byte`).
- * Use this for the current call only. A view cannot be copied for safety reasons.
- * If you need a copy, use [`ByteSliceView::to_owned`].
- *
- * Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
- */
-typedef struct {
-  /**
-   * True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
-   */
-  bool is_nil;
-  const uint8_t *ptr;
-  size_t len;
-} ByteSliceView;
 
 typedef struct {
   uint8_t _private[0];
@@ -220,7 +220,7 @@ typedef struct {
   GoApi_vtable vtable;
 } GoApi;
 
-vm_t *allocate_vm(void);
+vm_t *allocate_vm(ByteSliceView config_payload);
 
 UnmanagedVector convert_module_name(UnmanagedVector *errmsg,
                                     ByteSliceView precompiled,
