@@ -234,6 +234,38 @@ module initia_std::table {
         (key, &mut box.val)
     }
 
+    public inline fun walk_mut<K: copy + drop, V>(
+        mut_table: &mut Table<K, V>,
+        f: |K, &mut V| bool
+    ) {
+        let iter = iter_mut(
+            mut_table,
+            option::none(),
+            option::none(),
+            1
+        );
+        loop {
+            if (!prepare_mut<K, V>(iter)) { break };
+            let (key, value) = next_mut<K, V>(iter);
+            let stop = f(key, value);
+            if (stop) { break }
+        }
+    }
+
+    public inline fun walk<K: copy + drop, V>(mut_table: &Table<K, V>, f: |K, &V| bool) {
+        let iter = iter(
+            mut_table,
+            option::none(),
+            option::none(),
+            1
+        );
+        loop {
+            if (!prepare<K, V>(iter)) { break };
+            let (key, value) = next<K, V>(iter);
+            let stop = f(key, value);
+            if (stop) { break }
+        }
+    }
     // ======================================================================================================
     // Internal API
 
