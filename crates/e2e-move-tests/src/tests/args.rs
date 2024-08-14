@@ -766,7 +766,7 @@ fn json_object_args() {
     let events = output.events().clone().into_inner();
     let event = events
         .iter()
-        .find(|e| e.type_tag.to_string() == "0x1::object::CreateEvent")
+        .find(|e| e.type_tag == "0x1::object::CreateEvent")
         .unwrap();
     let data: CreateEvent = serde_json::from_str(event.event_data.as_str()).unwrap();
 

@@ -141,17 +141,17 @@ fn repeats_vec_of_vec_u8(item: Vec<u8>, n: usize) -> Vec<Vec<u8>> {
 /// Three Variants are supported in the input for convenience:
 ///  - Equal number of messages, signatures, and public keys: Standard, generic functionality.
 ///  - One message, and an equal number of signatures and public keys: Multiple digital signature
-/// (multisig) verification of a single message.
+///    (multisig) verification of a single message.
 ///  - One public key, and an equal number of messages and signatures: Verification of multiple
-/// messages, all signed with the same private key.
+///    messages, all signed with the same private key.
 ///
 /// Any other variants of input vectors result in an error.
 ///
 /// Notes:
 ///  - The "one-message, with zero signatures and zero public keys" case, is considered the empty
-/// case.
+///    case.
 ///  - The "one-public key, with zero messages and zero signatures" case, is considered the empty
-/// case.
+///    case.
 ///  - The empty case (no messages, no signatures and no public keys) returns true.
 pub fn native_batch_verify(
     context: &mut SafeNativeContext,
