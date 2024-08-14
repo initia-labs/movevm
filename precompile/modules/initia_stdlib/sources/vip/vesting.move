@@ -4,6 +4,7 @@ module initia_std::vip_vesting {
     use std::vector;
     use std::event;
     use std::type_info;
+    use std::option;
     use initia_std::fungible_asset::{ FungibleAsset };
     use initia_std::table::{Self, Table};
     use initia_std::table_key;
@@ -251,7 +252,7 @@ module initia_std::vip_vesting {
         operator_vestings_cache
     }
 
-    fun get_last_key_value<K: copy + drop, V>(table: &Table<K, V>): (K, &V) {
+    fun get_last_key<K: copy + drop, V>(table: &Table<K, V>): K {
         let iter = table::iter(
             table,
             option::none(),
@@ -263,9 +264,9 @@ module initia_std::vip_vesting {
                 error::invalid_argument(ENOT_FOUND)
             )
         };
-        let (key, value) = table::next<K, V>(iter);
+        let (key, _) = table::next<K, V>(iter);
 
-        (key, value)
+        key
     }
 
     fun get_last_claimed_stage<Vesting: copy + drop + store>(account_addr: address, bridge_id: u64)
@@ -277,7 +278,7 @@ module initia_std::vip_vesting {
                 &mut module_store.operator_vestings,
                 table_key
             );
-            let (stage_key, _) = get_last_key_value(operator_vestings);
+            let stage_key = get_last_key(operator_vestings);
             table_key::decode_u64(stage_key)
         }
         else if (type_info::type_name<Vesting>() == type_info::type_name<UserVesting>()) {
@@ -285,7 +286,7 @@ module initia_std::vip_vesting {
                 &mut module_store.user_vestings,
                 table_key
             );
-            let (stage_key, _) = get_last_key_value(user_vestings);
+            let stage_key = get_last_key(user_vestings);
             table_key::decode_u64(stage_key)
         }
         else {
