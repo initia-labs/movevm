@@ -13,7 +13,7 @@ use move_package::BuildConfig;
 #[derive(Parser)]
 #[clap(name = "clean")]
 pub struct Clean {
-    /// flush cache direcotry
+    /// flush cache directory
     #[clap(long = "clean-cache")]
     pub clean_cache: bool,
     /// flush other byproducts from compiler. it only removes files and directories with default name

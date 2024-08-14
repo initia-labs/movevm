@@ -27,7 +27,7 @@ use ed25519_consensus::SigningKey;
 /// The length of a public key in bytes.
 pub const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
 
-/// The lenght of a signature in bytes.
+/// The length of a signature in bytes.
 pub const ED25519_SIGNATURE_LENGTH: usize = 64;
 
 // See stdlib/error.move

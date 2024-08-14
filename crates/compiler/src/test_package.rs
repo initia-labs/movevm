@@ -1,19 +1,21 @@
 use std::path::PathBuf;
 
 use anyhow::bail;
-use initia_move_gas::{MiscGasParameters, NativeGasParameters};
+use initia_move_gas::{
+    InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters,
+};
 use initia_move_natives::all_natives;
 use initia_move_types::metadata;
 use move_cli::base::{
     coverage::{Coverage, CoverageSummaryOptions},
-    test::{run_move_unit_tests, Test, UnitTestResult},
+    test::{run_move_unit_tests_with_gas_meter, Test, UnitTestResult},
 };
 use move_core_types::effects::ChangeSet;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
-use crate::extensions::configure_for_unit_test;
+use crate::{extensions::configure_for_unit_test, test_gas_meter::TestInitiaGasMeter};
 
 pub struct TestPackage {
     pub package_path: PathBuf,
@@ -43,10 +45,12 @@ impl TestPackage {
         configure_for_unit_test();
 
         let gas_limit = 1_000_000_000u64;
-        let native_gas_params = NativeGasParameters::zeros();
-        let misc_gas_params = MiscGasParameters::zeros();
+        let gas_params = InitiaGasParameters::initial();
+        let gas_meter = TestInitiaGasMeter::new(gas_params, gas_limit);
 
-        let result = run_move_unit_tests(
+        let native_gas_params = NativeGasParameters::initial();
+        let misc_gas_params = MiscGasParameters::initial();
+        let result = run_move_unit_tests_with_gas_meter(
             &self.package_path,
             new_build_config,
             UnitTestingConfig {
@@ -63,6 +67,7 @@ impl TestPackage {
             None,
             self.test_config.compute_coverage,
             &mut std::io::stdout(),
+            Some(gas_meter),
         )?;
 
         if self.test_config.compute_coverage {

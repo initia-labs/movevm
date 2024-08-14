@@ -422,12 +422,12 @@ mod json_arg_testing {
 
         let arg = b"\"hello\"";
         let result = deserialize_json_to_value(&layout, arg).unwrap();
-        assert_eq!(
-            result
-                .simple_serialize(&MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)))
-                .unwrap(),
-            bcs::to_bytes("hello").unwrap()
-        );
+
+        assert!(result
+            .equals(&Value::struct_(Struct::pack(vec![Value::vector_u8(
+                b"hello".to_vec()
+            )])))
+            .unwrap());
     }
 
     #[test]

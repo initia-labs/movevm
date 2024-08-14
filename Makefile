@@ -53,13 +53,16 @@ test-safety:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
 	GODEBUG=cgocheck=2 go test -race -v -count=1 -parallel=1 ./...
 
-test-rust: test-compiler test-lib test-e2e test-movevm
+test-rust: test-compiler test-lib test-e2e test-movevm test-json
 
 test-compiler:
 	cargo test -p initia-move-compiler
 
 test-movevm:
 	cargo test -p movevm
+
+test-json:
+	cargo test -p initia-move-json
 
 test-lib:
 	cargo test -p initia-move-vm
@@ -94,7 +97,6 @@ update-bindings:
 	cp libcompiler/bindings_compiler.h api
 
 # Use debug build for quick testing.
-# In order to use "--features backtraces" here we need a Rust nightly toolchain, which we don't have by default
 build-rust-debug:
 	cargo build -p movevm
 	cargo build -p compiler
