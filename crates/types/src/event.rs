@@ -30,8 +30,8 @@ impl ContractEvent {
         &self.event_data
     }
 
-    pub fn into_inner(self) -> (TypeTag, String) {
-        (self.type_tag, self.event_data)
+    pub fn into_inner(self) -> (String, String) {
+        (self.type_tag.to_string(), self.event_data)
     }
 }
 

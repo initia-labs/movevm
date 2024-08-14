@@ -1,10 +1,8 @@
-use move_core_types::language_storage::TypeTag;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonEvent {
-    pub type_tag: TypeTag,
+    pub type_tag: String,
     pub event_data: String,
 }
 
@@ -15,10 +13,10 @@ impl PartialEq for JsonEvent {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct JsonEvents(Vec<(TypeTag, String)>);
+pub struct JsonEvents(Vec<(String, String)>);
 
 impl JsonEvents {
-    pub fn new(events: Vec<(TypeTag, String)>) -> JsonEvents {
+    pub fn new(events: Vec<(String, String)>) -> JsonEvents {
         Self(events)
     }
 
@@ -33,8 +31,8 @@ impl JsonEvents {
     }
 }
 
-impl AsRef<Vec<(TypeTag, String)>> for JsonEvents {
-    fn as_ref(&self) -> &Vec<(TypeTag, String)> {
+impl AsRef<Vec<(String, String)>> for JsonEvents {
+    fn as_ref(&self) -> &Vec<(String, String)> {
         &self.0
     }
 }

@@ -46,7 +46,7 @@ fn test_view_output() {
                 module: module_name,
                 name: struct_name,
                 type_args: vec![]
-            })),
+            })).to_string(),
             "{\"arg\":\"hello world\",\"type_arg\":\"u256\"}".to_string()
         )])
         .into_inner(),

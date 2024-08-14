@@ -194,7 +194,7 @@ func mintCoin(
 	require.Len(t, res.Events, 1)
 	require.Len(t, res.StakingDeltas, 0)
 
-	eventTypeTag, err := api.StringifyTypeTag(res.Events[0].TypeTag)
+	eventTypeTag := res.Events[0].TypeTag
 	require.NoError(t, err)
 	require.Equal(t, "0x2::TestCoin::MintEvent", eventTypeTag)
 
@@ -470,7 +470,7 @@ func Test_ExecuteScript(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res.Events, 1)
 
-	eventTypeTag, err := api.StringifyTypeTag(res.Events[0].TypeTag)
+	eventTypeTag := res.Events[0].TypeTag
 	require.NoError(t, err)
 	require.Equal(t, "0x1::BasicCoin::MintEvent", eventTypeTag)
 

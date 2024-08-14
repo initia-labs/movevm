@@ -1004,13 +1004,13 @@ func BcsDeserializeInitiaVMConfig(input []byte) (InitiaVMConfig, error) {
 }
 
 type JsonEvent struct {
-	TypeTag TypeTag
+	TypeTag string
 	EventData string
 }
 
 func (obj *JsonEvent) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
-	if err := obj.TypeTag.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeStr(obj.TypeTag); err != nil { return err }
 	if err := serializer.SerializeStr(obj.EventData); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
@@ -1028,7 +1028,7 @@ func (obj *JsonEvent) BcsSerialize() ([]byte, error) {
 func DeserializeJsonEvent(deserializer serde.Deserializer) (JsonEvent, error) {
 	var obj JsonEvent
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := DeserializeTypeTag(deserializer); err == nil { obj.TypeTag = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.TypeTag = val } else { return obj, err }
 	if val, err := deserializer.DeserializeStr(); err == nil { obj.EventData = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
