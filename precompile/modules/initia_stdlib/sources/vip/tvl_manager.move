@@ -196,7 +196,7 @@ module publisher::vip_tvl_manager {
             table_key::encode_u64(bridge_id)
         );
         let snapshot_responses = vector::empty<TVLSnapshotResponse>();
-        table::loop_table(
+        table::walk(
             snapshots_table,
             |time_vec, snapshot_tvl| {
                 vector::push_back(

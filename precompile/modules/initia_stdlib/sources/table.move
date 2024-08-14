@@ -224,7 +224,7 @@ module initia_std::table {
         (key, &mut box.val)
     }
 
-    public inline fun get_last_key_and_value<K: copy + drop, V>(table: &Table<K, V>): (K, &V) {
+    public inline fun get_last_key_value<K: copy + drop, V>(table: &Table<K, V>): (K, &V) {
         let iter = iter(
             table,
             option::none(),
@@ -241,7 +241,7 @@ module initia_std::table {
         (key, value)
     }
 
-    public inline fun loop_table_mut<K: copy + drop, V>(
+    public inline fun walk_mut<K: copy + drop, V>(
         mut_table: &mut Table<K, V>,
         f: |K, &mut V| bool
     ) {
@@ -259,7 +259,7 @@ module initia_std::table {
         }
     }
 
-    public inline fun loop_table<K: copy + drop, V>(mut_table: &Table<K, V>, f: |K, &V| bool) {
+    public inline fun walk<K: copy + drop, V>(mut_table: &Table<K, V>, f: |K, &V| bool) {
         let iter = iter(
             mut_table,
             option::none(),

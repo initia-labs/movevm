@@ -565,7 +565,7 @@ module publisher::vip {
     ): (u64, u64) {
         let total_user_funded_reward = 0;
         let total_operator_funded_reward = 0;
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, _v| {
                 let bridge_id = table_key::decode_u64(bridge_id_vec);
@@ -674,7 +674,7 @@ module publisher::vip {
         let bridge_balances: SimpleMap<u64, u64> = simple_map::create();
         let total_balance = 0;
         // sum total balance for calculating shares
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, _v| {
                 // bridge balance from tvl manager
@@ -700,7 +700,7 @@ module publisher::vip {
             total_balance
         );
         // calculate balance share by total balance
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, _v| {
 
@@ -732,7 +732,7 @@ module publisher::vip {
 
     fun calculate_weight_share(module_store: &ModuleStore): SimpleMap<u64, Decimal256> {
         let weight_shares: SimpleMap<u64, Decimal256> = simple_map::create<u64, Decimal256>();
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, bridge| {
                 use_bridge(bridge);
@@ -760,7 +760,7 @@ module publisher::vip {
     fun validate_vip_weights(module_store: &ModuleStore) {
         let total_weight = decimal256::zero();
 
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |_k, bridge| {
                 use_bridge(bridge);
@@ -1019,7 +1019,7 @@ module publisher::vip {
 
     fun add_tvl_snapshot_internal(module_store: &ModuleStore) {
         let current_stage = module_store.stage;
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, bridge| {
                 use_bridge(bridge);
@@ -1723,7 +1723,7 @@ module publisher::vip {
     public fun get_bridge_infos(): vector<BridgeResponse> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
         let bridge_infos = vector::empty<BridgeResponse>();
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, bridge| {
                 use_bridge(bridge);
@@ -1748,7 +1748,7 @@ module publisher::vip {
     public fun get_whitelisted_bridge_ids(): vector<u64> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
         let bridge_ids = vector::empty<u64>();
-        table::loop_table(
+        table::walk(
             &module_store.bridges,
             |bridge_id_vec, bridge| {
                 use_bridge(bridge);
@@ -1771,7 +1771,7 @@ module publisher::vip {
         let stage_key = table_key::encode_u64(stage);
         let stage_data = table::borrow(&module_store.stage_data, stage_key);
         let total_l2_scores: vector<TotalL2ScoreResponse> = vector[];
-        table::loop_table(
+        table::walk(
             &stage_data.snapshots,
             |bridge_id_vec, snapshot| {
                 use_snapshot(snapshot);

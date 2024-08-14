@@ -1287,7 +1287,7 @@ module publisher::vip_weight_vote {
     public fun get_challenge_by_cycle(cycle: u64): vector<ChallengeResponse> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@publisher);
         let challenge_responses = vector::empty<ChallengeResponse>();
-        table::loop_table(
+        table::walk(
             &module_store.challenges,
             |_k, challenge| {
                 use_challenge(challenge);
