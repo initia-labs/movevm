@@ -923,7 +923,8 @@ module initia_std::vip_test {
     }
 
     #[test(chain = @0x1, initia_std = @initia_std, operator = @0x56ccf33c45b99546cd1da172cf6849395bbf8573, receiver = @0x19c9b6007d21a996737ea527f46b160b0a057c37)]
-    fun zapping_vesting_position_without_claim(
+    #[expected_failure(abort_code = 0xC001f, location = vip)]
+    fun fail_zapping_vesting_position_without_claim(
         chain: &signer,
         initia_std: &signer,
         operator: &signer,

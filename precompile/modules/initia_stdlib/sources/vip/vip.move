@@ -58,6 +58,7 @@ module initia_std::vip {
     const ETOO_EARLY_FUND: u64 = 28;
     const EINVALID_STAGE_INTERVAL: u64 = 29;
     const EINVALID_STAGE_SNAPSHOT: u64 = 30;
+    const ECLAIMABLE_REWARD_CAN_BE_EXIST: u64 = 31;
     //
     //  Constants
     //
@@ -1513,7 +1514,7 @@ module initia_std::vip {
         zapping_amount: u64,
         stakelisted_amount: u64,
         stakelisted_metadata: Object<Metadata>,
-    ) {
+    ) acquires ModuleStore {
         let account_addr = signer::address_of(account);
         // check if it is already finalized(or zapped), make the error
         assert!(
@@ -1521,6 +1522,22 @@ module initia_std::vip {
                 account_addr, bridge_id, stage
             ),
             error::invalid_state(EALREADY_FINALIZED_OR_ZAPPED),
+        );
+
+        // check the last claimed stage !== current stage
+        // it means there can be claimable reward not to be zapped
+        let last_claimed_stage = vip_vesting::get_user_last_claimed_stage(
+            account_addr, bridge_id
+        );
+        let last_submitted_stage = get_last_submitted_stage(bridge_id);
+        let can_zap = if (last_claimed_stage == last_submitted_stage) { true } else {
+            // check is there any claimable reward
+            let check_stage = last_claimed_stage + 1;
+            !check_claimable(bridge_id, check_stage)
+        };
+        assert!(
+            can_zap,
+            error::not_implemented(ECLAIMABLE_REWARD_CAN_BE_EXIST)
         );
 
         zapping(
