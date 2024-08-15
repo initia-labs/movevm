@@ -13,7 +13,7 @@ module initia_std::vip_weight_vote {
     use initia_std::decimal256::{Self, Decimal256};
     use initia_std::event;
     use initia_std::primary_fungible_store;
-    use initia_std::object::{ Self };
+    use initia_std::object::{Self};
     use initia_std::table::{Self, Table};
     use initia_std::table_key;
 
@@ -94,7 +94,7 @@ module initia_std::vip_weight_vote {
         merkle_root: vector<u8>,
         votes: Table<address, WeightVote>,
         total_tally: u64,
-        tally: Table<vector<u8> /* bridge id */, u64 /* tally */ >,
+        tally: Table<vector<u8> /* bridge id */, u64 /* tally */>,
         snapshot_height: u64,
         voting_end_time: u64,
         api_uri: String, // api uri to serve merkle proofs
@@ -120,15 +120,12 @@ module initia_std::vip_weight_vote {
         title: String,
         summary: String,
         api_uri: String,
-
         cycle: u64,
         challenger: address,
         voting_power_cycle: u64,
-
         new_submitter: address,
         merkle_root: vector<u8>,
         snapshot_height: u64,
-
         votes: Table<address, Vote>,
         yes_tally: u64,
         no_tally: u64,
@@ -164,15 +161,12 @@ module initia_std::vip_weight_vote {
         title: String,
         summary: String,
         api_uri: String,
-
         cycle: u64,
         challenger: address,
         voting_power_cycle: u64,
-
         new_submitter: address,
         merkle_root: vector<u8>,
         snapshot_height: u64,
-
         yes_tally: u64,
         no_tally: u64,
         quorum: u64,
@@ -275,12 +269,13 @@ module initia_std::vip_weight_vote {
         challenge_deposit_amount: u64,
     ) {
         assert!(
-            signer::address_of(chain) == @initia_std || signer::address_of(chain) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED)
+            signer::address_of(chain) == @initia_std
+                || signer::address_of(chain) == @initia_std,
+            error::permission_denied(EUNAUTHORIZED),
         );
         assert!(
             !exists<ModuleStore>(@initia_std),
-            error::already_exists(EMODULE_STORE_ALREADY_EXISTS)
+            error::already_exists(EMODULE_STORE_ALREADY_EXISTS),
         );
 
         let object = object::create_named_object(chain, b"vip_proposal");
@@ -303,7 +298,7 @@ module initia_std::vip_weight_vote {
                 min_voting_period,
                 quorum_ratio,
                 challenge_deposit_amount,
-            }
+            },
         )
     }
 
@@ -319,7 +314,7 @@ module initia_std::vip_weight_vote {
     ) acquires ModuleStore {
         assert!(
             signer::address_of(chain) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED)
+            error::permission_denied(EUNAUTHORIZED),
         );
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
 
@@ -328,7 +323,9 @@ module initia_std::vip_weight_vote {
         };
 
         if (option::is_some(&snapshot_grace_period)) {
-            module_store.snapshot_grace_period = option::extract(&mut snapshot_grace_period);
+            module_store.snapshot_grace_period = option::extract(
+                &mut snapshot_grace_period
+            );
         };
 
         if (option::is_some(&voting_period)) {
@@ -356,7 +353,7 @@ module initia_std::vip_weight_vote {
         // voting period must be less than cycle interval
         assert!(
             module_store.voting_period < module_store.cycle_interval,
-            error::invalid_argument(EINVALID_PARAMETER)
+            error::invalid_argument(EINVALID_PARAMETER),
         );
     }
 
@@ -377,23 +374,24 @@ module initia_std::vip_weight_vote {
 
         assert!(
             signer::address_of(submitter) == module_store.submitter,
-            error::permission_denied(EUNAUTHORIZED)
+            error::permission_denied(EUNAUTHORIZED),
         );
         assert!(
             module_store.cycle_end_timestamp < timestamp,
-            error::invalid_state(ECYCLE_NOT_END)
+            error::invalid_state(ECYCLE_NOT_END),
         );
         // get the last voted proposal
         // execute proposal not executed
         if (module_store.current_cycle != 0) {
-            let proposal = table::borrow_mut(
-                &mut module_store.proposals,
-                table_key::encode_u64(module_store.current_cycle),
-            );
+            let proposal =
+                table::borrow_mut(
+                    &mut module_store.proposals,
+                    table_key::encode_u64(module_store.current_cycle),
+                );
             if (!proposal.executed && proposal.voting_end_time < timestamp) {
                 execute_proposal_internal(
                     proposal,
-                    module_store.current_cycle
+                    module_store.current_cycle,
                 );
             };
         };
@@ -404,7 +402,7 @@ module initia_std::vip_weight_vote {
             merkle_root,
             api_uri,
             snapshot_height,
-            voting_end_time
+            voting_end_time,
         );
     }
 
@@ -426,40 +424,40 @@ module initia_std::vip_weight_vote {
             |bridge_id| {
                 assert!(
                     vip::is_registered(bridge_id),
-                    error::invalid_argument(EINVALID_BRIDGE)
+                    error::invalid_argument(EINVALID_BRIDGE),
                 );
-            }
+            },
         );
         let weight_sum = decimal128::new(0);
         vector::for_each_ref(
             &weights,
             |weight| {
                 weight_sum = decimal128::add(&weight_sum, weight);
-            }
+            },
         );
         assert!(
             decimal128::val(&weight_sum) <= decimal128::val(&decimal128::one()),
-            error::invalid_argument(EINVALID_PARAMETER)
+            error::invalid_argument(EINVALID_PARAMETER),
         );
         let voting_power_used = decimal128::mul_u64(&weight_sum, max_voting_power);
         // check vote condition
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let proposal = table::borrow_mut(
-            &mut module_store.proposals,
-            cycle_key
+            &mut module_store.proposals, cycle_key
         );
         assert!(
             timestamp < proposal.voting_end_time,
-            error::invalid_state(EVOTING_END)
+            error::invalid_state(EVOTING_END),
         );
 
         // remove former vote
         if (table::contains(&proposal.votes, addr)) {
-            let WeightVote {voting_power: _, weights} = table::remove(&mut proposal.votes, addr);
+            let WeightVote { voting_power: _, weights } =
+                table::remove(&mut proposal.votes, addr);
             remove_vote(proposal, max_voting_power, weights);
         };
 
@@ -469,7 +467,7 @@ module initia_std::vip_weight_vote {
             assert_merkle_proofs(
                 merkle_proofs,
                 proposal.merkle_root,
-                target_hash
+                target_hash,
             );
         };
 
@@ -480,10 +478,7 @@ module initia_std::vip_weight_vote {
             |bridge_id, weight| {
                 vector::push_back(
                     &mut weight_vector,
-                    Weight {
-                        bridge_id: bridge_id,
-                        weight: weight,
-                    }
+                    Weight { bridge_id: bridge_id, weight: weight, },
                 );
             },
         );
@@ -499,10 +494,7 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut proposal.votes,
             addr,
-            WeightVote {
-                voting_power: voting_power_used,
-                weights: weight_vector
-            }
+            WeightVote { voting_power: voting_power_used, weights: weight_vector },
         );
 
         // emit event
@@ -512,7 +504,7 @@ module initia_std::vip_weight_vote {
                 cycle,
                 voting_power: voting_power_used, //TODO: max voting power
                 weights: weight_vector,
-            }
+            },
         )
     }
 
@@ -523,28 +515,27 @@ module initia_std::vip_weight_vote {
 
         // get the last voting proposal
         // check vote state
-        let proposal = table::borrow_mut(
-            &mut module_store.proposals,
-            table_key::encode_u64(module_store.current_cycle),
-        );
+        let proposal =
+            table::borrow_mut(
+                &mut module_store.proposals,
+                table_key::encode_u64(module_store.current_cycle),
+            );
         assert!(
             proposal.voting_end_time < timestamp,
-            error::invalid_state(EPROPOSAL_IN_PROGRESS)
+            error::invalid_state(EPROPOSAL_IN_PROGRESS),
         );
         assert!(
             !proposal.executed,
-            error::invalid_state(EPROPOSAL_ALREADY_EXECUTED)
+            error::invalid_state(EPROPOSAL_ALREADY_EXECUTED),
         );
 
         execute_proposal_internal(
-            proposal,
-            module_store.current_cycle
+            proposal, module_store.current_cycle
         );
     }
 
     fun execute_proposal_internal(
-        proposal: &mut Proposal,
-        current_cycle: u64
+        proposal: &mut Proposal, current_cycle: u64
     ) {
         // update vip weights
         let bridge_ids = vip::get_whitelisted_bridge_ids();
@@ -554,19 +545,21 @@ module initia_std::vip_weight_vote {
         let weights: vector<Decimal256> = vector[];
         while (index < len) {
             let bridge_id = *vector::borrow(&bridge_ids, index);
-            let tally = table::borrow_with_default(
-                &proposal.tally,
-                table_key::encode_u64(bridge_id),
-                &0
-            );
-            let weight = if (proposal.total_tally == 0) {
-                decimal256::from_ratio(1,(len as u256))
-            } else {
-                decimal256::from_ratio(
-                    (*tally as u256),
-                    (proposal.total_tally as u256)
-                )
-            };
+            let tally =
+                table::borrow_with_default(
+                    &proposal.tally,
+                    table_key::encode_u64(bridge_id),
+                    &0,
+                );
+            let weight =
+                if (proposal.total_tally == 0) {
+                    decimal256::from_ratio(1, (len as u256))
+                } else {
+                    decimal256::from_ratio(
+                        (*tally as u256),
+                        (proposal.total_tally as u256),
+                    )
+                };
             vector::push_back(&mut weights, weight);
             index = index + 1;
         };
@@ -575,11 +568,7 @@ module initia_std::vip_weight_vote {
 
         // emit event
         event::emit(
-            ExecuteProposalEvent {
-                cycle: current_cycle,
-                bridge_ids,
-                weights,
-            }
+            ExecuteProposalEvent { cycle: current_cycle, bridge_ids, weights, },
         );
 
         // update proposal state
@@ -605,9 +594,7 @@ module initia_std::vip_weight_vote {
         primary_fungible_store::transfer(
             account,
             vip_reward::reward_metadata(),
-            object::address_from_extend_ref(
-                &module_store.challenge_deposit_store
-            ),
+            object::address_from_extend_ref(&module_store.challenge_deposit_store),
             module_store.challenge_deposit_amount,
         );
 
@@ -616,28 +603,30 @@ module initia_std::vip_weight_vote {
         let min_voting_end_time = timestamp + module_store.min_voting_period;
         let quorum = decimal128::mul_u64(
             &module_store.quorum_ratio,
-            proposal.total_tally
+            proposal.total_tally,
         );
 
         // check challenge condition
-        let current_proposal = table::borrow(
-            &module_store.proposals,
-            table_key::encode_u64(module_store.current_cycle)
-        );
-        let cycle_to_challenge = if (current_proposal.voting_end_time > timestamp) {
-            // challenge can be created when voting is in progress
-            module_store.current_cycle
-        }
-        else if (module_store.cycle_end_timestamp + module_store.snapshot_grace_period < timestamp) {
-            // or when grace period is over
-            module_store.current_cycle + 1
-        } else {
-            abort error::invalid_state(ECANNOT_CREATE_CHALLENGE_PROPOSAL)
-        };
+        let current_proposal =
+            table::borrow(
+                &module_store.proposals,
+                table_key::encode_u64(module_store.current_cycle),
+            );
+        let cycle_to_challenge =
+            if (current_proposal.voting_end_time > timestamp) {
+                // challenge can be created when voting is in progress
+                module_store.current_cycle
+            } else if (module_store.cycle_end_timestamp
+                    + module_store.snapshot_grace_period < timestamp) {
+                // or when grace period is over
+                module_store.current_cycle + 1
+            } else {
+                abort error::invalid_state(ECANNOT_CREATE_CHALLENGE_PROPOSAL)
+            };
 
         assert!(
             cycle_to_challenge > 1,
-            error::invalid_argument(ECANNOT_CREATE_CHALLENGE_PROPOSAL)
+            error::invalid_argument(ECANNOT_CREATE_CHALLENGE_PROPOSAL),
         );
 
         let challenge = Challenge {
@@ -667,7 +656,7 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut module_store.challenges,
             table_key::encode_u64(challenge_id),
-            challenge
+            challenge,
         );
 
         // emit event
@@ -686,7 +675,7 @@ module initia_std::vip_weight_vote {
                 voting_end_time: voting_end_time,
                 min_voting_end_time: min_voting_end_time,
                 deposit_amount: module_store.challenge_deposit_amount,
-            }
+            },
         )
     }
 
@@ -704,39 +693,38 @@ module initia_std::vip_weight_vote {
         assert!(
             table::contains(
                 &module_store.challenges,
-                challenge_key
+                challenge_key,
             ),
-            error::not_found(ECHALLENGE_NOT_FOUND)
+            error::not_found(ECHALLENGE_NOT_FOUND),
         );
         let challenge = table::borrow_mut(
-            &mut module_store.challenges,
-            challenge_key
+            &mut module_store.challenges, challenge_key
         );
         assert!(
             timestamp < challenge.voting_end_time,
-            error::invalid_state(EVOTING_END)
+            error::invalid_state(EVOTING_END),
         );
 
         // retreive user voting power from the proposal of the voting power cycle
         let vp_cycle_key = table_key::encode_u64(challenge.voting_power_cycle);
         let proposal = table::borrow_mut(
-            &mut module_store.proposals,
-            vp_cycle_key
+            &mut module_store.proposals, vp_cycle_key
         );
         assert!(
             table::contains(&proposal.votes, addr),
-            error::not_found(EVOTE_NOT_FOUND)
+            error::not_found(EVOTE_NOT_FOUND),
         );
         let vote = table::borrow(&proposal.votes, addr);
 
         // if user already voted, remove former vote
         if (table::contains(&challenge.votes, addr)) {
-            let Vote {voting_power, vote_option} = table::remove(&mut challenge.votes, addr);
+            let Vote { voting_power, vote_option } =
+                table::remove(&mut challenge.votes, addr);
             apply_challenge_vote(
                 challenge,
                 vote_option,
                 voting_power,
-                true
+                true,
             );
         };
 
@@ -745,24 +733,19 @@ module initia_std::vip_weight_vote {
         table::add(
             &mut challenge.votes,
             addr,
-            Vote {voting_power, vote_option,}
+            Vote { voting_power, vote_option, },
         );
 
         apply_challenge_vote(
             challenge,
             vote_option,
             voting_power,
-            false
+            false,
         );
 
         // emit event
         event::emit(
-            VoteChallengeEvent {
-                account: addr,
-                challenge_id,
-                voting_power,
-                vote_option,
-            }
+            VoteChallengeEvent { account: addr, challenge_id, voting_power, vote_option, },
         )
     }
 
@@ -772,9 +755,7 @@ module initia_std::vip_weight_vote {
         let success = execute_challenge_internal(challenge_id);
 
         // emit event
-        event::emit(
-            ExecuteChallengeEvent {challenge_id, success}
-        )
+        event::emit(ExecuteChallengeEvent { challenge_id, success })
     }
 
     // helper functions
@@ -784,27 +765,27 @@ module initia_std::vip_weight_vote {
             &module_store.challenges,
             option::none(),
             option::none(),
-            2
+            2,
         );
-        if (!table::prepare<vector<u8>, Challenge>(iter)) { 1 } else {
+        if (!table::prepare<vector<u8>, Challenge>(iter)) { 1 }
+        else {
             let (challenge_id, _) = table::next<vector<u8>, Challenge>(iter);
             table_key::decode_u64(challenge_id) + 1
         }
     }
 
     fun last_finalized_proposal(
-        module_store: &ModuleStore,
-        timestamp: u64
+        module_store: &ModuleStore, timestamp: u64
     ): (u64, &Proposal) {
         let iter = table::iter(
             &module_store.proposals,
             option::none(),
             option::none(),
-            2
+            2,
         );
         assert!(
             table::prepare<vector<u8>, Proposal>(iter),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let (cycle_key, proposal) = table::next<vector<u8>, Proposal>(iter);
 
@@ -812,17 +793,14 @@ module initia_std::vip_weight_vote {
         if (proposal.voting_end_time > timestamp) {
             assert!(
                 table::prepare<vector<u8>, Proposal>(iter),
-                error::not_found(ECYCLE_NOT_FOUND)
+                error::not_found(ECYCLE_NOT_FOUND),
             );
             (cycle_key, _) = table::next<vector<u8>, Proposal>(iter);
         };
 
         let last_finalized_proposal_cycle = table_key::decode_u64(cycle_key);
         let last_finalized_proposal = table::borrow(&module_store.proposals, cycle_key);
-        (
-            last_finalized_proposal_cycle,
-            last_finalized_proposal
-        )
+        (last_finalized_proposal_cycle, last_finalized_proposal)
     }
 
     fun execute_challenge_internal(challenge_id: u64): bool acquires ModuleStore {
@@ -834,14 +812,13 @@ module initia_std::vip_weight_vote {
         assert!(
             table::contains(
                 &module_store.challenges,
-                challenge_key
+                challenge_key,
             ),
-            error::not_found(ECHALLENGE_NOT_FOUND)
+            error::not_found(ECHALLENGE_NOT_FOUND),
         );
 
         let challenge = table::borrow_mut(
-            &mut module_store.challenges,
-            challenge_key
+            &mut module_store.challenges, challenge_key
         );
         let yes_count = challenge.yes_tally;
         let no_count = challenge.no_tally;
@@ -850,11 +827,13 @@ module initia_std::vip_weight_vote {
         // check challenge execute condition
         assert!(
             !challenge.is_executed,
-            error::invalid_state(ECHALLENGE_ALREADY_EXECUTED)
+            error::invalid_state(ECHALLENGE_ALREADY_EXECUTED),
         );
         assert!(
-            challenge.voting_end_time < timestamp || (
-                challenge.quorum <= total_tally && challenge.min_voting_end_time <= timestamp
+            challenge.voting_end_time < timestamp
+            || (
+                challenge.quorum <= total_tally
+                    && challenge.min_voting_end_time <= timestamp
             ),
             error::invalid_state(ECHALLENGE_IN_PROGRESS),
         );
@@ -862,16 +841,17 @@ module initia_std::vip_weight_vote {
         // condition passed, so flag challenge as executed
         challenge.is_executed = true;
 
-        let object_signer = object::generate_signer_for_extending(
-            &module_store.challenge_deposit_store
-        );
+        let object_signer =
+            object::generate_signer_for_extending(
+                &module_store.challenge_deposit_store
+            );
 
         // if total tally doesn't reach quorum, transfer deposit to community pool and return false
         if (total_tally < challenge.quorum) {
             cosmos::fund_community_pool(
                 &object_signer,
                 vip_reward::reward_metadata(),
-                challenge.deposit_amount
+                challenge.deposit_amount,
             );
             return false
         };
@@ -881,7 +861,7 @@ module initia_std::vip_weight_vote {
             &object_signer,
             vip_reward::reward_metadata(),
             challenge.challenger,
-            challenge.deposit_amount
+            challenge.deposit_amount,
         );
 
         if (no_count > yes_count) {
@@ -914,7 +894,7 @@ module initia_std::vip_weight_vote {
         if (table::contains(&module_store.proposals, cycle_key)) {
             let former_proposal = table::remove(
                 &mut module_store.proposals,
-                cycle_key
+                cycle_key,
             );
 
             // check voting is not ended
@@ -922,7 +902,7 @@ module initia_std::vip_weight_vote {
                 table::add(
                     &mut module_store.proposals,
                     cycle_key,
-                    former_proposal
+                    former_proposal,
                 );
 
                 return false
@@ -933,7 +913,7 @@ module initia_std::vip_weight_vote {
             let object_signer = object::generate_signer(&constructor_ref);
             move_to(
                 &object_signer,
-                DroppedProposal {proposal: former_proposal}
+                DroppedProposal { proposal: former_proposal },
             );
 
             // revert module store state
@@ -948,7 +928,7 @@ module initia_std::vip_weight_vote {
             merkle_root,
             api_uri,
             snapshot_height,
-            voting_end_time
+            voting_end_time,
         );
         return true
     }
@@ -968,16 +948,15 @@ module initia_std::vip_weight_vote {
         // To handle case that submitter doesn't submit merkle root more than one cycle period
         // set cycle start time to former cycle end time + skipped cycle count * cycle interval
         if (voting_end_time > module_store.cycle_end_timestamp) {
-            let skipped_cycle_count = (
-                voting_end_time - module_store.cycle_end_timestamp
-            ) / module_store.cycle_interval;
-            module_store.cycle_start_timestamp = module_store.cycle_end_timestamp + skipped_cycle_count
-                * module_store.cycle_interval;
+            let skipped_cycle_count =
+                (voting_end_time - module_store.cycle_end_timestamp) / module_store.cycle_interval;
+            module_store.cycle_start_timestamp = module_store.cycle_end_timestamp
+                + skipped_cycle_count * module_store.cycle_interval;
         };
 
         // set cycle end time
-        module_store.cycle_end_timestamp = module_store.cycle_start_timestamp + module_store
-            .cycle_interval;
+        module_store.cycle_end_timestamp = module_store.cycle_start_timestamp
+            + module_store.cycle_interval;
 
         // initiate weight vote
         table::add(
@@ -1005,14 +984,12 @@ module initia_std::vip_weight_vote {
                 voting_end_time,
                 cycle_start_timestamp: module_store.cycle_start_timestamp,
                 cycle_end_timestamp: module_store.cycle_end_timestamp
-            }
+            },
         )
     }
 
     fun remove_vote(
-        proposal: &mut Proposal,
-        max_voting_power: u64,
-        weights: vector<Weight>
+        proposal: &mut Proposal, max_voting_power: u64, weights: vector<Weight>
     ) {
         let voting_power_removed = 0;
         vector::for_each(
@@ -1021,22 +998,21 @@ module initia_std::vip_weight_vote {
                 use_weight(w);
                 let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
                 voting_power_removed = voting_power_removed + bridge_vp;
-                let tally = table::borrow_mut_with_default(
-                    &mut proposal.tally,
-                    table_key::encode_u64(w.bridge_id),
-                    0
-                );
+                let tally =
+                    table::borrow_mut_with_default(
+                        &mut proposal.tally,
+                        table_key::encode_u64(w.bridge_id),
+                        0,
+                    );
                 *tally = *tally - (bridge_vp as u64);
-            }
+            },
         );
         proposal.total_tally = proposal.total_tally - voting_power_removed;
 
     }
 
     fun apply_vote(
-        proposal: &mut Proposal,
-        max_voting_power: u64,
-        weights: vector<Weight>
+        proposal: &mut Proposal, max_voting_power: u64, weights: vector<Weight>
     ) {
         let voting_power_used = 0;
         vector::for_each(
@@ -1045,13 +1021,14 @@ module initia_std::vip_weight_vote {
                 use_weight(w);
                 let bridge_vp = decimal128::mul_u64(&w.weight, max_voting_power);
                 voting_power_used = voting_power_used + bridge_vp;
-                let tally = table::borrow_mut_with_default(
-                    &mut proposal.tally,
-                    table_key::encode_u64(w.bridge_id),
-                    0
-                );
+                let tally =
+                    table::borrow_mut_with_default(
+                        &mut proposal.tally,
+                        table_key::encode_u64(w.bridge_id),
+                        0,
+                    );
                 *tally = *tally + (bridge_vp as u64);
-            }
+            },
         );
         proposal.total_tally = proposal.total_tally + voting_power_used
 
@@ -1063,9 +1040,17 @@ module initia_std::vip_weight_vote {
         voting_power: u64,
         remove: bool
     ) {
-        let tally = if (vote_option) {&mut challenge.yes_tally} else {&mut challenge.no_tally};
+        let tally = if (vote_option) {
+            &mut challenge.yes_tally
+        } else {
+            &mut challenge.no_tally
+        };
 
-        *tally = if (remove) {*tally - (voting_power as u64)} else {*tally + (voting_power as u64)};
+        *tally = if (remove) {
+            *tally - (voting_power as u64)
+        } else {
+            *tally + (voting_power as u64)
+        };
     }
 
     fun voting_power_hash(
@@ -1077,12 +1062,10 @@ module initia_std::vip_weight_vote {
         // add cycle to prevent replay attack
         vector::append(&mut data, bcs::to_bytes(&cycle));
         vector::append(
-            &mut data,
-            bcs::to_bytes(&account_addr)
+            &mut data, bcs::to_bytes(&account_addr)
         );
         vector::append(
-            &mut data,
-            bcs::to_bytes(&voting_power)
+            &mut data, bcs::to_bytes(&voting_power)
         );
         sha3_256(data)
     }
@@ -1120,7 +1103,7 @@ module initia_std::vip_weight_vote {
         let root_hash = root_seed;
         assert!(
             merkle_root == root_hash,
-            error::invalid_argument(EINVALID_MERKLE_PROOFS)
+            error::invalid_argument(EINVALID_MERKLE_PROOFS),
         );
     }
 
@@ -1131,19 +1114,22 @@ module initia_std::vip_weight_vote {
     fun bytes_cmp(v1: &vector<u8>, v2: &vector<u8>): u8 {
         assert!(
             vector::length(v1) == PROOF_LENGTH,
-            error::invalid_argument(EINVALID_PROOF_LENGTH)
+            error::invalid_argument(EINVALID_PROOF_LENGTH),
         );
         assert!(
             vector::length(v2) == PROOF_LENGTH,
-            error::invalid_argument(EINVALID_PROOF_LENGTH)
+            error::invalid_argument(EINVALID_PROOF_LENGTH),
         );
 
         let i = 0;
         while (i < PROOF_LENGTH) {
             let e1 = *vector::borrow(v1, i);
             let e2 = *vector::borrow(v2, i);
-            if (e1 > e2) {return 1}
-            else if (e2 > e1) {return 2};
+            if (e1 > e2) {
+                return 1
+            } else if (e2 > e1) {
+                return 2
+            };
             i = i + 1;
         };
 
@@ -1153,14 +1139,14 @@ module initia_std::vip_weight_vote {
     // if submitter submit merkle root after grace period, set voting end time to current timestamp + voting period
     // else set it to former cycle end time + grace period + voting period
     fun calculate_voting_end_time(
-        timestamp: u64,
-        module_store: &ModuleStore,
+        timestamp: u64, module_store: &ModuleStore,
     ): u64 {
-        if (timestamp > module_store.cycle_end_timestamp + module_store.snapshot_grace_period) {
+        if (timestamp
+                > module_store.cycle_end_timestamp + module_store.snapshot_grace_period) {
             return timestamp + module_store.voting_period
         } else {
-            return module_store.cycle_end_timestamp + module_store.snapshot_grace_period +
-                module_store.voting_period
+            return module_store.cycle_end_timestamp + module_store.snapshot_grace_period
+                + module_store.voting_period
         }
     }
 
@@ -1192,7 +1178,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
         proposal.total_tally
@@ -1204,13 +1190,13 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
         *table::borrow_with_default(
             &proposal.tally,
             table_key::encode_u64(bridge_id),
-            &0
+            &0,
         )
     }
 
@@ -1220,7 +1206,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
 
@@ -1231,16 +1217,17 @@ module initia_std::vip_weight_vote {
         vector::for_each(
             bridge_ids,
             |bridge_id| {
-                let tally = table::borrow_with_default(
-                    &proposal.tally,
-                    table_key::encode_u64(bridge_id),
-                    &0
-                );
+                let tally =
+                    table::borrow_with_default(
+                        &proposal.tally,
+                        table_key::encode_u64(bridge_id),
+                        &0,
+                    );
                 vector::push_back(
                     &mut tally_responses,
-                    TallyResponse {bridge_id, tally: *tally}
+                    TallyResponse { bridge_id, tally: *tally },
                 )
-            }
+            },
         );
 
         return tally_responses
@@ -1254,13 +1241,12 @@ module initia_std::vip_weight_vote {
         assert!(
             table::contains(
                 &module_store.challenges,
-                challenge_key
+                challenge_key,
             ),
-            error::not_found(ECHALLENGE_NOT_FOUND)
+            error::not_found(ECHALLENGE_NOT_FOUND),
         );
         let challenge = table::borrow(
-            &module_store.challenges,
-            challenge_key
+            &module_store.challenges, challenge_key
         );
 
         ChallengeResponse {
@@ -1311,11 +1297,11 @@ module initia_std::vip_weight_vote {
                             min_voting_end_time: challenge.min_voting_end_time,
                             deposit_amount: challenge.deposit_amount,
                             is_executed: challenge.is_executed,
-                        }
+                        },
                     );
                 };
                 false
-            }
+            },
         );
         challenge_responses
     }
@@ -1326,7 +1312,7 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
 
@@ -1346,20 +1332,18 @@ module initia_std::vip_weight_vote {
         let cycle_key = table_key::encode_u64(cycle);
         assert!(
             table::contains(&module_store.proposals, cycle_key),
-            error::not_found(ECYCLE_NOT_FOUND)
+            error::not_found(ECYCLE_NOT_FOUND),
         );
         let proposal = table::borrow(&module_store.proposals, cycle_key);
         let vote = table::borrow(&proposal.votes, user);
 
-        WeightVoteResponse {
-            voting_power: vote.voting_power,
-            weights: vote.weights,
-        }
+        WeightVoteResponse { voting_power: vote.voting_power, weights: vote.weights, }
     }
 
-    inline fun use_challenge(_v: &Challenge) {
-    } inline fun use_weight(_v: Weight) {
-    }
+    inline fun use_challenge(_v: &Challenge) {} inline fun use_weight(
+
+        _v: Weight
+    ) {}
 
     #[test_only]
     use initia_std::block::set_block_info;
@@ -1392,19 +1376,20 @@ module initia_std::vip_weight_vote {
             1,
             100,
             decimal128::from_ratio(3, 10),
-            100
+            100,
         );
         set_block_info(100, 101);
         primary_fungible_store::init_module_for_test();
-        let (mint_cap, _, _) = coin::initialize(
-            chain,
-            option::none(),
-            string::utf8(b"uinit"),
-            string::utf8(b"uinit"),
-            6,
-            string::utf8(b""),
-            string::utf8(b""),
-        );
+        let (mint_cap, _, _) =
+            coin::initialize(
+                chain,
+                option::none(),
+                string::utf8(b"uinit"),
+                string::utf8(b"uinit"),
+                6,
+                string::utf8(b""),
+                string::utf8(b""),
+            );
         vip::init_module_for_test(initia_std);
         vip::register(
             initia_std,
@@ -1431,14 +1416,12 @@ module initia_std::vip_weight_vote {
 
     #[test_only]
     fun create_merkle_tree(
-        cycle: u64,
-        addresses: vector<address>,
-        voting_powers: vector<u64>
+        cycle: u64, addresses: vector<address>, voting_powers: vector<u64>
     ): vector<vector<vector<u8>>> {
         let leaf_count = 2;
         let len = vector::length(&addresses);
         let empty_leaf = voting_power_hash(cycle, @0x0, 0);
-        while (leaf_count <= len) {leaf_count = leaf_count << 1};
+        while (leaf_count <= len) { leaf_count = leaf_count << 1 };
 
         let tree = vector[];
         let leaves = vector[];
@@ -1449,7 +1432,7 @@ module initia_std::vip_weight_vote {
             let vp = *vector::borrow(&voting_powers, i);
             vector::push_back(
                 &mut leaves,
-                voting_power_hash(cycle, addr, vp)
+                voting_power_hash(cycle, addr, vp),
             );
             i = i + 1;
         };
@@ -1493,24 +1476,26 @@ module initia_std::vip_weight_vote {
     }
 
     #[test_only]
-    fun get_merkle_root(
-        tree: vector<vector<vector<u8>>>
-    ): vector<u8> {
+    fun get_merkle_root(tree: vector<vector<vector<u8>>>): vector<u8> {
         let len = vector::length(&tree);
         *vector::borrow(vector::borrow(&tree, len - 1), 0)
     }
 
     #[test_only]
     fun get_proofs(
-        tree: vector<vector<vector<u8>>>,
-        idx: u64
+        tree: vector<vector<vector<u8>>>, idx: u64
     ): vector<vector<u8>> {
         let len = vector::length(&tree);
         let i = 0;
         let proofs = vector[];
         while (i < len - 1) {
             let leaves = vector::borrow(&tree, i);
-            let leaf = if (idx % 2 == 1) {*vector::borrow(leaves, idx - 1)} else {*vector::borrow(leaves, idx + 1)};
+            let leaf =
+                if (idx % 2 == 1) {
+                    *vector::borrow(leaves, idx - 1)
+                } else {
+                    *vector::borrow(leaves, idx + 1)
+                };
             vector::push_back(&mut proofs, leaf);
             idx = idx / 2;
             i = i + 1;
@@ -1534,8 +1519,7 @@ module initia_std::vip_weight_vote {
             signer::address_of(u1),
             signer::address_of(u2),
             signer::address_of(u3),
-            signer::address_of(u4),
-        ];
+            signer::address_of(u4),];
         let voting_powers = vector[10, 20, 30, 40];
         let cycle = 1;
         let tree = create_merkle_tree(cycle, addresses, voting_powers);
@@ -1545,7 +1529,7 @@ module initia_std::vip_weight_vote {
             submitter,
             merkle_root,
             string::utf8(b"https://abc.com"),
-            100
+            100,
         );
         vote(
             u1,
@@ -1553,10 +1537,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 0),
             10,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(1, 5),
-                decimal128::from_ratio(4, 5)
-            ], // 2, 8
+            vector[decimal128::from_ratio(1, 5), decimal128::from_ratio(4, 5)], // 2, 8
         );
 
         vote(
@@ -1565,10 +1546,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 1),
             20,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(2, 5),
-                decimal128::from_ratio(3, 5)
-            ], // 8, 12
+            vector[decimal128::from_ratio(2, 5), decimal128::from_ratio(3, 5)], // 8, 12
         );
 
         vote(
@@ -1577,10 +1555,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 2),
             30,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(2, 5),
-                decimal128::from_ratio(2, 5)
-            ], // 12, 12
+            vector[decimal128::from_ratio(2, 5), decimal128::from_ratio(2, 5)], // 12, 12
         );
 
         vote(
@@ -1589,10 +1564,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 3),
             40,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(3, 5),
-                decimal128::from_ratio(1, 5)
-            ], // 24, 8 // user can vote with
+            vector[decimal128::from_ratio(3, 5), decimal128::from_ratio(1, 5)], // 24, 8 // user can vote with
         );
 
         let proposal = get_proposal(1);
@@ -1607,8 +1579,7 @@ module initia_std::vip_weight_vote {
         let weight_vote = get_weight_vote(1, signer::address_of(u1));
         assert!(weight_vote.voting_power == 10, 4);
         assert!(
-            vector::length(&weight_vote.weights) == 2,
-            5
+            vector::length(&weight_vote.weights) == 2, 5
         );
         // update vote of u4
         vote(
@@ -1617,10 +1588,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 3),
             40,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(4, 5),
-                decimal128::from_ratio(1, 5)
-            ], // 32, 8 // user can vote with
+            vector[decimal128::from_ratio(4, 5), decimal128::from_ratio(1, 5)], // 32, 8 // user can vote with
         );
 
         vote1 = get_tally(1, 1);
@@ -1637,10 +1605,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 2),
             30,
             vector[1, 2],
-            vector[
-                decimal128::zero(),
-                decimal128::zero()
-            ], // 0, 0
+            vector[decimal128::zero(), decimal128::zero()], // 0, 0
         );
 
         vote1 = get_tally(1, 1);
@@ -1652,8 +1617,7 @@ module initia_std::vip_weight_vote {
         let weight_vote = get_weight_vote(1, signer::address_of(u1));
         assert!(weight_vote.voting_power == 10, 12);
         assert!(
-            vector::length(&weight_vote.weights) == 2,
-            13
+            vector::length(&weight_vote.weights) == 2, 13
         );
 
         skip_period(60);
@@ -1675,12 +1639,12 @@ module initia_std::vip_weight_vote {
         coin::mint_to(
             &mint_cap,
             signer::address_of(u1),
-            100
+            100,
         );
         coin::mint_to(
             &mint_cap,
             signer::address_of(u2),
-            100
+            100,
         );
 
         // submit root
@@ -1689,8 +1653,7 @@ module initia_std::vip_weight_vote {
             signer::address_of(u1),
             signer::address_of(u2),
             signer::address_of(u3),
-            signer::address_of(u4),
-        ];
+            signer::address_of(u4),];
         let voting_powers = vector[10, 20, 30, 40];
         let tree = create_merkle_tree(cycle, addresses, voting_powers);
         let merkle_root = get_merkle_root(tree);
@@ -1698,7 +1661,7 @@ module initia_std::vip_weight_vote {
             submitter,
             merkle_root,
             string::utf8(b"https://abc.com"),
-            100
+            100,
         );
         // votes
         vote(
@@ -1707,10 +1670,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 0),
             10,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(1, 5),
-                decimal128::from_ratio(4, 5)
-            ], // 2, 8
+            vector[decimal128::from_ratio(1, 5), decimal128::from_ratio(4, 5)], // 2, 8
         );
 
         vote(
@@ -1719,10 +1679,7 @@ module initia_std::vip_weight_vote {
             get_proofs(tree, 1),
             20,
             vector[1, 2],
-            vector[
-                decimal128::from_ratio(2, 5),
-                decimal128::from_ratio(3, 5)
-            ], // 8, 12
+            vector[decimal128::from_ratio(2, 5), decimal128::from_ratio(3, 5)], // 8, 12
         );
 
         // execute
@@ -1759,15 +1716,14 @@ module initia_std::vip_weight_vote {
         assert!(module_response.current_cycle == 2, 1);
         assert!(
             module_response.submitter == signer::address_of(u1),
-            2
+            2,
         );
         assert!(
-            vote.merkle_root == get_merkle_root(tree),
-            3
+            vote.merkle_root == get_merkle_root(tree), 3
         );
         assert!(
             vote.api_uri == string::utf8(b"https://abc2.com"),
-            4
+            4,
         );
 
         set_block_info(100, 251);
@@ -1799,29 +1755,28 @@ module initia_std::vip_weight_vote {
         assert!(module_response.current_cycle == 2, 5);
         assert!(
             module_response.submitter == signer::address_of(u2),
-            6
+            6,
         );
         assert!(
-            vote.merkle_root == get_merkle_root(tree),
-            7
+            vote.merkle_root == get_merkle_root(tree), 7
         );
         assert!(
             vote.api_uri == string::utf8(b"https://abc3.com"),
-            8
+            8,
         );
 
         let challenge = get_challenge(2);
         assert!(
             challenge.title == string::utf8(b"challenge"),
-            9
+            9,
         );
         assert!(
             challenge.summary == string::utf8(b"challenge"),
-            10
+            10,
         );
         assert!(
             challenge.api_uri == string::utf8(b"https://abc3.com"),
-            11
+            11,
         );
         assert!(challenge.cycle == 2, 12);
         assert!(challenge.yes_tally == 20, 13);
@@ -1829,5 +1784,4 @@ module initia_std::vip_weight_vote {
         assert!(challenge.quorum == 9, 15);
         assert!(challenge.is_executed == true, 16);
     }
-
 }

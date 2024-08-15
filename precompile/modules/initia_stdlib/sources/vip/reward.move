@@ -2,7 +2,7 @@ module initia_std::vip_reward {
     use std::string;
     use std::vector;
     use std::error;
-    use initia_std::object::{ Object };
+    use initia_std::object::{Object};
     use initia_std::fungible_asset::{Metadata,};
     use initia_std::primary_fungible_store;
     use initia_std::table;
@@ -44,18 +44,16 @@ module initia_std::vip_reward {
     fun init_module(initia_std: &signer) {
         move_to(
             initia_std,
-            ModuleStore {
-                distributed_reward: table::new<vector<u8>, RewardRecord>()
-            }
+            ModuleStore { distributed_reward: table::new<vector<u8>, RewardRecord>() },
         );
     }
 
     fun get_distrubuted_reward_table_key(bridge_id: u64, stage: u64): vector<u8> {
         let key = table_key::encode_u64(bridge_id);
         vector::append(
-            &mut key,
-            table_key::encode_u64(stage)
-        );key
+            &mut key, table_key::encode_u64(stage)
+        );
+        key
     }
 
     //
@@ -64,8 +62,7 @@ module initia_std::vip_reward {
 
     public fun reward_metadata(): Object<Metadata> {
         coin::metadata(
-            @initia_std,
-            string::utf8(REWARD_SYMBOL)
+            @initia_std, string::utf8(REWARD_SYMBOL)
         )
     }
 
@@ -78,18 +75,13 @@ module initia_std::vip_reward {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let key = get_distrubuted_reward_table_key(bridge_id, stage);
         assert!(
-            !table::contains(
-                &module_store.distributed_reward, key
-            ),
-            error::unavailable(EREWARD_STORE_ALREADY_EXISTS)
+            !table::contains(&module_store.distributed_reward, key),
+            error::unavailable(EREWARD_STORE_ALREADY_EXISTS),
         );
         table::add(
             &mut module_store.distributed_reward,
             get_distrubuted_reward_table_key(bridge_id, stage),
-            RewardRecord {
-                user_reward: user_reward,
-                operator_reward: operator_reward
-            }
+            RewardRecord { user_reward: user_reward, operator_reward: operator_reward },
         );
     }
 
@@ -106,15 +98,15 @@ module initia_std::vip_reward {
     public fun get_user_distrubuted_reward(bridge_id: u64, stage: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
-        if (
-            table::contains(
-                &module_store.distributed_reward,
-                get_distrubuted_reward_table_key(bridge_id, stage)
-            )) {
-            let reward_data = table::borrow(
+        if (table::contains(
                 &module_store.distributed_reward,
                 get_distrubuted_reward_table_key(bridge_id, stage),
-            );
+            )) {
+            let reward_data =
+                table::borrow(
+                    &module_store.distributed_reward,
+                    get_distrubuted_reward_table_key(bridge_id, stage),
+                );
             return reward_data.user_reward
         };
 
@@ -125,15 +117,15 @@ module initia_std::vip_reward {
     public fun get_operator_distrubuted_reward(bridge_id: u64, stage: u64): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
 
-        if (
-            table::contains(
-                &module_store.distributed_reward,
-                get_distrubuted_reward_table_key(bridge_id, stage)
-            )) {
-            let reward_data = table::borrow(
+        if (table::contains(
                 &module_store.distributed_reward,
                 get_distrubuted_reward_table_key(bridge_id, stage),
-            );
+            )) {
+            let reward_data =
+                table::borrow(
+                    &module_store.distributed_reward,
+                    get_distrubuted_reward_table_key(bridge_id, stage),
+                );
             return reward_data.operator_reward
         };
 

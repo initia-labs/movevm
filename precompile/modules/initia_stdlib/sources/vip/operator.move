@@ -67,9 +67,7 @@ module initia_std::vip_operator {
     fun init_module(initia_std: &signer) {
         move_to(
             initia_std,
-            ModuleStore {
-                operator_infos: table::new<vector<u8>, OperatorInfo>()
-            }
+            ModuleStore { operator_infos: table::new<vector<u8>, OperatorInfo>() },
         );
     }
 
@@ -79,15 +77,15 @@ module initia_std::vip_operator {
 
     fun check_chain_permission(chain: &signer) {
         assert!(
-            signer::address_of(chain) == @initia_std || signer::address_of(chain) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED)
+            signer::address_of(chain) == @initia_std,
+            error::permission_denied(EUNAUTHORIZED),
         );
     }
 
     fun check_valid_rate(rate: &Decimal256) {
         assert!(
             decimal256::val(rate) <= decimal256::val(&decimal256::one()),
-            error::invalid_argument(EINVALID_COMMISSION_RATE)
+            error::invalid_argument(EINVALID_COMMISSION_RATE),
         );
     }
 
@@ -101,7 +99,7 @@ module initia_std::vip_operator {
         check_valid_rate(commission_rate);
         assert!(
             decimal256::val(commission_rate) <= decimal256::val(commission_max_rate),
-            error::invalid_argument(EOVER_MAX_COMMISSION_RATE)
+            error::invalid_argument(EOVER_MAX_COMMISSION_RATE),
         );
     }
 
@@ -124,15 +122,15 @@ module initia_std::vip_operator {
         assert!(
             !table::contains(
                 &module_store.operator_infos,
-                bridge_id_key
+                bridge_id_key,
             ),
-            error::already_exists(EOPERATOR_STORE_ALREADY_EXISTS)
+            error::already_exists(EOPERATOR_STORE_ALREADY_EXISTS),
         );
 
         is_valid_commission_rates(
             &commission_max_rate,
             &commission_max_change_rate,
-            &commission_rate
+            &commission_rate,
         );
 
         table::add<vector<u8>, OperatorInfo>(
@@ -144,7 +142,7 @@ module initia_std::vip_operator {
                 commission_max_rate,
                 commission_max_change_rate,
                 commission_rate,
-            }
+            },
         );
 
     }
@@ -159,42 +157,43 @@ module initia_std::vip_operator {
         let bridge_id_key = table_key::encode_u64(bridge_id);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
 
-        let operator_info = table::borrow_mut(
-            &mut module_store.operator_infos,
-            bridge_id_key
-        );
+        let operator_info =
+            table::borrow_mut(
+                &mut module_store.operator_infos,
+                bridge_id_key,
+            );
         assert!(
             operator_addr == operator_info.operator_addr,
-            error::permission_denied(EUNAUTHORIZED)
+            error::permission_denied(EUNAUTHORIZED),
         );
         // commission can be updated once per a stage.
         assert!(
             stage > operator_info.last_changed_stage,
-            error::invalid_argument(EINVALID_STAGE)
+            error::invalid_argument(EINVALID_STAGE),
         );
 
         let old_commission_rate = decimal256::val(&operator_info.commission_rate);
         let new_commission_rate = decimal256::val(&commission_rate);
-        let max_commission_change_rate = decimal256::val(
-            &operator_info.commission_max_change_rate
-        );
+        let max_commission_change_rate =
+            decimal256::val(&operator_info.commission_max_change_rate);
         let max_commission_rate = decimal256::val(&operator_info.commission_max_rate);
 
         assert!(
             new_commission_rate <= max_commission_rate,
-            error::invalid_argument(EOVER_MAX_COMMISSION_RATE)
+            error::invalid_argument(EOVER_MAX_COMMISSION_RATE),
         );
 
         // operator max change rate limits
-        let change = if (old_commission_rate > new_commission_rate) {
-            old_commission_rate - new_commission_rate
-        } else {
-            new_commission_rate - old_commission_rate
-        };
+        let change =
+            if (old_commission_rate > new_commission_rate) {
+                old_commission_rate - new_commission_rate
+            } else {
+                new_commission_rate - old_commission_rate
+            };
 
         assert!(
             change <= max_commission_change_rate,
-            error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE)
+            error::invalid_argument(EINVALID_COMMISSION_CHANGE_RATE),
         );
 
         operator_info.commission_rate = commission_rate;
@@ -206,7 +205,7 @@ module initia_std::vip_operator {
                 bridge_id: bridge_id,
                 stage: operator_info.last_changed_stage,
                 commission_rate
-            }
+            },
         );
     }
 
@@ -217,13 +216,14 @@ module initia_std::vip_operator {
     ) acquires ModuleStore {
         let bridge_id_key = table_key::encode_u64(bridge_id);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let operator_info = table::borrow_mut(
-            &mut module_store.operator_infos,
-            bridge_id_key
-        );
+        let operator_info =
+            table::borrow_mut(
+                &mut module_store.operator_infos,
+                bridge_id_key,
+            );
         assert!(
             operator_info.operator_addr == signer::address_of(old_operator),
-            error::permission_denied(EUNAUTHORIZED)
+            error::permission_denied(EUNAUTHORIZED),
         );
 
         operator_info.operator_addr = new_operator_addr;
@@ -238,7 +238,7 @@ module initia_std::vip_operator {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         table::contains(
             &module_store.operator_infos,
-            table_key::encode_u64(bridge_id)
+            table_key::encode_u64(bridge_id),
         )
     }
 
@@ -248,14 +248,15 @@ module initia_std::vip_operator {
         assert!(
             table::contains(
                 &module_store.operator_infos,
-                table_key::encode_u64(bridge_id)
+                table_key::encode_u64(bridge_id),
             ),
-            error::not_found(EOPERATOR_STORE_NOT_FOUND)
+            error::not_found(EOPERATOR_STORE_NOT_FOUND),
         );
-        let operator_info = table::borrow(
-            &module_store.operator_infos,
-            table_key::encode_u64(bridge_id)
-        );
+        let operator_info =
+            table::borrow(
+                &module_store.operator_infos,
+                table_key::encode_u64(bridge_id),
+            );
         operator_info.commission_rate
     }
 
@@ -265,14 +266,15 @@ module initia_std::vip_operator {
         assert!(
             table::contains(
                 &module_store.operator_infos,
-                table_key::encode_u64(bridge_id)
+                table_key::encode_u64(bridge_id),
             ),
-            error::not_found(EOPERATOR_STORE_NOT_FOUND)
+            error::not_found(EOPERATOR_STORE_NOT_FOUND),
         );
-        let operator_info = table::borrow(
-            &module_store.operator_infos,
-            table_key::encode_u64(bridge_id)
-        );
+        let operator_info =
+            table::borrow(
+                &module_store.operator_infos,
+                table_key::encode_u64(bridge_id),
+            );
 
         OperatorInfoResponse {
             operator_addr: operator_info.operator_addr,
@@ -295,7 +297,9 @@ module initia_std::vip_operator {
     }
 
     #[test(initia_std = @initia_std, operator = @0x999)]
-    fun test_update_operator_commission(initia_std: &signer, operator: &signer) acquires ModuleStore {
+    fun test_update_operator_commission(
+        initia_std: &signer, operator: &signer
+    ) acquires ModuleStore {
         init_module_for_test(initia_std);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
@@ -311,14 +315,17 @@ module initia_std::vip_operator {
         );
 
         assert!(
-            get_operator_info(bridge_id) == OperatorInfoResponse {
-                operator_addr: operator_addr,
-                last_changed_stage: 10,
-                commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
-                commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
-                commission_rate: decimal256::from_string(&string::utf8(b"0")),
-            },
-            1
+            get_operator_info(bridge_id)
+                == OperatorInfoResponse {
+                    operator_addr: operator_addr,
+                    last_changed_stage: 10,
+                    commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
+                    commission_max_change_rate: decimal256::from_string(
+                        &string::utf8(b"0.2")
+                    ),
+                    commission_rate: decimal256::from_string(&string::utf8(b"0")),
+                },
+            1,
         );
 
         update_operator_commission(
@@ -329,14 +336,17 @@ module initia_std::vip_operator {
         );
 
         assert!(
-            get_operator_info(bridge_id) == OperatorInfoResponse {
-                operator_addr: operator_addr,
-                last_changed_stage: 11,
-                commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
-                commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
-                commission_rate: decimal256::from_string(&string::utf8(b"0.2")),
-            },
-            2
+            get_operator_info(bridge_id)
+                == OperatorInfoResponse {
+                    operator_addr: operator_addr,
+                    last_changed_stage: 11,
+                    commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
+                    commission_max_change_rate: decimal256::from_string(
+                        &string::utf8(b"0.2")
+                    ),
+                    commission_rate: decimal256::from_string(&string::utf8(b"0.2")),
+                },
+            2,
         );
 
         update_operator_commission(
@@ -347,20 +357,25 @@ module initia_std::vip_operator {
         );
 
         assert!(
-            get_operator_info(bridge_id) == OperatorInfoResponse {
-                operator_addr: operator_addr,
-                last_changed_stage: 12,
-                commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
-                commission_max_change_rate: decimal256::from_string(&string::utf8(b"0.2")),
-                commission_rate: decimal256::from_string(&string::utf8(b"0.1")),
-            },
-            3
+            get_operator_info(bridge_id)
+                == OperatorInfoResponse {
+                    operator_addr: operator_addr,
+                    last_changed_stage: 12,
+                    commission_max_rate: decimal256::from_string(&string::utf8(b"0.2")),
+                    commission_max_change_rate: decimal256::from_string(
+                        &string::utf8(b"0.2")
+                    ),
+                    commission_rate: decimal256::from_string(&string::utf8(b"0.1")),
+                },
+            3,
         );
     }
 
     #[test(initia_std = @initia_std, operator = @0x999)]
     #[expected_failure(abort_code = 0x10003, location = Self)]
-    fun failed_invalid_change_rate(initia_std: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_invalid_change_rate(
+        initia_std: &signer, operator: &signer
+    ) acquires ModuleStore {
         init_module_for_test(initia_std);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
@@ -385,7 +400,9 @@ module initia_std::vip_operator {
 
     #[test(initia_std = @initia_std, operator = @0x999)]
     #[expected_failure(abort_code = 0x10004, location = Self)]
-    fun failed_over_max_rate(initia_std: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_over_max_rate(
+        initia_std: &signer, operator: &signer
+    ) acquires ModuleStore {
         init_module_for_test(initia_std);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
@@ -410,7 +427,9 @@ module initia_std::vip_operator {
 
     #[test(initia_std = @initia_std, operator = @0x999)]
     #[expected_failure(abort_code = 0x10005, location = Self)]
-    fun failed_not_valid_stage(initia_std: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_not_valid_stage(
+        initia_std: &signer, operator: &signer
+    ) acquires ModuleStore {
         init_module_for_test(initia_std);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
@@ -435,7 +454,9 @@ module initia_std::vip_operator {
 
     #[test(initia_std = @initia_std, operator = @0x999)]
     #[expected_failure(abort_code = 0x10006, location = Self)]
-    fun failed_invalid_commission_rate(initia_std: &signer, operator: &signer) acquires ModuleStore {
+    fun failed_invalid_commission_rate(
+        initia_std: &signer, operator: &signer
+    ) acquires ModuleStore {
         init_module_for_test(initia_std);
         let bridge_id = 1;
         let operator_addr = signer::address_of(operator);
