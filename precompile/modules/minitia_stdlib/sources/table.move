@@ -186,13 +186,13 @@ module minitia_std::table {
     /// Create mutable iterator for `table`.
     /// A user has to check `prepare` before calling `next` to prevent abort.
     ///
-    /// let iter = table::iter_mut(&t, start, end, order);
+    /// let iter = table::iter_mut(&mut t, start, end, order);
     /// loop {
-    ///     if (!table::prepare_mut<K, V>(&mut iter)) {
+    ///     if (!table::prepare_mut(iter)) {
     ///         break;
     ///     }
     ///
-    ///     let (key, value) = table::next_mut<K, V>(&mut iter);
+    ///     let (key, value) = table::next_mut(iter);
     /// }
     ///
     /// NOTE: The default BCS number encoding follows the Little Endian method.
@@ -332,5 +332,15 @@ module minitia_std::table {
         assert!(key == 1 && *value == 1, 1);
 
         move_to(account, TableHolder { t });
+    }
+
+    #[test(account = @0x1, account2 = @0x2)]
+    fun test_address_uniqueness(account: &signer, account2: &signer) {
+        let t1 = new<u64, u8>();
+        let t2 = new<u64, u8>();
+        assert!(handle(&t1) != handle(&t2), 1);
+
+        move_to(account, TableHolder { t: t1 });
+        move_to(account2, TableHolder { t: t2 });
     }
 }
