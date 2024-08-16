@@ -59,6 +59,12 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                 Ok(JSONValue::Array(fields_array))
             }
             MoveStruct::WithFields(fields) | MoveStruct::WithVariantFields(_, _, fields) => {
+                // The move compiler inserts a dummy field with the value of false
+                // for structs with no fields.
+                if fields.len() == 1 && fields[0].0.as_str() == "dummy_field" {
+                    return Ok(JSONValue::Object(Map::new()));
+                }
+
                 let mut fields_map: Map<String, JSONValue> = Map::new();
                 for (id, mv) in fields.iter() {
                     let value = convert_move_value_to_json_value(mv, depth + 1)?;
@@ -68,6 +74,12 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                 Ok(JSONValue::Object(fields_map))
             }
             MoveStruct::WithTypes { type_, fields } => {
+                // The move compiler inserts a dummy field with the value of false
+                // for structs with no fields.
+                if fields.len() == 1 && fields[0].0.as_str() == "dummy_field" {
+                    return Ok(JSONValue::Object(Map::new()));
+                }
+
                 // check the struct type is string
                 // if yes, then convert move value to json string
                 // else, execute convert function recursively

@@ -98,6 +98,14 @@ pub fn convert_json_value_to_value(
         }
         Struct(layout) => match layout {
             WithTypes { fields, type_ } => {
+                // The move compiler inserts a dummy field with the value of false
+                // for structs with no fields.
+                if fields.len() == 1 && fields[0].name.as_str() == "dummy_field" {
+                    return Ok(Value::struct_(Struct::pack(vec![
+                        Value::bool(false)
+                    ])));
+                }
+
                 let full_name =
                     format!("{}::{}", type_.module_id().short_str_lossless(), type_.name);
                 match full_name.as_str() {
