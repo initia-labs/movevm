@@ -27,6 +27,9 @@ const EUNABLE_TO_EMIT_EVENT_DELAYED_FIELD: u64 = (ECATEGORY_INVALID_ARGUMENT << 
 #[derive(Default, Tid)]
 pub struct NativeEventContext {
     events: Vec<(ContractEvent, MoveTypeLayout)>,
+
+    #[cfg(feature = "testing")]
+    events_for_testing: Vec<(Vec<u8>, TypeTag)>,
 }
 
 impl NativeEventContext {
@@ -35,11 +38,11 @@ impl NativeEventContext {
     }
 
     #[cfg(feature = "testing")]
-    fn emitted_events(&self, ty_tag: &TypeTag) -> Vec<(&str, &MoveTypeLayout)> {
-        let mut events = vec![];
-        for (event, ty_layout) in self.events.iter() {
-            if event.type_tag() == ty_tag {
-                events.push((event.event_data(), ty_layout));
+    fn emitted_events(&self, ty_tag: &TypeTag) -> Vec<&[u8]> {
+        let mut events: Vec<&[u8]> = vec![];
+        for (data, tt) in self.events_for_testing.iter() {
+            if tt == ty_tag {
+                events.push(data);
             }
         }
         events
@@ -116,6 +119,19 @@ fn native_emit_event(
     })?;
 
     let ctx = context.extensions_mut().get_mut::<NativeEventContext>();
+
+    // Cache the emitted event for testing.
+    #[cfg(feature = "testing")]
+    {
+        let blob = msg.simple_serialize(&layout).ok_or_else(|| {
+            SafeNativeError::InvariantViolation(PartialVMError::new(
+                StatusCode::VALUE_SERIALIZATION_ERROR,
+            ))
+        })?;
+
+        ctx.events_for_testing.push((blob, type_tag.clone()));
+    }
+
     ctx.events.push((
         ContractEvent::new(type_tag, serde_value.to_string()),
         annotated_layout,
@@ -130,18 +146,18 @@ fn native_emitted_events(
     ty_args: Vec<Type>,
     arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    use initia_move_json::deserialize_json_to_value;
-
     debug_assert!(ty_args.len() == 1);
     debug_assert!(arguments.is_empty());
 
-    let ty_tag = context.type_to_type_tag(&ty_args[0])?;
+    let ty = &ty_args[0];
+    let ty_tag = context.type_to_type_tag(ty)?;
+    let ty_layout = context.type_to_type_layout(ty)?;
     let ctx = context.extensions_mut().get_mut::<NativeEventContext>();
     let events = ctx
         .emitted_events(&ty_tag)
         .into_iter()
-        .map(|(str, ty_layout)| {
-            deserialize_json_to_value(ty_layout, str.as_bytes()).map_err(|_| {
+        .map(|blob| {
+            Value::simple_deserialize(blob, &ty_layout).ok_or_else(|| {
                 SafeNativeError::InvariantViolation(PartialVMError::new(
                     StatusCode::VALUE_DESERIALIZATION_ERROR,
                 ))

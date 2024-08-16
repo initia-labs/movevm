@@ -397,4 +397,11 @@ module minitia_std::account {
         create_table_account(new_address);
         create_object_account(new_address);
     }
+
+    // functions for compatibility with the aptos
+
+    #[test_only]
+    public fun create_account_for_test(new_address: address): signer {
+        create_signer_for_test(new_address)
+    }
 }
