@@ -177,9 +177,7 @@ module initia_std::code {
             &mut registry.metadata, option::none(), option::none(), 1
         );
         loop {
-            if (!table::prepare_mut(iter)) {
-                break;
-            };
+            if (!table::prepare_mut(iter)) { break };
 
             let (_, metadata) = table::next_mut(iter);
             metadata.upgrade_policy = UPGRADE_POLICY_IMMUTABLE;

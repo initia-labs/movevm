@@ -29,14 +29,14 @@ module minitia_std::block {
 
     #[test_only]
     public fun initialize_for_test(
-        account: &signer, epoch_interval_microsecs: u64
+        _: &signer, _: u64
     ) {
         // no-op
     }
 
     #[test_only]
     public fun emit_writeset_block_event(
-        vm_signer: &signer, fake_block_hash: address
+        _: &signer, _: address
     ) {
         // no-op
     }
