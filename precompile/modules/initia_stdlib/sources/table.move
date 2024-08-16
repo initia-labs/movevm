@@ -186,13 +186,13 @@ module initia_std::table {
     /// Create mutable iterator for `table`.
     /// A user has to check `prepare` before calling `next` to prevent abort.
     ///
-    /// let iter = table::iter_mut(&t, start, end, order);
+    /// let iter = table::iter_mut(&mut t, start, end, order);
     /// loop {
-    ///     if (!table::prepare_mut<K, V>(&mut iter)) {
+    ///     if (!table::prepare_mut(iter)) {
     ///         break;
     ///     }
     ///
-    ///     let (key, value) = table::next_mut<K, V>(&mut iter);
+    ///     let (key, value) = table::next_mut(iter);
     /// }
     ///
     /// NOTE: The default BCS number encoding follows the Little Endian method.

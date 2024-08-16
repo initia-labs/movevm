@@ -4,7 +4,9 @@ module initia_std::code {
     use std::signer;
     use std::vector;
     use std::event;
+    use std::option;
 
+    use initia_std::object::{Self, Object};
     use initia_std::table::{Self, Table};
     use initia_std::simple_map;
 
@@ -55,6 +57,12 @@ module initia_std::code {
 
     /// The module ID is duplicated.
     const EDUPLICATE_MODULE_ID: u64 = 0x7;
+
+    /// Not the owner of the package registry.
+    const ENOT_PACKAGE_OWNER: u64 = 0x8;
+
+    /// `code_object` does not exist.
+    const ECODE_OBJECT_DOES_NOT_EXIST: u64 = 0x9;
 
     /// Whether a compatibility check should be performed for upgrades. The check only passes if
     /// a new module has (a) the same public functions (b) for existing resources, no layout change.
@@ -149,6 +157,33 @@ module initia_std::code {
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.allowed_publishers = allowed_publishers;
+    }
+
+    public fun freeze_code_object(
+        publisher: &signer, code_object: Object<MetadataStore>
+    ) acquires MetadataStore {
+        let code_object_addr = object::object_address(&code_object);
+        assert!(
+            exists<MetadataStore>(code_object_addr),
+            error::not_found(ECODE_OBJECT_DOES_NOT_EXIST),
+        );
+        assert!(
+            object::is_owner(code_object, signer::address_of(publisher)),
+            error::permission_denied(ENOT_PACKAGE_OWNER),
+        );
+
+        let registry = borrow_global_mut<MetadataStore>(code_object_addr);
+        let iter = table::iter_mut(
+            &mut registry.metadata, option::none(), option::none(), 1
+        );
+        loop {
+            if (!table::prepare_mut(iter)) {
+                break;
+            };
+
+            let (_, metadata) = table::next_mut(iter);
+            metadata.upgrade_policy = UPGRADE_POLICY_IMMUTABLE;
+        }
     }
 
     /// Publishes a package at the given signer's address. The caller must provide package metadata describing the
