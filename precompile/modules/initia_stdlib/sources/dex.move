@@ -261,9 +261,12 @@ module initia_std::dex {
                 (coin_b_pool, coin_a_pool, coin_b_weight, coin_a_weight)
             };
 
-        decimal128::from_ratio_u64(
-            decimal128::mul_u64(&base_weight, quote_pool),
-            decimal128::mul_u64(&quote_weight, base_pool),
+        let numerator = decimal128::div_u64(&base_weight, base_pool);
+        let denominator = decimal128::div_u64(&quote_weight, quote_pool);
+
+        decimal128::from_ratio(
+            decimal128::val(&numerator),
+            decimal128::val(&denominator),
         )
     }
 
