@@ -376,7 +376,7 @@ module initia_std::coin {
     }
 
     #[test_only]
-    fun initialized_coin(account: &signer, symbol: String,)
+    fun initialize_coin_for_testing(account: &signer, symbol: String,)
         : (
         BurnCapability, FreezeCapability, MintCapability
     ) {
@@ -397,8 +397,8 @@ module initia_std::coin {
     #[test(chain = @0x1, not_chain = @0x2)]
     fun test_denom_metadata_convert(chain: signer, not_chain: signer,) {
         initia_std::primary_fungible_store::init_module_for_test();
-        initialized_coin(&chain, string::utf8(b"INIT"));
-        initialized_coin(&not_chain, string::utf8(b"INIT"));
+        initialize_coin_for_testing(&chain, string::utf8(b"INIT"));
+        initialize_coin_for_testing(&not_chain, string::utf8(b"INIT"));
         let metadata = metadata(
             std::signer::address_of(&chain),
             string::utf8(b"INIT"),
