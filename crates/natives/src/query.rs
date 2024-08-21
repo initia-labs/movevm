@@ -215,6 +215,8 @@ pub fn make_all(
         ("query_stargate", native_query_stargate),
         #[cfg(feature = "testing")]
         ("set_query_response", native_test_only_set_query_response),
+        #[cfg(feature = "testing")]
+        ("unset_query_response", native_test_only_unset_query_response),
     ];
 
     builder.make_named_natives(natives)
@@ -337,6 +339,34 @@ fn native_test_only_set_query_response(
 
     let query_context = context.extensions_mut().get_mut::<NativeQueryContext>();
     query_context.responses.insert(hash, output_bytes);
+
+    Ok(smallvec![])
+}
+
+#[cfg(feature = "testing")]
+fn native_test_only_unset_query_response(
+    context: &mut SafeNativeContext,
+    ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 2);
+
+    let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+    let path_or_name_bytes = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
+
+    let path_or_name =
+        String::from_utf8(path_or_name_bytes).map_err(|_| SafeNativeError::Abort {
+            abort_code: UNABLE_TO_PARSE_STRING,
+        })?;
+
+    let mut hasher = Sha3_256::new();
+    hasher.update(path_or_name.as_bytes());
+    hasher.update(&data);
+    let hash = hex::encode(hasher.finalize());
+
+    let query_context = context.extensions_mut().get_mut::<NativeQueryContext>();
+    query_context.responses.remove(hash.as_str());
 
     Ok(smallvec![])
 }
