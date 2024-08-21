@@ -80,9 +80,7 @@ module initia_std::query {
     );
 
     #[test_only]
-    native public fun unset_query_response(
-        path_or_name: vector<u8>, data: vector<u8>
-    );
+    native public fun unset_query_response(path_or_name: vector<u8>, data: vector<u8>);
 
     #[test]
     fun test_query_custom() {

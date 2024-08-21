@@ -13,6 +13,7 @@ module minitia_std::dex {
     use minitia_std::string::{Self, String};
     use minitia_std::table::{Self, Table};
     use minitia_std::coin;
+    use minitia_std::decimal256;
 
     /// Pool configuration
     struct Config has key {
@@ -261,13 +262,13 @@ module minitia_std::dex {
                 (coin_b_pool, coin_a_pool, coin_b_weight, coin_a_weight)
             };
 
-        let numerator = decimal128::div_u64(&base_weight, base_pool);
-        let denominator = decimal128::div_u64(&quote_weight, quote_pool);
+        let price =
+            decimal256::from_ratio(
+                (quote_pool as u256) * (decimal128::val(&base_weight) as u256),
+                ((base_pool as u256) * (decimal128::val(&quote_weight) as u256)),
+            );
 
-        decimal128::from_ratio(
-            decimal128::val(&numerator),
-            decimal128::val(&denominator),
-        )
+        decimal128::new((decimal256::val(&price) as u128))
     }
 
     #[view]

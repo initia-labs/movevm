@@ -57,11 +57,11 @@ module initia_std::json {
 
     #[test]
     fun test_empty_marshal_unmarshal_empty() {
-        let json = marshal(&EmptyObject{});
+        let json = marshal(&EmptyObject {});
         assert!(json == b"{}", 1);
 
         let val = unmarshal<EmptyObject>(json);
-        assert!(val == EmptyObject{}, 2);
+        assert!(val == EmptyObject {}, 2);
     }
 
     #[test]
