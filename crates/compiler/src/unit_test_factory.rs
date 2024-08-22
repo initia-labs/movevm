@@ -51,22 +51,32 @@ impl UnitTestFactory<InitiaGasMeter> for InitiaUnitTestFactory {
         mut gas_meter: InitiaGasMeter,
         mut test_run_info: TestRunInfo,
     ) -> (VMResult<ChangeSet>, TestRunInfo) {
+        let mut apply_gas_used = |gas_meter: InitiaGasMeter| {
+            test_run_info.gas_used = gas_meter
+                .gas_limit()
+                .checked_sub(gas_meter.balance())
+                .unwrap()
+                .into();
+        };
+
         match session.finish_with_extensions() {
             Ok((cs, mut exts)) => {
                 let table_context: NativeTableContext = exts.remove::<NativeTableContext>();
                 match Self::charge_write_set_gas(&mut gas_meter, &cs, table_context) {
                     Ok(()) => {
-                        test_run_info.gas_used = gas_meter
-                            .gas_limit()
-                            .checked_sub(gas_meter.balance())
-                            .unwrap()
-                            .into();
+                        apply_gas_used(gas_meter);
                         (Ok(cs), test_run_info)
                     }
-                    Err(err) => return (Err(err), test_run_info),
+                    Err(err) => {
+                        apply_gas_used(gas_meter);
+                        return (Err(err), test_run_info)
+                    },
                 }
             }
-            Err(err) => (Err(err), test_run_info),
+            Err(err) => {
+                apply_gas_used(gas_meter);
+                (Err(err), test_run_info)
+            }
         }
     }
 }
