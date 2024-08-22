@@ -69,7 +69,7 @@ impl UnitTestFactory<InitiaGasMeter> for InitiaUnitTestFactory {
                     }
                     Err(err) => {
                         apply_gas_used(gas_meter);
-                        return (Err(err), test_run_info)
+                        (Err(err), test_run_info)
                     },
                 }
             }

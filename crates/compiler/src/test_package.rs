@@ -60,13 +60,13 @@ impl TestPackage {
                 report_storage_on_error: self.test_config.report_storage_on_error,
                 ignore_compile_warnings: self.test_config.ignore_compile_warnings,
                 verbose: self.test_config.verbose_mode,
-                ..UnitTestingConfig::default_with_bound(Some(gas_limit))
+                ..UnitTestingConfig::default()
             },
             all_natives(native_gas_params, misc_gas_params),
             ChangeSet::new(),
             self.test_config.compute_coverage,
             &mut std::io::stdout(),
-            Some(factory),
+            factory,
         )?;
 
         if self.test_config.compute_coverage {
