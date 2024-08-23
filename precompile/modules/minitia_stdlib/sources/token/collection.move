@@ -210,7 +210,7 @@ module minitia_std::collection {
             error::out_of_range(ECOLLECTION_NAME_TOO_LONG),
         );
         assert!(
-            string::index_of(name, &string::utf8(b"::")) == len,
+            string::index_of(name, &string::utf8(b":")) == len,
             error::invalid_argument(EINVALID_COLLECTION_NAME),
         );
     }

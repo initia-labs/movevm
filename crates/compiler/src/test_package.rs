@@ -8,14 +8,14 @@ use initia_move_natives::all_natives;
 use initia_move_types::metadata;
 use move_cli::base::{
     coverage::{Coverage, CoverageSummaryOptions},
-    test::{run_move_unit_tests_with_gas_meter, Test, UnitTestResult},
+    test::{run_move_unit_tests_with_factory, Test, UnitTestResult},
 };
 use move_core_types::effects::ChangeSet;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
-use crate::{extensions::configure_for_unit_test, test_gas_meter::TestInitiaGasMeter};
+use crate::{extensions::configure_for_unit_test, unit_test_factory::InitiaUnitTestFactory};
 
 pub struct TestPackage {
     pub package_path: PathBuf,
@@ -46,11 +46,11 @@ impl TestPackage {
 
         let gas_limit = 1_000_000_000u64;
         let gas_params = InitiaGasParameters::initial();
-        let gas_meter = TestInitiaGasMeter::new(gas_params, gas_limit);
+        let factory = InitiaUnitTestFactory::new(gas_params, gas_limit);
 
         let native_gas_params = NativeGasParameters::initial();
         let misc_gas_params = MiscGasParameters::initial();
-        let result = run_move_unit_tests_with_gas_meter(
+        let result = run_move_unit_tests_with_factory(
             &self.package_path,
             new_build_config,
             UnitTestingConfig {
@@ -60,14 +60,13 @@ impl TestPackage {
                 report_storage_on_error: self.test_config.report_storage_on_error,
                 ignore_compile_warnings: self.test_config.ignore_compile_warnings,
                 verbose: self.test_config.verbose_mode,
-                ..UnitTestingConfig::default_with_bound(Some(gas_limit))
+                ..UnitTestingConfig::default()
             },
             all_natives(native_gas_params, misc_gas_params),
             ChangeSet::new(),
-            None,
             self.test_config.compute_coverage,
             &mut std::io::stdout(),
-            Some(gas_meter),
+            factory,
         )?;
 
         if self.test_config.compute_coverage {

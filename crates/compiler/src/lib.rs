@@ -10,7 +10,7 @@ pub mod extensions;
 pub mod new;
 pub mod prover;
 pub mod test_package;
-pub mod test_gas_meter;
+pub mod unit_test_factory;
 
 mod mocks;
 

@@ -88,7 +88,7 @@ module initia_std::nft {
             error::out_of_range(ENFT_TOKEN_ID_TOO_LONG),
         );
         assert!(
-            string::index_of(token_id, &string::utf8(b"::")) == len,
+            string::index_of(token_id, &string::utf8(b":")) == len,
             error::invalid_argument(EINVALID_TOKEN_ID),
         );
     }

@@ -79,6 +79,9 @@ module minitia_std::query {
         path_or_name: vector<u8>, data: vector<u8>, response: vector<u8>
     );
 
+    #[test_only]
+    native public fun unset_query_response(path_or_name: vector<u8>, data: vector<u8>);
+
     #[test]
     fun test_query_custom() {
         set_query_response(b"path", b"data123", b"output");
@@ -93,5 +96,15 @@ module minitia_std::query {
 
         let res = query_stargate(b"path", b"data123");
         assert!(res == b"output", 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0x1006E, location = Self)]
+    fun test_query_unsset() {
+        set_query_response(b"path", b"data123", b"output");
+        unset_query_response(b"path", b"data123");
+
+        let res = query_custom(b"path", b"data123");
+        assert!(res == b"", 0);
     }
 }

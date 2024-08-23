@@ -13,6 +13,7 @@ module initia_std::dex {
     use initia_std::string::{Self, String};
     use initia_std::table::{Self, Table};
     use initia_std::coin;
+    use initia_std::decimal256;
 
     /// Pool configuration
     struct Config has key {
@@ -261,10 +262,13 @@ module initia_std::dex {
                 (coin_b_pool, coin_a_pool, coin_b_weight, coin_a_weight)
             };
 
-        decimal128::from_ratio_u64(
-            decimal128::mul_u64(&base_weight, quote_pool),
-            decimal128::mul_u64(&quote_weight, base_pool),
-        )
+        let price =
+            decimal256::from_ratio(
+                (quote_pool as u256) * (decimal128::val(&base_weight) as u256),
+                ((base_pool as u256) * (decimal128::val(&quote_weight) as u256)),
+            );
+
+        decimal128::new((decimal256::val(&price) as u128))
     }
 
     #[view]

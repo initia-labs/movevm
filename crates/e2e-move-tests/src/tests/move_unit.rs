@@ -4,7 +4,7 @@
 
 use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
 
-use initia_move_gas::{MiscGasParameters, NativeGasParameters};
+use initia_move_gas::{InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters};
 use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
@@ -12,8 +12,9 @@ use initia_move_natives::{
     transaction_context::NativeTransactionContext,
 };
 use initia_move_types::metadata;
+use initia_move_compiler::unit_test_factory::InitiaUnitTestFactory;
 
-use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
+use move_cli::base::test::{run_move_unit_tests_with_factory, UnitTestResult};
 use move_core_types::effects::ChangeSet;
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
@@ -51,8 +52,11 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
     configure_for_unit_test();
 
     let gas_limit = 1_000_000_000u64;
-    let native_gas_params = NativeGasParameters::zeros();
-    let misc_gas_params = MiscGasParameters::zeros();
+    let gas_params = InitiaGasParameters::initial();
+    let factory = InitiaUnitTestFactory::new(gas_params, gas_limit);
+
+    let native_gas_params = NativeGasParameters::initial();
+    let misc_gas_params = MiscGasParameters::initial();
 
     let mut build_config = move_package::BuildConfig {
         test_mode: true,
@@ -64,16 +68,15 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         .known_attributes
         .clone_from(metadata::get_all_attribute_names());
 
-    let res = run_move_unit_tests(
+    let res = run_move_unit_tests_with_factory(
         &pkg_path,
         build_config,
-        UnitTestingConfig::default_with_bound(Some(gas_limit)),
+        UnitTestingConfig::default(),
         all_natives(native_gas_params, misc_gas_params),
         ChangeSet::new(),
-        // TODO(Gas): we may want to switch to non-zero costs in the future
-        None,
         /* compute_coverage */ false,
         &mut std::io::stdout(),
+        factory,
     )
     .unwrap();
 
