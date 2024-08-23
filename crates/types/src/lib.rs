@@ -1,5 +1,6 @@
 pub mod access_path;
 pub mod account;
+pub mod compiler;
 pub mod cosmos;
 pub mod entry_function;
 pub mod env;

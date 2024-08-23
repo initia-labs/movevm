@@ -99,6 +99,365 @@ func BcsDeserializeAccountAddress(input []byte) (AccountAddress, error) {
 	return obj, err
 }
 
+type CompilerArguments struct {
+	PackagePath *string
+	Verbose bool
+	BuildConfig CompilerBuildConfig
+}
+
+func (obj *CompilerArguments) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serialize_option_str(obj.PackagePath, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.Verbose); err != nil { return err }
+	if err := obj.BuildConfig.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerArguments) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerArguments(deserializer serde.Deserializer) (CompilerArguments, error) {
+	var obj CompilerArguments
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.PackagePath = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.Verbose = val } else { return obj, err }
+	if val, err := DeserializeCompilerBuildConfig(deserializer); err == nil { obj.BuildConfig = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerArguments(input []byte) (CompilerArguments, error) {
+	if input == nil {
+		var obj CompilerArguments
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerArguments(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type CompilerBuildConfig struct {
+	DevMode bool
+	TestMode bool
+	GenerateDocs bool
+	GenerateAbis bool
+	InstallDir *string
+	ForceRecompilation bool
+	FetchDepsOnly bool
+	SkipFetchLatestGitDeps bool
+	BytecodeVersion uint32
+	CompilerVersion uint32
+	LanguageVersion uint32
+	AdditionalNamedAddresses []struct {Field0 string; Field1 AccountAddress}
+}
+
+func (obj *CompilerBuildConfig) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeBool(obj.DevMode); err != nil { return err }
+	if err := serializer.SerializeBool(obj.TestMode); err != nil { return err }
+	if err := serializer.SerializeBool(obj.GenerateDocs); err != nil { return err }
+	if err := serializer.SerializeBool(obj.GenerateAbis); err != nil { return err }
+	if err := serialize_option_str(obj.InstallDir, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.ForceRecompilation); err != nil { return err }
+	if err := serializer.SerializeBool(obj.FetchDepsOnly); err != nil { return err }
+	if err := serializer.SerializeBool(obj.SkipFetchLatestGitDeps); err != nil { return err }
+	if err := serializer.SerializeU32(obj.BytecodeVersion); err != nil { return err }
+	if err := serializer.SerializeU32(obj.CompilerVersion); err != nil { return err }
+	if err := serializer.SerializeU32(obj.LanguageVersion); err != nil { return err }
+	if err := serialize_vector_tuple2_str_AccountAddress(obj.AdditionalNamedAddresses, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerBuildConfig) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerBuildConfig(deserializer serde.Deserializer) (CompilerBuildConfig, error) {
+	var obj CompilerBuildConfig
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.DevMode = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.TestMode = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.GenerateDocs = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.GenerateAbis = val } else { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.InstallDir = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.ForceRecompilation = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.FetchDepsOnly = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.SkipFetchLatestGitDeps = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU32(); err == nil { obj.BytecodeVersion = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU32(); err == nil { obj.CompilerVersion = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU32(); err == nil { obj.LanguageVersion = val } else { return obj, err }
+	if val, err := deserialize_vector_tuple2_str_AccountAddress(deserializer); err == nil { obj.AdditionalNamedAddresses = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerBuildConfig(input []byte) (CompilerBuildConfig, error) {
+	if input == nil {
+		var obj CompilerBuildConfig
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerBuildConfig(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type CompilerCoverageBytecodeOptions struct {
+	ModuleName *string
+}
+
+func (obj *CompilerCoverageBytecodeOptions) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serialize_option_str(obj.ModuleName, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerCoverageBytecodeOptions) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerCoverageBytecodeOptions(deserializer serde.Deserializer) (CompilerCoverageBytecodeOptions, error) {
+	var obj CompilerCoverageBytecodeOptions
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.ModuleName = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerCoverageBytecodeOptions(input []byte) (CompilerCoverageBytecodeOptions, error) {
+	if input == nil {
+		var obj CompilerCoverageBytecodeOptions
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerCoverageBytecodeOptions(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type CompilerCoverageSourceOptions struct {
+	ModuleName *string
+}
+
+func (obj *CompilerCoverageSourceOptions) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serialize_option_str(obj.ModuleName, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerCoverageSourceOptions) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerCoverageSourceOptions(deserializer serde.Deserializer) (CompilerCoverageSourceOptions, error) {
+	var obj CompilerCoverageSourceOptions
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.ModuleName = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerCoverageSourceOptions(input []byte) (CompilerCoverageSourceOptions, error) {
+	if input == nil {
+		var obj CompilerCoverageSourceOptions
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerCoverageSourceOptions(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type CompilerCoverageSummaryOptions struct {
+	Functions bool
+	OutputCsv bool
+}
+
+func (obj *CompilerCoverageSummaryOptions) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeBool(obj.Functions); err != nil { return err }
+	if err := serializer.SerializeBool(obj.OutputCsv); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerCoverageSummaryOptions) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerCoverageSummaryOptions(deserializer serde.Deserializer) (CompilerCoverageSummaryOptions, error) {
+	var obj CompilerCoverageSummaryOptions
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.Functions = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.OutputCsv = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerCoverageSummaryOptions(input []byte) (CompilerCoverageSummaryOptions, error) {
+	if input == nil {
+		var obj CompilerCoverageSummaryOptions
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerCoverageSummaryOptions(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type CompilerDocgenOptions struct {
+	IncludeImpl bool
+	IncludeSpecs bool
+	SpecsInlined bool
+	IncludeDepDiagram bool
+	CollapsedSections bool
+	LandingPageTemplate *string
+	ReferencesFile *string
+}
+
+func (obj *CompilerDocgenOptions) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IncludeImpl); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IncludeSpecs); err != nil { return err }
+	if err := serializer.SerializeBool(obj.SpecsInlined); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IncludeDepDiagram); err != nil { return err }
+	if err := serializer.SerializeBool(obj.CollapsedSections); err != nil { return err }
+	if err := serialize_option_str(obj.LandingPageTemplate, serializer); err != nil { return err }
+	if err := serialize_option_str(obj.ReferencesFile, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerDocgenOptions) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerDocgenOptions(deserializer serde.Deserializer) (CompilerDocgenOptions, error) {
+	var obj CompilerDocgenOptions
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IncludeImpl = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IncludeSpecs = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.SpecsInlined = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IncludeDepDiagram = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.CollapsedSections = val } else { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.LandingPageTemplate = val } else { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.ReferencesFile = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerDocgenOptions(input []byte) (CompilerDocgenOptions, error) {
+	if input == nil {
+		var obj CompilerDocgenOptions
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerDocgenOptions(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type CompilerTestOptions struct {
+	Filter *string
+	ReportStatistics bool
+	ReportStorageOnError bool
+	IgnoreCompileWarnings bool
+	ComputeCoverage bool
+}
+
+func (obj *CompilerTestOptions) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serialize_option_str(obj.Filter, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.ReportStatistics); err != nil { return err }
+	if err := serializer.SerializeBool(obj.ReportStorageOnError); err != nil { return err }
+	if err := serializer.SerializeBool(obj.IgnoreCompileWarnings); err != nil { return err }
+	if err := serializer.SerializeBool(obj.ComputeCoverage); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *CompilerTestOptions) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeCompilerTestOptions(deserializer serde.Deserializer) (CompilerTestOptions, error) {
+	var obj CompilerTestOptions
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_option_str(deserializer); err == nil { obj.Filter = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.ReportStatistics = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.ReportStorageOnError = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.IgnoreCompileWarnings = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.ComputeCoverage = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeCompilerTestOptions(input []byte) (CompilerTestOptions, error) {
+	if input == nil {
+		var obj CompilerTestOptions
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeCompilerTestOptions(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type CosmosCoin struct {
 	Metadata AccountAddress
 	Amount uint64
@@ -2194,6 +2553,41 @@ func deserialize_array32_u8_array(deserializer serde.Deserializer) ([32]uint8, e
 	return obj, nil
 }
 
+func serialize_option_str(value *string, serializer serde.Serializer) error {
+	if value != nil {
+		if err := serializer.SerializeOptionTag(true); err != nil { return err }
+		if err := serializer.SerializeStr((*value)); err != nil { return err }
+	} else {
+		if err := serializer.SerializeOptionTag(false); err != nil { return err }
+	}
+	return nil
+}
+
+func deserialize_option_str(deserializer serde.Deserializer) (*string, error) {
+	tag, err := deserializer.DeserializeOptionTag()
+	if err != nil { return nil, err }
+	if tag {
+		value := new(string)
+		if val, err := deserializer.DeserializeStr(); err == nil { *value = val } else { return nil, err }
+	        return value, nil
+	} else {
+		return nil, nil
+	}
+}
+
+func serialize_tuple2_str_AccountAddress(value struct {Field0 string; Field1 AccountAddress}, serializer serde.Serializer) error {
+	if err := serializer.SerializeStr(value.Field0); err != nil { return err }
+	if err := value.Field1.Serialize(serializer); err != nil { return err }
+	return nil
+}
+
+func deserialize_tuple2_str_AccountAddress(deserializer serde.Deserializer) (struct {Field0 string; Field1 AccountAddress}, error) {
+	var obj struct {Field0 string; Field1 AccountAddress}
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Field0 = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Field1 = val } else { return obj, err }
+	return obj, nil
+}
+
 func serialize_vector_Account(value []Account, serializer serde.Serializer) error {
 	if err := serializer.SerializeLen(uint64(len(value))); err != nil { return err }
 	for _, item := range(value) {
@@ -2352,6 +2746,24 @@ func deserialize_vector_str(deserializer serde.Deserializer) ([]string, error) {
 	obj := make([]string, length)
 	for i := range(obj) {
 		if val, err := deserializer.DeserializeStr(); err == nil { obj[i] = val } else { return nil, err }
+	}
+	return obj, nil
+}
+
+func serialize_vector_tuple2_str_AccountAddress(value []struct {Field0 string; Field1 AccountAddress}, serializer serde.Serializer) error {
+	if err := serializer.SerializeLen(uint64(len(value))); err != nil { return err }
+	for _, item := range(value) {
+		if err := serialize_tuple2_str_AccountAddress(item, serializer); err != nil { return err }
+	}
+	return nil
+}
+
+func deserialize_vector_tuple2_str_AccountAddress(deserializer serde.Deserializer) ([]struct {Field0 string; Field1 AccountAddress}, error) {
+	length, err := deserializer.DeserializeLen()
+	if err != nil { return nil, err }
+	obj := make([]struct {Field0 string; Field1 AccountAddress}, length)
+	for i := range(obj) {
+		if val, err := deserialize_tuple2_str_AccountAddress(deserializer); err == nil { obj[i] = val } else { return nil, err }
 	}
 	return obj, nil
 }

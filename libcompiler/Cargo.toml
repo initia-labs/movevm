@@ -26,18 +26,14 @@ default = []
 [dependencies]
 errno = { workspace = true }
 thiserror = { workspace = true }
-log = { workspace = true, features = [
-    "max_level_debug",
-    "release_max_level_warn",
-] }
+bcs = { workspace = true }
+serde = { workspace = true, features = ["derive", "alloc"] }
 
 initia-move-compiler = { workspace = true }
+initia-move-types = { workspace = true }
 
 move-core-types = { workspace = true }
 move-cli = { workspace = true }
-move-docgen = { workspace = true }
-move-package = { workspace = true }
-move-model = { workspace = true }
 
 [build-dependencies]
 cbindgen = { workspace = true }

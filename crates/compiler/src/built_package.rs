@@ -12,7 +12,7 @@ use move_binary_format::CompiledModule;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_core_types::{
-    account_address::AccountAddress, language_storage::ModuleId, metadata::Metadata,
+    language_storage::ModuleId, metadata::Metadata,
 };
 use move_docgen::DocgenOptions;
 use move_model::{
@@ -23,25 +23,11 @@ use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
     BuildConfig, ModelConfig,
 };
-use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     io::stderr,
     path::{Path, PathBuf},
 };
-
-/// Represents a set of options for building artifacts from Move.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InitiaBuildOptions {
-    pub dev_mode: bool,
-    pub with_docs: bool,
-    pub with_abis: bool,
-    pub install_dir: Option<PathBuf>,
-    pub named_addresses: BTreeMap<String, AccountAddress>,
-    pub docgen_options: Option<DocgenOptions>,
-    pub skip_fetch_latest_git_deps: bool,
-    pub bytecode_version: Option<u32>,
-}
 
 /// Represents a built package.  It allows to extract `PackageMetadata`. Can also be used to
 /// just build Move code and related artifacts.

@@ -5,6 +5,11 @@ use serde_reflection::{Tracer, TracerConfig};
 
 use initia_move_types::{
     account::Account,
+    compiler::{
+        CompilerArguments, CompilerBuildConfig, CompilerCoverageBytecodeOptions,
+        CompilerCoverageSourceOptions, CompilerCoverageSummaryOptions, CompilerDocgenOptions,
+        CompilerTestOptions,
+    },
     cosmos::{
         CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, StakingMessage,
     },
@@ -52,6 +57,19 @@ fn main() {
     tracer.trace_simple_type::<Env>().unwrap();
     tracer.trace_simple_type::<TableInfo>().unwrap();
     tracer.trace_simple_type::<InitiaVMConfig>().unwrap();
+    tracer.trace_simple_type::<CompilerArguments>().unwrap();
+    tracer.trace_simple_type::<CompilerBuildConfig>().unwrap();
+    tracer
+        .trace_simple_type::<CompilerCoverageBytecodeOptions>()
+        .unwrap();
+    tracer
+        .trace_simple_type::<CompilerCoverageSourceOptions>()
+        .unwrap();
+    tracer
+        .trace_simple_type::<CompilerCoverageSummaryOptions>()
+        .unwrap();
+    tracer.trace_simple_type::<CompilerDocgenOptions>().unwrap();
+    tracer.trace_simple_type::<CompilerTestOptions>().unwrap();
 
     // aliases within StructTag
     tracer
