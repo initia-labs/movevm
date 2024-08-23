@@ -23,11 +23,6 @@ pub fn execute(move_args: Move, cmd: Command) -> anyhow::Result<()> {
             )?;
             Ok(())
         }
-        Command::Prove(c) => c.prove(
-            reroot_path(move_args.package_path)?.as_path(),
-            move_args.build_config.additional_named_addresses,
-            move_args.build_config.compiler_config.bytecode_version,
-        ),
         Command::New(c) => c.execute_with_defaults(move_args.package_path),
         Command::Clean(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Document(c) => {

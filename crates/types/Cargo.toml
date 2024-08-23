@@ -9,6 +9,10 @@ rust-version = { workspace = true }
 move-binary-format = { workspace = true }
 move-core-types = { workspace = true }
 move-compiler = { workspace = true }
+move-cli = { workspace = true }
+move-docgen = { workspace = true }
+move-package = { workspace = true }
+move-model = { workspace = true }
 
 anyhow = { workspace = true }
 bcs = { workspace = true }
@@ -17,5 +21,8 @@ serde_bytes = { workspace = true }
 hex = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
-move-model = { workspace = true }
 sha3 = { workspace = true }
+log = { workspace = true, features = [
+    "max_level_debug",
+    "release_max_level_warn",
+] }

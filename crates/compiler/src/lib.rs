@@ -8,7 +8,6 @@ pub mod docgen;
 pub mod extended_checks;
 pub mod extensions;
 pub mod new;
-pub mod prover;
 pub mod test_package;
 pub mod unit_test_factory;
 

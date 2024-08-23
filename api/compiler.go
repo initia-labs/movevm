@@ -8,43 +8,23 @@ import (
 	"runtime"
 	"syscall"
 
-	compiler "github.com/initia-labs/movevm/types/compiler"
-	coveragetypes "github.com/initia-labs/movevm/types/compiler/coverage"
-	docgentypes "github.com/initia-labs/movevm/types/compiler/docgen"
-	provetypes "github.com/initia-labs/movevm/types/compiler/prove"
-	testtypes "github.com/initia-labs/movevm/types/compiler/test"
+	"github.com/initia-labs/movevm/types"
 )
 
-func BuildContract(arg compiler.CompilerArgument) ([]byte, error) {
+func BuildContract(args types.CompilerArguments) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
 
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(buildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.build_move_package(&errmsg, compArg)
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+
+	res, err := C.build_move_package(&errmsg, argsBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -53,48 +33,25 @@ func BuildContract(arg compiler.CompilerArgument) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func TestContract(arg compiler.CompilerArgument, testConfig testtypes.TestConfig) ([]byte, error) {
+func TestContract(args types.CompilerArguments, options types.CompilerTestOptions) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-	filterBytesView := makeView([]byte(testConfig.Filter))
-	defer runtime.KeepAlive(filterBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
-	testOpt := C.CompilerTestOption{
-		filter:                  filterBytesView,
-		report_statistics:       cbool(testConfig.ReportStatistics),
-		report_storage_on_error: cbool(testConfig.ReportStorageOnError),
-		ignore_compile_warnings: cbool(testConfig.IgnoreCompileWarnings),
-		compute_coverage:        cbool(testConfig.ComputeCoverage),
+	optionsBytes, err := options.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.test_move_package(&errmsg,
-		compArg,
-		testOpt,
-	)
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+	optionsBytesView := makeView(optionsBytes)
+	defer runtime.KeepAlive(optionsBytesView)
+
+	res, err := C.test_move_package(&errmsg, argsBytesView, optionsBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -103,43 +60,25 @@ func TestContract(arg compiler.CompilerArgument, testConfig testtypes.TestConfig
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CoverageSummary(arg compiler.CompilerArgument, coverageSummaryConfig coveragetypes.CoverageSummaryConfig) ([]byte, error) {
+func CoverageSummary(args types.CompilerArguments, options types.CompilerCoverageSummaryOptions) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
-	coverageSummaryOpt := C.CompilerCoverageSummaryOption{
-		functions:  cbool(coverageSummaryConfig.Functions),
-		output_csv: cbool(coverageSummaryConfig.OutputCSV),
+	optionsBytes, err := options.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.coverage_summary_move_package(&errmsg,
-		compArg,
-		coverageSummaryOpt,
-	)
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+	optionsBytesView := makeView(optionsBytes)
+	defer runtime.KeepAlive(optionsBytesView)
+
+	res, err := C.coverage_summary_move_package(&errmsg, argsBytesView, optionsBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -148,44 +87,25 @@ func CoverageSummary(arg compiler.CompilerArgument, coverageSummaryConfig covera
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CoverageSource(arg compiler.CompilerArgument, coverageSourceConfig coveragetypes.CoverageSourceConfig) ([]byte, error) {
+func CoverageSource(args types.CompilerArguments, options types.CompilerCoverageSourceOptions) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-	moduleNameBytesView := makeView([]byte(coverageSourceConfig.ModuleName))
-	defer runtime.KeepAlive(moduleNameBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
-	coverageSourceOpt := C.CompilerCoverageSourceOption{
-		module_name: moduleNameBytesView,
+	optionsBytes, err := options.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.coverage_source_move_package(&errmsg,
-		compArg,
-		coverageSourceOpt,
-	)
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+	optionsBytesView := makeView(optionsBytes)
+	defer runtime.KeepAlive(optionsBytesView)
+
+	res, err := C.coverage_source_move_package(&errmsg, argsBytesView, optionsBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -194,44 +114,25 @@ func CoverageSource(arg compiler.CompilerArgument, coverageSourceConfig coverage
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CoverageBytecode(arg compiler.CompilerArgument, coverageBytecodeConfig coveragetypes.CoverageBytecodeConfig) ([]byte, error) {
+func CoverageBytecode(args types.CompilerArguments, options types.CompilerCoverageBytecodeOptions) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-	moduleNameBytesView := makeView([]byte(coverageBytecodeConfig.ModuleName))
-	defer runtime.KeepAlive(moduleNameBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
-	coverageBytecodeOpt := C.CompilerCoverageBytecodeOption{
-		module_name: moduleNameBytesView,
+	optionsBytes, err := options.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.coverage_bytecode_move_package(&errmsg,
-		compArg,
-		coverageBytecodeOpt,
-	)
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+	optionsBytesView := makeView(optionsBytes)
+	defer runtime.KeepAlive(optionsBytesView)
+
+	res, err := C.coverage_bytecode_move_package(&errmsg, argsBytesView, optionsBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -240,59 +141,25 @@ func CoverageBytecode(arg compiler.CompilerArgument, coverageBytecodeConfig cove
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func ProveContract(arg compiler.CompilerArgument, proveConfig provetypes.ProveConfig) ([]byte, error) {
+func Docgen(args types.CompilerArguments, options types.CompilerDocgenOptions) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-	filterBytesView := makeView([]byte(proveConfig.Filter))
-	defer runtime.KeepAlive(filterBytesView)
-	verbosityBytesView := makeView([]byte(proveConfig.Verbosity))
-	defer runtime.KeepAlive(verbosityBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
-	proveOpt := C.CompilerProveOption{
-		verbosity:            verbosityBytesView,
-		filter:               filterBytesView,
-		trace:                cbool(proveConfig.Trace),
-		cvc5:                 cbool(proveConfig.UseCVC5),
-		stratification_depth: cusize(proveConfig.StratificationDepth),
-		random_seed:          cusize(proveConfig.RandomSeed),
-		proc_cores:           cusize(proveConfig.ProcCores),
-		vc_timeout:           cusize(proveConfig.VcTimeout),
-		check_inconsistency:  cbool(proveConfig.CheckInconsistency),
-		keep_loops:           cbool(proveConfig.KeepLoops),
-		loop_unroll:          cu64(proveConfig.LoopUnroll),
-		stable_test_output:   cbool(proveConfig.StableTestOutput),
-		dump:                 cbool(proveConfig.Dump),
-		for_test:             cbool(proveConfig.ForTest),
+	optionsBytes, err := options.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.prove_move_package(&errmsg,
-		compArg,
-		proveOpt,
-	)
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+	optionsBytesView := makeView(optionsBytes)
+	defer runtime.KeepAlive(optionsBytesView)
+
+	res, err := C.docgen_move_package(&errmsg, argsBytesView, optionsBytesView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -301,93 +168,21 @@ func ProveContract(arg compiler.CompilerArgument, proveConfig provetypes.ProveCo
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func Docgen(arg compiler.CompilerArgument, docgenOption docgentypes.DocgenConfig) ([]byte, error) {
+func CreateContractPackage(args types.CompilerArguments, name string) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-	landingPageTemplateBytesView := makeView([]byte(docgenOption.LandingPageTemplate))
-	defer runtime.KeepAlive(landingPageTemplateBytesView)
-	referencesFileBytesView := makeView([]byte(docgenOption.ReferencesFile))
-	defer runtime.KeepAlive(referencesFileBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
-	}
-	docgenOpt := C.CompilerDocgenOption{
-		include_impl:          cbool(docgenOption.IncludeImpl),
-		include_specs:         cbool(docgenOption.IncludeSpecs),
-		specs_inlined:         cbool(docgenOption.SpecsInlined),
-		include_dep_diagram:   cbool(docgenOption.IncludeDepDiagram),
-		collapsed_sections:    cbool(docgenOption.CollapsedSections),
-		landing_page_template: landingPageTemplateBytesView,
-		references_file:       referencesFileBytesView,
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.docgen_move_package(&errmsg,
-		compArg,
-		docgenOpt,
-	)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
-}
-
-func CreateContractPackage(arg compiler.CompilerArgument, name string) ([]byte, error) {
-	var err error
-
-	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
-	}
-
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
 	nameView := makeView([]byte(name))
 	defer runtime.KeepAlive(nameView)
 
-	res, err := C.create_new_move_package(&errmsg, compArg, nameView)
+	res, err := C.create_new_move_package(&errmsg, argsBytesView, nameView)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
@@ -396,36 +191,19 @@ func CreateContractPackage(arg compiler.CompilerArgument, name string) ([]byte, 
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CleanContractPackage(arg compiler.CompilerArgument, cleanCache, cleanByproduct, force bool) ([]byte, error) {
+func CleanContractPackage(args types.CompilerArguments, cleanCache, cleanByproduct, force bool) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
-	buildConfig := arg.BuildConfig
-
-	pathBytesView := makeView([]byte(arg.PackagePath))
-	defer runtime.KeepAlive(pathBytesView)
-	installDirBytesView := makeView([]byte(arg.BuildConfig.InstallDir))
-	defer runtime.KeepAlive(installDirBytesView)
-
-	compArg := C.CompilerArgument{
-		package_path: pathBytesView,
-		verbose:      cbool(arg.Verbose),
-		build_config: C.CompilerBuildConfig{
-			dev_mode:                   cbool(buildConfig.DevMode),
-			test_mode:                  cbool(buildConfig.TestMode),
-			generate_docs:              cbool(buildConfig.GenerateDocs),
-			generate_abis:              cbool(buildConfig.GenerateABIs),
-			install_dir:                installDirBytesView,
-			force_recompilation:        cbool(buildConfig.ForceRecompilation),
-			fetch_deps_only:            cbool(buildConfig.FetchDepsOnly),
-			skip_fetch_latest_git_deps: cbool(buildConfig.SkipFetchLatestGitDeps),
-			bytecode_version:           cu32(buildConfig.BytecodeVersion),
-			compiler_version:           cu32(buildConfig.CompilerVersion),
-			language_version:           cu32(buildConfig.LanguageVersion),
-		},
+	argsBytes, err := args.BcsSerialize()
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := C.clean_move_package(&errmsg, compArg, cbool(cleanCache), cbool(cleanByproduct), cbool(force))
+	argsBytesView := makeView(argsBytes)
+	defer runtime.KeepAlive(argsBytesView)
+
+	res, err := C.clean_move_package(&errmsg, argsBytesView, cbool(cleanCache), cbool(cleanByproduct), cbool(force))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
