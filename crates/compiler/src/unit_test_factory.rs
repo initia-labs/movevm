@@ -4,7 +4,7 @@ use initia_move_types::write_set::WriteSet;
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{effects::ChangeSet, vm_status::StatusCode};
 use move_unit_test::test_reporter::{TestRunInfo, UnitTestFactory};
-use move_vm_runtime::session::Session;
+use move_vm_runtime::native_extensions::NativeContextExtensions;
 
 pub struct InitiaUnitTestFactory {
     pub gas_params: InitiaGasParameters,
@@ -40,17 +40,19 @@ impl InitiaUnitTestFactory {
 }
 
 // gas meter required for testing gas metering
-impl UnitTestFactory<InitiaGasMeter> for InitiaUnitTestFactory {
-    fn new_gas_meter(&self) -> InitiaGasMeter {
+impl UnitTestFactory for InitiaUnitTestFactory {
+    type GasMeter = InitiaGasMeter;
+    fn new_gas_meter(&self) -> Self::GasMeter {
         InitiaGasMeter::new(self.gas_params.clone(), self.balance)
     }
 
-    fn finish_session(
+    fn finalize_test_run_info(
         &self,
-        session: Session,
-        mut gas_meter: InitiaGasMeter,
+        change_set: &ChangeSet,
+        extensions: &mut NativeContextExtensions,
+        mut gas_meter: Self::GasMeter,
         mut test_run_info: TestRunInfo,
-    ) -> (VMResult<ChangeSet>, TestRunInfo) {
+    ) -> TestRunInfo {
         let mut apply_gas_used = |gas_meter: InitiaGasMeter| {
             test_run_info.gas_used = gas_meter
                 .gas_limit()
@@ -59,23 +61,18 @@ impl UnitTestFactory<InitiaGasMeter> for InitiaUnitTestFactory {
                 .into();
         };
 
-        match session.finish_with_extensions() {
-            Ok((cs, mut exts)) => {
-                let table_context: NativeTableContext = exts.remove::<NativeTableContext>();
-                match Self::charge_write_set_gas(&mut gas_meter, &cs, table_context) {
-                    Ok(()) => {
-                        apply_gas_used(gas_meter);
-                        (Ok(cs), test_run_info)
-                    }
-                    Err(err) => {
-                        apply_gas_used(gas_meter);
-                        (Err(err), test_run_info)
-                    },
-                }
-            }
-            Err(err) => {
+        match Self::charge_write_set_gas(
+            &mut gas_meter,
+            &change_set,
+            extensions.remove::<NativeTableContext>(),
+        ) {
+            Ok(()) => {
                 apply_gas_used(gas_meter);
-                (Err(err), test_run_info)
+                test_run_info
+            }
+            Err(_) => {
+                apply_gas_used(gas_meter);
+                test_run_info
             }
         }
     }
