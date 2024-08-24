@@ -63,7 +63,7 @@ impl UnitTestFactory for InitiaUnitTestFactory {
 
         match Self::charge_write_set_gas(
             &mut gas_meter,
-            &change_set,
+            change_set,
             extensions.remove::<NativeTableContext>(),
         ) {
             Ok(()) => {
