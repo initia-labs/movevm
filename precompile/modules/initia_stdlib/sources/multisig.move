@@ -656,7 +656,7 @@ module initia_std::multisig {
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
-    #[expected_failure(abort_code = 0x10000, location = simple_map)]
+    #[expected_failure(abort_code = 0x10001, location = simple_map)]
     fun duplicated_member(
         account1: signer,
         account2: signer,
