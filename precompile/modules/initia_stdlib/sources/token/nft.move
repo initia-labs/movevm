@@ -48,19 +48,19 @@ module initia_std::nft {
         token_id: String,
         /// The Uniform Resource Identifier (uri) pointing to the JSON file stored in off-chain
         /// storage; the URL length will likely need a maximum any suggestions?
-        uri: String,
+        uri: String
     }
 
     /// This enables burning an NFT, if possible, it will also delete the object. Note, the data
     /// in inner and self occupies 32-bytes each, rather than have both, this data structure makes
     /// a small optimization to support either and take a fixed amount of 34-bytes.
     struct BurnRef has drop, store {
-        delete_ref: object::DeleteRef,
+        delete_ref: object::DeleteRef
     }
 
     /// This enables mutating descritpion and URI by higher level services.
     struct MutatorRef has drop, store {
-        self: address,
+        self: address
     }
 
     #[event]
@@ -78,18 +78,18 @@ module initia_std::nft {
         collection: Object<Collection>,
         description: String,
         token_id: String,
-        uri: String,
+        uri: String
     }
 
     fun assert_token_id(token_id: &String) {
         let len = string::length(token_id);
         assert!(
             len <= MAX_NFT_TOKEN_ID_LENGTH,
-            error::out_of_range(ENFT_TOKEN_ID_TOO_LONG),
+            error::out_of_range(ENFT_TOKEN_ID_TOO_LONG)
         );
         assert!(
             string::index_of(token_id, &string::utf8(b":")) == len,
-            error::invalid_argument(EINVALID_TOKEN_ID),
+            error::invalid_argument(EINVALID_TOKEN_ID)
         );
     }
 
@@ -100,16 +100,16 @@ module initia_std::nft {
         description: String,
         token_id: String,
         royalty: Option<Royalty>,
-        uri: String,
+        uri: String
     ) {
         assert_token_id(&token_id);
         assert!(
             string::length(&description) <= MAX_DESCRIPTION_LENGTH,
-            error::out_of_range(EDESCRIPTION_TOO_LONG),
+            error::out_of_range(EDESCRIPTION_TOO_LONG)
         );
         assert!(
             string::length(&uri) <= MAX_URI_LENGTH,
-            error::out_of_range(EURI_TOO_LONG),
+            error::out_of_range(EURI_TOO_LONG)
         );
 
         let object_signer = object::generate_signer(constructor_ref);
@@ -120,16 +120,16 @@ module initia_std::nft {
         collection::increment_supply(
             collection,
             token_id,
-            signer::address_of(&object_signer),
+            signer::address_of(&object_signer)
         );
 
-        let nft = Nft { collection, description, token_id, uri, };
+        let nft = Nft { collection, description, token_id, uri };
         move_to(&object_signer, nft);
 
         if (option::is_some(&royalty)) {
             royalty::init(
                 constructor_ref,
-                option::extract(&mut royalty),
+                option::extract(&mut royalty)
             )
         };
     }
@@ -142,7 +142,7 @@ module initia_std::nft {
         description: String,
         token_id: String,
         royalty: Option<Royalty>,
-        uri: String,
+        uri: String
     ): ConstructorRef {
         let creator_address = signer::address_of(creator);
         let seed = create_nft_seed(&collection_name, &token_id);
@@ -155,7 +155,7 @@ module initia_std::nft {
             description,
             token_id,
             royalty,
-            uri,
+            uri
         );
         constructor_ref
     }
@@ -166,7 +166,7 @@ module initia_std::nft {
     ): address {
         object::create_object_address(
             &creator,
-            create_nft_seed(collection, token_id),
+            create_nft_seed(collection, token_id)
         )
     }
 
@@ -174,7 +174,7 @@ module initia_std::nft {
     public fun create_nft_seed(collection: &String, token_id: &String): vector<u8> {
         assert!(
             string::length(token_id) <= MAX_NFT_TOKEN_ID_LENGTH,
-            error::out_of_range(ENFT_TOKEN_ID_TOO_LONG),
+            error::out_of_range(ENFT_TOKEN_ID_TOO_LONG)
         );
         let seed = *string::bytes(collection);
         vector::append(&mut seed, b"::");
@@ -205,7 +205,7 @@ module initia_std::nft {
         let nft_address = object::object_address(&nft);
         assert!(
             exists<Nft>(nft_address),
-            error::not_found(ENFT_DOES_NOT_EXIST),
+            error::not_found(ENFT_DOES_NOT_EXIST)
         );
         borrow_global<Nft>(nft_address)
     }
@@ -269,7 +269,7 @@ module initia_std::nft {
             collection: nft.collection,
             description: nft.description,
             token_id: nft.token_id,
-            uri: nft.uri,
+            uri: nft.uri
         }
     }
 
@@ -278,7 +278,7 @@ module initia_std::nft {
         let len = vector::length(&nfts);
         assert!(
             len <= MAX_QUERY_LENGTH,
-            error::invalid_argument(EQUERY_LENGTH_TOO_LONG),
+            error::invalid_argument(EQUERY_LENGTH_TOO_LONG)
         );
         let index = 0;
         let res: vector<NftInfoResponse> = vector[];
@@ -296,7 +296,7 @@ module initia_std::nft {
     inline fun borrow_mut(mutator_ref: &MutatorRef): &mut Nft acquires Nft {
         assert!(
             exists<Nft>(mutator_ref.self),
-            error::not_found(ENFT_DOES_NOT_EXIST),
+            error::not_found(ENFT_DOES_NOT_EXIST)
         );
         borrow_global_mut<Nft>(mutator_ref.self)
     }
@@ -310,7 +310,7 @@ module initia_std::nft {
             royalty::delete(addr)
         };
 
-        let Nft { collection, description: _, token_id, uri: _, } = move_from<Nft>(addr);
+        let Nft { collection, description: _, token_id, uri: _ } = move_from<Nft>(addr);
 
         collection::decrement_supply(collection, token_id, addr);
     }
@@ -320,7 +320,7 @@ module initia_std::nft {
     ) acquires Nft {
         assert!(
             string::length(&description) <= MAX_DESCRIPTION_LENGTH,
-            error::out_of_range(EDESCRIPTION_TOO_LONG),
+            error::out_of_range(EDESCRIPTION_TOO_LONG)
         );
         let nft = borrow_mut(mutator_ref);
         event::emit(
@@ -329,7 +329,7 @@ module initia_std::nft {
                 mutated_field_name: string::utf8(b"description"),
                 old_value: nft.description,
                 new_value: description
-            },
+            }
         );
         nft.description = description;
     }
@@ -337,7 +337,7 @@ module initia_std::nft {
     public fun set_uri(mutator_ref: &MutatorRef, uri: String) acquires Nft {
         assert!(
             string::length(&uri) <= MAX_URI_LENGTH,
-            error::out_of_range(EURI_TOO_LONG),
+            error::out_of_range(EURI_TOO_LONG)
         );
         let nft = borrow_mut(mutator_ref);
         event::emit(
@@ -345,8 +345,8 @@ module initia_std::nft {
                 nft: mutator_ref.self,
                 mutated_field_name: string::utf8(b"uri"),
                 old_value: nft.uri,
-                new_value: uri,
-            },
+                new_value: uri
+            }
         );
         nft.uri = uri;
     }
@@ -363,28 +363,28 @@ module initia_std::nft {
         let nft_addr = create_nft_address(
             creator_address,
             &collection_name,
-            &token_id,
+            &token_id
         );
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(object::owner(nft) == creator_address, 1);
         object::transfer(
             creator,
             nft,
-            signer::address_of(trader),
+            signer::address_of(trader)
         );
         assert!(
             object::owner(nft) == signer::address_of(trader),
-            1,
+            1
         );
 
         let expected_royalty =
             royalty::create(
                 initia_std::decimal128::from_ratio(25, 10000),
-                creator_address,
+                creator_address
             );
         assert!(
             option::some(expected_royalty) == royalty(nft),
-            2,
+            2
         );
     }
 
@@ -397,7 +397,7 @@ module initia_std::nft {
         let expected_royalty =
             royalty::create(
                 initia_std::decimal128::from_ratio(10, 1000),
-                creator_address,
+                creator_address
             );
         collection::create_fixed_collection(
             creator,
@@ -405,7 +405,7 @@ module initia_std::nft {
             5,
             collection_name,
             option::some(expected_royalty),
-            string::utf8(b"collection uri"),
+            string::utf8(b"collection uri")
         );
 
         create(
@@ -414,18 +414,18 @@ module initia_std::nft {
             string::utf8(b"nft description"),
             token_id,
             option::none(),
-            string::utf8(b"nft uri"),
+            string::utf8(b"nft uri")
         );
 
         let nft_addr = create_nft_address(
             creator_address,
             &collection_name,
-            &token_id,
+            &token_id
         );
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(
             option::some(expected_royalty) == royalty(nft),
-            0,
+            0
         );
     }
 
@@ -439,7 +439,7 @@ module initia_std::nft {
             string::utf8(b"collection description"),
             collection_name,
             option::none(),
-            string::utf8(b"collection uri"),
+            string::utf8(b"collection uri")
         );
 
         create(
@@ -448,14 +448,14 @@ module initia_std::nft {
             string::utf8(b"nft description"),
             token_id,
             option::none(),
-            string::utf8(b"nft uri"),
+            string::utf8(b"nft uri")
         );
 
         let creator_address = signer::address_of(creator);
         let nft_addr = create_nft_address(
             creator_address,
             &collection_name,
-            &token_id,
+            &token_id
         );
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(option::none() == royalty(nft), 0);
@@ -505,8 +505,8 @@ module initia_std::nft {
                 create_nft_address(
                     signer::address_of(creator),
                     &collection_name,
-                    &token_id,
-                ),
+                    &token_id
+                )
             );
 
         let description = string::utf8(b"no fail");
@@ -527,8 +527,8 @@ module initia_std::nft {
                 create_nft_address(
                     signer::address_of(creator),
                     &collection_name,
-                    &token_id,
-                ),
+                    &token_id
+                )
             );
 
         let uri = string::utf8(b"no fail");
@@ -550,7 +550,7 @@ module initia_std::nft {
                 string::utf8(b"nft description"),
                 token_id,
                 option::none(),
-                string::utf8(b"nft uri"),
+                string::utf8(b"nft uri")
             );
         let burn_ref = generate_burn_ref(&constructor_ref);
         let nft_addr = object::address_from_constructor_ref(&constructor_ref);
@@ -576,10 +576,10 @@ module initia_std::nft {
                 option::some(
                     royalty::create(
                         initia_std::decimal128::from_ratio(1, 1),
-                        signer::address_of(creator),
-                    ),
+                        signer::address_of(creator)
+                    )
                 ),
-                string::utf8(b"nft uri"),
+                string::utf8(b"nft uri")
             );
         let burn_ref = generate_burn_ref(&constructor_ref);
         let nft_addr = object::address_from_constructor_ref(&constructor_ref);
@@ -604,7 +604,7 @@ module initia_std::nft {
                 string::utf8(b"nft description"),
                 token_id,
                 option::none(),
-                string::utf8(b"nft uri"),
+                string::utf8(b"nft uri")
             );
         let burn_ref = generate_burn_ref(&constructor_ref);
         let nft_addr = object::address_from_constructor_ref(&constructor_ref);
@@ -618,7 +618,7 @@ module initia_std::nft {
             string::utf8(b"nft description"),
             token_id,
             option::none(),
-            string::utf8(b"nft uri"),
+            string::utf8(b"nft uri")
         );
         assert!(exists<Nft>(nft_addr), 2);
     }
@@ -633,7 +633,7 @@ module initia_std::nft {
             max_supply,
             collection_name,
             option::none(),
-            string::utf8(b"collection uri"),
+            string::utf8(b"collection uri")
         );
     }
 
@@ -649,18 +649,16 @@ module initia_std::nft {
             option::some(
                 royalty::create(
                     initia_std::decimal128::from_ratio(25, 10000),
-                    signer::address_of(creator),
-                ),
+                    signer::address_of(creator)
+                )
             ),
-            string::utf8(b"uri"),
+            string::utf8(b"uri")
         )
     }
 
     #[test_only]
     fun create_nft_with_mutation_ref(
-        creator: &signer,
-        collection_name: String,
-        token_id: String,
+        creator: &signer, collection_name: String, token_id: String
     ): MutatorRef {
         let constructor_ref = create_nft_helper(creator, collection_name, token_id);
         generate_mutator_ref(&constructor_ref)

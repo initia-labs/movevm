@@ -114,7 +114,7 @@ module minitia_std::fixed_point64 {
         let quotient = scaled_numerator / (denominator as u256);
         assert!(
             quotient != 0 || numerator == 0,
-            ERATIO_OUT_OF_RANGE,
+            ERATIO_OUT_OF_RANGE
         );
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
@@ -141,7 +141,9 @@ module minitia_std::fixed_point64 {
     }
 
     spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint64 {
-        FixedPoint64 { value: (numerator << 128) / (denominator << 64) }
+        FixedPoint64 {
+            value: (numerator << 128) / (denominator << 64)
+        }
     }
 
     /// Create a fixedpoint value from a raw value.

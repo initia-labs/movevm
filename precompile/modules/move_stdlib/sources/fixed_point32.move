@@ -117,7 +117,7 @@ module std::fixed_point32 {
         let quotient = scaled_numerator / scaled_denominator;
         assert!(
             quotient != 0 || numerator == 0,
-            ERATIO_OUT_OF_RANGE,
+            ERATIO_OUT_OF_RANGE
         );
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
@@ -143,7 +143,9 @@ module std::fixed_point32 {
     }
 
     spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
-        FixedPoint32 { value: (numerator << 64) / (denominator << 32) }
+        FixedPoint32 {
+            value: (numerator << 64) / (denominator << 32)
+        }
     }
 
     /// Create a fixedpoint value from a raw value.

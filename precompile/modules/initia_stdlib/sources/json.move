@@ -42,14 +42,14 @@ module initia_std::json {
         _type_: String,
         _move_: String,
         decimal128: Decimal128,
-        decimal256: Decimal256,
+        decimal256: Decimal256
     }
 
     #[test_only]
     struct TestObject2 has copy, drop {
         a: u64,
         b: bool,
-        c: vector<u8>,
+        c: vector<u8>
     }
 
     #[test_only]
@@ -90,20 +90,20 @@ module initia_std::json {
             c: vector[1, 2, 3],
             d: @0x1,
             e: option::some(
-                TestObject2 { a: 42, b: true, c: vector[1, 2, 3], },
+                TestObject2 { a: 42, b: true, c: vector[1, 2, 3] }
             ),
             f: option::none(),
             _type_: string::utf8(b"/cosmos.gov.v1.MsgVote"),
             _move_: string::utf8(b"move"),
             decimal128: decimal128::from_ratio(1, 100),
-            decimal256: decimal256::from_ratio(123, 10000),
+            decimal256: decimal256::from_ratio(123, 10000)
         };
 
         let json = marshal(&obj);
         assert!(
             json
                 == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"c\":\"010203\",\"d\":\"0x1\",\"decimal128\":\"0.01\",\"decimal256\":\"0.0123\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}",
-            1,
+            1
         );
 
         let obj2 = unmarshal<TestObject>(json);
@@ -111,7 +111,7 @@ module initia_std::json {
         assert!(
             json2
                 == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"c\":\"010203\",\"d\":\"0x1\",\"decimal128\":\"0.01\",\"decimal256\":\"0.0123\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}",
-            1,
+            1
         );
     }
 }

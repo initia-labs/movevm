@@ -18,7 +18,7 @@ module initia_std::staking {
     use initia_std::string;
 
     struct ModuleStore has key {
-        staking_states: Table<Object<Metadata>, Table<String, StakingState>>,
+        staking_states: Table<Object<Metadata>, Table<String, StakingState>>
     }
 
     struct StakingState has store {
@@ -30,7 +30,7 @@ module initia_std::staking {
         reward_coin_store_ref: ExtendRef,
         unbonding_coin_store_ref: ExtendRef,
         reward_coin_store: Object<FungibleStore>,
-        unbonding_coin_store: Object<FungibleStore>,
+        unbonding_coin_store: Object<FungibleStore>
     }
 
     /// Define a delegation entry which can be transferred.
@@ -38,7 +38,7 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         validator: String,
         share: u64,
-        reward_index: Decimal128,
+        reward_index: Decimal128
     }
 
     /// Define a unbonding entry which can be transferred.
@@ -46,7 +46,7 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         validator: String,
         unbonding_share: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     /// A holder of delegations and unbonding delegations.
@@ -55,7 +55,7 @@ module initia_std::staking {
         // key: metadata + validator
         delegations: Table<Object<Metadata>, Table<String, Delegation>>,
         // key: metadata + validator + release_times
-        unbondings: Table<Object<Metadata>, Table<UnbondingKey, Unbonding>>,
+        unbondings: Table<Object<Metadata>, Table<UnbondingKey, Unbonding>>
     }
 
     // Keys
@@ -63,7 +63,7 @@ module initia_std::staking {
     /// Key for `Unbonding`
     struct UnbondingKey has copy, drop {
         validator: String,
-        release_time: u64,
+        release_time: u64
     }
 
     // Events
@@ -73,7 +73,7 @@ module initia_std::staking {
     struct RewardEvent has drop, store {
         account: address,
         metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     }
 
     #[event]
@@ -82,7 +82,7 @@ module initia_std::staking {
         account: address,
         metadata: Object<Metadata>,
         validator: String,
-        share: u64,
+        share: u64
     }
 
     #[event]
@@ -91,7 +91,7 @@ module initia_std::staking {
         account: address,
         metadata: Object<Metadata>,
         validator: String,
-        share: u64,
+        share: u64
     }
 
     #[event]
@@ -101,7 +101,7 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         validator: String,
         share: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     #[event]
@@ -111,7 +111,7 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         validator: String,
         share: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     // Query responses
@@ -120,14 +120,14 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         validator: String,
         share: u64,
-        unclaimed_reward: u64,
+        unclaimed_reward: u64
     }
 
     struct UnbondingResponse has drop {
         metadata: Object<Metadata>,
         validator: String,
         unbonding_amount: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     // Errors
@@ -197,7 +197,7 @@ module initia_std::staking {
     fun init_module(chain: &signer) {
         move_to(
             chain,
-            ModuleStore { staking_states: table::new(), },
+            ModuleStore { staking_states: table::new() }
         );
     }
 
@@ -210,13 +210,13 @@ module initia_std::staking {
     ): &StakingState {
         assert!(
             table::contains(staking_states, metadata),
-            error::not_found(ESTAKING_STATE_NOT_EXISTS),
+            error::not_found(ESTAKING_STATE_NOT_EXISTS)
         );
         let states = table::borrow(staking_states, metadata);
 
         assert!(
             table::contains(states, validator),
-            error::not_found(ESTAKING_STATE_NOT_EXISTS),
+            error::not_found(ESTAKING_STATE_NOT_EXISTS)
         );
         table::borrow(states, validator)
     }
@@ -228,13 +228,13 @@ module initia_std::staking {
     ): &mut StakingState {
         assert!(
             table::contains(staking_states, metadata),
-            error::not_found(ESTAKING_STATE_NOT_EXISTS),
+            error::not_found(ESTAKING_STATE_NOT_EXISTS)
         );
         let states = table::borrow_mut(staking_states, metadata);
 
         assert!(
             table::contains(states, validator),
-            error::not_found(ESTAKING_STATE_NOT_EXISTS),
+            error::not_found(ESTAKING_STATE_NOT_EXISTS)
         );
         table::borrow_mut(states, validator)
     }
@@ -246,13 +246,13 @@ module initia_std::staking {
     ): &Delegation {
         assert!(
             table::contains(delegations, metadata),
-            error::not_found(EDELEGATION_NOT_FOUND),
+            error::not_found(EDELEGATION_NOT_FOUND)
         );
         let delegations = table::borrow(delegations, metadata);
 
         assert!(
             table::contains(delegations, validator),
-            error::not_found(EDELEGATION_NOT_FOUND),
+            error::not_found(EDELEGATION_NOT_FOUND)
         );
         table::borrow(delegations, validator)
     }
@@ -264,13 +264,13 @@ module initia_std::staking {
     ): &mut Delegation {
         assert!(
             table::contains(delegations, metadata),
-            error::not_found(EDELEGATION_NOT_FOUND),
+            error::not_found(EDELEGATION_NOT_FOUND)
         );
         let delegations = table::borrow_mut(delegations, metadata);
 
         assert!(
             table::contains(delegations, validator),
-            error::not_found(EDELEGATION_NOT_FOUND),
+            error::not_found(EDELEGATION_NOT_FOUND)
         );
         table::borrow_mut(delegations, validator)
     }
@@ -283,14 +283,14 @@ module initia_std::staking {
     ): &Unbonding {
         assert!(
             table::contains(unbondings, metadata),
-            error::not_found(EUNBONDING_NOT_FOUND),
+            error::not_found(EUNBONDING_NOT_FOUND)
         );
         let unbondings = table::borrow(unbondings, metadata);
 
         let key = UnbondingKey { validator, release_time };
         assert!(
             table::contains(unbondings, key),
-            error::not_found(EUNBONDING_NOT_FOUND),
+            error::not_found(EUNBONDING_NOT_FOUND)
         );
         table::borrow(unbondings, key)
     }
@@ -303,14 +303,14 @@ module initia_std::staking {
     ): &mut Unbonding {
         assert!(
             table::contains(unbondings, metadata),
-            error::not_found(EUNBONDING_NOT_FOUND),
+            error::not_found(EUNBONDING_NOT_FOUND)
         );
         let unbondings = table::borrow_mut(unbondings, metadata);
 
         let key = UnbondingKey { validator, release_time };
         assert!(
             table::contains(unbondings, key),
-            error::not_found(EUNBONDING_NOT_FOUND),
+            error::not_found(EUNBONDING_NOT_FOUND)
         );
         table::borrow_mut(unbondings, key)
     }
@@ -328,7 +328,7 @@ module initia_std::staking {
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
-            validator,
+            validator
         );
 
         let reward = calculate_reward(delegation, state);
@@ -337,7 +337,7 @@ module initia_std::staking {
             metadata: delegation.metadata,
             validator: delegation.validator,
             share: delegation.share,
-            unclaimed_reward: reward,
+            unclaimed_reward: reward
         }
     }
 
@@ -351,20 +351,18 @@ module initia_std::staking {
             metadata: unbonding.metadata,
             validator: unbonding.validator,
             unbonding_amount,
-            release_time: unbonding.release_time,
+            release_time: unbonding.release_time
         }
     }
 
     #[view]
     /// Get delegation info of specifed addr and validator
     public fun get_delegation(
-        addr: address,
-        metadata: Object<Metadata>,
-        validator: String,
+        addr: address, metadata: Object<Metadata>, validator: String
     ): DelegationResponse acquires DelegationStore, ModuleStore {
         assert!(
             is_account_registered(addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let delegation_store = borrow_global<DelegationStore>(addr);
@@ -372,14 +370,14 @@ module initia_std::staking {
             load_delegation(
                 &delegation_store.delegations,
                 metadata,
-                validator,
+                validator
             );
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
-            validator,
+            validator
         );
 
         let reward = calculate_reward(delegation, state);
@@ -388,7 +386,7 @@ module initia_std::staking {
             metadata,
             validator,
             share: delegation.share,
-            unclaimed_reward: reward,
+            unclaimed_reward: reward
         }
     }
 
@@ -398,7 +396,7 @@ module initia_std::staking {
         addr: address,
         metadata: Object<Metadata>,
         start_after: Option<String>,
-        limit: u8,
+        limit: u8
     ): vector<DelegationResponse> acquires DelegationStore, ModuleStore {
         if (limit > MAX_LIMIT) {
             limit = MAX_LIMIT;
@@ -406,7 +404,7 @@ module initia_std::staking {
 
         assert!(
             is_account_registered(addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
@@ -418,7 +416,7 @@ module initia_std::staking {
             delegations,
             option::none(),
             start_after,
-            2,
+            2
         );
 
         let prepare = table::prepare(delegations_iter);
@@ -433,8 +431,8 @@ module initia_std::staking {
                     metadata: delegation.metadata,
                     validator: delegation.validator,
                     share: delegation.share,
-                    unclaimed_reward: reward,
-                },
+                    unclaimed_reward: reward
+                }
             );
             prepare = table::prepare(delegations_iter);
         };
@@ -448,11 +446,11 @@ module initia_std::staking {
         addr: address,
         metadata: Object<Metadata>,
         validator: String,
-        release_time: u64,
+        release_time: u64
     ): UnbondingResponse acquires DelegationStore, ModuleStore {
         assert!(
             is_account_registered(addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let delegation_store = borrow_global<DelegationStore>(addr);
@@ -462,7 +460,7 @@ module initia_std::staking {
                 &delegation_store.unbondings,
                 metadata,
                 validator,
-                release_time,
+                release_time
             );
         let unbonding_amount = get_unbonding_amount_from_unbonding(unbonding);
 
@@ -470,7 +468,7 @@ module initia_std::staking {
             metadata: unbonding.metadata,
             validator: unbonding.validator,
             unbonding_amount,
-            release_time,
+            release_time
         }
     }
 
@@ -481,7 +479,7 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         start_after_validator: Option<String>,
         start_after_release_time: Option<u64>,
-        limit: u8,
+        limit: u8
     ): vector<UnbondingResponse> acquires DelegationStore, ModuleStore {
         if (limit > MAX_LIMIT) {
             limit = MAX_LIMIT;
@@ -489,13 +487,13 @@ module initia_std::staking {
 
         assert!(
             is_account_registered(addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         assert!(
             option::is_some(&start_after_validator)
                 == option::is_some(&start_after_release_time),
-            error::invalid_argument(EINVALID_START_AFTER),
+            error::invalid_argument(EINVALID_START_AFTER)
         );
 
         let delegation_store = borrow_global<DelegationStore>(addr);
@@ -506,8 +504,8 @@ module initia_std::staking {
                 option::some(
                     UnbondingKey {
                         validator: *option::borrow(&start_after_validator),
-                        release_time: *option::borrow(&start_after_release_time),
-                    },
+                        release_time: *option::borrow(&start_after_release_time)
+                    }
                 )
             } else {
                 option::none()
@@ -517,12 +515,12 @@ module initia_std::staking {
             unbondings,
             option::none(),
             start_after,
-            2,
+            2
         );
 
         let res: vector<UnbondingResponse> = vector[];
         while (vector::length(&res) < (limit as u64)
-                && table::prepare<UnbondingKey, Unbonding>(unbondings_iter)) {
+            && table::prepare<UnbondingKey, Unbonding>(unbondings_iter)) {
             let (_, unbonding) = table::next<UnbondingKey, Unbonding>(unbondings_iter);
             let unbonding_amount = get_unbonding_amount_from_unbonding(unbonding);
             vector::push_back(
@@ -531,8 +529,8 @@ module initia_std::staking {
                     metadata: unbonding.metadata,
                     validator: unbonding.validator,
                     unbonding_amount,
-                    release_time: unbonding.release_time,
-                },
+                    release_time: unbonding.release_time
+                }
             );
         };
 
@@ -603,7 +601,7 @@ module initia_std::staking {
     fun check_chain_permission(chain: &signer) {
         assert!(
             signer::address_of(chain) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED_CHAIN_OPERATION),
+            error::permission_denied(EUNAUTHORIZED_CHAIN_OPERATION)
         );
     }
 
@@ -618,14 +616,14 @@ module initia_std::staking {
         assert!(
             !table::contains(
                 &module_store.staking_states,
-                metadata,
+                metadata
             ),
-            error::already_exists(ESTAKING_STATE_ALREADY_EXISTS),
+            error::already_exists(ESTAKING_STATE_ALREADY_EXISTS)
         );
         table::add(
             &mut module_store.staking_states,
             metadata,
-            table::new(),
+            table::new()
         );
     }
 
@@ -643,7 +641,7 @@ module initia_std::staking {
             load_staking_state_mut(
                 &mut module_store.staking_states,
                 metadata,
-                validator,
+                validator
             );
 
         let fraction = decimal128::from_string(&fraction);
@@ -660,7 +658,7 @@ module initia_std::staking {
                 fungible_asset::withdraw(
                     unbonding_coin_store_signer,
                     state.unbonding_coin_store,
-                    slash_amount,
+                    slash_amount
                 );
 
             // deposit to relayer for fund community pool
@@ -672,7 +670,7 @@ module initia_std::staking {
             cosmos::fund_community_pool(
                 &staking_module,
                 metadata,
-                slash_amount,
+                slash_amount
             );
         }
     }
@@ -688,7 +686,7 @@ module initia_std::staking {
 
         assert!(
             vector::length(&validators) == vector::length(&amounts),
-            error::invalid_argument(ELENGTH_MISMATCH),
+            error::invalid_argument(ELENGTH_MISMATCH)
         );
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let staking_module = create_signer(@relayer);
@@ -701,7 +699,7 @@ module initia_std::staking {
                 load_staking_state_mut(
                     &mut module_store.staking_states,
                     metadata,
-                    validator,
+                    validator
                 );
 
             // calculate share
@@ -713,7 +711,7 @@ module initia_std::staking {
                 } else {
                     decimal128::from_ratio(
                         state.unbonding_share,
-                        (total_unbonding_amount as u128),
+                        (total_unbonding_amount as u128)
                     )
                 };
 
@@ -723,7 +721,7 @@ module initia_std::staking {
             let unbonding_coin = coin::withdraw(&staking_module, metadata, amount);
             fungible_asset::deposit(
                 state.unbonding_coin_store,
-                unbonding_coin,
+                unbonding_coin
             );
 
             index = index + 1;
@@ -735,13 +733,13 @@ module initia_std::staking {
         chain: &signer,
         metadata: Object<Metadata>,
         validators: vector<String>,
-        reward_amounts: vector<u64>,
+        reward_amounts: vector<u64>
     ) acquires ModuleStore {
         check_chain_permission(chain);
 
         assert!(
             vector::length(&validators) == vector::length(&reward_amounts),
-            error::invalid_argument(ELENGTH_MISMATCH),
+            error::invalid_argument(ELENGTH_MISMATCH)
         );
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let staking_module = create_signer(@relayer);
@@ -754,21 +752,21 @@ module initia_std::staking {
             let reward = coin::withdraw(
                 &staking_module,
                 reward_metadata,
-                reward_amount,
+                reward_amount
             );
 
             let state =
                 load_staking_state_mut(
                     &mut module_store.staking_states,
                     metadata,
-                    validator,
+                    validator
                 );
             state.reward_index = decimal128::add(
                 &state.reward_index,
                 &decimal128::from_ratio(
                     (reward_amount as u128),
-                    state.total_share,
-                ),
+                    state.total_share
+                )
             );
 
             fungible_asset::deposit(state.reward_coin_store, reward);
@@ -789,12 +787,12 @@ module initia_std::staking {
         let account_addr = signer::address_of(account);
         assert!(
             !is_account_registered(account_addr),
-            error::already_exists(EDELEGATION_STORE_ALREADY_EXISTS),
+            error::already_exists(EDELEGATION_STORE_ALREADY_EXISTS)
         );
 
         let delegation_store = DelegationStore {
             delegations: table::new<Object<Metadata>, Table<String, Delegation>>(),
-            unbondings: table::new<Object<Metadata>, Table<UnbondingKey, Unbonding>>(),
+            unbondings: table::new<Object<Metadata>, Table<UnbondingKey, Unbonding>>()
         };
 
         move_to(account, delegation_store);
@@ -805,7 +803,7 @@ module initia_std::staking {
         account: &signer,
         metadata: Object<Metadata>,
         validator: String,
-        amount: u64,
+        amount: u64
     ) acquires DelegationStore, ModuleStore {
         let account_addr = signer::address_of(account);
         if (!is_account_registered(account_addr)) {
@@ -821,8 +819,8 @@ module initia_std::staking {
             RewardEvent {
                 account: account_addr,
                 metadata,
-                amount: fungible_asset::amount(&reward),
-            },
+                amount: fungible_asset::amount(&reward)
+            }
         );
 
         coin::deposit(account_addr, reward);
@@ -836,9 +834,9 @@ module initia_std::staking {
         assert!(
             table::contains(
                 &module_store.staking_states,
-                metadata,
+                metadata
             ),
-            error::not_found(ESTAKING_STATE_NOT_EXISTS),
+            error::not_found(ESTAKING_STATE_NOT_EXISTS)
         );
         let states = table::borrow_mut(&mut module_store.staking_states, metadata);
 
@@ -851,7 +849,7 @@ module initia_std::staking {
             let reward_coin_store =
                 primary_fungible_store::create_primary_store(
                     reward_coin_store_address,
-                    reward_metadata(),
+                    reward_metadata()
                 );
 
             let unbonding_coin_store_address =
@@ -859,7 +857,7 @@ module initia_std::staking {
             let unbonding_coin_store =
                 primary_fungible_store::create_primary_store(
                     unbonding_coin_store_address,
-                    metadata,
+                    metadata
                 );
 
             table::add(
@@ -878,8 +876,8 @@ module initia_std::staking {
                         unbonding_coin_store_ref
                     ),
                     reward_coin_store,
-                    unbonding_coin_store,
-                },
+                    unbonding_coin_store
+                }
             )
         };
 
@@ -887,13 +885,13 @@ module initia_std::staking {
             delegate_internal(
                 *string::bytes(&validator),
                 &metadata,
-                fungible_asset::amount(&fa),
+                fungible_asset::amount(&fa)
             );
         let state =
             load_staking_state_mut(
                 &mut module_store.staking_states,
                 metadata,
-                validator,
+                validator
             );
         state.total_share = state.total_share + (share_diff as u128);
 
@@ -905,7 +903,7 @@ module initia_std::staking {
             metadata,
             validator,
             share: share_diff,
-            reward_index: state.reward_index,
+            reward_index: state.reward_index
         }
     }
 
@@ -915,19 +913,19 @@ module initia_std::staking {
         account: &signer,
         metadata: Object<Metadata>,
         validator: String,
-        amount: u64,
+        amount: u64
     ) acquires DelegationStore, ModuleStore {
         let account_addr = signer::address_of(account);
 
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let share = amount_to_share(
             *string::bytes(&validator),
             &metadata,
-            amount,
+            amount
         );
         let delegation = withdraw_delegation(account, metadata, validator, share);
         let (reward, unbonding) = undelegate(delegation);
@@ -936,15 +934,15 @@ module initia_std::staking {
             RewardEvent {
                 account: account_addr,
                 metadata,
-                amount: fungible_asset::amount(&reward),
-            },
+                amount: fungible_asset::amount(&reward)
+            }
         );
 
         coin::deposit(account_addr, reward);
         deposit_unbonding(account_addr, unbonding);
     }
 
-    public fun undelegate(delegation: Delegation,): (FungibleAsset, Unbonding) acquires ModuleStore {
+    public fun undelegate(delegation: Delegation): (FungibleAsset, Unbonding) acquires ModuleStore {
         let share = delegation.share;
         let validator = delegation.validator;
         let metadata = delegation.metadata;
@@ -953,7 +951,7 @@ module initia_std::staking {
             undelegate_internal(
                 *string::bytes(&validator),
                 &metadata,
-                share,
+                share
             );
         let reward = destroy_delegation_and_extract_reward(delegation);
 
@@ -962,12 +960,12 @@ module initia_std::staking {
             load_staking_state_mut(
                 &mut module_store.staking_states,
                 metadata,
-                validator,
+                validator
             );
 
         assert!(
             state.total_share >= (share as u128),
-            error::invalid_state(EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE),
+            error::invalid_state(EINSUFFICIENT_UNBONDING_DELEGATION_TOTAL_SHARE)
         );
         state.total_share = state.total_share - (share as u128);
 
@@ -975,7 +973,7 @@ module initia_std::staking {
             unbonding_share_from_amount(
                 metadata,
                 validator,
-                unbonding_amount,
+                unbonding_amount
             );
         let unbonding = Unbonding { metadata, validator, unbonding_share, release_time };
 
@@ -993,7 +991,7 @@ module initia_std::staking {
 
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         // withdraw unbonding all
@@ -1001,7 +999,7 @@ module initia_std::staking {
             account_addr,
             metadata,
             validator,
-            release_time,
+            release_time
         );
         let unbonding =
             withdraw_unbonding(
@@ -1009,7 +1007,7 @@ module initia_std::staking {
                 metadata,
                 validator,
                 release_time,
-                unbonding_info.unbonding_amount,
+                unbonding_info.unbonding_amount
             );
         let unbonding_coin = claim_unbonding(unbonding);
         coin::deposit(account_addr, unbonding_coin)
@@ -1022,7 +1020,7 @@ module initia_std::staking {
 
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
@@ -1030,7 +1028,7 @@ module initia_std::staking {
             load_delegation_mut(
                 &mut delegation_store.delegations,
                 metadata,
-                validator,
+                validator
             );
         let reward = claim_reward(delegation);
 
@@ -1038,8 +1036,8 @@ module initia_std::staking {
             RewardEvent {
                 account: account_addr,
                 metadata,
-                amount: fungible_asset::amount(&reward),
-            },
+                amount: fungible_asset::amount(&reward)
+            }
         );
 
         coin::deposit(account_addr, reward);
@@ -1054,7 +1052,7 @@ module initia_std::staking {
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
-            validator,
+            validator
         );
 
         let reward_amount = calculate_reward(delegation, state);
@@ -1069,7 +1067,7 @@ module initia_std::staking {
                 fungible_asset::withdraw(
                     reward_coin_store_signer,
                     state.reward_coin_store,
-                    reward_amount,
+                    reward_amount
                 )
             };
 
@@ -1082,7 +1080,7 @@ module initia_std::staking {
     fun calculate_reward(delegation: &Delegation, state: &StakingState): u64 {
         assert!(
             delegation.metadata == state.metadata,
-            error::invalid_argument(EMETADATA_MISMATCH),
+            error::invalid_argument(EMETADATA_MISMATCH)
         );
 
         let index_diff = decimal128::sub(&state.reward_index, &delegation.reward_index);
@@ -1095,7 +1093,7 @@ module initia_std::staking {
     public fun empty_delegation(
         metadata: Object<Metadata>, validator: String
     ): Delegation {
-        Delegation { metadata, validator, share: 0, reward_index: decimal128::zero(), }
+        Delegation { metadata, validator, share: 0, reward_index: decimal128::zero() }
     }
 
     /// Get `metadata` from `Delegation`
@@ -1117,7 +1115,7 @@ module initia_std::staking {
     public fun destroy_empty_delegation(delegation: Delegation) {
         assert!(
             delegation.share == 0,
-            error::invalid_argument(ENOT_EMPTY),
+            error::invalid_argument(ENOT_EMPTY)
         );
         let Delegation { metadata: _, validator: _, share: _, reward_index: _ } =
             delegation;
@@ -1125,11 +1123,11 @@ module initia_std::staking {
 
     /// Deposit the delegation into recipient's account.
     public fun deposit_delegation(
-        account_addr: address, delegation: Delegation,
+        account_addr: address, delegation: Delegation
     ): FungibleAsset acquires DelegationStore, ModuleStore {
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let metadata = delegation.metadata;
@@ -1137,13 +1135,12 @@ module initia_std::staking {
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
         if (!table::contains(
-                &delegation_store.delegations,
-                metadata,
-            )) {
+            &delegation_store.delegations, metadata
+        )) {
             table::add(
                 &mut delegation_store.delegations,
                 metadata,
-                table::new(),
+                table::new()
             );
         };
 
@@ -1154,8 +1151,8 @@ module initia_std::staking {
                 validator,
                 empty_delegation(
                     delegation.metadata,
-                    delegation.validator,
-                ),
+                    delegation.validator
+                )
             );
         };
 
@@ -1164,15 +1161,15 @@ module initia_std::staking {
                 account: account_addr,
                 metadata: delegation.metadata,
                 share: delegation.share,
-                validator: delegation.validator,
-            },
+                validator: delegation.validator
+            }
         );
 
         let dst_delegation =
             load_delegation_mut(
                 &mut delegation_store.delegations,
                 metadata,
-                validator,
+                validator
             );
 
         merge_delegation(dst_delegation, delegation)
@@ -1183,13 +1180,13 @@ module initia_std::staking {
         account: &signer,
         metadata: Object<Metadata>,
         validator: String,
-        share: u64,
+        share: u64
     ): Delegation acquires DelegationStore {
         let account_addr = signer::address_of(account);
 
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
@@ -1197,11 +1194,11 @@ module initia_std::staking {
             load_delegation_mut(
                 &mut delegation_store.delegations,
                 metadata,
-                validator,
+                validator
             );
 
         event::emit(
-            DelegationWithdrawEvent { account: account_addr, metadata, share, validator, },
+            DelegationWithdrawEvent { account: account_addr, metadata, share, validator }
         );
 
         // If withdraw all, remove delegation
@@ -1209,7 +1206,7 @@ module initia_std::staking {
             let delegations =
                 table::borrow_mut(
                     &mut delegation_store.delegations,
-                    metadata,
+                    metadata
                 );
             table::remove(delegations, validator)
             // Else extract
@@ -1224,7 +1221,7 @@ module initia_std::staking {
     ): Delegation {
         assert!(
             delegation.share >= share,
-            error::invalid_argument(EINSUFFICIENT_AMOUNT),
+            error::invalid_argument(EINSUFFICIENT_AMOUNT)
         );
 
         // Total share is invariant and reward_indexes are same btw given and new one so no need to update `reward_index`.
@@ -1233,7 +1230,7 @@ module initia_std::staking {
             metadata: delegation.metadata,
             validator: delegation.validator,
             reward_index: delegation.reward_index,
-            share,
+            share
         }
     }
 
@@ -1244,11 +1241,11 @@ module initia_std::staking {
     ): FungibleAsset acquires ModuleStore {
         assert!(
             dst_delegation.metadata == source_delegation.metadata,
-            error::invalid_argument(EMETADATA_MISMATCH),
+            error::invalid_argument(EMETADATA_MISMATCH)
         );
         assert!(
             dst_delegation.validator == source_delegation.validator,
-            error::invalid_argument(EVALIDATOR_MISMATCH),
+            error::invalid_argument(EVALIDATOR_MISMATCH)
         );
 
         spec {
@@ -1266,7 +1263,9 @@ module initia_std::staking {
     }
 
     /// Destroy delegation and extract reward from delegation
-    fun destroy_delegation_and_extract_reward(delegation: Delegation): FungibleAsset acquires ModuleStore {
+    fun destroy_delegation_and_extract_reward(
+        delegation: Delegation
+    ): FungibleAsset acquires ModuleStore {
         let metadata = delegation.metadata;
         let validator = delegation.validator;
 
@@ -1274,7 +1273,7 @@ module initia_std::staking {
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
-            validator,
+            validator
         );
 
         let reward_amount = calculate_reward(&delegation, state);
@@ -1289,7 +1288,7 @@ module initia_std::staking {
                 fungible_asset::withdraw(
                     reward_coin_store_signer,
                     state.reward_coin_store,
-                    reward_amount,
+                    reward_amount
                 )
             };
 
@@ -1309,7 +1308,7 @@ module initia_std::staking {
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
-            validator,
+            validator
         );
 
         let total_unbonding_amount = fungible_asset::balance(state.unbonding_coin_store);
@@ -1319,7 +1318,7 @@ module initia_std::staking {
             } else {
                 decimal128::from_ratio(
                     state.unbonding_share,
-                    (total_unbonding_amount as u128),
+                    (total_unbonding_amount as u128)
                 )
             };
 
@@ -1333,7 +1332,7 @@ module initia_std::staking {
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
-            validator,
+            validator
         );
 
         let total_unbonding_amount = fungible_asset::balance(state.unbonding_coin_store);
@@ -1343,7 +1342,7 @@ module initia_std::staking {
             } else {
                 decimal128::from_ratio(
                     (total_unbonding_amount as u128),
-                    state.unbonding_share,
+                    state.unbonding_share
                 )
             };
 
@@ -1354,7 +1353,7 @@ module initia_std::staking {
     public fun empty_unbonding(
         metadata: Object<Metadata>, validator: String, release_time: u64
     ): Unbonding {
-        Unbonding { metadata, validator, unbonding_share: 0, release_time, }
+        Unbonding { metadata, validator, unbonding_share: 0, release_time }
     }
 
     /// Get `metadata` from `Unbonding`
@@ -1382,7 +1381,7 @@ module initia_std::staking {
         unbonding_amount_from_share(
             unbonding.metadata,
             unbonding.validator,
-            unbonding.unbonding_share,
+            unbonding.unbonding_share
         )
     }
 
@@ -1390,7 +1389,7 @@ module initia_std::staking {
     public fun destroy_empty_unbonding(unbonding: Unbonding) {
         assert!(
             unbonding.unbonding_share == 0,
-            error::invalid_argument(ENOT_EMPTY),
+            error::invalid_argument(ENOT_EMPTY)
         );
         let Unbonding { metadata: _, validator: _, unbonding_share: _, release_time: _ } =
             unbonding;
@@ -1402,24 +1401,23 @@ module initia_std::staking {
     ) acquires DelegationStore {
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let metadata = unbonding.metadata;
         let validator = unbonding.validator;
         let release_time = unbonding.release_time;
 
-        let key = UnbondingKey { validator, release_time, };
+        let key = UnbondingKey { validator, release_time };
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
         if (!table::contains(
-                &delegation_store.unbondings,
-                metadata,
-            )) {
+            &delegation_store.unbondings, metadata
+        )) {
             table::add(
                 &mut delegation_store.unbondings,
                 metadata,
-                table::new(),
+                table::new()
             );
         };
 
@@ -1428,7 +1426,7 @@ module initia_std::staking {
             table::add(
                 unbondings,
                 key,
-                empty_unbonding(metadata, validator, release_time),
+                empty_unbonding(metadata, validator, release_time)
             );
         };
 
@@ -1438,8 +1436,8 @@ module initia_std::staking {
                 metadata,
                 validator,
                 share: unbonding.unbonding_share,
-                release_time,
-            },
+                release_time
+            }
         );
 
         let dst_unbonding = table::borrow_mut(unbondings, key);
@@ -1452,13 +1450,13 @@ module initia_std::staking {
         metadata: Object<Metadata>,
         validator: String,
         release_time: u64,
-        amount: u64,
+        amount: u64
     ): Unbonding acquires DelegationStore, ModuleStore {
         let account_addr = signer::address_of(account);
 
         assert!(
             is_account_registered(account_addr),
-            error::not_found(EDELEGATION_STORE_NOT_EXISTS),
+            error::not_found(EDELEGATION_STORE_NOT_EXISTS)
         );
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
@@ -1467,7 +1465,7 @@ module initia_std::staking {
                 &mut delegation_store.unbondings,
                 metadata,
                 validator,
-                release_time,
+                release_time
             );
 
         event::emit(
@@ -1476,8 +1474,8 @@ module initia_std::staking {
                 metadata,
                 validator,
                 share: unbonding.unbonding_share,
-                release_time: unbonding.release_time,
-            },
+                release_time: unbonding.release_time
+            }
         );
 
         let share = unbonding_share_from_amount(metadata, validator, amount);
@@ -1485,12 +1483,12 @@ module initia_std::staking {
             // If withdraw all, remove unbonding
             let unbondings = table::borrow_mut(
                 &mut delegation_store.unbondings,
-                metadata,
+                metadata
             );
 
             table::remove(
                 unbondings,
-                UnbondingKey { validator, release_time, },
+                UnbondingKey { validator, release_time }
             )
         } else {
             // Else extract
@@ -1502,7 +1500,7 @@ module initia_std::staking {
     public fun extract_unbonding(unbonding: &mut Unbonding, share: u64): Unbonding {
         assert!(
             unbonding.unbonding_share >= share,
-            error::invalid_argument(EINSUFFICIENT_AMOUNT),
+            error::invalid_argument(EINSUFFICIENT_AMOUNT)
         );
 
         unbonding.unbonding_share = unbonding.unbonding_share - share;
@@ -1522,15 +1520,15 @@ module initia_std::staking {
     ) {
         assert!(
             dst_unbonding.metadata == source_unbonding.metadata,
-            error::invalid_argument(EMETADATA_MISMATCH),
+            error::invalid_argument(EMETADATA_MISMATCH)
         );
         assert!(
             dst_unbonding.validator == source_unbonding.validator,
-            error::invalid_argument(EVALIDATOR_MISMATCH),
+            error::invalid_argument(EVALIDATOR_MISMATCH)
         );
         assert!(
             dst_unbonding.release_time >= source_unbonding.release_time,
-            error::invalid_argument(ERELEASE_TIME),
+            error::invalid_argument(ERELEASE_TIME)
         );
 
         spec {
@@ -1549,7 +1547,7 @@ module initia_std::staking {
         let (_, timestamp) = block::get_block_info();
         assert!(
             unbonding.release_time <= timestamp,
-            error::invalid_state(ENOT_RELEASED),
+            error::invalid_state(ENOT_RELEASED)
         );
 
         let unbonding_amount = get_unbonding_amount_from_unbonding(&unbonding);
@@ -1562,7 +1560,7 @@ module initia_std::staking {
             load_staking_state_mut(
                 &mut module_store.staking_states,
                 metadata,
-                validator,
+                validator
             );
         let unbonding_coin =
             if (unbonding_amount == 0) {
@@ -1575,12 +1573,13 @@ module initia_std::staking {
                 fungible_asset::withdraw(
                     unbonding_coin_store_signer,
                     state.unbonding_coin_store,
-                    unbonding_amount,
+                    unbonding_amount
                 )
             };
 
         // decrease share
-        state.unbonding_share = state.unbonding_share - (unbonding.unbonding_share as u128);
+        state.unbonding_share = state.unbonding_share
+            - (unbonding.unbonding_share as u128);
 
         // destroy empty
         let Unbonding { metadata: _, validator: _, unbonding_share: _, release_time: _ } =
@@ -1592,7 +1591,7 @@ module initia_std::staking {
     // Native functions
 
     native fun delegate_internal(
-        validator: vector<u8>, metadata: &Object<Metadata>, amount: u64, /* share amount */
+        validator: vector<u8>, metadata: &Object<Metadata>, amount: u64 /* share amount */
     ): u64;
 
     native fun undelegate_internal(
@@ -1609,7 +1608,10 @@ module initia_std::staking {
 
     #[test_only]
     native public fun set_staking_share_ratio(
-        validator: vector<u8>, metadata: &Object<Metadata>, share: u64, amount: u64
+        validator: vector<u8>,
+        metadata: &Object<Metadata>,
+        share: u64,
+        amount: u64
     );
 
     #[test_only]
@@ -1655,13 +1657,13 @@ module initia_std::staking {
                 string::utf8(STAKING_SYMBOL),
                 6,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         coin::mint_to(
             &mint_cap,
             chain_addr,
-            100000000000000,
+            100000000000000
         );
 
         // initialize reward coin
@@ -1673,13 +1675,13 @@ module initia_std::staking {
                 string::utf8(REWARD_SYMBOL),
                 6,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         coin::mint_to(
             &mint_cap,
             chain_addr,
-            100000000000000,
+            100000000000000
         );
 
         initialize_for_chain(chain, staking_metadata_for_test());
@@ -1694,8 +1696,8 @@ module initia_std::staking {
             coin::withdraw(
                 chain,
                 staking_metadata_for_test(),
-                amount,
-            ),
+                amount
+            )
         );
     }
 
@@ -1705,15 +1707,13 @@ module initia_std::staking {
     ) {
         coin::deposit(
             receiver,
-            coin::withdraw(chain, reward_metadata(), amount),
+            coin::withdraw(chain, reward_metadata(), amount)
         );
     }
 
     #[test(chain = @0x1, user1 = @0x1234, user2 = @0x4321)]
     fun end_to_end(
-        chain: &signer,
-        user1: &signer,
-        user2: &signer,
+        chain: &signer, user1: &signer, user2: &signer
     ) acquires DelegationStore, ModuleStore {
         test_setup();
 
@@ -1734,14 +1734,14 @@ module initia_std::staking {
             *string::bytes(&validator),
             &metadata,
             1,
-            1,
+            1
         );
 
         delegate_script(user1, metadata, validator, 10000000);
 
         assert!(
             coin::balance(user1_addr, metadata) == 990000000,
-            0,
+            0
         );
 
         let delegation = get_delegation(user1_addr, metadata, validator);
@@ -1754,7 +1754,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[1000000],
+            vector[1000000]
         );
 
         let delegation = get_delegation(user1_addr, metadata, validator);
@@ -1773,7 +1773,7 @@ module initia_std::staking {
         claim_reward_script(user1, metadata, validator);
         assert!(
             coin::balance(user1_addr, reward_metadata) == 1000000,
-            8,
+            8
         );
         let delegation = get_delegation(user1_addr, metadata, validator);
         assert!(delegation.unclaimed_reward == 0, 8);
@@ -1783,7 +1783,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[1000000],
+            vector[1000000]
         );
         let delegation = get_delegation(user1_addr, metadata, validator);
         assert!(delegation.unclaimed_reward == 500000, 9);
@@ -1791,7 +1791,7 @@ module initia_std::staking {
         undelegate_script(user1, metadata, validator, 5000000);
         assert!(
             coin::balance(user1_addr, reward_metadata) == 1500000,
-            10,
+            10
         );
 
         // undelegate trigger `deposit_unbonding_coin_for_chain`
@@ -1799,7 +1799,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[5000000],
+            vector[5000000]
         );
 
         let unbondings =
@@ -1808,7 +1808,7 @@ module initia_std::staking {
                 metadata,
                 option::none(),
                 option::none(),
-                1,
+                1
             );
         let unbonding = vector::borrow(&unbondings, 0);
 
@@ -1818,7 +1818,7 @@ module initia_std::staking {
                 metadata,
                 validator,
                 unbonding.release_time,
-                2500000,
+                2500000
             );
 
         deposit_unbonding(user2_addr, withdrawn_unbonding);
@@ -1828,7 +1828,7 @@ module initia_std::staking {
                 user1_addr,
                 metadata,
                 validator,
-                unbonding.release_time,
+                unbonding.release_time
             );
         assert!(unbonding.unbonding_amount == 2500000, 11);
         let unbonding =
@@ -1836,7 +1836,7 @@ module initia_std::staking {
                 user2_addr,
                 metadata,
                 validator,
-                unbonding.release_time,
+                unbonding.release_time
             );
         assert!(unbonding.unbonding_amount == 2500000, 12);
 
@@ -1846,16 +1846,16 @@ module initia_std::staking {
             user1,
             metadata,
             validator,
-            unbonding.release_time,
+            unbonding.release_time
         );
         assert!(
             coin::balance(user1_addr, metadata) == 992500000,
-            13,
+            13
         );
     }
 
     #[test(chain = @0x1, user = @0x1234)]
-    public fun test_delegate(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
+    public fun test_delegate(chain: &signer, user: &signer) acquires DelegationStore, ModuleStore {
         test_setup();
 
         let user_addr = signer::address_of(user);
@@ -1873,7 +1873,7 @@ module initia_std::staking {
             *string::bytes(&validator),
             &metadata,
             1,
-            1,
+            1
         );
 
         // Delegate with entry function
@@ -1884,7 +1884,7 @@ module initia_std::staking {
         assert!(delegation.validator == validator, 1);
         assert!(
             coin::balance(user_addr, metadata) == 900000,
-            2,
+            2
         );
 
         // withdraw delegation
@@ -1898,7 +1898,7 @@ module initia_std::staking {
             user_addr,
             metadata,
             option::none(),
-            1,
+            1
         );
         assert!(vector::length(&delegations) == 0, 4);
 
@@ -1907,7 +1907,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[100000],
+            vector[100000]
         );
 
         // deposit delegation
@@ -1946,11 +1946,11 @@ module initia_std::staking {
         // 100000 (rewards)
         assert!(
             coin::balance(user_addr, metadata) == 800000,
-            16,
+            16
         );
         assert!(
             coin::balance(user_addr, reward_metadata) == 100000,
-            17,
+            17
         );
 
         let delegation = get_delegation(user_addr, metadata, validator);
@@ -1958,7 +1958,7 @@ module initia_std::staking {
     }
 
     #[test(chain = @0x1, user = @0x1234)]
-    public fun test_undelegate(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
+    public fun test_undelegate(chain: &signer, user: &signer) acquires DelegationStore, ModuleStore {
         test_setup();
 
         let user_addr = signer::address_of(user);
@@ -1976,7 +1976,7 @@ module initia_std::staking {
             *string::bytes(&validator),
             &metadata,
             1,
-            1,
+            1
         );
 
         delegate_script(user, metadata, validator, 100000);
@@ -1986,7 +1986,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[100000],
+            vector[100000]
         );
 
         // undelegate with script
@@ -1997,7 +1997,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[10000],
+            vector[10000]
         );
 
         let delegation = get_delegation(user_addr, metadata, validator);
@@ -2009,18 +2009,18 @@ module initia_std::staking {
                 metadata,
                 option::none(),
                 option::none(),
-                1,
+                1
             );
         let unbonding = vector::borrow(&unbondings, 0);
         let release_time = unbonding.release_time;
         assert!(unbonding.unbonding_amount == 10000, 1);
         assert!(
             coin::balance(user_addr, metadata) == 900000,
-            2,
+            2
         );
         assert!(
             coin::balance(user_addr, reward_metadata) == 10000,
-            3,
+            3
         );
 
         // distribute reward
@@ -2029,7 +2029,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[90000],
+            vector[90000]
         );
 
         // undelegate
@@ -2043,13 +2043,13 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[10000],
+            vector[10000]
         );
 
         coin::deposit(user_addr, reward);
         assert!(
             coin::balance(user_addr, reward_metadata) == 30000,
-            3,
+            3
         );
 
         // extract unbonding
@@ -2067,7 +2067,7 @@ module initia_std::staking {
             user_addr,
             metadata,
             validator,
-            release_time,
+            release_time
         );
         assert!(unbonding.unbonding_amount == 20000, 10);
 
@@ -2077,7 +2077,7 @@ module initia_std::staking {
             metadata,
             validator,
             release_time,
-            10000,
+            10000
         );
         assert!(unbonding.unbonding_share == 10000, 11);
 
@@ -2092,19 +2092,17 @@ module initia_std::staking {
             user,
             metadata,
             validator,
-            release_time,
+            release_time
         );
         assert!(
             coin::balance(user_addr, metadata) == 920000,
-            13,
+            13
         );
     }
 
     #[test(chain = @0x1, user1 = @0x1234, user2 = @0x4321)]
     fun test_claim_reward(
-        chain: &signer,
-        user1: &signer,
-        user2: &signer,
+        chain: &signer, user1: &signer, user2: &signer
     ) acquires DelegationStore, ModuleStore {
         test_setup();
 
@@ -2128,14 +2126,14 @@ module initia_std::staking {
             *string::bytes(&validator),
             &metadata,
             1,
-            1,
+            1
         );
 
         delegate_script(
             user1,
             metadata,
             string::utf8(b"validator"),
-            1000000,
+            1000000
         );
 
         fund_reward_coin(chain, @relayer, 100000);
@@ -2143,14 +2141,14 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[100000],
+            vector[100000]
         );
 
         // claim reward by script
         claim_reward_script(user1, metadata, validator);
         assert!(
             coin::balance(user1_addr, reward_metadata) == 100000,
-            0,
+            0
         );
 
         fund_reward_coin(chain, @relayer, 100000);
@@ -2158,7 +2156,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[100000],
+            vector[100000]
         );
 
         // claim reward
@@ -2173,14 +2171,14 @@ module initia_std::staking {
 
         assert!(
             coin::balance(user1_addr, reward_metadata) == 200000,
-            3,
+            3
         );
 
         delegate_script(
             user2,
             metadata,
             string::utf8(b"validator"),
-            1000000,
+            1000000
         );
 
         fund_reward_coin(chain, @relayer, 100000);
@@ -2188,12 +2186,12 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[100000],
+            vector[100000]
         );
         claim_reward_script(user1, metadata, validator);
         assert!(
             coin::balance(user1_addr, reward_metadata) == 250000,
-            4,
+            4
         );
     }
 
@@ -2206,7 +2204,7 @@ module initia_std::staking {
             metadata: staking_metadata_for_test(),
             validator: string::utf8(b"validator"),
             reward_index: decimal128::zero(),
-            share: 100,
+            share: 100
         };
 
         destroy_empty_delegation(delegation);
@@ -2221,7 +2219,7 @@ module initia_std::staking {
             metadata: staking_metadata_for_test(),
             validator: string::utf8(b"validator"),
             unbonding_share: 100,
-            release_time: 1234,
+            release_time: 1234
         };
 
         destroy_empty_unbonding(unbonding);
@@ -2236,14 +2234,14 @@ module initia_std::staking {
             metadata: staking_metadata_for_test(),
             validator: string::utf8(b"validator1"),
             reward_index: decimal128::zero(),
-            share: 100,
+            share: 100
         };
 
         let delegation2 = Delegation {
             metadata: staking_metadata_for_test(),
             validator: string::utf8(b"validator2"),
             reward_index: decimal128::zero(),
-            share: 100,
+            share: 100
         };
 
         let reward = merge_delegation(&mut delegation1, delegation2);
@@ -2262,14 +2260,14 @@ module initia_std::staking {
             metadata: staking_metadata_for_test(),
             validator,
             unbonding_share: 100,
-            release_time: 1000,
+            release_time: 1000
         };
 
         let unbonding2 = Unbonding {
             metadata: staking_metadata_for_test(),
             validator,
             unbonding_share: 100,
-            release_time: 1234,
+            release_time: 1234
         };
 
         merge_unbonding(&mut unbonding1, unbonding2);
@@ -2282,7 +2280,7 @@ module initia_std::staking {
     #[test(chain = @0x1, user = @0x1234)]
     #[expected_failure(abort_code = 0x3000A, location = Self)]
     public fun test_claim_not_released_unbonding(
-        chain: &signer, user: &signer,
+        chain: &signer, user: &signer
     ) acquires ModuleStore, DelegationStore {
         test_setup();
 
@@ -2298,7 +2296,7 @@ module initia_std::staking {
             *string::bytes(&validator),
             &metadata,
             1,
-            1,
+            1
         );
 
         // dummy delegation to create global states
@@ -2309,7 +2307,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[100],
+            vector[100]
         );
 
         set_block_info(100, 100);
@@ -2318,7 +2316,7 @@ module initia_std::staking {
             metadata,
             validator,
             unbonding_share: 100,
-            release_time: 1000,
+            release_time: 1000
         };
 
         let coin = claim_unbonding(unbonding);
@@ -2328,7 +2326,9 @@ module initia_std::staking {
     }
 
     #[test(chain = @0x1, user = @0x1234)]
-    public fun test_query_entry_functions(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
+    public fun test_query_entry_functions(
+        chain: &signer, user: &signer
+    ) acquires DelegationStore, ModuleStore {
         test_setup();
 
         let user_addr = signer::address_of(user);
@@ -2346,13 +2346,13 @@ module initia_std::staking {
             *string::bytes(&validator1),
             &metadata,
             1,
-            1,
+            1
         );
         set_staking_share_ratio(
             *string::bytes(&validator2),
             &metadata,
             1,
-            1,
+            1
         );
 
         delegate_script(user, metadata, validator1, 100000);
@@ -2366,7 +2366,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator1, validator2],
-            vector[10000, 10000],
+            vector[10000, 10000]
         );
 
         // update block info
@@ -2379,7 +2379,7 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator1],
-            vector[10000],
+            vector[10000]
         );
 
         let delegation = get_delegation(user_addr, metadata, validator1);
@@ -2389,16 +2389,16 @@ module initia_std::staking {
                     metadata,
                     validator: validator1,
                     share: 80000,
-                    unclaimed_reward: 0,
+                    unclaimed_reward: 0
                 },
-            0,
+            0
         );
 
         let delegations = get_delegations(
             user_addr,
             metadata,
             option::none(),
-            10,
+            10
         );
         assert!(
             delegations
@@ -2407,24 +2407,24 @@ module initia_std::staking {
                         metadata,
                         validator: validator2,
                         share: 90000,
-                        unclaimed_reward: 0,
+                        unclaimed_reward: 0
                     },
                     DelegationResponse {
                         metadata,
                         validator: validator1,
                         share: 80000,
-                        unclaimed_reward: 0,
-                    },],
-            1,
+                        unclaimed_reward: 0
+                    }
+                ],
+            1
         );
 
-        let delegations =
-            get_delegations(
-                user_addr,
-                metadata,
-                option::some(validator2),
-                10,
-            );
+        let delegations = get_delegations(
+            user_addr,
+            metadata,
+            option::some(validator2),
+            10
+        );
         assert!(
             delegations
                 == vector[
@@ -2432,16 +2432,17 @@ module initia_std::staking {
                         metadata,
                         validator: validator1,
                         share: 80000,
-                        unclaimed_reward: 0,
-                    },],
-            2,
+                        unclaimed_reward: 0
+                    }
+                ],
+            2
         );
 
         let unbonding = get_unbonding(
             user_addr,
             metadata,
             validator1,
-            10000 + 7 * 24 * 60 * 60,
+            10000 + 7 * 24 * 60 * 60
         );
         assert!(
             unbonding
@@ -2449,9 +2450,9 @@ module initia_std::staking {
                     metadata,
                     validator: validator1,
                     unbonding_amount: 10000,
-                    release_time: 10000 + 7 * 24 * 60 * 60,
+                    release_time: 10000 + 7 * 24 * 60 * 60
                 },
-            3,
+            3
         );
 
         let unbondings =
@@ -2460,7 +2461,7 @@ module initia_std::staking {
                 metadata,
                 option::none(),
                 option::none(),
-                10,
+                10
             );
         assert!(
             unbondings
@@ -2469,21 +2470,22 @@ module initia_std::staking {
                         metadata,
                         validator: validator2,
                         unbonding_amount: 10000,
-                        release_time: 10000 + 7 * 24 * 60 * 60,
+                        release_time: 10000 + 7 * 24 * 60 * 60
                     },
                     UnbondingResponse {
                         metadata,
                         validator: validator1,
                         unbonding_amount: 10000,
-                        release_time: 20000 + 7 * 24 * 60 * 60,
+                        release_time: 20000 + 7 * 24 * 60 * 60
                     },
                     UnbondingResponse {
                         metadata,
                         validator: validator1,
                         unbonding_amount: 10000,
-                        release_time: 10000 + 7 * 24 * 60 * 60,
-                    },],
-            4,
+                        release_time: 10000 + 7 * 24 * 60 * 60
+                    }
+                ],
+            4
         );
 
         let unbondings =
@@ -2492,7 +2494,7 @@ module initia_std::staking {
                 metadata,
                 option::some(validator1),
                 option::some(20000 + 7 * 24 * 60 * 60),
-                10,
+                10
             );
         assert!(
             unbondings
@@ -2501,9 +2503,10 @@ module initia_std::staking {
                         metadata,
                         validator: validator1,
                         unbonding_amount: 10000,
-                        release_time: 10000 + 7 * 24 * 60 * 60,
-                    },],
-            5,
+                        release_time: 10000 + 7 * 24 * 60 * 60
+                    }
+                ],
+            5
         );
     }
 
@@ -2532,7 +2535,9 @@ module initia_std::staking {
     }
 
     #[test(chain = @0x1, user = @0x1234)]
-    public fun test_slash_unbonding(chain: &signer, user: &signer,) acquires DelegationStore, ModuleStore {
+    public fun test_slash_unbonding(
+        chain: &signer, user: &signer
+    ) acquires DelegationStore, ModuleStore {
         test_setup();
 
         let user_addr = signer::address_of(user);
@@ -2547,7 +2552,7 @@ module initia_std::staking {
             *string::bytes(&validator),
             &metadata,
             1,
-            1,
+            1
         );
 
         register(user);
@@ -2559,13 +2564,13 @@ module initia_std::staking {
             chain,
             metadata,
             vector[validator],
-            vector[10000],
+            vector[10000]
         );
         slash_unbonding_for_chain(
             chain,
             metadata,
             validator,
-            string::utf8(b"0.1"),
+            string::utf8(b"0.1")
         ); // 10%
 
         let unbonding_response =
@@ -2573,11 +2578,11 @@ module initia_std::staking {
                 user_addr,
                 metadata,
                 validator,
-                10000 + 7 * 24 * 60 * 60,
+                10000 + 7 * 24 * 60 * 60
             );
         assert!(
             unbonding_response.unbonding_amount == 9000,
-            1,
+            1
         );
     }
 }

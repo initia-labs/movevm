@@ -107,7 +107,7 @@ module initia_std::minitswap {
         /// global arb map. index => Virtual Pool
         global_arb_batch_map: Table<vector<u8>, Object<VirtualPool>>,
         /// arb batc index
-        arb_batch_index: u64,
+        arb_batch_index: u64
     }
 
     struct VirtualPool has key {
@@ -151,14 +151,14 @@ module initia_std::minitswap {
         /// hook contract
         hook_contract: String,
         /// ongoing in house arb info
-        arb_batch_map: Table<vector<u8>, ArbInfo>,
+        arb_batch_map: Table<vector<u8>, ArbInfo>
     }
 
     struct Pools has store {
         op_bridge_id: u64,
         ibc_channel: String,
         virtual_pool: Option<Object<VirtualPool>>,
-        stableswap_pool: Option<Object<Pool>>,
+        stableswap_pool: Option<Object<Pool>>
     }
 
     struct UnbondEntity has store {
@@ -169,7 +169,7 @@ module initia_std::minitswap {
         // init withdraw amount
         withdraw_amount: u64,
         // release timestamp
-        release_time: u64,
+        release_time: u64
     }
 
     struct ArbInfo has store {
@@ -180,7 +180,7 @@ module initia_std::minitswap {
         // amount of ibc op init sent
         ibc_op_init_sent: u64,
         // triggering fee
-        triggering_fee: u64,
+        triggering_fee: u64
     }
 
     #[event]
@@ -191,7 +191,7 @@ module initia_std::minitswap {
         pool_size: u64,
         ann: u64,
         max_ratio: Decimal128,
-        recover_param: Decimal128,
+        recover_param: Decimal128
     }
 
     #[event]
@@ -199,7 +199,7 @@ module initia_std::minitswap {
     struct ChangePoolSizeEvent has drop, store {
         ibc_op_init_metadata: Object<Metadata>,
         pool_size: u64,
-        depositor_owned_init_increase: u64,
+        depositor_owned_init_increase: u64
     }
 
     #[event]
@@ -210,14 +210,14 @@ module initia_std::minitswap {
         ann: Option<u64>,
         max_ratio: Option<Decimal128>,
         recover_param: Option<Decimal128>,
-        hook_contract: Option<String>,
+        hook_contract: Option<String>
     }
 
     #[event]
     /// Event emitted when provide.
     struct ProvideEvent has drop, store {
         provide_amount: u64,
-        share_amount: u64,
+        share_amount: u64
     }
 
     #[event]
@@ -226,7 +226,7 @@ module initia_std::minitswap {
         account: address,
         share_amount: u64,
         withdraw_amount: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     #[event]
@@ -235,7 +235,7 @@ module initia_std::minitswap {
         account: address,
         share_amount: u64,
         withdraw_amount: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     #[event]
@@ -250,14 +250,14 @@ module initia_std::minitswap {
         init_swap_fee_amount: u64,
         init_arb_fee_amount: u64,
         ibc_op_init_swap_fee_amount: u64,
-        ibc_op_init_arb_fee_amount: u64,
+        ibc_op_init_arb_fee_amount: u64
     }
 
     #[event]
     /// Event emitted when stable swap pool created
     struct CreateStableswapPoolEvent has drop, store {
         ibc_op_init_metadata: Object<Metadata>,
-        pool: Object<Pool>,
+        pool: Object<Pool>
     }
 
     #[event]
@@ -268,7 +268,7 @@ module initia_std::minitswap {
         executed_time: u64,
         init_used: u64,
         ibc_op_init_sent: u64,
-        triggering_fee: u64,
+        triggering_fee: u64
     }
 
     #[event]
@@ -278,7 +278,7 @@ module initia_std::minitswap {
         pool: Object<VirtualPool>,
         init_used: u64,
         ibc_op_init_sent: u64,
-        triggering_fee: u64,
+        triggering_fee: u64
     }
 
     #[event]
@@ -288,7 +288,7 @@ module initia_std::minitswap {
         pool: Object<VirtualPool>,
         init_used: u64,
         ibc_op_init_sent: u64,
-        triggering_fee: u64,
+        triggering_fee: u64
     }
 
     fun init_module(chain: &signer) {
@@ -303,7 +303,7 @@ module initia_std::minitswap {
                 string::utf8(SYMBOL),
                 6,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         move_to(
@@ -329,8 +329,8 @@ module initia_std::minitswap {
                 max_arb_batch: 20,
                 min_arb_interval: 60 * 60 * 24, // 1 day TODO: set initial value
                 global_arb_batch_map: table::new(),
-                arb_batch_index: 0,
-            },
+                arb_batch_index: 0
+            }
         );
     }
 
@@ -340,13 +340,13 @@ module initia_std::minitswap {
 
     #[view]
     public fun get_pool_amount(
-        ibc_op_init_metadata: Object<Metadata>, after_peg_keeper_swap: bool,
+        ibc_op_init_metadata: Object<Metadata>, after_peg_keeper_swap: bool
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let virtual_pool_exists = virtual_pool_exists(ibc_op_init_metadata);
 
         assert!(
             virtual_pool_exists,
-            error::invalid_argument(EPOOL_NOT_FOUND),
+            error::invalid_argument(EPOOL_NOT_FOUND)
         );
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -361,14 +361,14 @@ module initia_std::minitswap {
                 calc_peg_keeper_swap(pool)
             } else { (0, 0) };
         return (
-            pool.init_pool_amount + swap_amount, pool.ibc_op_init_pool_amount
-                - return_amount
+            pool.init_pool_amount + swap_amount,
+            pool.ibc_op_init_pool_amount - return_amount
         )
     }
 
     #[view]
     public fun get_pool_amount_by_denom(
-        ibc_op_init_denom: String, after_peg_keeper_swap: bool,
+        ibc_op_init_denom: String, after_peg_keeper_swap: bool
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let ibc_op_init_metadata = coin::denom_to_metadata(ibc_op_init_denom);
         get_pool_amount(ibc_op_init_metadata, after_peg_keeper_swap)
@@ -376,7 +376,7 @@ module initia_std::minitswap {
 
     #[view]
     public fun get_peg_keeper_balance(
-        ibc_op_init_metadata: Object<Metadata>, after_peg_keeper_swap: bool,
+        ibc_op_init_metadata: Object<Metadata>, after_peg_keeper_swap: bool
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (_, pool) = borrow_all(ibc_op_init_metadata);
         assert!(pool.active, error::invalid_state(EINACTIVE));
@@ -393,7 +393,7 @@ module initia_std::minitswap {
 
     #[view]
     public fun get_peg_keeper_balance_by_denom(
-        ibc_op_init_denom: String, after_peg_keeper_swap: bool,
+        ibc_op_init_denom: String, after_peg_keeper_swap: bool
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let ibc_op_init_metadata = coin::denom_to_metadata(ibc_op_init_denom);
         get_peg_keeper_balance(ibc_op_init_metadata, after_peg_keeper_swap)
@@ -403,17 +403,17 @@ module initia_std::minitswap {
     public fun swap_simulation(
         offer_metadata: Object<Metadata>,
         return_metadata: Object<Metadata>,
-        offer_amount: u64,
+        offer_amount: u64
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (return_amount, fee_amount) =
             safe_swap_simulation(
                 offer_metadata,
                 return_metadata,
-                offer_amount,
+                offer_amount
             );
         assert!(
             return_amount != 0,
-            error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW),
+            error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW)
         );
         (return_amount, fee_amount)
     }
@@ -422,39 +422,37 @@ module initia_std::minitswap {
     public fun swap_simulation_given_out(
         offer_metadata: Object<Metadata>,
         return_metadata: Object<Metadata>,
-        return_amount: u64,
+        return_amount: u64
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (return_amount, fee_amount) =
             safe_swap_simulation_given_out(
                 offer_metadata,
                 return_metadata,
-                return_amount,
+                return_amount
             );
         assert!(
             return_amount != (U64_MAX as u64),
-            error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW),
+            error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW)
         );
         (return_amount, fee_amount)
     }
 
     #[view]
     public fun swap_simulation_by_denom(
-        offer_denom: String,
-        return_denom: String,
-        offer_amount: u64,
+        offer_denom: String, return_denom: String, offer_amount: u64
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         let return_metadata = coin::denom_to_metadata(return_denom);
         swap_simulation(
             offer_metadata,
             return_metadata,
-            offer_amount,
+            offer_amount
         )
     }
 
     #[view]
     public fun spot_price(
-        base_metadata: Object<Metadata>, quote_metadata: Object<Metadata>,
+        base_metadata: Object<Metadata>, quote_metadata: Object<Metadata>
     ): Decimal128 acquires ModuleStore, VirtualPool {
         let is_init_quote = is_init_metadata(quote_metadata);
         let ibc_op_init_metadata = if (is_init_quote) {
@@ -467,7 +465,7 @@ module initia_std::minitswap {
 
         assert!(
             virtual_pool_exists,
-            error::invalid_argument(EPOOL_NOT_FOUND),
+            error::invalid_argument(EPOOL_NOT_FOUND)
         );
 
         let (init_pool_amount, ibc_op_init_pool_amount) =
@@ -481,7 +479,7 @@ module initia_std::minitswap {
                 init_pool_amount,
                 ibc_op_init_pool_amount,
                 pool.pool_size,
-                pool.ann,
+                pool.ann
             );
         let init_return_amount =
             get_return_amount(
@@ -489,34 +487,32 @@ module initia_std::minitswap {
                 ibc_op_init_pool_amount,
                 init_pool_amount,
                 pool.pool_size,
-                pool.ann,
+                pool.ann
             );
 
         if (is_init_quote) {
             decimal128::from_ratio_u64(
                 init_return_amount + swap_amount,
-                ibc_op_init_return_amount + swap_amount,
+                ibc_op_init_return_amount + swap_amount
             )
         } else {
             decimal128::from_ratio_u64(
                 ibc_op_init_return_amount + swap_amount,
-                init_return_amount + swap_amount,
+                init_return_amount + swap_amount
             )
         }
     }
 
     #[view]
     public fun get_unbond_list(
-        account: address,
-        start_after: Option<u64>,
-        limit: u64,
+        account: address, start_after: Option<u64>, limit: u64
     ): vector<UnbondResponse> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let start_key =
             if (option::is_some(&start_after)) {
                 generate_unbond_key(
                     account,
-                    *option::borrow(&start_after) + 1,
+                    *option::borrow(&start_after) + 1
                 )
             } else {
                 generate_unbond_key(account, 0)
@@ -531,7 +527,7 @@ module initia_std::minitswap {
                 &module_store.unbond_wait_list,
                 option::some(start_key),
                 option::none(),
-                1,
+                1
             );
 
         let i = 0;
@@ -546,8 +542,8 @@ module initia_std::minitswap {
                     account: value.account,
                     share_amount: value.share_amount,
                     withdraw_amount: value.withdraw_amount,
-                    release_time: value.release_time,
-                },
+                    release_time: value.release_time
+                }
             );
         };
 
@@ -555,17 +551,17 @@ module initia_std::minitswap {
     }
 
     #[view]
-    public fun get_arb_info(id: u64,): ArbResponse acquires ModuleStore, VirtualPool {
+    public fun get_arb_info(id: u64): ArbResponse acquires ModuleStore, VirtualPool {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_obj =
             table::borrow(
                 &module_store.global_arb_batch_map,
-                table_key::encode_u64(id),
+                table_key::encode_u64(id)
             );
         let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
         let arb_info = table::borrow(
             &pool.arb_batch_map,
-            table_key::encode_u64(id),
+            table_key::encode_u64(id)
         );
 
         return ArbResponse {
@@ -574,15 +570,13 @@ module initia_std::minitswap {
             executed_time: arb_info.executed_time,
             init_used: arb_info.init_used,
             ibc_op_init_sent: arb_info.ibc_op_init_sent,
-            triggering_fee: arb_info.triggering_fee,
+            triggering_fee: arb_info.triggering_fee
         }
     }
 
     #[view]
     public fun get_arb_infos(
-        ibc_op_init_metadata: Object<Metadata>,
-        start_after: Option<u64>,
-        limit: u64,
+        ibc_op_init_metadata: Object<Metadata>, start_after: Option<u64>, limit: u64
     ): vector<ArbResponse> acquires ModuleStore, VirtualPool {
         let (_, pool) = borrow_all(ibc_op_init_metadata);
         let start_key =
@@ -601,7 +595,7 @@ module initia_std::minitswap {
                 &pool.arb_batch_map,
                 option::some(start_key),
                 option::none(),
-                1,
+                1
             );
 
         let i = 0;
@@ -618,8 +612,8 @@ module initia_std::minitswap {
                     executed_time: arb_info.executed_time,
                     init_used: arb_info.init_used,
                     ibc_op_init_sent: arb_info.ibc_op_init_sent,
-                    triggering_fee: arb_info.triggering_fee,
-                },
+                    triggering_fee: arb_info.triggering_fee
+                }
             );
         };
 
@@ -643,7 +637,7 @@ module initia_std::minitswap {
             ibc_timeout: module_store.ibc_timeout,
             max_arb_batch: module_store.max_arb_batch,
             min_arb_interval: module_store.min_arb_interval,
-            arb_batch_index: module_store.arb_batch_index,
+            arb_batch_index: module_store.arb_batch_index
         }
     }
 
@@ -657,7 +651,7 @@ module initia_std::minitswap {
             op_bridge_id: pools.op_bridge_id,
             ibc_channel: pools.ibc_channel,
             virtual_pool: pools.virtual_pool,
-            stableswap_pool: pools.stableswap_pool,
+            stableswap_pool: pools.stableswap_pool
         }
     }
 
@@ -675,7 +669,7 @@ module initia_std::minitswap {
             &module_store.pools,
             option::none(),
             start_after,
-            2,
+            2
         );
 
         let i = 0;
@@ -691,8 +685,8 @@ module initia_std::minitswap {
                     op_bridge_id: pools.op_bridge_id,
                     ibc_channel: pools.ibc_channel,
                     virtual_pool: pools.virtual_pool,
-                    stableswap_pool: pools.stableswap_pool,
-                },
+                    stableswap_pool: pools.stableswap_pool
+                }
             );
         };
 
@@ -700,7 +694,9 @@ module initia_std::minitswap {
     }
 
     #[view]
-    public fun get_pools_detail(ibc_op_init_metadata: Object<Metadata>): PoolsDetailResponse acquires ModuleStore, VirtualPool {
+    public fun get_pools_detail(
+        ibc_op_init_metadata: Object<Metadata>
+    ): PoolsDetailResponse acquires ModuleStore, VirtualPool {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
         let virtual_pool =
@@ -722,8 +718,8 @@ module initia_std::minitswap {
                         virtual_ibc_op_init_balance: vp.virtual_ibc_op_init_balance,
                         peg_keeper_owned_ibc_op_init_balance: vp.peg_keeper_owned_ibc_op_init_balance,
                         ann: vp.ann,
-                        active: vp.active,
-                    },
+                        active: vp.active
+                    }
                 )
             } else {
                 option::none()
@@ -744,7 +740,7 @@ module initia_std::minitswap {
             op_bridge_id: pools.op_bridge_id,
             ibc_channel: pools.ibc_channel,
             virtual_pool: virtual_pool,
-            stableswap_pool,
+            stableswap_pool
         }
     }
 
@@ -762,7 +758,7 @@ module initia_std::minitswap {
             &module_store.pools,
             option::none(),
             start_after,
-            2,
+            2
         );
 
         let i = 0;
@@ -776,7 +772,7 @@ module initia_std::minitswap {
                         borrow_global<VirtualPool>(
                             object::object_address(
                                 &*option::borrow(&pools.virtual_pool)
-                            ),
+                            )
                         );
                     option::some(
                         VirtualPoolDetail {
@@ -791,8 +787,8 @@ module initia_std::minitswap {
                             virtual_ibc_op_init_balance: vp.virtual_ibc_op_init_balance,
                             peg_keeper_owned_ibc_op_init_balance: vp.peg_keeper_owned_ibc_op_init_balance,
                             ann: vp.ann,
-                            active: vp.active,
-                        },
+                            active: vp.active
+                        }
                     )
                 } else {
                     option::none()
@@ -815,8 +811,8 @@ module initia_std::minitswap {
                     op_bridge_id: pools.op_bridge_id,
                     ibc_channel: pools.ibc_channel,
                     virtual_pool: virtual_pool,
-                    stableswap_pool,
-                },
+                    stableswap_pool
+                }
             )
         };
 
@@ -832,7 +828,7 @@ module initia_std::minitswap {
         account: address,
         share_amount: u64,
         withdraw_amount: u64,
-        release_time: u64,
+        release_time: u64
     }
 
     public fun unpack_unbond_response(res: UnbondResponse): (address, u64, u64, u64) {
@@ -845,11 +841,11 @@ module initia_std::minitswap {
         executed_time: u64,
         init_used: u64,
         ibc_op_init_sent: u64,
-        triggering_fee: u64,
+        triggering_fee: u64
     }
 
-    public fun unpack_arb_response(res: ArbResponse)
-        : (Object<Metadata>, u64, u64, u64, u64, u64) {
+    public fun unpack_arb_response(res: ArbResponse):
+        (Object<Metadata>, u64, u64, u64, u64, u64) {
         return (
             res.ibc_op_init_metadata,
             res.id,
@@ -873,11 +869,12 @@ module initia_std::minitswap {
         ibc_timeout: u64,
         max_arb_batch: u64,
         min_arb_interval: u64,
-        arb_batch_index: u64,
+        arb_batch_index: u64
     }
 
-    public fun unpack_module_store_response(res: ModuleStoreResponse)
-        : (
+    public fun unpack_module_store_response(
+        res: ModuleStoreResponse
+    ): (
         Decimal128,
         bool,
         address,
@@ -905,7 +902,7 @@ module initia_std::minitswap {
             res.ibc_timeout,
             res.max_arb_batch,
             res.min_arb_interval,
-            res.arb_batch_index,
+            res.arb_batch_index
         )
     }
 
@@ -915,11 +912,12 @@ module initia_std::minitswap {
         op_bridge_id: u64,
         ibc_channel: String,
         virtual_pool: Option<Object<VirtualPool>>,
-        stableswap_pool: Option<Object<Pool>>,
+        stableswap_pool: Option<Object<Pool>>
     }
 
-    public fun unpack_pools_response(res: PoolsResponse)
-        : (
+    public fun unpack_pools_response(
+        res: PoolsResponse
+    ): (
         Object<Metadata>,
         String,
         u64,
@@ -943,11 +941,12 @@ module initia_std::minitswap {
         op_bridge_id: u64,
         ibc_channel: String,
         virtual_pool: Option<VirtualPoolDetail>,
-        stableswap_pool: Option<stableswap::PoolResponse>,
+        stableswap_pool: Option<stableswap::PoolResponse>
     }
 
-    public fun unpack_pools_detail_response(res: PoolsDetailResponse)
-        : (
+    public fun unpack_pools_detail_response(
+        res: PoolsDetailResponse
+    ): (
         Object<Metadata>,
         String,
         u64,
@@ -985,13 +984,12 @@ module initia_std::minitswap {
         virtual_ibc_op_init_balance: u64,
         peg_keeper_owned_ibc_op_init_balance: u64,
         ann: u64,
-        active: bool,
+        active: bool
     }
 
-    public fun unpack_virtual_pool_detail(res: VirtualPoolDetail)
-        : (
-        u64, Decimal128, Decimal128, Decimal128, u64, u64, u64, u64, u64, u64, u64, bool
-    ) {
+    public fun unpack_virtual_pool_detail(
+        res: VirtualPoolDetail
+    ): (u64, Decimal128, Decimal128, Decimal128, u64, u64, u64, u64, u64, u64, u64, bool) {
         return (
             res.pool_size,
             res.recover_velocity,
@@ -1004,7 +1002,7 @@ module initia_std::minitswap {
             res.virtual_ibc_op_init_balance,
             res.peg_keeper_owned_ibc_op_init_balance,
             res.ann,
-            res.active,
+            res.active
         )
     }
 
@@ -1024,12 +1022,12 @@ module initia_std::minitswap {
         vm_type: u8,
         hook_contract: String,
         op_bridge_id: u64,
-        ibc_channel: String,
+        ibc_channel: String
     ) acquires ModuleStore {
         assert_is_chain(chain, false);
         assert!(
             pool_size > 0,
-            error::invalid_argument(EPOOL_SIZE),
+            error::invalid_argument(EPOOL_SIZE)
         );
         let constructor_ref = object::create_object(@initia_std, false);
         let extend_ref = object::generate_extend_ref(&constructor_ref);
@@ -1038,13 +1036,13 @@ module initia_std::minitswap {
 
         assert!(
             vm_type == MOVE || vm_type == COSMWASM,
-            error::invalid_argument(EVM_TYPE),
+            error::invalid_argument(EVM_TYPE)
         );
 
         check_bridge_info(
             op_bridge_id,
             ibc_channel,
-            ibc_op_init_metadata,
+            ibc_op_init_metadata
         );
 
         move_to(
@@ -1068,8 +1066,8 @@ module initia_std::minitswap {
                 ibc_channel,
                 vm_type,
                 hook_contract,
-                arb_batch_map: table::new(),
-            },
+                arb_batch_map: table::new()
+            }
         );
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -1078,12 +1076,12 @@ module initia_std::minitswap {
                 module_store,
                 ibc_op_init_metadata,
                 op_bridge_id,
-                ibc_channel,
+                ibc_channel
             );
 
         assert!(
             option::is_none(&pools.virtual_pool),
-            error::already_exists(EVIRTUAL_POOL_EXISTS),
+            error::already_exists(EVIRTUAL_POOL_EXISTS)
         );
         pools.virtual_pool = option::some(
             object::object_from_constructor_ref<VirtualPool>(&constructor_ref)
@@ -1096,8 +1094,8 @@ module initia_std::minitswap {
                 pool_size,
                 ann,
                 max_ratio,
-                recover_param,
-            },
+                recover_param
+            }
         )
     }
 
@@ -1143,7 +1141,7 @@ module initia_std::minitswap {
         assert_is_chain(chain, false);
         assert!(
             new_pool_size > 0,
-            error::invalid_argument(EPOOL_SIZE),
+            error::invalid_argument(EPOOL_SIZE)
         );
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
@@ -1156,20 +1154,19 @@ module initia_std::minitswap {
             if (new_pool_size > pool.pool_size) {
                 decimal128::from_ratio_u64(
                     new_pool_size - pool.pool_size,
-                    pool.pool_size,
+                    pool.pool_size
                 )
             } else {
                 decimal128::from_ratio_u64(
                     pool.pool_size - new_pool_size,
-                    pool.pool_size,
+                    pool.pool_size
                 )
             };
 
         assert!(
-            decimal128::val(&module_store.max_change_rate) >= decimal128::val(
-                &change_rate
-            ),
-            error::invalid_argument(EMAX_CHANGE),
+            decimal128::val(&module_store.max_change_rate)
+                >= decimal128::val(&change_rate),
+            error::invalid_argument(EMAX_CHANGE)
         );
 
         let depositor_owned_init_increase =
@@ -1194,7 +1191,7 @@ module initia_std::minitswap {
                 pool.init_pool_amount = decimal128::mul_u64(&ratio, pool.init_pool_amount);
                 pool.ibc_op_init_pool_amount = decimal128::mul_u64(
                     &ratio,
-                    pool.ibc_op_init_pool_amount,
+                    pool.ibc_op_init_pool_amount
                 );
                 pool.pool_size = new_pool_size;
 
@@ -1202,7 +1199,8 @@ module initia_std::minitswap {
                 let ibc_op_init_delta = pool.ibc_op_init_pool_amount - pool.pool_size;
 
                 let net_init_delta = current_init_delta - init_delta;
-                let net_ibc_op_init_delta = current_ibc_op_init_delta - ibc_op_init_delta;
+                let net_ibc_op_init_delta = current_ibc_op_init_delta
+                    - ibc_op_init_delta;
 
                 pool.virtual_init_balance = pool.virtual_init_balance + net_init_delta;
                 pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
@@ -1225,10 +1223,12 @@ module initia_std::minitswap {
 
                 // 1. swap to make 5:5
                 let init_swap_amount = pool.pool_size - pool.init_pool_amount;
-                let ibc_op_init_swap_amount = pool.ibc_op_init_pool_amount - pool.pool_size;
+                let ibc_op_init_swap_amount = pool.ibc_op_init_pool_amount
+                    - pool.pool_size;
                 // pool.init_pool_amount = pool.pool_size;
                 // pool.ibc_op_init_pool_amount = pool.pool_size;
-                pool.virtual_init_balance = pool.virtual_init_balance + init_swap_amount;
+                pool.virtual_init_balance = pool.virtual_init_balance
+                    + init_swap_amount;
                 pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
                     + ibc_op_init_swap_amount;
                 pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance
@@ -1246,7 +1246,7 @@ module initia_std::minitswap {
                         pool.ibc_op_init_pool_amount,
                         pool.init_pool_amount,
                         pool.pool_size,
-                        pool.ann,
+                        pool.ann
                     );
                 pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
                     + ibc_op_init_swap_amount;
@@ -1263,7 +1263,8 @@ module initia_std::minitswap {
                     pool.virtual_init_balance = 0;
                     remain
                 } else {
-                    pool.virtual_init_balance = pool.virtual_init_balance - return_amount;
+                    pool.virtual_init_balance = pool.virtual_init_balance
+                        - return_amount;
                     0
                 }
             };
@@ -1272,8 +1273,8 @@ module initia_std::minitswap {
             ChangePoolSizeEvent {
                 ibc_op_init_metadata,
                 pool_size: new_pool_size,
-                depositor_owned_init_increase,
-            },
+                depositor_owned_init_increase
+            }
         )
     }
 
@@ -1288,7 +1289,7 @@ module initia_std::minitswap {
         min_arb_profit: Option<u64>,
         ibc_timeout: Option<u64>,
         max_arb_batch: Option<u64>,
-        min_arb_interval: Option<u64>,
+        min_arb_interval: Option<u64>
     ) acquires ModuleStore {
         assert_is_chain(chain, false);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -1335,7 +1336,7 @@ module initia_std::minitswap {
 
         assert!(
             module_store.min_arb_profit > module_store.trigger_fee,
-            error::invalid_argument(ESMALL_ARB_PROFIT),
+            error::invalid_argument(ESMALL_ARB_PROFIT)
         )
     }
 
@@ -1346,7 +1347,7 @@ module initia_std::minitswap {
         ann: Option<u64>,
         max_ratio: Option<Decimal128>,
         recover_param: Option<Decimal128>,
-        hook_contract: Option<String>,
+        hook_contract: Option<String>
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, false);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -1384,8 +1385,8 @@ module initia_std::minitswap {
                 ann,
                 max_ratio,
                 recover_param,
-                hook_contract,
-            },
+                hook_contract
+            }
         )
     }
 
@@ -1407,7 +1408,7 @@ module initia_std::minitswap {
             primary_fungible_store::withdraw(
                 account,
                 share_token_metadata(),
-                amount,
+                amount
             );
         unbond_internal(account, share_token);
     }
@@ -1419,7 +1420,7 @@ module initia_std::minitswap {
         // check emergency
         assert!(
             !module_store.emergency_state,
-            error::invalid_state(EEMERGENCY),
+            error::invalid_state(EEMERGENCY)
         );
 
         // remove unbond entity
@@ -1431,7 +1432,7 @@ module initia_std::minitswap {
         let (_, timestamp) = block::get_block_info();
         assert!(
             timestamp >= release_time,
-            error::invalid_state(ERELEASE_TIME),
+            error::invalid_state(ERELEASE_TIME)
         );
 
         // release init
@@ -1441,7 +1442,7 @@ module initia_std::minitswap {
             &module_signer,
             init_metadata(),
             addr,
-            withdraw_amount,
+            withdraw_amount
         );
 
         event::emit(
@@ -1449,8 +1450,8 @@ module initia_std::minitswap {
                 account: addr,
                 share_amount,
                 withdraw_amount,
-                release_time,
-            },
+                release_time
+            }
         );
     }
 
@@ -1465,7 +1466,7 @@ module initia_std::minitswap {
             primary_fungible_store::withdraw(
                 account,
                 offer_asset_metadata,
-                amount,
+                amount
             );
 
         let return_asset = swap_internal(offer_asset, return_asset_metadata);
@@ -1484,20 +1485,20 @@ module initia_std::minitswap {
         version: String,
         state_root: String,
         storage_root: String,
-        latest_block_hash: String,
+        latest_block_hash: String
     ) acquires ModuleStore, VirtualPool {
         // check arb info
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_obj =
             table::borrow(
                 &module_store.global_arb_batch_map,
-                table_key::encode_u64(arb_index),
+                table_key::encode_u64(arb_index)
             );
         let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
         let arb_info =
             table::borrow(
                 &pool.arb_batch_map,
-                table_key::encode_u64(arb_index),
+                table_key::encode_u64(arb_index)
             );
 
         // execute finalize token withdrawal
@@ -1515,7 +1516,7 @@ module initia_std::minitswap {
                 version,
                 state_root,
                 storage_root,
-                latest_block_hash,
+                latest_block_hash
             );
         cosmos::stargate(&pool_signer, withdrawal_msg);
 
@@ -1530,32 +1531,31 @@ module initia_std::minitswap {
             vector[],
             vector[
                 bcs::to_bytes(&arb_index),
-                bcs::to_bytes(&signer::address_of(account)),],
+                bcs::to_bytes(&signer::address_of(account))
+            ]
         );
     }
 
     public entry fun finalize_arb_hook(
-        module_signer: &signer,
-        arb_index: u64,
-        executor: address,
+        module_signer: &signer, arb_index: u64, executor: address
     ) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         assert!(
             signer::address_of(module_signer)
                 == object::address_from_extend_ref(&module_store.extend_ref),
-            error::permission_denied(EUNAUTHORIZED),
+            error::permission_denied(EUNAUTHORIZED)
         );
 
         let pool_obj =
             table::remove(
                 &mut module_store.global_arb_batch_map,
-                table_key::encode_u64(arb_index),
+                table_key::encode_u64(arb_index)
             );
         let pool = borrow_global_mut<VirtualPool>(object::object_address(&pool_obj));
         let ArbInfo { executed_time: _, init_used, ibc_op_init_sent, triggering_fee } =
             table::remove(
                 &mut pool.arb_batch_map,
-                table_key::encode_u64(arb_index),
+                table_key::encode_u64(arb_index)
             );
 
         assert!(pool.active, error::invalid_state(EINACTIVE));
@@ -1571,7 +1571,7 @@ module initia_std::minitswap {
             &pool_signer,
             init_metadata(),
             executor,
-            triggering_fee,
+            triggering_fee
         );
 
         // transfer leftover to module_addr
@@ -1580,7 +1580,7 @@ module initia_std::minitswap {
             &pool_signer,
             init_metadata(),
             signer::address_of(module_signer),
-            leftover_amount,
+            leftover_amount
         );
 
         // update depositor owned init
@@ -1595,8 +1595,8 @@ module initia_std::minitswap {
                 pool: pool_obj,
                 init_used,
                 ibc_op_init_sent,
-                triggering_fee,
-            },
+                triggering_fee
+            }
         );
     }
 
@@ -1608,14 +1608,14 @@ module initia_std::minitswap {
         ibc_channel: String,
         ibc_op_init_metadata: Object<Metadata>,
         init_amount: u64,
-        ibc_op_init_amount: u64,
+        ibc_op_init_amount: u64
     ) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let (_, ibc_denom) =
             check_bridge_info(
                 op_bridge_id,
                 ibc_channel,
-                ibc_op_init_metadata,
+                ibc_op_init_metadata
             );
 
         let creator = object::generate_signer_for_extending(&module_store.extend_ref);
@@ -1626,13 +1626,14 @@ module initia_std::minitswap {
             coin::withdraw(
                 account,
                 init_metadata(),
-                init_amount,
+                init_amount
             ),
             coin::withdraw(
                 account,
                 ibc_op_init_metadata,
-                ibc_op_init_amount,
-            ),];
+                ibc_op_init_amount
+            )
+        ];
 
         let liquidity_token =
             stableswap::create_pool(
@@ -1641,7 +1642,7 @@ module initia_std::minitswap {
                 symbol,
                 module_store.stableswap_swap_fee_rate,
                 coins,
-                module_store.stableswap_ann,
+                module_store.stableswap_ann
             );
         let metadata = fungible_asset::metadata_from_asset(&liquidity_token);
         let pool = object::convert<Metadata, Pool>(metadata);
@@ -1651,19 +1652,19 @@ module initia_std::minitswap {
                 module_store,
                 ibc_op_init_metadata,
                 op_bridge_id,
-                ibc_channel,
+                ibc_channel
             );
         pools.stableswap_pool = option::some(object::convert<Metadata, Pool>(metadata));
 
         primary_fungible_store::deposit(signer::address_of(account), liquidity_token);
-        event::emit(CreateStableswapPoolEvent { ibc_op_init_metadata, pool, });
+        event::emit(CreateStableswapPoolEvent { ibc_op_init_metadata, pool });
     }
 
     public fun provide_internal(init: FungibleAsset): FungibleAsset acquires ModuleStore {
         // check asset metadata
         assert!(
             is_init(&init),
-            error::invalid_argument(ENOT_INIT),
+            error::invalid_argument(ENOT_INIT)
         );
         let provide_amount = fungible_asset::amount(&init);
 
@@ -1672,7 +1673,7 @@ module initia_std::minitswap {
         // check emergency
         assert!(
             !module_store.emergency_state,
-            error::invalid_state(EEMERGENCY),
+            error::invalid_state(EEMERGENCY)
         );
 
         // calculate share amount
@@ -1684,7 +1685,7 @@ module initia_std::minitswap {
                 mul_div(
                     provide_amount,
                     (total_share as u64),
-                    module_store.depositor_owned_init,
+                    module_store.depositor_owned_init
                 )
             };
 
@@ -1697,7 +1698,7 @@ module initia_std::minitswap {
         primary_fungible_store::deposit(module_addr, init);
 
         // emit event
-        event::emit<ProvideEvent>(ProvideEvent { provide_amount, share_amount, });
+        event::emit<ProvideEvent>(ProvideEvent { provide_amount, share_amount });
 
         // mint share token
         coin::mint(&module_store.mint_cap, share_amount)
@@ -1711,14 +1712,14 @@ module initia_std::minitswap {
         // check emergency
         assert!(
             !module_store.emergency_state,
-            error::invalid_state(EEMERGENCY),
+            error::invalid_state(EEMERGENCY)
         );
 
         // check metdata
         let share_token_metadata = fungible_asset::metadata_from_asset(&share_token);
         assert!(
             share_token_metadata == share_token_metadata(),
-            error::invalid_argument(ENOT_SHARE_TOKEN),
+            error::invalid_argument(ENOT_SHARE_TOKEN)
         );
 
         // calculate withdraw amount
@@ -1728,7 +1729,7 @@ module initia_std::minitswap {
             mul_div(
                 share_amount,
                 module_store.depositor_owned_init,
-                total_share,
+                total_share
             );
 
         // decrease depositor owned init
@@ -1747,13 +1748,13 @@ module initia_std::minitswap {
             account: signer::address_of(account),
             share_amount,
             withdraw_amount,
-            release_time,
+            release_time
         };
         let key = generate_unbond_key(signer::address_of(account), release_time);
         table::add(
             &mut module_store.unbond_wait_list,
             key,
-            withdraw_entity,
+            withdraw_entity
         );
 
         // emit event
@@ -1762,13 +1763,13 @@ module initia_std::minitswap {
                 account: signer::address_of(account),
                 share_amount,
                 withdraw_amount,
-                release_time,
-            },
+                release_time
+            }
         );
     }
 
     public fun swap_internal(
-        offer_asset: FungibleAsset, return_metadata: Object<Metadata>,
+        offer_asset: FungibleAsset, return_metadata: Object<Metadata>
     ): FungibleAsset acquires ModuleStore, VirtualPool {
         let is_init_offered = is_init(&offer_asset);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_asset);
@@ -1791,7 +1792,7 @@ module initia_std::minitswap {
             init_swap_fee_amount,
             init_arb_fee_amount,
             ibc_op_init_swap_fee_amount,
-            ibc_op_init_arb_fee_amount,
+            ibc_op_init_arb_fee_amount
         ) =
             if (is_init_offered) {
                 // user swap
@@ -1805,7 +1806,7 @@ module initia_std::minitswap {
                         pool,
                         module_signer,
                         pool_signer,
-                        is_init_offered,
+                        is_init_offered
                     );
 
                 // peg keeper swap
@@ -1819,11 +1820,12 @@ module initia_std::minitswap {
                         mul_div(
                             depositor_return_amount,
                             arb_fee_amount,
-                            arb_fee_amount + swap_fee_amount,
+                            arb_fee_amount + swap_fee_amount
                         )
                     };
 
-                let init_swap_fee_amount = depositor_return_amount - init_arb_fee_amount;
+                let init_swap_fee_amount = depositor_return_amount
+                    - init_arb_fee_amount;
 
                 (
                     peg_keeper_offer_amount,
@@ -1849,7 +1851,7 @@ module initia_std::minitswap {
                         pool,
                         module_signer,
                         pool_signer,
-                        is_init_offered,
+                        is_init_offered
                     );
 
                 (
@@ -1867,7 +1869,7 @@ module initia_std::minitswap {
         check_arb(
             module_store,
             pool,
-            ibc_op_init_metadata,
+            ibc_op_init_metadata
         );
 
         event::emit<SwapEvent>(
@@ -1881,8 +1883,8 @@ module initia_std::minitswap {
                 init_swap_fee_amount,
                 init_arb_fee_amount,
                 ibc_op_init_swap_fee_amount,
-                ibc_op_init_arb_fee_amount,
-            },
+                ibc_op_init_arb_fee_amount
+            }
         );
 
         return_asset
@@ -1899,13 +1901,13 @@ module initia_std::minitswap {
         let pool_obj =
             table::borrow(
                 &mut module_store.global_arb_batch_map,
-                table_key::encode_u64(callback_id),
+                table_key::encode_u64(callback_id)
             );
         let pool = borrow_global_mut<VirtualPool>(object::object_address(&*pool_obj));
         assert!(
             signer::address_of(pool_signer)
                 == object::address_from_extend_ref(&pool.extend_ref),
-            error::permission_denied(EUNAUTHORIZED),
+            error::permission_denied(EUNAUTHORIZED)
         );
 
         // do nothing
@@ -1914,18 +1916,20 @@ module initia_std::minitswap {
         revert_arb_state(callback_id);
     }
 
-    public entry fun ibc_timeout(pool_signer: &signer, callback_id: u64) acquires ModuleStore, VirtualPool {
+    public entry fun ibc_timeout(
+        pool_signer: &signer, callback_id: u64
+    ) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let pool_obj =
             table::borrow(
                 &mut module_store.global_arb_batch_map,
-                table_key::encode_u64(callback_id),
+                table_key::encode_u64(callback_id)
             );
         let pool = borrow_global_mut<VirtualPool>(object::object_address(&*pool_obj));
         assert!(
             signer::address_of(pool_signer)
                 == object::address_from_extend_ref(&pool.extend_ref),
-            error::permission_denied(EUNAUTHORIZED),
+            error::permission_denied(EUNAUTHORIZED)
         );
 
         revert_arb_state(callback_id);
@@ -1936,13 +1940,13 @@ module initia_std::minitswap {
         let pool_obj =
             table::remove(
                 &mut module_store.global_arb_batch_map,
-                table_key::encode_u64(callback_id),
+                table_key::encode_u64(callback_id)
             );
         let pool = borrow_global_mut<VirtualPool>(object::object_address(&pool_obj));
-        let ArbInfo { executed_time: _, init_used, ibc_op_init_sent, triggering_fee, } =
+        let ArbInfo { executed_time: _, init_used, ibc_op_init_sent, triggering_fee } =
             table::remove(
                 &mut pool.arb_batch_map,
-                table_key::encode_u64(callback_id),
+                table_key::encode_u64(callback_id)
             );
         pool.virtual_init_balance = pool.virtual_init_balance + init_used;
         pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
@@ -1954,8 +1958,8 @@ module initia_std::minitswap {
                 pool: pool_obj,
                 init_used,
                 ibc_op_init_sent, // always ibc op init
-                triggering_fee,
-            },
+                triggering_fee
+            }
         );
 
     }
@@ -1964,10 +1968,9 @@ module initia_std::minitswap {
     // Helper function
     //
 
-    inline fun borrow_all_mut(metadata: Object<Metadata>)
-        : (
-        &mut ModuleStore, &mut VirtualPool, signer, signer
-    ) acquires ModuleStore, VirtualPool {
+    inline fun borrow_all_mut(
+        metadata: Object<Metadata>
+    ): (&mut ModuleStore, &mut VirtualPool, signer, signer) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let module_signer =
             object::generate_signer_for_extending(&module_store.extend_ref);
@@ -1975,20 +1978,22 @@ module initia_std::minitswap {
             object::object_address(
                 &*option::borrow(
                     &table::borrow(&module_store.pools, metadata).virtual_pool
-                ),
+                )
             );
         let pool = borrow_global_mut<VirtualPool>(pool_addr);
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
         (module_store, pool, module_signer, pool_signer)
     }
 
-    inline fun borrow_all(metadata: Object<Metadata>): (&ModuleStore, &VirtualPool) acquires ModuleStore, VirtualPool {
+    inline fun borrow_all(
+        metadata: Object<Metadata>
+    ): (&ModuleStore, &VirtualPool) acquires ModuleStore, VirtualPool {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_addr =
             object::object_address(
                 &*option::borrow(
                     &table::borrow(&module_store.pools, metadata).virtual_pool
-                ),
+                )
             );
         let pool = borrow_global<VirtualPool>(pool_addr);
         (module_store, pool)
@@ -2007,21 +2012,21 @@ module initia_std::minitswap {
 
         let imbalance =
             decimal128::from_ratio_u64(
-                pool.peg_keeper_owned_ibc_op_init_balance + pool.ibc_op_init_pool_amount
-                    - pool.pool_size, // same with real ibc op init balance
-                pool.pool_size,
+                pool.peg_keeper_owned_ibc_op_init_balance
+                    + pool.ibc_op_init_pool_amount - pool.pool_size, // same with real ibc op init balance
+                pool.pool_size
             );
         // Peg keeper swap
         let r_fr =
             get_fully_recovered_ratio(
                 &imbalance,
                 &pool.max_ratio,
-                &pool.recover_param,
+                &pool.recover_param
             );
         let current_ratio =
             decimal128::from_ratio_u64(
                 pool.ibc_op_init_pool_amount,
-                pool.init_pool_amount + pool.ibc_op_init_pool_amount,
+                pool.init_pool_amount + pool.ibc_op_init_pool_amount
             );
         let time_diff = timestamp - pool.last_recovered_timestamp;
         if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
@@ -2046,7 +2051,7 @@ module initia_std::minitswap {
                     pool.init_pool_amount,
                     pool.ibc_op_init_pool_amount,
                     pool.pool_size,
-                    pool.ann,
+                    pool.ann
                 );
 
             (swap_amount, return_amount)
@@ -2060,7 +2065,7 @@ module initia_std::minitswap {
         pool: &mut VirtualPool,
         module_signer: signer,
         pool_signer: signer,
-        is_init_offered: bool,
+        is_init_offered: bool
     ): (FungibleAsset, u64, u64, u64) {
         let module_addr = signer::address_of(&module_signer);
         let pool_addr = signer::address_of(&pool_signer);
@@ -2078,22 +2083,23 @@ module initia_std::minitswap {
                         pool.init_pool_amount,
                         pool.ibc_op_init_pool_amount,
                         pool.pool_size,
-                        pool.ann,
+                        pool.ann
                     );
                 pool.init_pool_amount = pool.init_pool_amount + offer_amount;
-                pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount - return_amount;
+                pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
+                    - return_amount;
 
                 assert!(
                     pool.ibc_op_init_pool_amount >= pool.pool_size
                         && pool.init_pool_amount <= pool.pool_size,
-                    error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW),
+                    error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW)
                 );
 
                 // take swap fee
                 let swap_fee_amount =
                     decimal128::mul_u64(
                         &module_store.swap_fee_rate,
-                        return_amount,
+                        return_amount
                     );
                 return_amount = return_amount - swap_fee_amount;
 
@@ -2104,7 +2110,7 @@ module initia_std::minitswap {
                     } else { 0 };
                 arb_fee_amount = decimal128::mul_u64(
                     &module_store.arb_fee_rate,
-                    arb_profit,
+                    arb_profit
                 );
                 return_amount = return_amount - arb_fee_amount;
                 let total_fee_amount = swap_fee_amount + arb_fee_amount;
@@ -2116,7 +2122,7 @@ module initia_std::minitswap {
                         pool.ibc_op_init_pool_amount,
                         pool.init_pool_amount,
                         pool.pool_size,
-                        pool.ann,
+                        pool.ann
                     );
                 pool.init_pool_amount = pool.init_pool_amount - depositor_return_amount;
                 pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
@@ -2130,7 +2136,7 @@ module initia_std::minitswap {
                     primary_fungible_store::withdraw(
                         &pool_signer,
                         return_metadata,
-                        return_amount,
+                        return_amount
                     ),
                     swap_fee_amount,
                     depositor_return_amount
@@ -2145,16 +2151,17 @@ module initia_std::minitswap {
                         pool.ibc_op_init_pool_amount,
                         pool.init_pool_amount,
                         pool.pool_size,
-                        pool.ann,
+                        pool.ann
                     );
                 pool.init_pool_amount = pool.init_pool_amount - return_amount;
-                pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount + offer_amount;
+                pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
+                    + offer_amount;
 
                 // take swap fee
                 let swap_fee_amount =
                     decimal128::mul_u64(
                         &module_store.swap_fee_rate,
-                        return_amount,
+                        return_amount
                     );
                 let return_amount = return_amount - swap_fee_amount;
 
@@ -2166,7 +2173,7 @@ module initia_std::minitswap {
                     primary_fungible_store::withdraw(
                         &module_signer,
                         return_metadata,
-                        return_amount,
+                        return_amount
                     ),
                     swap_fee_amount,
                     swap_fee_amount
@@ -2213,7 +2220,7 @@ module initia_std::minitswap {
             &pool.arb_batch_map,
             option::none(),
             option::none(),
-            2,
+            2
         );
 
         let last_arb_timestamp =
@@ -2235,7 +2242,7 @@ module initia_std::minitswap {
             executed_time: timestamp,
             init_used: pool.virtual_init_balance,
             ibc_op_init_sent: pool.virtual_ibc_op_init_balance,
-            triggering_fee: module_store.trigger_fee,
+            triggering_fee: module_store.trigger_fee
         };
 
         // reset peg keeper balance
@@ -2248,7 +2255,7 @@ module initia_std::minitswap {
             pool,
             arb_index,
             ibc_op_init_metadata,
-            arb_info.ibc_op_init_sent,
+            arb_info.ibc_op_init_sent
         );
 
         // emit event
@@ -2261,20 +2268,20 @@ module initia_std::minitswap {
                 executed_time: arb_info.executed_time,
                 init_used: arb_info.init_used,
                 ibc_op_init_sent: arb_info.ibc_op_init_sent,
-                triggering_fee: arb_info.triggering_fee,
-            },
+                triggering_fee: arb_info.triggering_fee
+            }
         );
 
         // store arb info
         table::add(
             &mut module_store.global_arb_batch_map,
             table_key::encode_u64(arb_index),
-            pool_obj,
+            pool_obj
         );
         table::add(
             &mut pool.arb_batch_map,
             table_key::encode_u64(arb_index),
-            arb_info,
+            arb_info
         );
     }
 
@@ -2285,12 +2292,11 @@ module initia_std::minitswap {
         ibc_channel: String
     ): &mut Pools {
         if (table::contains(
-                &module_store.pools,
-                ibc_op_init_metadata,
-            )) {
+            &module_store.pools, ibc_op_init_metadata
+        )) {
             table::borrow_mut(
                 &mut module_store.pools,
-                ibc_op_init_metadata,
+                ibc_op_init_metadata
             )
         } else {
             table::add(
@@ -2300,13 +2306,13 @@ module initia_std::minitswap {
                     op_bridge_id,
                     ibc_channel,
                     virtual_pool: option::none(),
-                    stableswap_pool: option::none(),
-                },
+                    stableswap_pool: option::none()
+                }
             );
 
             table::borrow_mut(
                 &mut module_store.pools,
-                ibc_op_init_metadata,
+                ibc_op_init_metadata
             )
         }
     }
@@ -2316,7 +2322,7 @@ module initia_std::minitswap {
         pool: &mut VirtualPool,
         batch_index: u64,
         ibc_op_init_metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     ) {
         // create memo (ibc hook)
         let receiver = to_sdk(object::address_from_extend_ref(&pool.extend_ref));
@@ -2330,7 +2336,7 @@ module initia_std::minitswap {
                 batch_index,
                 receiver,
                 op_denom,
-                amount,
+                amount
             );
 
         // execute ibc transfer
@@ -2347,24 +2353,24 @@ module initia_std::minitswap {
             0,
             0,
             (timestamp + module_store.ibc_timeout) * 1000000000,
-            memo,
+            memo
         )
     }
 
     struct IBCMemo has copy, drop {
         _move_: MemoMove,
-        wasm: Option<MemoWasm>,
+        wasm: Option<MemoWasm>
     }
 
     struct MemoMove has copy, drop {
         message: Option<MemoMoveMessage>,
-        async_callback: MemoAsyncCallback,
+        async_callback: MemoAsyncCallback
     }
 
     struct MemoAsyncCallback has copy, drop {
         id: u64,
         module_address: address,
-        module_name: String,
+        module_name: String
     }
 
     struct MemoMoveMessage has copy, drop {
@@ -2372,30 +2378,30 @@ module initia_std::minitswap {
         module_name: String,
         function_name: String,
         type_args: vector<String>,
-        args: vector<String>,
+        args: vector<String>
     }
 
     struct MemoWasm has copy, drop {
-        message: MemoWasmMessage,
+        message: MemoWasmMessage
     }
 
     struct MemoWasmMessage has copy, drop {
         contracts: String,
         funds: vector<MemoWasmFunds>,
-        msg: MemoWasmMinitswapHook,
+        msg: MemoWasmMinitswapHook
     }
 
     struct MemoWasmFunds has copy, drop {
         denom: String,
-        amount: String,
+        amount: String
     }
 
     struct MemoWasmMinitswapHook has copy, drop {
-        minitswap_hook: MemoWasmMinitswapHookMsg,
+        minitswap_hook: MemoWasmMinitswapHookMsg
     }
 
     struct MemoWasmMinitswapHookMsg has copy, drop {
-        receiver: String,
+        receiver: String
     }
 
     fun generate_ibc_message(
@@ -2404,7 +2410,7 @@ module initia_std::minitswap {
         batch_index: u64,
         receiver: String,
         op_denom: String,
-        amount: u64,
+        amount: u64
     ): (String, String) {
         let memo = IBCMemo {
             _move_: MemoMove {
@@ -2412,10 +2418,10 @@ module initia_std::minitswap {
                 async_callback: MemoAsyncCallback {
                     id: batch_index,
                     module_address: @initia_std,
-                    module_name: string::utf8(b"minitswap"),
-                },
+                    module_name: string::utf8(b"minitswap")
+                }
             },
-            wasm: option::none(),
+            wasm: option::none()
         };
 
         // set hook message
@@ -2430,14 +2436,15 @@ module initia_std::minitswap {
                         args: vector[
                             base64::to_string(bcs::to_bytes(&op_denom)),
                             base64::to_string(bcs::to_bytes(&amount)),
-                            base64::to_string(bcs::to_bytes(&receiver)),],
-                    },
+                            base64::to_string(bcs::to_bytes(&receiver))
+                        ]
+                    }
                 );
 
                 let ibc_receiver = hook_contract;
                 string::append(
                     &mut ibc_receiver,
-                    string::utf8(b"::minitswap_hook::minitswap_hook"),
+                    string::utf8(b"::minitswap_hook::minitswap_hook")
                 );
                 ibc_receiver
             } else if (vm_type == COSMWASM) {
@@ -2446,14 +2453,14 @@ module initia_std::minitswap {
                         message: MemoWasmMessage {
                             contracts: hook_contract,
                             funds: vector[MemoWasmFunds {
-                                    denom: op_denom,
-                                    amount: to_string(&amount),
-                                },],
+                                denom: op_denom,
+                                amount: to_string(&amount)
+                            }],
                             msg: MemoWasmMinitswapHook {
-                                minitswap_hook: MemoWasmMinitswapHookMsg { receiver, },
-                            },
-                        },
-                    },
+                                minitswap_hook: MemoWasmMinitswapHookMsg { receiver }
+                            }
+                        }
+                    }
                 );
 
                 hook_contract
@@ -2476,12 +2483,12 @@ module initia_std::minitswap {
         version: String,
         state_root: String,
         storage_root: String,
-        latest_block_hash: String,
+        latest_block_hash: String
     }
 
     struct CosmosCoin has copy, drop {
         denom: String,
-        amount: u64,
+        amount: u64
     }
 
     fun generate_finalize_token_withdrawal_msg(
@@ -2496,7 +2503,7 @@ module initia_std::minitswap {
         version: String,
         state_root: String,
         storage_root: String,
-        latest_block_hash: String,
+        latest_block_hash: String
     ): vector<u8> {
         json::marshal(
             &FinalizeTokenWithdrawalRequest {
@@ -2507,12 +2514,12 @@ module initia_std::minitswap {
                 sender: to_sdk(sender),
                 receiver: to_sdk(receiver),
                 sequence,
-                amount: CosmosCoin { denom, amount, },
+                amount: CosmosCoin { denom, amount },
                 version,
                 state_root,
                 storage_root,
-                latest_block_hash,
-            },
+                latest_block_hash
+            }
         )
     }
 
@@ -2535,9 +2542,8 @@ module initia_std::minitswap {
         let addr = signer::address_of(account);
         let module_store = borrow_global<ModuleStore>(@initia_std);
         assert!(
-            addr == @initia_std
-            || (allow_admin && module_store.admin == addr),
-            error::permission_denied(EUNAUTHORIZED),
+            addr == @initia_std || (allow_admin && module_store.admin == addr),
+            error::permission_denied(EUNAUTHORIZED)
         );
     }
 
@@ -2557,7 +2563,7 @@ module initia_std::minitswap {
         let denom = string::utf8(b"ibc/");
         string::append(
             &mut denom,
-            hex::encode_to_string_with_option(&hash, true),
+            hex::encode_to_string_with_option(&hash, true)
         );
         denom
     }
@@ -2581,7 +2587,7 @@ module initia_std::minitswap {
             object::create_object_address(&@initia_std, *string::bytes(&ibc_denom));
         assert!(
             object::object_address(&ibc_op_init_metadata) == ibc_token_address,
-            error::invalid_argument(EINVAILD_METADATA),
+            error::invalid_argument(EINVAILD_METADATA)
         );
 
         (op_denom, ibc_denom)
@@ -2724,8 +2730,8 @@ module initia_std::minitswap {
                 &decimal128::sub(max_ratio, &half), // R_max - 0.5
                 &decimal128_safe_from_ratio(
                     decimal128::val(&fi3),
-                    decimal128::val(&decimal128::add(&decimal128::one(), &fi3)),
-                ),
+                    decimal128::val(&decimal128::add(&decimal128::one(), &fi3))
+                )
                 // (f * I) ** 3 / (1 + (f * I) ** 3)
             );
 
@@ -2740,7 +2746,7 @@ module initia_std::minitswap {
         let grad =
             decimal128::from_ratio(
                 fully_recovered_ratio_val,
-                denominator - fully_recovered_ratio_val,
+                denominator - fully_recovered_ratio_val
             );
         let grad_val = decimal128::val(&grad);
 
@@ -2767,13 +2773,9 @@ module initia_std::minitswap {
             // x = z * (x' - y') / (g * (x'- z) - (y' - z))
             // x = z * (y' - x') / (g * (z - x') + (y' - z))
             let temp_x =
-                (
-                    (pool_size as u256) * (y - x as u256) * (denominator as u256)
-                        / (
-                            (grad_val as u256) * (pool_size - x as u256)
-                                + (y - pool_size as u256) * (denominator as u256)
-                        ) as u128
-                );
+                ((pool_size as u256) * (y - x as u256) * (denominator as u256)
+                    / ((grad_val as u256) * (pool_size - x as u256)
+                        + (y - pool_size as u256) * (denominator as u256)) as u128);
 
             // get y from temp x
             y = decimal128::mul_u128(&grad, temp_x);
@@ -2821,7 +2823,7 @@ module initia_std::minitswap {
             let amount = fungible_asset::amount(fa);
             assert!(
                 amount >= option::extract(&mut min_return),
-                error::invalid_state(EMIN_RETURN),
+                error::invalid_state(EMIN_RETURN)
             )
         }
     }
@@ -2830,7 +2832,7 @@ module initia_std::minitswap {
     public fun safe_swap_simulation(
         offer_metadata: Object<Metadata>,
         return_metadata: Object<Metadata>,
-        offer_amount: u64,
+        offer_amount: u64
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let is_init_offered = is_init_metadata(offer_metadata);
         let ibc_op_init_metadata =
@@ -2844,7 +2846,7 @@ module initia_std::minitswap {
 
         assert!(
             virtual_pool_exists,
-            error::invalid_argument(EPOOL_NOT_FOUND),
+            error::invalid_argument(EPOOL_NOT_FOUND)
         );
 
         let (init_pool_amount, ibc_op_init_pool_amount) =
@@ -2859,7 +2861,7 @@ module initia_std::minitswap {
                         init_pool_amount,
                         ibc_op_init_pool_amount,
                         pool_size,
-                        ann,
+                        ann
                     );
 
                 if (ibc_op_init_pool_amount - return_amount < pool_size) {
@@ -2870,7 +2872,7 @@ module initia_std::minitswap {
                 let swap_fee_amount =
                     decimal128::mul_u64(
                         &module_store.swap_fee_rate,
-                        return_amount,
+                        return_amount
                     );
 
                 // take arb fee
@@ -2881,7 +2883,7 @@ module initia_std::minitswap {
                 let arb_fee_amount =
                     decimal128::mul_u64(
                         &module_store.arb_fee_rate,
-                        arb_profit,
+                        arb_profit
                     );
                 let fee_amount = swap_fee_amount + arb_fee_amount;
 
@@ -2893,12 +2895,12 @@ module initia_std::minitswap {
                         ibc_op_init_pool_amount,
                         init_pool_amount,
                         pool_size,
-                        ann,
+                        ann
                     );
                 let fee_amount =
                     decimal128::mul_u64(
                         &module_store.swap_fee_rate,
-                        return_amount,
+                        return_amount
                     );
 
                 (return_amount, fee_amount)
@@ -2912,7 +2914,7 @@ module initia_std::minitswap {
     public fun safe_swap_simulation_given_out(
         offer_metadata: Object<Metadata>,
         return_metadata: Object<Metadata>,
-        return_amount: u64,
+        return_amount: u64
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let is_init_offered = is_init_metadata(offer_metadata);
         let ibc_op_init_metadata =
@@ -2926,7 +2928,7 @@ module initia_std::minitswap {
 
         assert!(
             virtual_pool_exists,
-            error::invalid_argument(EPOOL_NOT_FOUND),
+            error::invalid_argument(EPOOL_NOT_FOUND)
         );
 
         let (init_pool_amount, ibc_op_init_pool_amount) =
@@ -2950,7 +2952,7 @@ module initia_std::minitswap {
                         mul_div_u128(
                             (return_amount as u128),
                             denominator,
-                            (denominator - decimal128::val(&module_store.swap_fee_rate)),
+                            (denominator - decimal128::val(&module_store.swap_fee_rate))
                         ) as u64
                     );
                 if (ibc_op_init_pool_amount - return_amount_before_swap_fee < pool_size) {
@@ -2965,7 +2967,7 @@ module initia_std::minitswap {
                         init_pool_amount,
                         ibc_op_init_pool_amount,
                         pool_size,
-                        ann,
+                        ann
                     );
 
                 // calculate arb fee
@@ -2976,7 +2978,7 @@ module initia_std::minitswap {
                 let arb_fee_amount =
                     decimal128::mul_u64(
                         &module_store.arb_fee_rate,
-                        arb_profit,
+                        arb_profit
                     );
 
                 // actual return amount is return amount - arb fee
@@ -2989,13 +2991,14 @@ module initia_std::minitswap {
                     return_amount_before_swap_fee = return_amount_before_swap_fee
                         + return_diff;
 
-                    if (ibc_op_init_pool_amount - return_amount_before_swap_fee < pool_size) {
+                    if (ibc_op_init_pool_amount - return_amount_before_swap_fee
+                        < pool_size) {
                         return ((U64_MAX as u64), (U64_MAX as u64))
                     };
 
                     swap_fee_amount = decimal128::mul_u64(
                         &module_store.swap_fee_rate,
-                        return_amount_before_swap_fee,
+                        return_amount_before_swap_fee
                     );
 
                     offer_amount = get_offer_amount(
@@ -3003,7 +3006,7 @@ module initia_std::minitswap {
                         init_pool_amount,
                         ibc_op_init_pool_amount,
                         pool_size,
-                        ann,
+                        ann
                     );
 
                     // calculate arb fee
@@ -3012,10 +3015,10 @@ module initia_std::minitswap {
                     } else { 0 };
                     arb_fee_amount = decimal128::mul_u64(
                         &module_store.arb_fee_rate,
-                        arb_profit,
+                        arb_profit
                     );
-                    actual_return_amount = return_amount_before_swap_fee - swap_fee_amount
-                        - arb_fee_amount;
+                    actual_return_amount = return_amount_before_swap_fee
+                        - swap_fee_amount - arb_fee_amount;
                     if (actual_return_amount >= return_amount) break;
 
                     return_diff = return_amount - actual_return_amount;
@@ -3032,7 +3035,7 @@ module initia_std::minitswap {
                         mul_div_u128(
                             (return_amount as u128),
                             denominator,
-                            (denominator - decimal128::val(&module_store.swap_fee_rate)),
+                            (denominator - decimal128::val(&module_store.swap_fee_rate))
                         ) as u64
                     );
                 let fee_amount = return_amount_ - return_amount;
@@ -3043,7 +3046,7 @@ module initia_std::minitswap {
                         ibc_op_init_pool_amount,
                         init_pool_amount,
                         pool_size,
-                        ann,
+                        ann
                     );
 
                 (offer_amount, fee_amount)
@@ -3062,10 +3065,9 @@ module initia_std::minitswap {
     }
 
     #[test_only]
-    fun initialized_coin(account: &signer, symbol: String,)
-        : (
-        coin::BurnCapability, coin::FreezeCapability, coin::MintCapability
-    ) {
+    fun initialized_coin(
+        account: &signer, symbol: String
+    ): (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability) {
         let (mint_cap, burn_cap, freeze_cap, _) =
             coin::initialize_and_generate_extend_ref(
                 account,
@@ -3074,7 +3076,7 @@ module initia_std::minitswap {
                 symbol,
                 6,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         return (burn_cap, freeze_cap, mint_cap)
@@ -3094,32 +3096,32 @@ module initia_std::minitswap {
         _state_root: String,
         _storage_root: String,
         _latest_block_hash: String,
-        init_mint_cap: &coin::MintCapability,
+        init_mint_cap: &coin::MintCapability
     ) acquires ModuleStore, VirtualPool {
         // check arb info
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_obj =
             table::borrow(
                 &module_store.global_arb_batch_map,
-                table_key::encode_u64(arb_index),
+                table_key::encode_u64(arb_index)
             );
         let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
         let arb_info =
             table::borrow(
                 &pool.arb_batch_map,
-                table_key::encode_u64(arb_index),
+                table_key::encode_u64(arb_index)
             );
 
         assert!(
             amount == arb_info.ibc_op_init_sent,
-            error::invalid_argument(EAMOUNT_MISMATCH),
+            error::invalid_argument(EAMOUNT_MISMATCH)
         );
 
         // mock finalize withdraw
         coin::mint_to(
             init_mint_cap,
             object::address_from_extend_ref(&pool.extend_ref),
-            amount,
+            amount
         );
 
         let module_signer =
@@ -3129,7 +3131,7 @@ module initia_std::minitswap {
         finalize_arb_hook(
             &module_signer,
             arb_index,
-            signer::address_of(account),
+            signer::address_of(account)
         );
     }
 
@@ -3139,7 +3141,7 @@ module initia_std::minitswap {
             generate_finalize_token_withdrawal_msg(
                 1,
                 2,
-                vector[string::utf8(b"abc"), string::utf8(b"123"),],
+                vector[string::utf8(b"abc"), string::utf8(b"123")],
                 @0x1,
                 @0x2,
                 3,
@@ -3148,7 +3150,7 @@ module initia_std::minitswap {
                 string::utf8(b"version"),
                 string::utf8(b"state_root"),
                 string::utf8(b"storage_root"),
-                string::utf8(b"latest_block_hash"),
+                string::utf8(b"latest_block_hash")
             );
         let json_str =
             b"{\"@type\":\"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal\",\"amount\":{\"amount\":\"100\",\"denom\":\"uinit\"},\"bridge_id\":\"1\",\"latest_block_hash\":\"latest_block_hash\",\"output_index\":\"2\",\"receiver\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzwsp0lj\",\"sender\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqr5e3d\",\"sequence\":\"3\",\"state_root\":\"state_root\",\"storage_root\":\"storage_root\",\"version\":\"version\",\"withdrawal_proofs\":[\"abc\",\"123\"]}";
@@ -3161,14 +3163,14 @@ module initia_std::minitswap {
             get_ibc_denom(
                 string::utf8(b"channel-0"),
                 string::utf8(
-                    b"l2/771d639f30fbe45e3fbca954ffbe2fcc26f915f5513c67a4a2d0bc1d635bdefd",
-                ),
+                    b"l2/771d639f30fbe45e3fbca954ffbe2fcc26f915f5513c67a4a2d0bc1d635bdefd"
+                )
             );
         assert!(
             string::utf8(
                 b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
             ) == ibc_denom,
-            0,
+            0
         );
     }
 
@@ -3179,7 +3181,7 @@ module initia_std::minitswap {
             string::utf8(
                 b"l2/771d639f30fbe45e3fbca954ffbe2fcc26f915f5513c67a4a2d0bc1d635bdefd"
             ) == op_denom,
-            0,
+            0
         );
     }
 
@@ -3195,26 +3197,26 @@ module initia_std::minitswap {
             initialized_coin(
                 &chain,
                 string::utf8(
-                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802",
-                ),
+                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
+                )
             );
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
         let ibc_op_init_metadata =
             coin::metadata(
                 chain_addr,
                 string::utf8(
-                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802",
-                ),
+                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
+                )
             );
         coin::mint_to(
             &initia_mint_cap,
             chain_addr,
-            1000000000,
+            1000000000
         );
         coin::mint_to(
             &ibc_op_init_mint_cap,
             chain_addr,
-            1000000000,
+            1000000000
         );
         provide(&chain, 15000000, option::none());
 
@@ -3229,7 +3231,7 @@ module initia_std::minitswap {
             MOVE,
             string::utf8(b"0x1"),
             1,
-            string::utf8(b"channel-0"),
+            string::utf8(b"channel-0")
         );
 
         swap(
@@ -3237,7 +3239,7 @@ module initia_std::minitswap {
             ibc_op_init_metadata,
             init_metadata,
             10000000,
-            option::none(),
+            option::none()
         );
 
         block::set_block_info(0, 100000);
@@ -3248,7 +3250,7 @@ module initia_std::minitswap {
             ibc_op_init_metadata,
             init_metadata,
             10000000,
-            option::none(),
+            option::none()
         );
 
         let arb_info = get_arb_info(0);
@@ -3270,7 +3272,7 @@ module initia_std::minitswap {
             str,
             str,
             str,
-            &initia_mint_cap,
+            &initia_mint_cap
         );
 
         let excutor_balance_after = coin::balance(@0x1, init_metadata);
@@ -3278,12 +3280,12 @@ module initia_std::minitswap {
         // check triggering fee
         assert!(
             excutor_balance_after - excutor_balance_before == arb_info.triggering_fee,
-            0,
+            0
         );
     }
 
     #[test(chain = @0x1)]
-    fun end_to_end(chain: signer,) acquires ModuleStore, VirtualPool {
+    fun end_to_end(chain: signer) acquires ModuleStore, VirtualPool {
         initia_std::primary_fungible_store::init_module_for_test();
         init_module(&chain);
         stableswap::init_module_for_test();
@@ -3297,46 +3299,46 @@ module initia_std::minitswap {
             initialized_coin(
                 &chain,
                 string::utf8(
-                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802",
-                ),
+                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
+                )
             );
         let (_, _, ibc_op_init_2_mint_cap) =
             initialized_coin(
                 &chain,
                 string::utf8(
-                    b"ibc/AD8D520BF2D981113B652A3BCD55368EF146FCB9E016F8B1DAECAA5D570BC8A1",
-                ),
+                    b"ibc/AD8D520BF2D981113B652A3BCD55368EF146FCB9E016F8B1DAECAA5D570BC8A1"
+                )
             );
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
         let ibc_op_init_1_metadata =
             coin::metadata(
                 chain_addr,
                 string::utf8(
-                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802",
-                ),
+                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
+                )
             );
         let ibc_op_init_2_metadata =
             coin::metadata(
                 chain_addr,
                 string::utf8(
-                    b"ibc/AD8D520BF2D981113B652A3BCD55368EF146FCB9E016F8B1DAECAA5D570BC8A1",
-                ),
+                    b"ibc/AD8D520BF2D981113B652A3BCD55368EF146FCB9E016F8B1DAECAA5D570BC8A1"
+                )
             );
 
         coin::mint_to(
             &initia_mint_cap,
             chain_addr,
-            100000000,
+            100000000
         );
         coin::mint_to(
             &ibc_op_init_1_mint_cap,
             chain_addr,
-            1000000000,
+            1000000000
         );
         coin::mint_to(
             &ibc_op_init_2_mint_cap,
             chain_addr,
-            1000000000,
+            1000000000
         );
         provide(&chain, 15000000, option::none());
 
@@ -3351,7 +3353,7 @@ module initia_std::minitswap {
             MOVE,
             string::utf8(b"0x1"),
             1,
-            string::utf8(b"channel-0"),
+            string::utf8(b"channel-0")
         );
 
         create_pool(
@@ -3365,7 +3367,7 @@ module initia_std::minitswap {
             MOVE,
             string::utf8(b"0x1"),
             2,
-            string::utf8(b"channel-2"),
+            string::utf8(b"channel-2")
         );
 
         create_stableswap_pool(
@@ -3374,7 +3376,7 @@ module initia_std::minitswap {
             string::utf8(b"channel-0"),
             ibc_op_init_1_metadata,
             10000000,
-            10000000,
+            10000000
         );
 
         // swap ibc op init to init
@@ -3382,7 +3384,7 @@ module initia_std::minitswap {
             swap_simulation(
                 ibc_op_init_1_metadata,
                 init_metadata,
-                1000000,
+                1000000
             );
         assert!(return_amount == 992741, 0);
 
@@ -3392,12 +3394,12 @@ module initia_std::minitswap {
             ibc_op_init_1_metadata,
             init_metadata,
             1000000,
-            option::none(),
+            option::none()
         );
         let balance_after = coin::balance(chain_addr, init_metadata);
         assert!(
             balance_after - balance_before == return_amount,
-            0,
+            0
         );
 
         // swap init to ibc op init
@@ -3405,7 +3407,7 @@ module initia_std::minitswap {
             swap_simulation(
                 init_metadata,
                 ibc_op_init_1_metadata,
-                500000,
+                500000
             );
         assert!(return_amount == 504226, 0);
 
@@ -3415,18 +3417,18 @@ module initia_std::minitswap {
             init_metadata,
             ibc_op_init_1_metadata,
             500000,
-            option::none(),
+            option::none()
         );
         let balance_after = coin::balance(chain_addr, ibc_op_init_1_metadata);
         assert!(
             balance_after - balance_before == return_amount,
-            0,
+            0
         );
 
         change_pool_size(
             &chain,
             ibc_op_init_1_metadata,
-            9000000,
+            9000000
         );
     }
 
@@ -3439,16 +3441,16 @@ module initia_std::minitswap {
                 1,
                 string::utf8(b"receiver"),
                 string::utf8(b"op_denom"),
-                1000000,
+                1000000
             );
 
         assert!(ibc_receiver == string::utf8(b"0x1::minitswap_hook::minitswap_hook"), 0);
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}",
+                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}"
                 ),
-            1,
+            1
         );
 
         let (ibc_receiver, memo) =
@@ -3458,16 +3460,16 @@ module initia_std::minitswap {
                 1,
                 string::utf8(b"receiver"),
                 string::utf8(b"op_denom"),
-                1000000,
+                1000000
             );
 
         assert!(ibc_receiver == string::utf8(b"cosmwasm_contract_addr"), 2);
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}",
+                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}"
                 ),
-            3,
+            3
         );
     }
 }

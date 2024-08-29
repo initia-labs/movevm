@@ -14,7 +14,7 @@ module 0xcafe::permissioned_token {
     const EWITHDRAW_NOT_ALLOWED: u64 = 1;
 
     struct AllowlistStore has key {
-        allowed_sender: vector<address>,
+        allowed_sender: vector<address>
     }
 
     public fun initialize(
@@ -27,14 +27,14 @@ module 0xcafe::permissioned_token {
             function_info::new_function_info(
                 account,
                 string::utf8(b"permissioned_token"),
-                string::utf8(b"withdraw"),
+                string::utf8(b"withdraw")
             );
 
         dispatchable_fungible_asset::register_dispatch_functions(
             constructor_ref,
             option::some(withdraw),
             option::none(),
-            option::none(),
+            option::none()
         );
     }
 
@@ -47,16 +47,14 @@ module 0xcafe::permissioned_token {
     }
 
     public fun withdraw<T: key>(
-        store: Object<T>,
-        amount: u64,
-        transfer_ref: &TransferRef,
+        store: Object<T>, amount: u64, transfer_ref: &TransferRef
     ): FungibleAsset acquires AllowlistStore {
         assert!(
             vector::contains(
                 &borrow_global<AllowlistStore>(@0xcafe).allowed_sender,
-                &object::object_address(&store),
+                &object::object_address(&store)
             ),
-            EWITHDRAW_NOT_ALLOWED,
+            EWITHDRAW_NOT_ALLOWED
         );
 
         fungible_asset::withdraw_with_ref(transfer_ref, store, amount)

@@ -58,7 +58,7 @@ module minitia_std::math64 {
         let res = 0;
         assert!(
             x != 0,
-            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2),
+            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2)
         );
         // Effectively the position of the most significant set bit
         let n = 32;
@@ -140,9 +140,9 @@ module minitia_std::math64 {
         assert!(
             ceil_div(
                 (((1u128 << 64) - 9) as u64),
-                11,
+                11
             ) == 1676976733973595601,
-            0,
+            0
         );
     }
 
@@ -211,10 +211,8 @@ module minitia_std::math64 {
         idx = 1;
         while (idx <= 64) {
             assert!(
-                floor_log2(
-                    (((1u128 << idx) - 1) as u64)
-                ) == idx - 1,
-                0,
+                floor_log2((((1u128 << idx) - 1) as u64)) == idx - 1,
+                0
             );
             idx = idx + 1;
         };
@@ -227,7 +225,7 @@ module minitia_std::math64 {
             let res = log2(1 << idx);
             assert!(
                 fixed_point32::get_raw_value(res) == (idx as u64) << 32,
-                0,
+                0
             );
             idx = idx + 1;
         };
@@ -246,7 +244,7 @@ module minitia_std::math64 {
             assert_approx_the_same(
                 (fixed_point32::get_raw_value(res) as u128),
                 expected,
-                8,
+                8
             );
             idx = idx + 1;
         };

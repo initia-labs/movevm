@@ -64,9 +64,9 @@ module initia_std::from_bcs {
             |s| {
                 assert!(
                     string::internal_check_utf8(string::bytes(s)),
-                    EINVALID_UTF8,
+                    EINVALID_UTF8
                 );
-            },
+            }
         );
         vec_string
     }
@@ -76,7 +76,7 @@ module initia_std::from_bcs {
         let s = from_bytes<String>(v);
         assert!(
             string::internal_check_utf8(string::bytes(&s)),
-            EINVALID_UTF8,
+            EINVALID_UTF8
         );
         s
     }

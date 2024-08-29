@@ -39,6 +39,6 @@ module minitia_std::block {
         _vm: &signer, _fake_block_hash: address
     ) {
         let (block_height, block_time) = get_block_info();
-        set_block_info(block_height+1, block_time);
+        set_block_info(block_height + 1, block_time);
     }
 }

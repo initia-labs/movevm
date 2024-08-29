@@ -51,7 +51,7 @@ module std::compare {
             i2 = i2 - 1;
             let elem_cmp = cmp_u8(
                 *vector::borrow(v1, i1),
-                *vector::borrow(v2, i2),
+                *vector::borrow(v2, i2)
             );
             if (elem_cmp != 0) return elem_cmp
             // else, compare next element

@@ -31,7 +31,7 @@ module TestAccount::TableTestData {
             t_ref,
             option::none(),
             option::none(),
-            1,
+            1
         );
 
         let i = 1;
@@ -49,7 +49,7 @@ module TestAccount::TableTestData {
             t_ref,
             option::some(2),
             option::some(5),
-            1,
+            1
         );
 
         let i = 2;
@@ -71,7 +71,7 @@ module TestAccount::TableTestData {
             t_ref,
             option::none(),
             option::none(),
-            2,
+            2
         );
 
         let i = 10;
@@ -89,7 +89,7 @@ module TestAccount::TableTestData {
             t_ref,
             option::some(2),
             option::some(5),
-            2,
+            2
         );
 
         let i = 4;

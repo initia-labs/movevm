@@ -22,12 +22,12 @@ module initia_std::royalty {
     struct Royalty has copy, drop, key {
         royalty: Decimal128,
         /// creators.
-        payee_address: address,
+        payee_address: address
     }
 
     /// This enables creating or overwriting a `MutatorRef`.
     struct MutatorRef has drop, store {
-        inner: ExtendRef,
+        inner: ExtendRef
     }
 
     /// Add a royalty, given a ConstructorRef.
@@ -51,7 +51,7 @@ module initia_std::royalty {
     public fun create(royalty: Decimal128, payee_address: address): Royalty {
         assert!(
             decimal128::val(&royalty) <= decimal128::val(&decimal128::one()),
-            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM),
+            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM)
         );
 
         Royalty { royalty, payee_address }
@@ -68,7 +68,7 @@ module initia_std::royalty {
     public(friend) fun delete(addr: address) acquires Royalty {
         assert!(
             exists<Royalty>(addr),
-            error::not_found(EROYALTY_DOES_NOT_EXIST),
+            error::not_found(EROYALTY_DOES_NOT_EXIST)
         );
         move_from<Royalty>(addr);
     }
@@ -109,7 +109,7 @@ module initia_std::royalty {
         assert!(option::some(init_royalty) == get(object), 0);
         assert!(
             royalty(&init_royalty) == decimal128::from_ratio(1, 2),
-            1,
+            1
         );
         assert!(payee_address(&init_royalty) == @0x123, 2);
 
@@ -119,11 +119,11 @@ module initia_std::royalty {
         update(&mutator_ref, update_royalty);
         assert!(
             option::some(update_royalty) == get(object),
-            3,
+            3
         );
         assert!(
             royalty(&update_royalty) == decimal128::from_ratio(2, 5),
-            4,
+            4
         );
         assert!(payee_address(&update_royalty) == @0x456, 5);
     }
@@ -141,7 +141,7 @@ module initia_std::royalty {
         update(&mutator_ref, update_royalty);
         assert!(
             option::some(update_royalty) == get(object),
-            1,
+            1
         );
     }
 

@@ -23,7 +23,7 @@ module minitia_std::transaction_context {
             i = i + 1;
             vector::push_back(
                 &mut addrs,
-                generate_unique_address(),
+                generate_unique_address()
             );
         };
 
@@ -33,7 +33,7 @@ module minitia_std::transaction_context {
             while (j < count) {
                 assert!(
                     *vector::borrow(&addrs, i) != *vector::borrow(&addrs, j),
-                    0,
+                    0
                 );
                 j = j + 1;
             };

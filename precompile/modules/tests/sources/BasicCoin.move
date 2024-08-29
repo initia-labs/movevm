@@ -8,14 +8,14 @@ module std::BasicCoin {
 
     struct Coin<phantom CoinType> has key, copy {
         value: u64,
-        test: bool,
+        test: bool
     }
 
     #[event]
     /// Event emitted when some amount of coins are withdrawn from an Collateral.
     struct MintEvent has drop, store {
         amount: u64,
-        coin_type: string::String,
+        coin_type: string::String
     }
 
     public entry fun mint<CoinType>(account: signer, value: u64) acquires Coin {
@@ -23,7 +23,7 @@ module std::BasicCoin {
         if (!exists<Coin<CoinType>>(account_addr)) {
             move_to(
                 &account,
-                Coin<CoinType> { value, test: true },
+                Coin<CoinType> { value, test: true }
             );
         } else {
             let coin = borrow_global_mut<Coin<CoinType>>(account_addr);
@@ -32,7 +32,10 @@ module std::BasicCoin {
 
         // emit event
         event::emit(
-            MintEvent { amount: value, coin_type: type_info::type_name<CoinType>(), },
+            MintEvent {
+                amount: value,
+                coin_type: type_info::type_name<CoinType>()
+            }
         );
     }
 

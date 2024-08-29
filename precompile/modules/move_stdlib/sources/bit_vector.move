@@ -12,7 +12,7 @@ module std::bit_vector {
 
     struct BitVector has copy, drop, store {
         length: u64,
-        bit_field: vector<bool>,
+        bit_field: vector<bool>
     }
 
     public fun new(length: u64): BitVector {
@@ -21,12 +21,12 @@ module std::bit_vector {
         let counter = 0;
         let bit_field = vector::empty();
         while ({
-                spec {
-                    invariant counter <= length;
-                    invariant len(bit_field) == counter;
-                };
-                (counter < length)
-            }) {
+            spec {
+                invariant counter <= length;
+                invariant len(bit_field) == counter;
+            };
+            (counter < length)
+        }) {
             vector::push_back(&mut bit_field, false);
             counter = counter + 1;
         };
@@ -35,7 +35,7 @@ module std::bit_vector {
             assert len(bit_field) == length;
         };
 
-        BitVector { length, bit_field, }
+        BitVector { length, bit_field }
     }
 
     spec new {
@@ -54,7 +54,7 @@ module std::bit_vector {
     public fun set(bitvector: &mut BitVector, bit_index: u64) {
         assert!(
             bit_index < vector::length(&bitvector.bit_field),
-            EINDEX,
+            EINDEX
         );
         let x = vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = true;
@@ -75,7 +75,7 @@ module std::bit_vector {
     public fun unset(bitvector: &mut BitVector, bit_index: u64) {
         assert!(
             bit_index < vector::length(&bitvector.bit_field),
-            EINDEX,
+            EINDEX
         );
         let x = vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = false;
@@ -126,7 +126,7 @@ module std::bit_vector {
     public fun is_index_set(bitvector: &BitVector, bit_index: u64): bool {
         assert!(
             bit_index < vector::length(&bitvector.bit_field),
-            EINDEX,
+            EINDEX
         );
         *vector::borrow(&bitvector.bit_field, bit_index)
     }

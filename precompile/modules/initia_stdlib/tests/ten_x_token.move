@@ -18,19 +18,19 @@ module 0xcafe::ten_x_token {
             function_info::new_function_info(
                 account,
                 string::utf8(b"ten_x_token"),
-                string::utf8(b"derived_balance"),
+                string::utf8(b"derived_balance")
             );
         let supply_value =
             function_info::new_function_info(
                 account,
                 string::utf8(b"ten_x_token"),
-                string::utf8(b"derived_supply"),
+                string::utf8(b"derived_supply")
             );
         dispatchable_fungible_asset::register_dispatch_functions(
             constructor_ref,
             option::none(),
             option::none(),
-            option::some(balance_value),
+            option::some(balance_value)
         );
         dispatchable_fungible_asset::register_derive_supply_dispatch_function(
             constructor_ref, option::some(supply_value)
