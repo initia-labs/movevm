@@ -12,6 +12,21 @@ module initia_std::transaction_context {
     #[test_only]
     native fun get_session_id(): vector<u8>;
 
+    #[test_only]
+    use initia_std::vector;
+
+    #[test_only]
+    public fun set_transaction_hash(transaction_hash: vector<u8>) {
+        assert!(
+            vector::length(&transaction_hash) == 32,
+            100
+        );
+        set_transaction_hash_internal(transaction_hash);
+    }
+
+    #[test_only]
+    native fun set_transaction_hash_internal(transaction_hash: vector<u8>);
+
     #[test]
     fun test_address_uniquess() {
         use std::vector;
@@ -62,5 +77,14 @@ module initia_std::transaction_context {
 
         let addr2 = initia_std::from_bcs::to_address(std::hash::sha3_256(bytes));
         assert!(addr1 == addr2, 0);
+    }
+
+    #[test]
+    fun test_get_transaction_hash() {
+        set_transaction_hash(x"0000000000000000000000000000000000000000000000000000000000000001");
+        assert!(
+            get_transaction_hash() == x"0000000000000000000000000000000000000000000000000000000000000001",
+            0
+        );
     }
 }
