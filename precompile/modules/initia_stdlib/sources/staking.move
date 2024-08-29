@@ -1316,9 +1316,17 @@ module initia_std::staking {
             if (total_unbonding_amount == 0) {
                 decimal128::one()
             } else {
+                let total_unbonding_amount = if ((total_unbonding_amount as u128) > state.unbonding_share) {
+                    // cap total unbonding amount to total share to prevent poissible attack like depositing huge amount of unbonding coin
+                    // directly to the validator's unbonding_coin_store.
+                    state.unbonding_share
+                } else {
+                    (total_unbonding_amount as u128)
+                };
+
                 decimal128::from_ratio(
                     state.unbonding_share,
-                    (total_unbonding_amount as u128)
+                    total_unbonding_amount
                 )
             };
 
