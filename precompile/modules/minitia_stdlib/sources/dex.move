@@ -13,7 +13,7 @@ module minitia_std::dex {
     use minitia_std::string::{Self, String};
     use minitia_std::table::{Self, Table};
     use minitia_std::coin;
-    use minitia_std::decimal256;
+    use minitia_std::decimal256::{Self, Decimal256};
 
     /// Pool configuration
     struct Config has key {
@@ -247,7 +247,7 @@ module minitia_std::dex {
     /// https://balancer.fi/whitepaper.pdf (2)
     public fun get_spot_price(
         pair: Object<Config>, base_coin: Object<Metadata>
-    ): Decimal128 acquires Config, Pool {
+    ): Decimal256 acquires Config, Pool {
         let (coin_a_pool, coin_b_pool, coin_a_weight, coin_b_weight, _) =
             pool_info(pair, false);
 
@@ -265,19 +265,16 @@ module minitia_std::dex {
                 (coin_b_pool, coin_a_pool, coin_b_weight, coin_a_weight)
             };
 
-        let price =
-            decimal256::from_ratio(
-                (quote_pool as u256) * (decimal128::val(&base_weight) as u256),
-                ((base_pool as u256) * (decimal128::val(&quote_weight) as u256))
-            );
-
-        decimal128::new((decimal256::val(&price) as u128))
+        decimal256::from_ratio(
+            (quote_pool as u256) * (decimal128::val(&base_weight) as u256),
+            ((base_pool as u256) * (decimal128::val(&quote_weight) as u256))
+        )
     }
 
     #[view]
     public fun get_spot_price_by_denom(
         pair_denom: String, base_coin: String
-    ): Decimal128 acquires Config, Pool {
+    ): Decimal256 acquires Config, Pool {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let base_metadata = coin::denom_to_metadata(base_coin);
         get_spot_price(object::convert(pair_metadata), base_metadata)
@@ -2019,7 +2016,7 @@ module minitia_std::dex {
 
         assert!(
             get_spot_price(pair, init_metadata)
-                == decimal128::from_string(&string::utf8(b"24.75")),
+                == decimal256::from_string(&string::utf8(b"24.75")),
             0
         );
 
@@ -2027,7 +2024,7 @@ module minitia_std::dex {
         set_block_info(11, 2500);
         assert!(
             get_spot_price(pair, init_metadata)
-                == decimal128::from_string(&string::utf8(b"1")),
+                == decimal256::from_string(&string::utf8(b"1")),
             1
         );
 
@@ -2035,7 +2032,7 @@ module minitia_std::dex {
         set_block_info(12, 3500);
         assert!(
             get_spot_price(pair, init_metadata)
-                == decimal128::from_string(&string::utf8(b"0.391025641025641025")),
+                == decimal256::from_string(&string::utf8(b"0.391025641025641025")),
             2
         );
 
