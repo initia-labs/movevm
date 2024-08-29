@@ -211,6 +211,9 @@ module minitia_std::dex {
     /// Zero amount in the swap simulation is not allowed
     const EZERO_AMOUNT_IN: u64 = 20;
 
+    /// Weights sum must be 1.0
+    const EINVALID_WEIGHTS: u64 = 21;
+
     // Constants
     const MAX_LIMIT: u8 = 30;
 
@@ -1260,6 +1263,18 @@ module minitia_std::dex {
         return_coin
     }
 
+    /// Sum of weights must be 1
+    fun assert_weights(weights: Weights) {
+        assert!(
+            decimal128::is_same(&decimal128::one(), &decimal128::add(&weights.weights_before.coin_a_weight, &weights.weights_before.coin_b_weight)),
+            EINVALID_WEIGHTS,
+        );
+        assert!(
+            decimal128::is_same(&decimal128::one(), &decimal128::add(&weights.weights_after.coin_a_weight, &weights.weights_after.coin_b_weight)),
+            EINVALID_WEIGHTS,
+        );
+    }
+    
     public fun create_pair(
         creator: &signer,
         name: String,
@@ -1279,6 +1294,8 @@ module minitia_std::dex {
                 string::utf8(b""),
                 string::utf8(b""),
             );
+
+        assert_weights(weights);
 
         assert!(
             decimal128::val(&swap_fee_rate) <= MAX_FEE_RATE,
