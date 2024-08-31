@@ -1134,9 +1134,7 @@ module initia_std::staking {
         let validator = delegation.validator;
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
-        if (!table::contains(
-            &delegation_store.delegations, metadata
-        )) {
+        if (!table::contains(&delegation_store.delegations, metadata)) {
             table::add(
                 &mut delegation_store.delegations,
                 metadata,
@@ -1316,13 +1314,14 @@ module initia_std::staking {
             if (total_unbonding_amount == 0) {
                 decimal128::one()
             } else {
-                let total_unbonding_amount = if ((total_unbonding_amount as u128) > state.unbonding_share) {
-                    // cap total unbonding amount to total share to prevent poissible attack like depositing huge amount of unbonding coin
-                    // directly to the validator's unbonding_coin_store.
-                    state.unbonding_share
-                } else {
-                    (total_unbonding_amount as u128)
-                };
+                let total_unbonding_amount =
+                    if ((total_unbonding_amount as u128) > state.unbonding_share) {
+                        // cap total unbonding amount to total share to prevent poissible attack like depositing huge amount of unbonding coin
+                        // directly to the validator's unbonding_coin_store.
+                        state.unbonding_share
+                    } else {
+                        (total_unbonding_amount as u128)
+                    };
 
                 decimal128::from_ratio(
                     state.unbonding_share,
@@ -1419,9 +1418,7 @@ module initia_std::staking {
         let key = UnbondingKey { validator, release_time };
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
-        if (!table::contains(
-            &delegation_store.unbondings, metadata
-        )) {
+        if (!table::contains(&delegation_store.unbondings, metadata)) {
             table::add(
                 &mut delegation_store.unbondings,
                 metadata,

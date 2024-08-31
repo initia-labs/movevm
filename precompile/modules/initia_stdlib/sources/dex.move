@@ -283,9 +283,7 @@ module initia_std::dex {
     #[view]
     /// Return swap simulation result
     public fun get_swap_simulation(
-        pair: Object<Config>,
-        offer_metadata: Object<Metadata>,
-        offer_amount: u64
+        pair: Object<Config>, offer_metadata: Object<Metadata>, offer_amount: u64
     ): u64 acquires Config, Pool {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
@@ -316,9 +314,7 @@ module initia_std::dex {
 
     #[view]
     public fun get_swap_simulation_by_denom(
-        pair_denom: String,
-        offer_denom: String,
-        offer_amount: u64
+        pair_denom: String, offer_denom: String, offer_amount: u64
     ): u64 acquires Config, Pool {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
@@ -332,9 +328,7 @@ module initia_std::dex {
     #[view]
     /// Return swap simulation result
     public fun get_swap_simulation_given_out(
-        pair: Object<Config>,
-        offer_metadata: Object<Metadata>,
-        return_amount: u64
+        pair: Object<Config>, offer_metadata: Object<Metadata>, return_amount: u64
     ): u64 acquires Config, Pool {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
@@ -365,9 +359,7 @@ module initia_std::dex {
 
     #[view]
     public fun get_swap_simulation_given_out_by_denom(
-        pair_denom: String,
-        offer_denom: String,
-        return_amount: u64
+        pair_denom: String, offer_denom: String, return_amount: u64
     ): u64 acquires Config, Pool {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
@@ -593,9 +585,7 @@ module initia_std::dex {
                     }
                 )
             } else {
-                option::some(
-                    PairKey { coin_a, coin_b, liquidity_token: @0x0 }
-                )
+                option::some(PairKey { coin_a, coin_b, liquidity_token: @0x0 })
             };
 
         let res = vector[];
@@ -812,9 +802,7 @@ module initia_std::dex {
 
     /// update swap fee rate
     public entry fun update_swap_fee_rate(
-        chain: &signer,
-        pair: Object<Config>,
-        swap_fee_rate: Decimal128
+        chain: &signer, pair: Object<Config>, swap_fee_rate: Decimal128
     ) acquires Config, Pool, ModuleStore {
         check_chain_permission(chain);
 

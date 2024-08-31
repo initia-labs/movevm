@@ -2291,9 +2291,7 @@ module initia_std::minitswap {
         op_bridge_id: u64,
         ibc_channel: String
     ): &mut Pools {
-        if (table::contains(
-            &module_store.pools, ibc_op_init_metadata
-        )) {
+        if (table::contains(&module_store.pools, ibc_op_init_metadata)) {
             table::borrow_mut(
                 &mut module_store.pools,
                 ibc_op_init_metadata

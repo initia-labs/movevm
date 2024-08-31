@@ -389,9 +389,7 @@ module minitia_std::fungible_asset {
         let store_obj = &object::generate_signer(constructor_ref);
 
         // Store the overload function hook.
-        move_to<DeriveSupply>(
-            store_obj, DeriveSupply { dispatch_function }
-        );
+        move_to<DeriveSupply>(store_obj, DeriveSupply { dispatch_function });
     }
 
     /// Check the requirements for registering a dispatchable function.

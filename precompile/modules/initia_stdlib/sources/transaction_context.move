@@ -18,8 +18,7 @@ module initia_std::transaction_context {
     #[test_only]
     public fun set_transaction_hash(transaction_hash: vector<u8>) {
         assert!(
-            vector::length(&transaction_hash) == 32,
-            100
+            vector::length(&transaction_hash) == 32, 100
         );
         set_transaction_hash_internal(transaction_hash);
     }
@@ -81,9 +80,12 @@ module initia_std::transaction_context {
 
     #[test]
     fun test_get_transaction_hash() {
-        set_transaction_hash(x"0000000000000000000000000000000000000000000000000000000000000001");
+        set_transaction_hash(
+            x"0000000000000000000000000000000000000000000000000000000000000001"
+        );
         assert!(
-            get_transaction_hash() == x"0000000000000000000000000000000000000000000000000000000000000001",
+            get_transaction_hash()
+                == x"0000000000000000000000000000000000000000000000000000000000000001",
             0
         );
     }
