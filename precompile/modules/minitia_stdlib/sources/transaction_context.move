@@ -17,9 +17,7 @@ module minitia_std::transaction_context {
 
     #[test_only]
     public fun set_transaction_hash(transaction_hash: vector<u8>) {
-        assert!(
-            vector::length(&transaction_hash) == 32, 100
-        );
+        assert!(vector::length(&transaction_hash) == 32, 100);
 
         set_transaction_hash_internal(transaction_hash);
     }

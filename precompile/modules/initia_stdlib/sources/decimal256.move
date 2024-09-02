@@ -61,6 +61,38 @@ module initia_std::decimal256 {
         new(numerator * DECIMAL_FRACTIONAL / denominator)
     }
 
+    public fun rev(decimal: &Decimal256): Decimal256 {
+        new(DECIMAL_FRACTIONAL * DECIMAL_FRACTIONAL / decimal.val)
+    }
+
+    public fun gt(left: &Decimal256, right: &Decimal256): bool {
+        left.val > right.val
+    }
+
+    public fun gte(left: &Decimal256, right: &Decimal256): bool {
+        left.val >= right.val
+    }
+
+    public fun lt(left: &Decimal256, right: &Decimal256): bool {
+        left.val < right.val
+    }
+
+    public fun lte(left: &Decimal256, right: &Decimal256): bool {
+        left.val <= right.val
+    }
+
+    public fun eq(left: &Decimal256, right: &Decimal256): bool {
+        left.val == right.val
+    }
+
+    public fun is_zero(decimal: &Decimal256): bool {
+        decimal.val == 0
+    }
+
+    public fun is_one(decimal: &Decimal256): bool {
+        decimal.val == DECIMAL_FRACTIONAL
+    }
+
     public fun add(left: &Decimal256, right: &Decimal256): Decimal256 {
         new(left.val + right.val)
     }
@@ -138,6 +170,18 @@ module initia_std::decimal256 {
 
     public fun val(decimal: &Decimal256): u256 {
         decimal.val
+    }
+
+    public fun truncate_u64(decimal: &Decimal256): u64 {
+        (decimal.val / DECIMAL_FRACTIONAL as u64)
+    }
+
+    public fun truncate_u128(decimal: &Decimal256): u128 {
+        (decimal.val / DECIMAL_FRACTIONAL as u128)
+    }
+
+    public fun truncate_u256(decimal: &Decimal256): u256 {
+        decimal.val / DECIMAL_FRACTIONAL
     }
 
     public fun round_up_u64(decimal: &Decimal256): u64 {

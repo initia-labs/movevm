@@ -77,7 +77,7 @@ impl StakingAPI for BlankStakingAPIImpl {
         _validator: &[u8],
         _metadata: AccountAddress,
         _amount: u64,
-    ) -> anyhow::Result<u64> {
+    ) -> anyhow::Result<String> {
         Err(anyhow!("validator not found"))
     }
 
@@ -85,7 +85,7 @@ impl StakingAPI for BlankStakingAPIImpl {
         &self,
         _validator: &[u8],
         _metadata: AccountAddress,
-        _share: u64,
+        _share: String,
     ) -> anyhow::Result<u64> {
         Err(anyhow!("validator not found"))
     }

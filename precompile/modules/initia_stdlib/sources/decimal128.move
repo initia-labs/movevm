@@ -48,6 +48,39 @@ module initia_std::decimal128 {
         new(numerator * DECIMAL_FRACTIONAL / denominator)
     }
 
+    public fun rev(decimal: &Decimal128): Decimal128 {
+        new(((DECIMAL_FRACTIONAL as u256) * (DECIMAL_FRACTIONAL as u256)
+            / (decimal.val as u256) as u128))
+    }
+
+    public fun gt(left: &Decimal128, right: &Decimal128): bool {
+        left.val > right.val
+    }
+
+    public fun gte(left: &Decimal128, right: &Decimal128): bool {
+        left.val >= right.val
+    }
+
+    public fun lt(left: &Decimal128, right: &Decimal128): bool {
+        left.val < right.val
+    }
+
+    public fun lte(left: &Decimal128, right: &Decimal128): bool {
+        left.val <= right.val
+    }
+
+    public fun eq(left: &Decimal128, right: &Decimal128): bool {
+        left.val == right.val
+    }
+
+    public fun is_zero(decimal: &Decimal128): bool {
+        decimal.val == 0
+    }
+
+    public fun is_one(decimal: &Decimal128): bool {
+        decimal.val == DECIMAL_FRACTIONAL
+    }
+
     public fun add(left: &Decimal128, right: &Decimal128): Decimal128 {
         new(left.val + right.val)
     }
@@ -104,6 +137,14 @@ module initia_std::decimal128 {
 
     public fun val(decimal: &Decimal128): u128 {
         decimal.val
+    }
+
+    public fun truncate_u64(decimal: &Decimal128): u64 {
+        (decimal.val / DECIMAL_FRACTIONAL as u64)
+    }
+
+    public fun truncate_u128(decimal: &Decimal128): u128 {
+        decimal.val / DECIMAL_FRACTIONAL
     }
 
     public fun round_up_u64(decimal: &Decimal128): u64 {

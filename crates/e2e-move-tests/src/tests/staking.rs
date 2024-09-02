@@ -168,7 +168,7 @@ fn test_simple_staking() {
             None,
             Some(vec![(
                 val_addr.clone(),
-                vec![(staking_metadata, (1_000_000u64, 0u64))],
+                vec![(staking_metadata, (1_000_000u64, "0".to_string()))],
             )]),
             None,
         ),
@@ -207,7 +207,7 @@ fn test_simple_staking() {
             None,
             Some(vec![(
                 val_addr.clone(),
-                vec![(staking_metadata, (0u64, 500_000u64))],
+                vec![(staking_metadata, (0u64, "500000".to_string()))],
             )]),
             None,
         ),

@@ -198,12 +198,12 @@ typedef struct {
                              U8SliceView,
                              U8SliceView,
                              uint64_t,
-                             uint64_t*,
+                             UnmanagedVector*,
                              UnmanagedVector*);
   int32_t (*share_to_amount)(const api_t*,
                              U8SliceView,
                              U8SliceView,
-                             uint64_t,
+                             U8SliceView,
                              uint64_t*,
                              UnmanagedVector*);
   int32_t (*unbond_timestamp)(const api_t*, uint64_t*, UnmanagedVector*);

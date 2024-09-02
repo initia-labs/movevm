@@ -14,8 +14,8 @@ typedef GoError (*scan_db_fn)(db_t *ptr, U8SliceView prefix, U8SliceView start, 
 // and api
 typedef GoError (*query_fn)(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
 typedef GoError (*get_account_info_fn)(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence,  uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut);
-typedef GoError (*amount_to_share_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share,  UnmanagedVector *errOut);
-typedef GoError (*share_to_amount_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount,  UnmanagedVector *errOut);
+typedef GoError (*amount_to_share_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, UnmanagedVector *share,  UnmanagedVector *errOut);
+typedef GoError (*share_to_amount_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, U8SliceView share, uint64_t *amount,  UnmanagedVector *errOut);
 typedef GoError (*unbond_timestamp_fn)(api_t *ptr, uint64_t *unbondTimestamp,  UnmanagedVector *errOut);
 typedef GoError (*get_price_fn)(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
 // and iterator
@@ -29,8 +29,8 @@ GoError cScan_cgo(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView 
 // api
 GoError cQuery_cgo(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
 GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut);
-GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share, UnmanagedVector *errOut);
-GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount, UnmanagedVector *errOut);
+GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, UnmanagedVector *share, UnmanagedVector *errOut);
+GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, U8SliceView share, uint64_t *amount, UnmanagedVector *errOut);
 GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);
 GoError cGetPrice_cgo(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
 // iterator
@@ -303,8 +303,8 @@ func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) 
 type GoAPI interface {
 	Query(types.QueryRequest, uint64) ([]byte, uint64, error)
 	GetAccountInfo(types.AccountAddress) (bool /* found */, uint64 /* account number */, uint64 /* sequence */, uint8 /* account type */, bool /* is blocked */)
-	AmountToShare([]byte, types.AccountAddress, uint64) (uint64, error)
-	ShareToAmount([]byte, types.AccountAddress, uint64) (uint64, error)
+	AmountToShare([]byte, types.AccountAddress, uint64) (string, error)
+	ShareToAmount([]byte, types.AccountAddress, string) (uint64, error)
 	UnbondTimestamp() uint64
 	GetPrice(string) ([]byte, uint64, uint64, error)
 }
@@ -402,7 +402,7 @@ func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_nu
 }
 
 //export cAmountToShare
-func cAmountToShare(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceView, amount C.uint64_t, share *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cAmountToShare(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceView, amount C.uint64_t, share *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if share == nil {
@@ -433,12 +433,12 @@ func cAmountToShare(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceVie
 		return C.GoError_User
 	}
 
-	*share = C.uint64_t(s)
+	*share = newUnmanagedVector([]byte(s))
 	return C.GoError_None
 }
 
 //export cShareToAmount
-func cShareToAmount(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceView, share C.uint64_t, amount *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cShareToAmount(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceView, share C.U8SliceView, amount *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if amount == nil {
@@ -455,7 +455,7 @@ func cShareToAmount(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceVie
 
 	v := copyU8Slice(validator)
 	m := copyU8Slice(metadata)
-	s := uint64(share)
+	s := copyU8Slice(share)
 
 	t, err := types.BcsDeserializeAccountAddress(m)
 	if err != nil {
@@ -463,7 +463,7 @@ func cShareToAmount(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceVie
 		return C.GoError_User
 	}
 
-	a, err := api.ShareToAmount(v, t, s)
+	a, err := api.ShareToAmount(v, t, string(s))
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_User

@@ -12,7 +12,7 @@ pub struct StakingDelta {
     /// The delegation amount
     delegation: u64,
     /// The undelegation share amount
-    undelegation: u64,
+    undelegation: String,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -23,18 +23,18 @@ pub struct StakingChangeSet(
             AccountAddress,
             (
                 u64, /* delegation amount */
-                u64, /* undelegation share amount */
+                String, /* undelegation share amount */
             ),
         >,
     >,
 );
 
 impl StakingChangeSet {
-    pub fn new(map: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, u64)>>) -> StakingChangeSet {
+    pub fn new(map: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, String)>>) -> StakingChangeSet {
         Self(map)
     }
 
-    pub fn changes(&self) -> &BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, u64)>> {
+    pub fn changes(&self) -> &BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, String)>> {
         &self.0
     }
 
@@ -42,7 +42,7 @@ impl StakingChangeSet {
         self.0
             .into_iter()
             .flat_map(
-                |(validator, changes): (Vec<u8>, BTreeMap<AccountAddress, (u64, u64)>)| {
+                |(validator, changes): (Vec<u8>, BTreeMap<AccountAddress, (u64, String)>)| {
                     changes
                         .into_iter()
                         .map(|(metadata, (delegation, undelegation))| StakingDelta {
