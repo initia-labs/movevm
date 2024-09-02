@@ -1861,7 +1861,7 @@ module initia_std::staking {
     }
 
     #[test(chain = @0x1, user = @0x1234)]
-    public fun test_delegate(chain: &signer, user: &signer) acquires DelegationStore, ModuleStore {
+    public fun test_delegate2(chain: &signer, user: &signer) acquires DelegationStore, ModuleStore {
         test_setup();
 
         let user_addr = signer::address_of(user);
@@ -1878,15 +1878,15 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            1,
-            1
+            3,
+            2
         );
 
         // Delegate with entry function
         delegate_script(user, metadata, validator, 100000);
 
         let delegation = get_delegation(user_addr, metadata, validator);
-        assert!(decimal128::truncate_u64(&delegation.share) == 100000, 0);
+        assert!(decimal128::truncate_u64(&delegation.share) == 150000, 0);
         assert!(delegation.validator == validator, 1);
         assert!(
             coin::balance(user_addr, metadata) == 900000,
@@ -1902,7 +1902,7 @@ module initia_std::staking {
                 decimal128::from_ratio_u64(50000, 1)
             );
         let delegation = get_delegation(user_addr, metadata, validator);
-        assert!(decimal128::truncate_u64(&delegation.share) == 50000, 3);
+        assert!(decimal128::truncate_u64(&delegation.share) == 100000, 3);
 
         // withdraw all of rest delegation
         let delegation1 =
@@ -1918,7 +1918,8 @@ module initia_std::staking {
             option::none(),
             1
         );
-        assert!(vector::length(&delegations) == 0, 4);
+        assert!(vector::length(&delegations) == 1, 4);
+        assert!(decimal128::truncate_u64(&vector::borrow(&delegations, 0).share) == 50000, 4);
 
         fund_reward_coin(chain, @relayer, 100000);
         deposit_reward_for_chain(
@@ -1930,10 +1931,10 @@ module initia_std::staking {
 
         // deposit delegation
         let reward = deposit_delegation(user_addr, delegation0);
-        assert!(fungible_asset::amount(&reward) == 50000, 5);
+        assert!(fungible_asset::amount(&reward) == 66666, 5);
 
         let delegation = get_delegation(user_addr, metadata, validator);
-        assert!(decimal128::truncate_u64(&delegation.share) == 50000, 6);
+        assert!(decimal128::truncate_u64(&delegation.share) == 100000, 6);
         assert!(delegation.validator == validator, 7);
 
         coin::deposit(user_addr, reward);
@@ -1946,14 +1947,14 @@ module initia_std::staking {
 
         // merge delegation
         let reward = merge_delegation(&mut delegation1, delegation2);
-        assert!(fungible_asset::amount(&reward) == 50000, 13);
+        assert!(fungible_asset::amount(&reward) == 33332, 13);
         assert!(decimal128::truncate_u64(&delegation1.share) == 50000, 14);
         coin::deposit(user_addr, reward);
 
         // delegate
         let coin = coin::withdraw(user, metadata, 100000);
         let delegation3 = delegate(validator, coin);
-        assert!(decimal128::truncate_u64(&delegation3.share) == 100000, 12);
+        assert!(decimal128::truncate_u64(&delegation3.share) == 150000, 12);
         let reward = merge_delegation(&mut delegation1, delegation3);
         fungible_asset::destroy_zero(reward);
 
@@ -1962,18 +1963,18 @@ module initia_std::staking {
         fungible_asset::destroy_zero(reward);
 
         // 1000000 (mint) - 100000 (delegate_script) - 100000 (delegate)
-        // 100000 (rewards)
+        // 99998 (rewards)
         assert!(
             coin::balance(user_addr, metadata) == 800000,
             16
         );
         assert!(
-            coin::balance(user_addr, reward_metadata) == 100000,
+            coin::balance(user_addr, reward_metadata) == 99998,
             17
         );
 
         let delegation = get_delegation(user_addr, metadata, validator);
-        assert!(decimal128::truncate_u64(&delegation.share) == 200000, 6);
+        assert!(decimal128::truncate_u64(&delegation.share) == 300000, 6);
     }
 
     #[test(chain = @0x1, user = @0x1234)]
