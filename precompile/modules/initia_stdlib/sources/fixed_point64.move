@@ -31,6 +31,14 @@ module initia_std::fixed_point64 {
     /// Abort code on calculation result is negative.
     const ENEGATIVE_RESULT: u64 = 0x10006;
 
+    public fun one(): FixedPoint64 {
+        create_from_raw_value(1 << 64)
+    }
+
+    public fun zero(): FixedPoint64 {
+        create_from_raw_value(0)
+    }
+
     /// Returns self - y. self must be not less than y.
     public fun sub(self: FixedPoint64, y: FixedPoint64): FixedPoint64 {
         let x_raw = get_raw_value(self);
@@ -50,6 +58,13 @@ module initia_std::fixed_point64 {
         let x_raw = get_raw_value(self);
         let y_raw = get_raw_value(y);
         let result = (x_raw as u256) + (y_raw as u256);
+        assert!(result <= MAX_U128, ERATIO_OUT_OF_RANGE);
+        create_from_raw_value((result as u128))
+    }
+
+    public fun add_u64(self: FixedPoint64, y: u64): FixedPoint64 {
+        let x_raw = get_raw_value(self);
+        let result = (x_raw as u256) + ((y as u256) << 64);
         assert!(result <= MAX_U128, ERATIO_OUT_OF_RANGE);
         create_from_raw_value((result as u128))
     }
