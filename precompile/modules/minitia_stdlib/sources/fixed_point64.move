@@ -17,6 +17,8 @@ module minitia_std::fixed_point64 {
     }
 
     const MAX_U128: u256 = 340282366920938463463374607431768211455;
+    const MAX_U64: u128 = 18446744073709551615;
+
 
     /// The denominator provided was zero
     const EDENOMINATOR: u64 = 0x10001;
@@ -47,6 +49,17 @@ module minitia_std::fixed_point64 {
         create_from_raw_value(x_raw - y_raw)
     }
 
+    public fun sub_u64(self: FixedPoint64, y: u64): FixedPoint64 {
+        sub_u128(self, (y as u128))
+    }
+
+    public fun sub_u128(self: FixedPoint64, y: u128): FixedPoint64 {
+        let x_raw = (get_raw_value(self) as u256);
+        let y_raw = (y as u256) << 64;
+        assert!(x_raw >= y_raw, ENEGATIVE_RESULT);
+        create_from_raw_value(((x_raw - y_raw) as u128))
+    }
+
     spec sub {
         pragma opaque;
         aborts_if self.value < y.value with ENEGATIVE_RESULT;
@@ -63,8 +76,13 @@ module minitia_std::fixed_point64 {
     }
 
     public fun add_u64(self: FixedPoint64, y: u64): FixedPoint64 {
-        let x_raw = get_raw_value(self);
-        let result = (x_raw as u256) + ((y as u256) << 64);
+        add_u128(self, (y as u128))
+    }
+
+    public fun add_u128(self: FixedPoint64, y: u128): FixedPoint64 {
+        let x_raw = (get_raw_value(self) as u256);
+        let y_raw = (y as u256) << 64;
+        let result = x_raw + y_raw;
         assert!(result <= MAX_U128, ERATIO_OUT_OF_RANGE);
         create_from_raw_value((result as u128))
     }
@@ -73,6 +91,20 @@ module minitia_std::fixed_point64 {
         pragma opaque;
         aborts_if (self.value as u256) + (y.value as u256) > MAX_U128 with ERATIO_OUT_OF_RANGE;
         ensures result.value == self.value + y.value;
+    }
+
+    public fun multiply(self: FixedPoint64, y: FixedPoint64): FixedPoint64 {
+        let x_raw = get_raw_value(self);
+        let y_raw = get_raw_value(y);
+        let result = ((x_raw as u256) * (y_raw as u256)) >> 64;
+        assert!(result <= MAX_U128, EMULTIPLICATION);
+        create_from_raw_value((result as u128))
+    }
+
+    public fun multiply_u64(val: u64, multiplier: FixedPoint64): u64 {
+        let res = multiply_u128((val as u128), multiplier);
+        assert!(res <= MAX_U64, EMULTIPLICATION);
+        (res as u64)
     }
 
     /// Multiply a u128 integer by a fixed-point number, truncating any
@@ -105,6 +137,24 @@ module minitia_std::fixed_point64 {
 
     spec fun spec_multiply_u128(val: num, multiplier: FixedPoint64): num {
         (val * multiplier.value) >> 64
+    }
+
+    public fun divide(self: FixedPoint64, divisor: FixedPoint64): FixedPoint64 {
+        // Check for division by zero.
+        assert!(divisor.value != 0, EDIVISION_BY_ZERO);
+        // Perform the division with 256 bits to avoid losing accuracy.
+        let result = ((self.value as u256) << 64) / (divisor.value as u256);
+        assert!(result <= MAX_U128, EDIVISION);
+        create_from_raw_value((result as u128))
+    }
+
+    /// Divide a u64 integer by a fixed-point number, truncating any
+    /// fractional part of the quotient. This will abort if the divisor
+    /// is zero or if the quotient overflows.
+    public fun divide_u64(val: u64, divisor: FixedPoint64): u64 {
+        let res = divide_u128((val as u128), divisor);
+        assert!(res <= MAX_U64, EDIVISION);
+        (res as u64)
     }
 
     /// Divide a u128 integer by a fixed-point number, truncating any
@@ -468,15 +518,6 @@ module minitia_std::fixed_point64 {
     }
 
     #[test]
-    public fun test_add_u64() {
-        let x = one();
-        let y = 1u64;
-
-        let result = add_u64(x, y);
-        assert!(get_raw_value(result) == 2 << 64, 1);
-    }
-
-    #[test]
     #[expected_failure(abort_code = 0x10006, location = Self)]
     public entry fun test_sub_should_abort() {
         let x = create_from_rational(1, 3);
@@ -503,5 +544,90 @@ module minitia_std::fixed_point64 {
             n = n * n;
         };
         assert!((x - y) * mult < x, 0);
+    }
+
+    #[test]
+    public entry fun test_div() {
+        let x = create_from_rational(9, 7);
+        let y = create_from_rational(1, 3);
+        let result = divide(x, y);
+        // 9/7 / 1/3 = 27/7
+        let expected_result = create_from_rational(27, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_div_u64() {
+        let x = create_from_rational(9, 7);
+        let y = 3u64;
+        let result = divide_u64(y, x);
+        // 3 / 9/7 = 21/9
+        let expected_result = create_from_rational(21, 9);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_div_u128() {
+        let x = create_from_rational(9, 7);
+        let y = 3u128;
+        let result = divide_u128(y, x);
+        std::debug::print(&result);
+        // 3 / 9/7 = 21/9
+        let expected_result = create_from_rational(21, 9);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_multiply() {
+        let x = create_from_rational(9, 7);
+        let y = create_from_rational(1, 3);
+        let result = multiply(x, y);
+        // 9/7 * 1/3 = 3/7
+        let expected_result = create_from_rational(3, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_multiply_u64() {
+        let x = create_from_rational(9, 7);
+        let y = 3u64;
+        let result = multiply_u64(y, x);
+        // 3 * 9/7 = 27/7
+        let expected_result = create_from_rational(27, 7);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_multiply_u128() {
+        let x = create_from_rational(9, 7);
+        let y = 3u128;
+        let result = multiply_u128(y, x);
+        // 3 * 9/7 = 27/7
+        let expected_result = create_from_rational(27, 7);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
     }
 }
