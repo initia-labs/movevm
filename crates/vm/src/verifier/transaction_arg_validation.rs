@@ -99,6 +99,26 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
                 func_name: ident_str!("new"),
             },
         ),
+        (
+            "0x1::biguint::BigUint",
+            FunctionId {
+                module_id: ModuleId::new(
+                    AccountAddress::ONE,
+                    Identifier::from(ident_str!("biguint")),
+                ),
+                func_name: ident_str!("from_le_bytes"),
+            },
+        ),
+        (
+            "0x1::bigdecimal::BigDecimal",
+            FunctionId {
+                module_id: ModuleId::new(
+                    AccountAddress::ONE,
+                    Identifier::from(ident_str!("bigdecimal")),
+                ),
+                func_name: ident_str!("from_scaled_le_bytes"),
+            },
+        )
     ]
     .into_iter()
     .map(|(s, validator)| (s.to_string(), validator))

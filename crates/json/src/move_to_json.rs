@@ -1,6 +1,4 @@
-use std::str::FromStr;
-
-use bigdecimal::{BigDecimal, FromPrimitive};
+use bigdecimal::{num_bigint::BigUint, BigDecimal, FromPrimitive};
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{
     language_storage::{StructTag, CORE_CODE_ADDRESS},
@@ -85,6 +83,8 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                 // else, execute convert function recursively
                 if is_utf8_string(type_) {
                     convert_string_to_json_value(&fields[0].1)
+                } else if is_biguint(type_) {
+                    convert_biguint_to_json_value(&fields[0].1)
                 } else if is_decimal(type_) {
                     convert_decimal_to_json_value(&fields[0].1)
                 } else if is_option(type_) {
@@ -142,16 +142,51 @@ fn convert_string_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     Ok(JSONValue::String(json_val.to_string()))
 }
 
-fn convert_decimal_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
-    const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
-
+fn convert_biguint_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     Ok(JSONValue::String(match val {
-        MoveValue::U128(num) => (BigDecimal::from_u128(*num).unwrap() / DECIMAL_SCALE).to_string(),
-        MoveValue::U256(num) => {
-            (BigDecimal::from_str(&num.to_string()).unwrap() / DECIMAL_SCALE).to_string()
+        MoveValue::Vector(bytes_val) => {
+            let bytes_le = bytes_val
+                .iter()
+                .map(|byte_val| match byte_val {
+                    MoveValue::U8(byte) => *byte,
+                    _ => unreachable!(),
+                })
+                .collect::<Vec<u8>>();
+
+            BigUint::from_bytes_le(&bytes_le).to_string()
         }
         _ => unreachable!(),
     }))
+}
+
+fn convert_decimal_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
+    Ok(JSONValue::String(
+        match val {
+            MoveValue::U128(num) => {
+                let num = BigUint::from_bytes_le(&num.to_le_bytes());
+                BigDecimal::new(num.into(), 18)
+            }
+            MoveValue::U256(num) => {
+                let num = BigUint::from_bytes_le(&num.to_le_bytes());
+                BigDecimal::new(num.into(), 18)
+            }
+            MoveValue::Vector(bytes_val) => {
+                let bytes_le = bytes_val
+                    .iter()
+                    .map(|byte_val| match byte_val {
+                        MoveValue::U8(byte) => *byte,
+                        _ => unreachable!(),
+                    })
+                    .collect::<Vec<u8>>();
+
+                let num = BigUint::from_bytes_le(&bytes_le);
+                BigDecimal::new(num.into(), 18)
+            }
+            _ => unreachable!(),
+        }
+        .normalized()
+        .to_string()
+    ))
 }
 
 fn convert_fixed_point_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
@@ -189,10 +224,20 @@ fn is_utf8_string(type_: &StructTag) -> bool {
         && type_.name.as_str() == "String"
 }
 
+fn is_biguint(type_: &StructTag) -> bool {
+    type_.address == CORE_CODE_ADDRESS
+        && type_.module.as_str() == "biguint"
+        && type_.name.as_str() == "BigUint"
+}
+
 fn is_decimal(type_: &StructTag) -> bool {
     type_.address == CORE_CODE_ADDRESS
-        && (type_.module.as_str() == "decimal256" || type_.module.as_str() == "decimal128")
-        && (type_.name.as_str() == "Decimal256" || type_.name.as_str() == "Decimal128")
+        && (type_.module.as_str() == "decimal256"
+            || type_.module.as_str() == "decimal128"
+            || type_.module.as_str() == "bigdecimal")
+        && (type_.name.as_str() == "Decimal256"
+            || type_.name.as_str() == "Decimal128"
+            || type_.name.as_str() == "BigDecimal")
 }
 
 fn is_fixed_point(type_: &StructTag) -> bool {
@@ -251,6 +296,30 @@ mod move_to_json_tests {
         let mv = MoveValue::U256(U256::from(123u64));
         let val = convert_move_value_to_json_value(&mv, 1).unwrap();
         assert_eq!(val, json!("123"));
+
+        // biguint
+        let mv = MoveValue::Struct(MoveStruct::WithTypes {
+            type_: StructTag {
+                address: CORE_CODE_ADDRESS,
+                module: ident_str!("biguint").into(),
+                name: ident_str!("BigUint").into(),
+                type_args: vec![],
+            },
+            fields: vec![(
+                ident_str!("bytes").into(),
+                MoveValue::Vector(vec![
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                ]),
+            )],
+        });
+        let val = convert_move_value_to_json_value(&mv, 1).unwrap();
+        assert_eq!(
+            val,
+            json!("1077952576")
+        );
 
         // address
         let addr = AccountAddress::random();
@@ -360,6 +429,31 @@ mod move_to_json_tests {
         });
         let val = convert_move_value_to_json_value(&mv, 1).unwrap();
         assert_eq!(val, json!("61.5"));
+
+        // bigdecimal
+        let mv = MoveValue::Struct(MoveStruct::WithTypes {
+            type_: StructTag {
+                address: CORE_CODE_ADDRESS,
+                module: ident_str!("bigdecimal").into(),
+                name: ident_str!("BigDecimal").into(),
+                type_args: vec![],
+            },
+            fields: vec![(
+                ident_str!("bytes").into(),
+                MoveValue::Vector(vec![
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                    MoveValue::U8(64),
+                ]),
+            )],
+        });
+        let val = convert_move_value_to_json_value(&mv, 1).unwrap();
+        assert_eq!(
+            val,
+            json!("0.00000027595585952")
+        );
 
         // object
         let addr = AccountAddress::random();

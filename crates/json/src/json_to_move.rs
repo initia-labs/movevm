@@ -1,6 +1,10 @@
 use std::{str::FromStr, sync::Arc};
 
-use bigdecimal::{self, num_bigint::ToBigInt, BigDecimal, Signed};
+use bigdecimal::{
+    self,
+    num_bigint::{BigUint, ToBigInt},
+    BigDecimal, Signed,
+};
 use bytes::Bytes;
 use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
@@ -178,20 +182,47 @@ fn convert_json_value_to_move_value<S: StructResolver, R: ResourceResolver>(
 
                     if bigint.is_negative() {
                         return Err(deserialization_error_with_msg(
-                            format!("negative value: {}", bigint).as_str(),
+                            format!("failed to convert negative value {} to Decimal256", bigint).as_str(),
                         ));
                     }
 
                     let (_, bytes_slice) = bigint.to_bytes_le();
                     if bytes_slice.len() > 32 {
                         return Err(deserialization_error_with_msg(
-                            format!("huge value: {}", bigint).as_str(),
+                            format!("failed to convert huge value {} to Decimal256", bigint).as_str(),
                         ));
                     }
 
                     let mut bytes_array: [u8; 32] = [0u8; 32];
                     bytes_array[0..bytes_slice.len()].copy_from_slice(&bytes_slice);
                     MoveValue::U256(U256::from_le_bytes(&bytes_array))
+                }
+                "0x1::biguint::BigUint" => {
+                    let s = json_val.as_str().ok_or_else(deserialization_error)?;
+                    let biguint = BigUint::from_str(s).map_err(deserialization_error_with_msg)?;
+
+                    MoveValue::vector_u8(biguint.to_bytes_le())
+                }
+                "0x1::bigdecimal::BigDecimal" => {
+                    const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
+                    let s = json_val.as_str().ok_or_else(deserialization_error)?;
+                    let bigint = BigDecimal::from_str(s)
+                        .map(|v| v * DECIMAL_SCALE)
+                        .map_err(deserialization_error_with_msg)?
+                        .to_bigint()
+                        .ok_or_else(deserialization_error)?;
+                    if bigint.is_negative() {
+                        return Err(deserialization_error_with_msg(
+                            format!(
+                                "failed to convert negative value {} to BigDecimal",
+                                bigint
+                            )
+                            .as_str(),
+                        ));
+                    }
+
+                    let (_, bytes) = bigint.to_bytes_le();
+                    MoveValue::vector_u8(bytes)
                 }
                 _ => {
                     return Err(deserialization_error_with_msg(
@@ -321,6 +352,7 @@ impl ResourceResolver for DummyResolver {
 mod json_arg_testing {
     use std::collections::BTreeMap;
 
+    use bigdecimal::FromPrimitive;
     use bytes::Bytes;
     use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
     use initia_move_types::access_path::{AccessPath, DataPath};
@@ -829,6 +861,60 @@ mod json_arg_testing {
         assert_eq!(
             result,
             bcs::to_bytes(&((1234567u128 << 64) / 10_000)).unwrap()
+        );
+
+        // invalid negative
+        let arg = b"\"-123.4567\"";
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
+    }
+
+    #[test]
+    fn test_deserialize_json_args_big_uint() {
+        let mut mock_state = mock_state();
+        mock_state.structs.insert(
+            StructNameIndex(0),
+            Arc::new(for_test("biguint", "BigUint")),
+        );
+
+        let state_view = StateViewImpl::new(&mock_state);
+
+        let ty = Type::Struct {
+            idx: StructNameIndex(0),
+            ability: AbilityInfo::struct_(AbilitySet::ALL),
+        };
+        let arg = b"\"1234567\"";
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
+
+        assert_eq!(
+            result,
+            bcs::to_bytes(&BigUint::from_u64(1234567).unwrap().to_bytes_le()).unwrap()
+        );
+
+        // invalid negative
+        let arg = b"\"-1234567\"";
+        _ = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap_err();
+    }
+
+    #[test]
+    fn test_deserialize_json_args_big_decimal() {
+        let mut mock_state = mock_state();
+        mock_state.structs.insert(
+            StructNameIndex(0),
+            Arc::new(for_test("bigdecimal", "BigDecimal")),
+        );
+
+        let state_view = StateViewImpl::new(&mock_state);
+
+        let ty = Type::Struct {
+            idx: StructNameIndex(0),
+            ability: AbilityInfo::struct_(AbilitySet::ALL),
+        };
+        let arg = b"\"123.4567\"";
+        let result = deserialize_json_args(&mock_state, &state_view, &ty, arg).unwrap();
+
+        assert_eq!(
+            result,
+            bcs::to_bytes(&BigUint::from_u128(1234567u128 * (1e14 as u128)).unwrap().to_bytes_le()).unwrap()
         );
 
         // invalid negative
