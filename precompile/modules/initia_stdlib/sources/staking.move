@@ -1919,7 +1919,9 @@ module initia_std::staking {
             1
         );
         assert!(vector::length(&delegations) == 1, 4);
-        assert!(decimal128::truncate_u64(&vector::borrow(&delegations, 0).share) == 50000, 4);
+        assert!(
+            decimal128::truncate_u64(&vector::borrow(&delegations, 0).share) == 50000, 4
+        );
 
         fund_reward_coin(chain, @relayer, 100000);
         deposit_reward_for_chain(

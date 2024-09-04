@@ -19,7 +19,6 @@ module initia_std::fixed_point64 {
     const MAX_U128: u256 = 340282366920938463463374607431768211455;
     const MAX_U64: u128 = 18446744073709551615;
 
-
     /// The denominator provided was zero
     const EDENOMINATOR: u64 = 0x10001;
     /// The quotient value would be too large to be held in a `u128`
@@ -39,6 +38,10 @@ module initia_std::fixed_point64 {
 
     public fun zero(): FixedPoint64 {
         create_from_raw_value(0)
+    }
+
+    public fun rev(self: FixedPoint64): FixedPoint64 {
+        create_from_raw_value(((1u256 << 128) / (get_raw_value(self) as u256) as u128))
     }
 
     /// Returns self - y. self must be not less than y.
@@ -157,6 +160,11 @@ module initia_std::fixed_point64 {
         (res as u64)
     }
 
+    /// Divide a fixed-point number by a u64 integer.
+    public fun divide_by_u64(val: FixedPoint64, divisor: u64): FixedPoint64 {
+        divide_by_u128(val, (divisor as u128))   
+    }
+
     /// Divide a u128 integer by a fixed-point number, truncating any
     /// fractional part of the quotient. This will abort if the divisor
     /// is zero or if the quotient overflows.
@@ -172,6 +180,13 @@ module initia_std::fixed_point64 {
         // the value may be too large, which will cause the cast to fail
         // with an arithmetic error.
         (quotient as u128)
+    }
+
+    /// Divide a fixed-point number by a u64 integer.
+    public fun divide_by_u128(val: FixedPoint64, divisor: u128): FixedPoint64 {
+        // Check for division by zero.
+        assert!(divisor != 0, EDIVISION_BY_ZERO);
+        create_from_raw_value(get_raw_value(val) / divisor)
     }
 
     spec divide_u128 {
@@ -627,6 +642,47 @@ module initia_std::fixed_point64 {
         assert_approx_the_same(
             (result as u256),
             (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_rev() {
+        let x = create_from_rational(9, 7);
+        let result = rev(x);
+        // 1 / 9/7 = 7/9
+        let expected_result = create_from_rational(7, 9);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_divide_by_u64() {
+        let x = create_from_rational(9, 7);
+        let y = 3u64;
+        let result = divide_by_u64(x, y);
+        // 9/7 / 3 = 3/7
+        let expected_result = create_from_rational(3, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_divide_by_u128() {
+        let x = create_from_rational(9, 7);
+        let y = 3u128;
+        let result = divide_by_u128(x, y);
+        // 9/7 / 3 = 3/7
+        let expected_result = create_from_rational(3, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
             16
         );
     }
