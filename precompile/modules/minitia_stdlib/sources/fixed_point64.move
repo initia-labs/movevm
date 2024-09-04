@@ -182,7 +182,7 @@ module minitia_std::fixed_point64 {
         (quotient as u128)
     }
 
-    /// Divide a fixed-point number by a u64 integer.
+    /// Divide a fixed-point number by a u128 integer.
     public fun divide_by_u128(val: FixedPoint64, divisor: u128): FixedPoint64 {
         // Check for division by zero.
         assert!(divisor != 0, EDIVISION_BY_ZERO);
