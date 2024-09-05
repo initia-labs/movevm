@@ -8,6 +8,7 @@ pub mod account;
 pub mod address;
 pub mod any;
 pub mod base64;
+pub mod biguint;
 pub mod block;
 pub mod code;
 pub mod cosmos;
@@ -78,6 +79,7 @@ pub fn initia_move_natives(
         "dispatchable_fungible_asset",
         dispatchable_fungible_asset::make_all(builder)
     );
+    add_natives_from_module!("biguint", biguint::make_all(builder));
 
     make_table_from_iter(initia_std_addr, natives)
 }

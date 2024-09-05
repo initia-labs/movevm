@@ -2,8 +2,8 @@
 module 0x2::test {
     use std::vector;
     use std::option;
-    use std::decimal256;
-    use std::decimal128;
+    use std::biguint;
+    use std::bigdecimal;
     use std::string;
 
     #[view]
@@ -22,23 +22,23 @@ module 0x2::test {
     }
 
     #[view]
-    public fun decimal1(): decimal256::Decimal256 {
-        decimal256::from_ratio(123, 100) // 1.23
+    public fun bigdecimal1(): bigdecimal::BigDecimal {
+        bigdecimal::from_ratio_u64(123, 100) // 1.23
     }
 
     #[view]
-    public fun decimal2(): decimal256::Decimal256 {
-        decimal256::from_ratio(123, 1000) // 0.123
+    public fun bigdecimal2(): bigdecimal::BigDecimal {
+        bigdecimal::from_ratio_u64(123, 1000) // 0.123
     }
 
     #[view]
-    public fun decimal3(): decimal128::Decimal128 {
-        decimal128::from_ratio(123, 1) // 123
+    public fun biguint1(): biguint::BigUint {
+        biguint::from_u64(123)
     }
 
     #[view]
-    public fun decimal4(): decimal128::Decimal128 {
-        decimal128::from_ratio(123, 1000000) // 0.000123
+    public fun biguint2(): biguint::BigUint {
+        biguint::from_u128(12312983219839218392183) 
     }
 
     #[view]

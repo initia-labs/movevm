@@ -10,7 +10,7 @@ module minitia_std::simple_nft {
     use minitia_std::royalty;
     use minitia_std::nft;
     use minitia_std::initia_nft::{Self, InitiaNft};
-    use minitia_std::decimal128::Decimal128;
+    use minitia_std::bigdecimal::BigDecimal;
 
     /// The collection does not exist
     const ECOLLECTION_DOES_NOT_EXIST: u64 = 1;
@@ -48,7 +48,7 @@ module minitia_std::simple_nft {
         mutable_nft_description: bool,
         mutable_nft_properties: bool,
         mutable_nft_uri: bool,
-        royalty: Decimal128
+        royalty: BigDecimal
     ) {
         create_collection_object(
             creator,
@@ -78,7 +78,7 @@ module minitia_std::simple_nft {
         mutable_nft_description: bool,
         mutable_nft_properties: bool,
         mutable_nft_uri: bool,
-        royalty: Decimal128
+        royalty: BigDecimal
     ): Object<SimpleNftCollection> {
         let (_, extend_ref) =
             initia_nft::create_collection_object(
@@ -405,7 +405,7 @@ module minitia_std::simple_nft {
     entry fun set_collection_royalties_call<T: key>(
         creator: &signer,
         collection: Object<T>,
-        royalty: Decimal128,
+        royalty: BigDecimal,
         payee_address: address
     ) {
         let royalty = royalty::create(royalty, payee_address);
@@ -424,7 +424,7 @@ module minitia_std::simple_nft {
     use std::string;
 
     #[test_only]
-    use minitia_std::decimal128;
+    use minitia_std::bigdecimal;
 
     #[test(creator = @0x123)]
     fun test_create_and_transfer(creator: &signer) {
@@ -547,7 +547,7 @@ module minitia_std::simple_nft {
             flag,
             flag,
             flag,
-            decimal128::from_ratio(1, 100)
+            bigdecimal::from_ratio_u64(1, 100)
         )
     }
 

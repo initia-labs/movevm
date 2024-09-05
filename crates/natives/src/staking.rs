@@ -1,4 +1,7 @@
 use better_any::{Tid, TidAble};
+use bigdecimal::num_bigint::BigUint;
+use bigdecimal::num_traits::FromBytes;
+use bigdecimal::Signed;
 use bigdecimal::Zero;
 use bigdecimal::{num_bigint::ToBigInt, BigDecimal};
 use move_vm_types::values::{Reference, Struct};
@@ -103,7 +106,10 @@ impl<'a> NativeStakingContext<'a> {
                         changes
                             .into_iter()
                             .map(|(metadata, (delegation, undelegation))| {
-                                (metadata, (delegation, undelegation.to_string()))
+                                (
+                                    metadata,
+                                    (delegation, big_decimal_to_string(undelegation.normalized())),
+                                )
                             })
                             .collect(),
                     )
@@ -182,7 +188,7 @@ fn native_delegate(
     #[cfg(feature = "testing")]
     if let Some(ratios) = staking_context.share_ratios.get(&validator) {
         if let Some(ratio) = ratios.get(&metadata) {
-            return Ok(smallvec![big_decimal_to_decimal128(
+            return Ok(smallvec![write_big_decimal(
                 BigDecimal::from(amount) * ratio.0 / ratio.1
             )?]);
         }
@@ -193,9 +199,7 @@ fn native_delegate(
         .amount_to_share(&validator, metadata, amount)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(smallvec![big_decimal_to_decimal128(
-        string_to_big_decimal(share)?
-    )?])
+    Ok(smallvec![write_big_decimal(string_to_big_decimal(share)?)?])
 }
 
 fn native_undelegate(
@@ -208,7 +212,7 @@ fn native_undelegate(
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
-    let share = decimal128_to_big_decimal(safely_pop_arg!(arguments, StructRef))?;
+    let share = read_big_decimal(safely_pop_arg!(arguments, StructRef))?;
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
@@ -258,7 +262,7 @@ fn native_undelegate(
     // convert share to amount
     let amount = staking_context
         .api
-        .share_to_amount(&validator, metadata, big_decimal_to_string(share)?)
+        .share_to_amount(&validator, metadata, big_decimal_to_string(share))
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
     let unbond_timestamp = staking_context
@@ -279,7 +283,7 @@ fn native_share_to_amount(
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
-    let share = decimal128_to_big_decimal(safely_pop_arg!(arguments, StructRef))?;
+    let share = read_big_decimal(safely_pop_arg!(arguments, StructRef))?;
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
@@ -306,7 +310,7 @@ fn native_share_to_amount(
 
     let amount = staking_context
         .api
-        .share_to_amount(&validator, metadata, big_decimal_to_string(share)?)
+        .share_to_amount(&validator, metadata, big_decimal_to_string(share))
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
     Ok(smallvec![Value::u64(amount),])
@@ -338,7 +342,7 @@ fn native_amount_to_share(
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            return Ok(smallvec![big_decimal_to_decimal128(
+            return Ok(smallvec![write_big_decimal(
                 BigDecimal::from(amount) * ratio.0 / ratio.1
             )?]);
         }
@@ -349,9 +353,7 @@ fn native_amount_to_share(
         .amount_to_share(&validator, metadata, amount)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(smallvec![big_decimal_to_decimal128(
-        string_to_big_decimal(share)?
-    )?])
+    Ok(smallvec![write_big_decimal(string_to_big_decimal(share)?)?])
 }
 
 /***************************************************************************************************
@@ -407,33 +409,40 @@ fn partial_extension_error(msg: impl ToString) -> PartialVMError {
 
 fn string_to_big_decimal(s: String) -> SafeNativeResult<BigDecimal> {
     Ok(BigDecimal::from_str(&s)
-        .map_err(|_| partial_extension_error("failed to convert string to Decimal128"))?)
+        .map_err(|_| partial_extension_error("failed to convert string to BigDecimal"))?)
 }
 
-fn big_decimal_to_string(v: BigDecimal) -> SafeNativeResult<String> {
-    Ok(v.to_string())
+fn big_decimal_to_string(v: BigDecimal) -> String {
+    v.normalized().to_string()
 }
 
-fn big_decimal_to_decimal128(v: BigDecimal) -> SafeNativeResult<Value> {
+fn write_big_decimal(v: BigDecimal) -> SafeNativeResult<Value> {
     const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
     let bigint = (v * DECIMAL_SCALE)
         .to_bigint()
-        .ok_or_else(|| partial_extension_error("failed to convert big_decimal to decimal128"))?;
-    Ok(Value::struct_(Struct::pack(vec![Value::u128(
-        bigint
-            .try_into()
-            .map_err(|_| partial_extension_error("failed to convert big_decimal to decimal128"))?,
+        .ok_or_else(|| partial_extension_error("invalid BigDecimal"))?;
+
+    if bigint.is_negative() {
+        return Err(partial_extension_error("negative BigDecimal").into());
+    }
+
+    let (_, bytes) = bigint.to_bytes_le();
+    Ok(Value::struct_(Struct::pack(vec![Value::struct_(
+        Struct::pack(vec![Value::vector_u8(bytes)]),
     )])))
 }
 
-fn decimal128_to_big_decimal(v: StructRef) -> SafeNativeResult<BigDecimal> {
-    const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
-    let share = v
+fn read_big_decimal(v: StructRef) -> SafeNativeResult<BigDecimal> {
+    let scaled_le_bytes = v
         .borrow_field(0)?
         .value_as::<Reference>()?
         .read_ref()?
-        .value_as::<u128>()?;
+        .value_as::<Struct>()?
+        .unpack()?
+        .next()
+        .unwrap()
+        .value_as::<Vec<u8>>()?;
 
-    let decimal = BigDecimal::from(share) / DECIMAL_SCALE;
-    Ok(decimal)
+    let scaled = BigUint::from_le_bytes(&scaled_le_bytes);
+    Ok(BigDecimal::new(scaled.into(), 18))
 }

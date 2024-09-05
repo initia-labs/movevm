@@ -162,7 +162,7 @@ module minitia_std::fixed_point64 {
 
     /// Divide a fixed-point number by a u64 integer.
     public fun divide_by_u64(val: FixedPoint64, divisor: u64): FixedPoint64 {
-        divide_by_u128(val, (divisor as u128))   
+        divide_by_u128(val, (divisor as u128))
     }
 
     /// Divide a u128 integer by a fixed-point number, truncating any
@@ -594,7 +594,6 @@ module minitia_std::fixed_point64 {
         let x = create_from_rational(9, 7);
         let y = 3u128;
         let result = divide_u128(y, x);
-        std::debug::print(&result);
         // 3 / 9/7 = 21/9
         let expected_result = create_from_rational(21, 9);
         assert_approx_the_same(

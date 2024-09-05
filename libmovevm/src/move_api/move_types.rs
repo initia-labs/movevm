@@ -1,4 +1,5 @@
 use anyhow::{bail, format_err};
+use bigdecimal::{num_bigint::BigUint, BigDecimal};
 use initia_move_types::module::Module;
 use move_binary_format::{
     access::ModuleAccess,
@@ -123,10 +124,6 @@ macro_rules! define_integer_type {
         }
     };
 }
-
-// defines decimal fractional part length of
-// 0x1::decimal256::Decimal256 and 0x1::decimal128::Decimal128
-const DECIMAL_FRACTIONAL_LENGTH: usize = 18;
 
 // convert huge numbers to string
 define_integer_type!(U64, u64, "A string encoded U64.");
@@ -261,10 +258,16 @@ impl MoveValue {
             && st.name.to_string() == "String"
     }
 
+    fn is_biguint(st: &StructTag) -> bool {
+        st.address == AccountAddress::ONE
+            && st.module.as_str() == "biguint"
+            && st.name.as_str() == "BigUint"
+    }
+
     pub fn is_decimal(st: &StructTag) -> bool {
         st.address == AccountAddress::ONE
-            && (st.module.to_string() == "decimal256" || st.module.to_string() == "decimal128")
-            && (st.name.to_string() == "Decimal256" || st.name.to_string() == "Decimal128")
+            && st.module.as_str() == "bigdecimal"
+            && st.name.as_str() == "BigDecimal"
     }
 
     pub fn is_option(st: &StructTag) -> bool {
@@ -281,27 +284,26 @@ impl MoveValue {
         }
     }
 
-    pub fn convert_decimal(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
-        let mut num_str = match v.value.into_iter().next() {
-            Some((_, AnnotatedMoveValue::U128(num))) => num.to_string(),
-            Some((_, AnnotatedMoveValue::U256(num))) => num.to_string(),
+    fn convert_biguint(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
+        Ok(MoveValue::String(match v.value.into_iter().next() {
+            Some((_, AnnotatedMoveValue::Bytes(bytes_le))) => {
+                BigUint::from_bytes_le(&bytes_le).to_string()
+            }
             _ => bail!("expect decimal::Decimal, but failed to decode struct value"),
-        };
+        }))
+    }
 
-        if num_str.len() > DECIMAL_FRACTIONAL_LENGTH {
-            let diff = num_str.len() - DECIMAL_FRACTIONAL_LENGTH;
-            num_str = num_str[0..diff].to_owned() + "." + &num_str[diff..];
-        } else {
-            let diff = DECIMAL_FRACTIONAL_LENGTH - num_str.len();
-            num_str = "0.".to_owned() + &"0".repeat(diff) + &num_str;
-        }
-
-        Ok(MoveValue::String(
-            num_str
-                .trim_end_matches('0')
-                .trim_end_matches('.')
-                .to_string(),
-        ))
+    pub fn convert_decimal(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
+        Ok(MoveValue::String(match v.value.into_iter().next() {
+            Some((_, AnnotatedMoveValue::Struct(st))) => match st.value.into_iter().next() {
+                Some((_, AnnotatedMoveValue::Bytes(bytes_le))) => {
+                    let num = BigUint::from_bytes_le(&bytes_le);
+                    BigDecimal::new(num.into(), 18).normalized().to_string()
+                }
+                _ => bail!("expect bigdecimal::BigDecimal, A but failed to decode struct value"),
+            },
+            _ => bail!("expect bigdecimal::BigDecimal, B but failed to decode struct value"),
+        }))
     }
 
     pub fn convert_option(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
@@ -339,6 +341,8 @@ impl TryFrom<AnnotatedMoveValue> for MoveValue {
             AnnotatedMoveValue::Struct(v) => {
                 if MoveValue::is_utf8_string(&v.ty_tag) {
                     MoveValue::convert_utf8_string(v)?
+                } else if MoveValue::is_biguint(&v.ty_tag) {
+                    MoveValue::convert_biguint(v)?
                 } else if MoveValue::is_decimal(&v.ty_tag) {
                     MoveValue::convert_decimal(v)?
                 } else if MoveValue::is_option(&v.ty_tag) {
@@ -1228,7 +1232,6 @@ mod tests {
         account_address::AccountAddress,
         identifier::Identifier,
         language_storage::{StructTag, TypeTag},
-        u256,
     };
     use move_resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue};
 
@@ -1262,130 +1265,132 @@ mod tests {
     fn test_serialize_move_resource() {
         use AnnotatedMoveValue::*;
 
-        let res =
-            MoveResource::try_from(annotated_move_struct(
-                "Values",
-                vec![
-                    (identifier("field_u8"), U8(7)),
-                    (identifier("field_u64"), U64(7)),
-                    (identifier("field_u128"), U128(7)),
-                    (identifier("field_bool"), Bool(true)),
-                    (identifier("field_address"), Address(address("0xdd"))),
-                    (
-                        identifier("field_vector"),
-                        Vector(TypeTag::U128, vec![U128(128)]),
+        let res = MoveResource::try_from(annotated_move_struct(
+            "Values",
+            vec![
+                (identifier("field_u8"), U8(7)),
+                (identifier("field_u64"), U64(7)),
+                (identifier("field_u128"), U128(7)),
+                (identifier("field_bool"), Bool(true)),
+                (identifier("field_address"), Address(address("0xdd"))),
+                (
+                    identifier("field_vector"),
+                    Vector(TypeTag::U128, vec![U128(128)]),
+                ),
+                (identifier("field_bytes"), Bytes(vec![9, 9])),
+                (
+                    identifier("field_struct"),
+                    Struct(annotated_move_struct(
+                        "Nested",
+                        vec![(
+                            identifier("nested_vector"),
+                            Vector(
+                                TypeTag::Struct(Box::new(type_struct("Host"))),
+                                vec![Struct(annotated_move_struct(
+                                    "String",
+                                    vec![
+                                        (identifier("address1"), Address(address("0x0"))),
+                                        (identifier("address2"), Address(address("0x123"))),
+                                    ],
+                                ))],
+                            ),
+                        )],
+                    )),
+                ),
+                (
+                    identifier("field_options"),
+                    Vector(
+                        TypeTag::Struct(Box::new(option_struct())),
+                        vec![
+                            Struct(annotated_option_struct(vec![(
+                                identifier("vec"),
+                                Vector(TypeTag::Address, vec![Address(address("0x123"))]),
+                            )])),
+                            Struct(annotated_option_struct(vec![(
+                                identifier("vec"),
+                                Vector(TypeTag::Address, vec![]),
+                            )])),
+                        ],
                     ),
-                    (identifier("field_bytes"), Bytes(vec![9, 9])),
-                    (
-                        identifier("field_struct"),
-                        Struct(annotated_move_struct(
-                            "Nested",
-                            vec![(
-                                identifier("nested_vector"),
+                ),
+                (
+                    identifier("biguints"),
+                    Vector(
+                        TypeTag::Struct(Box::new(biguint_struct())),
+                        vec![
+                            Struct(annotated_biguint_struct(vec![(
+                                identifier("val"),
+                                Vector(TypeTag::U8, vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8)]),
+                            )])),
+                            Struct(annotated_biguint_struct(vec![(
+                                identifier("val"),
                                 Vector(
-                                    TypeTag::Struct(Box::new(type_struct("Host"))),
-                                    vec![Struct(annotated_move_struct(
-                                        "String",
-                                        vec![
-                                            (identifier("address1"), Address(address("0x0"))),
-                                            (identifier("address2"), Address(address("0x123"))),
-                                        ],
-                                    ))],
+                                    TypeTag::U8,
+                                    vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8), U8(64u8)],
                                 ),
-                            )],
-                        )),
+                            )])),
+                            Struct(annotated_biguint_struct(vec![(
+                                identifier("val"),
+                                Vector(
+                                    TypeTag::U8,
+                                    vec![
+                                        U8(64u8),
+                                        U8(64u8),
+                                        U8(64u8),
+                                        U8(64u8),
+                                        U8(64u8),
+                                        U8(64u8),
+                                    ],
+                                ),
+                            )])),
+                        ],
                     ),
-                    (
-                        identifier("field_options"),
-                        Vector(
-                            TypeTag::Struct(Box::new(option_struct())),
-                            vec![
-                                Struct(annotated_option_struct(vec![(
-                                    identifier("vec"),
-                                    Vector(TypeTag::Address, vec![Address(address("0x123"))]),
-                                )])),
-                                Struct(annotated_option_struct(vec![(
-                                    identifier("vec"),
-                                    Vector(TypeTag::Address, vec![]),
-                                )])),
-                            ],
-                        ),
+                ),
+                (
+                    identifier("bigdecimals"),
+                    Vector(
+                        TypeTag::Struct(Box::new(bigdecimal_struct())),
+                        vec![
+                            Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
+                                (
+                                    identifier("val"),
+                                    Vector(
+                                        TypeTag::U8,
+                                        vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8)],
+                                    ),
+                                ),
+                            ]))),
+                            Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
+                                (
+                                    identifier("val"),
+                                    Vector(
+                                        TypeTag::U8,
+                                        vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8), U8(64u8)],
+                                    ),
+                                ),
+                            ]))),
+                            Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
+                                (
+                                    identifier("val"),
+                                    Vector(
+                                        TypeTag::U8,
+                                        vec![
+                                            U8(64u8),
+                                            U8(64u8),
+                                            U8(64u8),
+                                            U8(64u8),
+                                            U8(64u8),
+                                            U8(64u8),
+                                        ],
+                                    ),
+                                ),
+                            ]))),
+                        ],
                     ),
-                    (
-                        identifier("field_decimal256s"),
-                        Vector(
-                            TypeTag::Struct(Box::new(decimal256_struct())),
-                            vec![
-                                Struct(annotated_decimal256_struct(vec![(
-                                    identifier("val"),
-                                    U256(
-                                        u256::U256::from_str(
-                                            &(u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32)
-                                                * 123
-                                                / 100)
-                                                .to_string(),
-                                        )
-                                        .unwrap(), /* 1.23 */
-                                    ),
-                                )])),
-                                Struct(annotated_decimal256_struct(vec![(
-                                    identifier("val"),
-                                    U256(
-                                        u256::U256::from_str(
-                                            &(u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32)
-                                                * 123)
-                                                .to_string(),
-                                        )
-                                        .unwrap(), /* 123 */
-                                    ),
-                                )])),
-                                Struct(annotated_decimal256_struct(vec![(
-                                    identifier("val"),
-                                    U256(
-                                        u256::U256::from_str(
-                                            &(u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32)
-                                                * 123
-                                                / 1000)
-                                                .to_string(),
-                                        )
-                                        .unwrap(), /* 0.123 */
-                                    ),
-                                )])),
-                            ],
-                        ),
-                    ),
-                    (
-                        identifier("field_decimal128s"),
-                        Vector(
-                            TypeTag::Struct(Box::new(decimal128_struct())),
-                            vec![
-                                Struct(annotated_decimal128_struct(vec![(
-                                    identifier("val"),
-                                    U128(
-                                        /* 1.23 */
-                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123 / 100,
-                                    ),
-                                )])),
-                                Struct(annotated_decimal128_struct(vec![(
-                                    identifier("val"),
-                                    U128(
-                                        /* 123 */
-                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123,
-                                    ),
-                                )])),
-                                Struct(annotated_decimal128_struct(vec![(
-                                    identifier("val"),
-                                    U128(
-                                        u128::pow(10, DECIMAL_FRACTIONAL_LENGTH as u32) * 123
-                                            / 1000, /* 0.123 */
-                                    ),
-                                )])),
-                            ],
-                        ),
-                    ),
-                ],
-            ))
-            .unwrap();
+                ),
+            ],
+        ))
+        .unwrap();
         let value = to_value(&res).unwrap();
         assert_json(
             value,
@@ -1403,8 +1408,8 @@ mod tests {
                         "nested_vector": [{"address1": "0x0", "address2": "0x123"}]
                     },
                     "field_options": ["0x123", null],
-                    "field_decimal256s": ["1.23", "123", "0.123"],
-                    "field_decimal128s": ["1.23", "123", "0.123"]
+                    "biguints": ["1077952576", "275955859520", "70644700037184"],
+                    "bigdecimals": ["0.000000001077952576", "0.00000027595585952", "0.000070644700037184"]
                 }
             }),
         );
@@ -1600,20 +1605,20 @@ mod tests {
         }
     }
 
-    fn decimal128_struct() -> StructTag {
+    fn biguint_struct() -> StructTag {
         StructTag {
             address: address("0x1"),
-            module: identifier("decimal128"),
-            name: identifier("Decimal128"),
+            module: identifier("biguint"),
+            name: identifier("BigUint"),
             type_args: vec![],
         }
     }
 
-    fn decimal256_struct() -> StructTag {
+    fn bigdecimal_struct() -> StructTag {
         StructTag {
             address: address("0x1"),
-            module: identifier("decimal256"),
-            name: identifier("Decimal256"),
+            module: identifier("bigdecimal"),
+            name: identifier("BigDecimal"),
             type_args: vec![],
         }
     }
@@ -1640,25 +1645,23 @@ mod tests {
         AccountAddress::from_hex_literal(hex).unwrap()
     }
 
-    fn annotated_decimal128_struct(
+    fn annotated_biguint_struct(
         values: Vec<(Identifier, AnnotatedMoveValue)>,
     ) -> AnnotatedMoveStruct {
         AnnotatedMoveStruct {
             abilities: AbilitySet::EMPTY,
-            ty_tag: decimal128_struct(),
+            ty_tag: biguint_struct(),
             variant_info: None,
             value: values,
         }
     }
 
-    fn annotated_decimal256_struct(
-        values: Vec<(Identifier, AnnotatedMoveValue)>,
-    ) -> AnnotatedMoveStruct {
+    fn annotated_bigdecimal_struct(biguint: AnnotatedMoveStruct) -> AnnotatedMoveStruct {
         AnnotatedMoveStruct {
             abilities: AbilitySet::EMPTY,
-            ty_tag: decimal256_struct(),
+            ty_tag: bigdecimal_struct(),
             variant_info: None,
-            value: values,
+            value: vec![(identifier("scaled"), AnnotatedMoveValue::Struct(biguint))],
         }
     }
 
