@@ -286,15 +286,7 @@ impl MoveValue {
 
     fn convert_biguint(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
         Ok(MoveValue::String(match v.value.into_iter().next() {
-            Some((_, AnnotatedMoveValue::Vector(_, bytes_val))) => {
-                let bytes_le = bytes_val
-                    .iter()
-                    .map(|byte_val| match byte_val {
-                        AnnotatedMoveValue::U8(byte) => *byte,
-                        _ => unreachable!(),
-                    })
-                    .collect::<Vec<u8>>();
-
+            Some((_, AnnotatedMoveValue::Bytes(bytes_le))) => {
                 BigUint::from_bytes_le(&bytes_le).to_string()
             }
             _ => bail!("expect decimal::Decimal, but failed to decode struct value"),
@@ -303,22 +295,14 @@ impl MoveValue {
 
     pub fn convert_decimal(v: AnnotatedMoveStruct) -> anyhow::Result<MoveValue> {
         Ok(MoveValue::String(match v.value.into_iter().next() {
-            Some((_, AnnotatedMoveValue::Struct(st))) => match st.value.get(0) {
-                Some((_, AnnotatedMoveValue::Vector(_, bytes_val))) => {
-                    let bytes_le = bytes_val
-                        .iter()
-                        .map(|byte_val| match byte_val {
-                            AnnotatedMoveValue::U8(byte) => *byte,
-                            _ => unreachable!(),
-                        })
-                        .collect::<Vec<u8>>();
-
+            Some((_, AnnotatedMoveValue::Struct(st))) => match st.value.into_iter().next() {
+                Some((_, AnnotatedMoveValue::Bytes(bytes_le))) => {
                     let num = BigUint::from_bytes_le(&bytes_le);
                     BigDecimal::new(num.into(), 18).normalized().to_string()
                 }
-                _ => bail!("expect bigdecimal::BigDecimal, but failed to decode struct value"),
+                _ => bail!("expect bigdecimal::BigDecimal, A but failed to decode struct value"),
             },
-            _ => bail!("expect bigdecimal::BigDecimal, but failed to decode struct value"),
+            _ => bail!("expect bigdecimal::BigDecimal, B but failed to decode struct value"),
         }))
     }
 
