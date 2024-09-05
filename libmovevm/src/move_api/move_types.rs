@@ -1320,28 +1320,15 @@ mod tests {
                         vec![
                             Struct(annotated_biguint_struct(vec![(
                                 identifier("val"),
-                                Vector(TypeTag::U8, vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8)]),
+                                Bytes(vec![64u8, 64u8, 64u8, 64u8]),
                             )])),
                             Struct(annotated_biguint_struct(vec![(
                                 identifier("val"),
-                                Vector(
-                                    TypeTag::U8,
-                                    vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8), U8(64u8)],
-                                ),
+                                Bytes(vec![64u8, 64u8, 64u8, 64u8, 64u8]),
                             )])),
                             Struct(annotated_biguint_struct(vec![(
                                 identifier("val"),
-                                Vector(
-                                    TypeTag::U8,
-                                    vec![
-                                        U8(64u8),
-                                        U8(64u8),
-                                        U8(64u8),
-                                        U8(64u8),
-                                        U8(64u8),
-                                        U8(64u8),
-                                    ],
-                                ),
+                                Bytes(vec![64u8, 64u8, 64u8, 64u8, 64u8, 64u8]),
                             )])),
                         ],
                     ),
@@ -1352,37 +1339,15 @@ mod tests {
                         TypeTag::Struct(Box::new(bigdecimal_struct())),
                         vec![
                             Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
-                                (
-                                    identifier("val"),
-                                    Vector(
-                                        TypeTag::U8,
-                                        vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8)],
-                                    ),
-                                ),
+                                (identifier("val"), Bytes(vec![64u8, 64u8, 64u8, 64u8])),
+                            ]))),
+                            Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
+                                (identifier("val"), Bytes(vec![64u8, 64u8, 64u8, 64u8, 64u8])),
                             ]))),
                             Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
                                 (
                                     identifier("val"),
-                                    Vector(
-                                        TypeTag::U8,
-                                        vec![U8(64u8), U8(64u8), U8(64u8), U8(64u8), U8(64u8)],
-                                    ),
-                                ),
-                            ]))),
-                            Struct(annotated_bigdecimal_struct(annotated_biguint_struct(vec![
-                                (
-                                    identifier("val"),
-                                    Vector(
-                                        TypeTag::U8,
-                                        vec![
-                                            U8(64u8),
-                                            U8(64u8),
-                                            U8(64u8),
-                                            U8(64u8),
-                                            U8(64u8),
-                                            U8(64u8),
-                                        ],
-                                    ),
+                                    Bytes(vec![64u8, 64u8, 64u8, 64u8, 64u8, 64u8]),
                                 ),
                             ]))),
                         ],
