@@ -289,7 +289,7 @@ impl MoveValue {
             Some((_, AnnotatedMoveValue::Bytes(bytes_le))) => {
                 BigUint::from_bytes_le(&bytes_le).to_string()
             }
-            _ => bail!("expect decimal::Decimal, but failed to decode struct value"),
+            _ => bail!("expect biguint::BigUint, but failed to decode struct value"),
         }))
     }
 
@@ -300,9 +300,9 @@ impl MoveValue {
                     let num = BigUint::from_bytes_le(&bytes_le);
                     BigDecimal::new(num.into(), 18).normalized().to_string()
                 }
-                _ => bail!("expect bigdecimal::BigDecimal, A but failed to decode struct value"),
+                _ => bail!("expect bigdecimal::BigDecimal, but failed to decode struct value"),
             },
-            _ => bail!("expect bigdecimal::BigDecimal, B but failed to decode struct value"),
+            _ => bail!("expect bigdecimal::BigDecimal, but failed to decode struct value"),
         }))
     }
 
