@@ -15,26 +15,26 @@ module initia_std::table {
     /// Type of tables
     struct Table<phantom K: copy + drop, phantom V> has store {
         handle: address,
-        length: u64,
+        length: u64
     }
 
     /// Type of table iterators
     struct TableIter<phantom K: copy + drop, phantom V> has drop {
-        iterator_id: u64,
+        iterator_id: u64
     }
 
     /// Create a new Table.
     public fun new<K: copy + drop, V: store>(): Table<K, V> {
         let handle = new_table_handle<K, V>();
         account::create_table_account(handle);
-        Table { handle, length: 0, }
+        Table { handle, length: 0 }
     }
 
     /// Destroy a table. The table must be empty to succeed.
     public fun destroy_empty<K: copy + drop, V>(table: Table<K, V>) {
         assert!(
             table.length == 0,
-            error::invalid_state(ENOT_EMPTY),
+            error::invalid_state(ENOT_EMPTY)
         );
         destroy_empty_box<K, V, Box<V>>(&table);
         drop_unchecked_box<K, V, Box<V>>(table)
@@ -155,7 +155,7 @@ module initia_std::table {
         table: &Table<K, V>,
         start: Option<K>, /* inclusive */
         end: Option<K>, /* exclusive */
-        order: u8 /* 1: Ascending, 2: Descending */,
+        order: u8 /* 1: Ascending, 2: Descending */
     ): &TableIter<K, V> {
         let start_bytes: vector<u8> =
             if (option::is_some(&start)) {
@@ -204,7 +204,7 @@ module initia_std::table {
         table: &mut Table<K, V>,
         start: Option<K>, /* inclusive */
         end: Option<K>, /* exclusive */
-        order: u8 /* 1: Ascending, 2: Descending */,
+        order: u8 /* 1: Ascending, 2: Descending */
     ): &mut TableIter<K, V> {
         let start_bytes: vector<u8> =
             if (option::is_some(&start)) {
@@ -246,35 +246,51 @@ module initia_std::table {
     // can use this to determine serialization layout.
     native fun new_table_handle<K, V>(): address;
 
-    native fun add_box<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K, val: Box<V>);
+    native fun add_box<K: copy + drop, V, B>(
+        table: &mut Table<K, V>, key: K, val: Box<V>
+    );
 
     native fun borrow_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): &Box<V>;
 
-    native fun borrow_box_mut<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K): &mut Box<V>;
+    native fun borrow_box_mut<K: copy + drop, V, B>(
+        table: &mut Table<K, V>, key: K
+    ): &mut Box<V>;
 
     native fun contains_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): bool;
 
-    native fun remove_box<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K): Box<V>;
+    native fun remove_box<K: copy + drop, V, B>(
+        table: &mut Table<K, V>, key: K
+    ): Box<V>;
 
     native fun destroy_empty_box<K: copy + drop, V, B>(table: &Table<K, V>);
 
     native fun drop_unchecked_box<K: copy + drop, V, B>(table: Table<K, V>);
 
     native fun new_table_iter<K: copy + drop, V, B>(
-        table: &Table<K, V>, start: vector<u8>, end: vector<u8>, order: u8
+        table: &Table<K, V>,
+        start: vector<u8>,
+        end: vector<u8>,
+        order: u8
     ): &TableIter<K, V>;
 
     native fun new_table_iter_mut<K: copy + drop, V, B>(
-        table: &mut Table<K, V>, start: vector<u8>, end: vector<u8>, order: u8
+        table: &mut Table<K, V>,
+        start: vector<u8>,
+        end: vector<u8>,
+        order: u8
     ): &mut TableIter<K, V>;
 
     native fun next_box<K: copy + drop, V, B>(table_iter: &TableIter<K, V>): (K, &Box<V>);
 
     native fun prepare_box<K: copy + drop, V, B>(table_iter: &TableIter<K, V>): bool;
 
-    native fun next_box_mut<K: copy + drop, V, B>(table_iter: &mut TableIter<K, V>): (K, &mut Box<V>);
+    native fun next_box_mut<K: copy + drop, V, B>(
+        table_iter: &mut TableIter<K, V>
+    ): (K, &mut Box<V>);
 
-    native fun prepare_box_mut<K: copy + drop, V, B>(table_iter: &mut TableIter<K, V>): bool;
+    native fun prepare_box_mut<K: copy + drop, V, B>(
+        table_iter: &mut TableIter<K, V>
+    ): bool;
 
     // ======================================================================================================
     // Tests
@@ -306,12 +322,12 @@ module initia_std::table {
         assert!(!contains(&t, key), error_code);
         assert!(
             *borrow_with_default(&t, key, &12) == 12,
-            error_code,
+            error_code
         );
         add(&mut t, key, 1);
         assert!(
             *borrow_with_default(&t, key, &12) == 1,
-            error_code,
+            error_code
         );
 
         move_to(&account, TableHolder { t });

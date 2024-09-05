@@ -16,14 +16,14 @@ module initia_std::aptos_coin {
                 string::utf8(b"uinit"),
                 0,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
         };
 
         managed_coin::mint(
             &account::create_signer_for_test(@initia_std),
             coin::metadata(@initia_std, string::utf8(b"uinit")),
-            amount,
+            amount
         )
     }
 

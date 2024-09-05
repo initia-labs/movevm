@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 
+	"cosmossdk.io/math"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/initia-labs/movevm/types"
 )
@@ -122,11 +123,11 @@ func (m MockAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64, uint64
 	return m.AccountAPI.GetAccountInfo(addr)
 }
 
-func (m MockAPI) AmountToShare(validator []byte, metadata types.AccountAddress, amount uint64) (uint64, error) {
+func (m MockAPI) AmountToShare(validator []byte, metadata types.AccountAddress, amount uint64) (string, error) {
 	return m.StakingAPI.AmountToShare(validator, metadata, amount)
 }
 
-func (m MockAPI) ShareToAmount(validator []byte, metadata types.AccountAddress, share uint64) (uint64, error) {
+func (m MockAPI) ShareToAmount(validator []byte, metadata types.AccountAddress, share string) (uint64, error) {
 	return m.StakingAPI.ShareToAmount(validator, metadata, share)
 }
 
@@ -163,7 +164,7 @@ func (m MockAccountAPI) GetAccountInfo(addr types.AccountAddress) (bool, uint64,
 }
 
 type ShareAmountRatio struct {
-	share  uint64
+	share  string
 	amount uint64
 }
 
@@ -178,7 +179,7 @@ func NewMockStakingAPI() MockStakingAPI {
 	}
 }
 
-func (m *MockStakingAPI) SetShareRatio(validator []byte, metadata types.AccountAddress, share uint64, amount uint64) {
+func (m *MockStakingAPI) SetShareRatio(validator []byte, metadata types.AccountAddress, share string, amount uint64) {
 	if ratios, ok := m.validators[string(validator)]; ok {
 		ratios[metadata] = ShareAmountRatio{share, amount}
 	} else {
@@ -187,21 +188,21 @@ func (m *MockStakingAPI) SetShareRatio(validator []byte, metadata types.AccountA
 	}
 }
 
-func (m MockStakingAPI) AmountToShare(validator []byte, metadata types.AccountAddress, amount uint64) (uint64, error) {
+func (m MockStakingAPI) AmountToShare(validator []byte, metadata types.AccountAddress, amount uint64) (string, error) {
 	ratios, ok := m.validators[string(validator)]
 	if !ok {
-		return 0, errors.New("validator not found")
+		return "0", errors.New("validator not found")
 	}
 
 	ratio, ok := ratios[metadata]
 	if !ok {
-		return 0, errors.New("metadata not found")
+		return "0", errors.New("metadata not found")
 	}
 
-	return amount * ratio.share / ratio.amount, nil
+	return math.LegacyMustNewDecFromStr(ratio.share).MulInt64(int64(amount)).QuoInt64(int64(ratio.amount)).String(), nil
 }
 
-func (m MockStakingAPI) ShareToAmount(validator []byte, metadata types.AccountAddress, share uint64) (uint64, error) {
+func (m MockStakingAPI) ShareToAmount(validator []byte, metadata types.AccountAddress, share string) (uint64, error) {
 	ratios, ok := m.validators[string(validator)]
 	if !ok {
 		return 0, errors.New("validator not found")
@@ -212,7 +213,7 @@ func (m MockStakingAPI) ShareToAmount(validator []byte, metadata types.AccountAd
 		return 0, errors.New("metadata not found")
 	}
 
-	return share * ratio.amount / ratio.share, nil
+	return math.LegacyMustNewDecFromStr(share).MulInt64(int64(ratio.amount)).Quo(math.LegacyMustNewDecFromStr(ratio.share)).TruncateInt().Uint64(), nil
 }
 
 type MockQueryAPI struct {

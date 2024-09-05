@@ -60,7 +60,7 @@ module initia_std::math128 {
         let res = 0;
         assert!(
             x != 0,
-            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2),
+            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2)
         );
         // Effectively the position of the most significant set bit
         let n = 64;
@@ -167,9 +167,9 @@ module initia_std::math128 {
         assert!(
             ceil_div(
                 (((1u256 << 128) - 9) as u128),
-                11,
+                11
             ) == 30934760629176223951215873402888019223,
-            0,
+            0
         );
     }
 
@@ -232,10 +232,8 @@ module initia_std::math128 {
         idx = 1;
         while (idx <= 128) {
             assert!(
-                floor_log2(
-                    (((1u256 << idx) - 1) as u128)
-                ) == idx - 1,
-                0,
+                floor_log2((((1u256 << idx) - 1) as u128)) == idx - 1,
+                0
             );
             idx = idx + 1;
         };
@@ -248,7 +246,7 @@ module initia_std::math128 {
             let res = log2(1 << idx);
             assert!(
                 fixed_point32::get_raw_value(res) == (idx as u64) << 32,
-                0,
+                0
             );
             idx = idx + 1;
         };
@@ -267,7 +265,7 @@ module initia_std::math128 {
             assert_approx_the_same(
                 (fixed_point32::get_raw_value(res) as u128),
                 expected,
-                8,
+                8
             );
             idx = idx + 1;
         };
@@ -280,15 +278,13 @@ module initia_std::math128 {
             let res = log2_64(1 << idx);
             assert!(
                 fixed_point64::get_raw_value(res) == (idx as u128) << 64,
-                0,
+                0
             );
             idx = idx + 1;
         };
         idx = 10;
         while (idx <= 128) {
-            let res = log2_64(
-                (((1u256 << idx) - 1) as u128)
-            );
+            let res = log2_64((((1u256 << idx) - 1) as u128));
             // idx + log2 (1 - 1/2^idx) = idx + ln (1-1/2^idx)/ln2
             // Use 3rd order taylor to approximate expected result
             let expected = (idx as u256) << 64;
@@ -304,7 +300,7 @@ module initia_std::math128 {
             assert_approx_the_same(
                 fixed_point64::get_raw_value(res),
                 (expected as u128),
-                14,
+                14
             );
             idx = idx + 1;
         };

@@ -5,19 +5,121 @@
 
 
 
+-  [Struct `FromSdkRequest`](#0x1_address_FromSdkRequest)
+-  [Struct `FromSdkResponse`](#0x1_address_FromSdkResponse)
+-  [Struct `ToSdkRequest`](#0x1_address_ToSdkRequest)
+-  [Struct `ToSdkResponse`](#0x1_address_ToSdkResponse)
 -  [Function `from_sdk`](#0x1_address_from_sdk)
 -  [Function `to_sdk`](#0x1_address_to_sdk)
 -  [Function `to_string`](#0x1_address_to_string)
 -  [Function `from_string`](#0x1_address_from_string)
+-  [Function `to_bytes`](#0x1_address_to_bytes)
+-  [Function `from_bytes`](#0x1_address_from_bytes)
 
 
-<pre><code><b>use</b> <a href="json.md#0x1_json">0x1::json</a>;
-<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option">0x1::option</a>;
+<pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs">0x1::bcs</a>;
+<b>use</b> <a href="from_bcs.md#0x1_from_bcs">0x1::from_bcs</a>;
+<b>use</b> <a href="json.md#0x1_json">0x1::json</a>;
 <b>use</b> <a href="query.md#0x1_query">0x1::query</a>;
-<b>use</b> <a href="simple_json.md#0x1_simple_json">0x1::simple_json</a>;
 <b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 </code></pre>
 
+
+
+<a id="0x1_address_FromSdkRequest"></a>
+
+## Struct `FromSdkRequest`
+
+
+
+<pre><code><b>struct</b> <a href="address.md#0x1_address_FromSdkRequest">FromSdkRequest</a> <b>has</b> <b>copy</b>, drop
+</code></pre>
+
+
+
+##### Fields
+
+
+<dl>
+<dt>
+<code>sdk_addr: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+<a id="0x1_address_FromSdkResponse"></a>
+
+## Struct `FromSdkResponse`
+
+
+
+<pre><code><b>struct</b> <a href="address.md#0x1_address_FromSdkResponse">FromSdkResponse</a> <b>has</b> <b>copy</b>, drop
+</code></pre>
+
+
+
+##### Fields
+
+
+<dl>
+<dt>
+<code>vm_addr: <b>address</b></code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+<a id="0x1_address_ToSdkRequest"></a>
+
+## Struct `ToSdkRequest`
+
+
+
+<pre><code><b>struct</b> <a href="address.md#0x1_address_ToSdkRequest">ToSdkRequest</a> <b>has</b> <b>copy</b>, drop
+</code></pre>
+
+
+
+##### Fields
+
+
+<dl>
+<dt>
+<code>vm_addr: <b>address</b></code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+<a id="0x1_address_ToSdkResponse"></a>
+
+## Struct `ToSdkResponse`
+
+
+
+<pre><code><b>struct</b> <a href="address.md#0x1_address_ToSdkResponse">ToSdkResponse</a> <b>has</b> <b>copy</b>, drop
+</code></pre>
+
+
+
+##### Fields
+
+
+<dl>
+<dt>
+<code>sdk_addr: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a></code>
+</dt>
+<dd>
+
+</dd>
+</dl>
 
 
 <a id="0x1_address_from_sdk"></a>
@@ -31,31 +133,23 @@
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="address.md#0x1_address_from_sdk">from_sdk</a>(sdk_addr: String): <b>address</b> {
-    <b>let</b> obj = <a href="simple_json.md#0x1_simple_json_empty">simple_json::empty</a>();
-    <a href="simple_json.md#0x1_simple_json_set_object">simple_json::set_object</a>(&<b>mut</b> obj, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>&lt;String&gt;());
-    <a href="simple_json.md#0x1_simple_json_increase_depth">simple_json::increase_depth</a>(&<b>mut</b> obj);
+    <b>let</b> res =
+        <a href="json.md#0x1_json_unmarshal">json::unmarshal</a>&lt;<a href="address.md#0x1_address_FromSdkResponse">FromSdkResponse</a>&gt;(
+            <a href="query.md#0x1_query_query_custom">query::query_custom</a>(
+                b"from_sdk_address",
+                <a href="json.md#0x1_json_marshal">json::marshal</a>(&<a href="address.md#0x1_address_FromSdkRequest">FromSdkRequest</a> { sdk_addr: sdk_addr })
+            )
+        );
 
-    <a href="simple_json.md#0x1_simple_json_set_string">simple_json::set_string</a>(&<b>mut</b> obj, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"sdk_addr")), sdk_addr);
-
-    <b>let</b> req = <a href="json.md#0x1_json_stringify">json::stringify</a>(<a href="simple_json.md#0x1_simple_json_to_json_object">simple_json::to_json_object</a>(&obj));
-    <b>let</b> res = <a href="query.md#0x1_query_query_custom">query::query_custom</a>(b"from_sdk_address", *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&req));
-    <b>let</b> res = <a href="simple_json.md#0x1_simple_json_from_json_object">simple_json::from_json_object</a>(<a href="json.md#0x1_json_parse">json::parse</a>(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(res)));
-
-    <a href="simple_json.md#0x1_simple_json_increase_depth">simple_json::increase_depth</a>(&<b>mut</b> res);
-    <b>let</b> (_, data) = <a href="json.md#0x1_json_unpack_elem">json::unpack_elem</a>(<a href="simple_json.md#0x1_simple_json_borrow">simple_json::borrow</a>(&<b>mut</b> res));
-
-    <a href="address.md#0x1_address_from_string">from_string</a>(<a href="json.md#0x1_json_as_string">json::as_string</a>(data))
+    res.vm_addr
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_address_to_sdk"></a>
 
@@ -68,31 +162,23 @@
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="address.md#0x1_address_to_sdk">to_sdk</a>(vm_addr: <b>address</b>): String {
-    <b>let</b> obj = <a href="simple_json.md#0x1_simple_json_empty">simple_json::empty</a>();
-    <a href="simple_json.md#0x1_simple_json_set_object">simple_json::set_object</a>(&<b>mut</b> obj, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>&lt;String&gt;());
-    <a href="simple_json.md#0x1_simple_json_increase_depth">simple_json::increase_depth</a>(&<b>mut</b> obj);
+    <b>let</b> res =
+        <a href="json.md#0x1_json_unmarshal">json::unmarshal</a>&lt;<a href="address.md#0x1_address_ToSdkResponse">ToSdkResponse</a>&gt;(
+            <a href="query.md#0x1_query_query_custom">query::query_custom</a>(
+                b"to_sdk_address",
+                <a href="json.md#0x1_json_marshal">json::marshal</a>(&<a href="address.md#0x1_address_ToSdkRequest">ToSdkRequest</a> { vm_addr: vm_addr })
+            )
+        );
 
-    <a href="simple_json.md#0x1_simple_json_set_string">simple_json::set_string</a>(&<b>mut</b> obj, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_some">option::some</a>(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"vm_addr")), <a href="address.md#0x1_address_to_string">to_string</a>(vm_addr));
-
-    <b>let</b> req = <a href="json.md#0x1_json_stringify">json::stringify</a>(<a href="simple_json.md#0x1_simple_json_to_json_object">simple_json::to_json_object</a>(&obj));
-    <b>let</b> res = <a href="query.md#0x1_query_query_custom">query::query_custom</a>(b"to_sdk_address", *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&req));
-    <b>let</b> res = <a href="simple_json.md#0x1_simple_json_from_json_object">simple_json::from_json_object</a>(<a href="json.md#0x1_json_parse">json::parse</a>(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(res)));
-
-    <a href="simple_json.md#0x1_simple_json_increase_depth">simple_json::increase_depth</a>(&<b>mut</b> res);
-    <b>let</b> (_, data) = <a href="json.md#0x1_json_unpack_elem">json::unpack_elem</a>(<a href="simple_json.md#0x1_simple_json_borrow">simple_json::borrow</a>(&<b>mut</b> res));
-
-    <a href="json.md#0x1_json_as_string">json::as_string</a>(data)
+    res.sdk_addr
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_address_to_string"></a>
 
@@ -105,16 +191,13 @@
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>native</b> <b>fun</b> <a href="address.md#0x1_address_to_string">to_string</a>(addr: <b>address</b>): String;
+<pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="address.md#0x1_address_to_string">to_string</a>(addr: <b>address</b>): String;
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_address_from_string"></a>
 
@@ -127,13 +210,50 @@
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>native</b> <b>fun</b> <a href="address.md#0x1_address_from_string">from_string</a>(addr_str: String): <b>address</b>;
+<pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="address.md#0x1_address_from_string">from_string</a>(addr_str: String): <b>address</b>;
 </code></pre>
 
 
 
-</details>
+<a id="0x1_address_to_bytes"></a>
+
+## Function `to_bytes`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="address.md#0x1_address_to_bytes">to_bytes</a>(addr: <b>address</b>): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="address.md#0x1_address_to_bytes">to_bytes</a>(addr: <b>address</b>): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
+    <a href="../../move_nursery/../move_stdlib/doc/bcs.md#0x1_bcs_to_bytes">bcs::to_bytes</a>(&addr)
+}
+</code></pre>
+
+
+
+<a id="0x1_address_from_bytes"></a>
+
+## Function `from_bytes`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="address.md#0x1_address_from_bytes">from_bytes</a>(bytes: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): <b>address</b>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="address.md#0x1_address_from_bytes">from_bytes</a>(bytes: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): <b>address</b> {
+    <a href="from_bcs.md#0x1_from_bcs_to_address">from_bcs::to_address</a>(bytes)
+}
+</code></pre>

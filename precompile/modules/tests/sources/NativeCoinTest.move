@@ -13,7 +13,7 @@ module TestAccount::NativeCoinTest {
     struct Capabilities has key {
         burn_capability: BurnCapability,
         freeze_capability: FreezeCapability,
-        mint_capability: MintCapability,
+        mint_capability: MintCapability
     }
 
     public fun initialized(): bool {
@@ -24,7 +24,7 @@ module TestAccount::NativeCoinTest {
         assert!(!initialized(), ERR_INITIALIZED);
         assert!(
             signer::address_of(account) == @TestAccount,
-            ERR_UNAUTHORIZED,
+            ERR_UNAUTHORIZED
         );
 
         let (mint_cap, burn_cap, freeze_cap) =
@@ -35,7 +35,7 @@ module TestAccount::NativeCoinTest {
                 string::utf8(b"TC"),
                 8,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         move_to(
@@ -44,7 +44,7 @@ module TestAccount::NativeCoinTest {
                 burn_capability: burn_cap,
                 freeze_capability: freeze_cap,
                 mint_capability: mint_cap
-            },
+            }
         )
     }
 
@@ -54,7 +54,7 @@ module TestAccount::NativeCoinTest {
         assert!(initialized(), ERR_UNINITIALIZED);
         assert!(
             signer::address_of(account) == @TestAccount,
-            ERR_UNAUTHORIZED,
+            ERR_UNAUTHORIZED
         );
 
         let cap = borrow_global<Capabilities>(@TestAccount);

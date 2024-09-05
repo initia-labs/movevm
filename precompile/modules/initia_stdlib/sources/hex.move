@@ -36,11 +36,11 @@ module initia_std::hex {
             let val = *vector::borrow(bz, index);
             vector::push_back(
                 &mut vec,
-                encode_to_char_with_option(val / 0x10, is_upper),
+                encode_to_char_with_option(val / 0x10, is_upper)
             );
             vector::push_back(
                 &mut vec,
-                encode_to_char_with_option(val % 0x10, is_upper),
+                encode_to_char_with_option(val % 0x10, is_upper)
             );
             index = index + 1;
         };
@@ -52,7 +52,7 @@ module initia_std::hex {
     public fun decode_string(str: &String): vector<u8> {
         assert!(
             is_hex_string(str),
-            error::invalid_argument(ENOT_HEXSTRING),
+            error::invalid_argument(ENOT_HEXSTRING)
         );
 
         let vec: vector<u8> = vector[];
@@ -128,12 +128,13 @@ module initia_std::hex {
     }
 
     fun is_hex_char(char: u8): bool {
-        if ((char >= ZERO
+        if (
+            (char >= ZERO
                 && char <= ZERO + 9) // 0 - 9
-            || (char >= UPPERA
-                && char <= UPPERA + 5) // A - F
-            || (char >= LOWERA
-                && char <= LOWERA + 5)) { // a - f
+                || (char >= UPPERA
+                    && char <= UPPERA + 5) // A - F
+                || (char >= LOWERA
+                    && char <= LOWERA + 5)) { // a - f
             return true
         };
         false
@@ -145,7 +146,7 @@ module initia_std::hex {
         let hex_string = encode_to_string(&raw_bytes);
         assert!(
             *string::bytes(&hex_string) == b"68656c6c6f20776f726c6421",
-            0,
+            0
         );
 
         // test odd bytes

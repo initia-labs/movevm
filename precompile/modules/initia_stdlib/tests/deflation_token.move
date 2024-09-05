@@ -10,7 +10,7 @@ module 0xcafe::deflation_token {
     use std::string;
 
     struct BurnStore has key {
-        burn_ref: BurnRef,
+        burn_ref: BurnRef
     }
 
     public fun initialize(
@@ -25,21 +25,19 @@ module 0xcafe::deflation_token {
             function_info::new_function_info(
                 account,
                 string::utf8(b"deflation_token"),
-                string::utf8(b"withdraw"),
+                string::utf8(b"withdraw")
             );
 
         dispatchable_fungible_asset::register_dispatch_functions(
             constructor_ref,
             option::some(withdraw),
             option::none(),
-            option::none(),
+            option::none()
         );
     }
 
     public fun withdraw<T: key>(
-        store: Object<T>,
-        amount: u64,
-        transfer_ref: &TransferRef,
+        store: Object<T>, amount: u64, transfer_ref: &TransferRef
     ): FungibleAsset acquires BurnStore {
         // For every withdraw, we burn 10% from the store.
         let burn_amount = amount / 10;
@@ -58,8 +56,12 @@ module 0xcafe::deflation_token {
     use initia_std::fungible_asset::{Metadata, TestToken};
 
     #[test(creator = @0xcafe)]
-    #[expected_failure(major_status = 4037, location = initia_std::dispatchable_fungible_asset)]
-    fun test_self_reentrancy(creator: &signer,) {
+    #[
+        expected_failure(
+            major_status = 4037, location = initia_std::dispatchable_fungible_asset
+        )
+    ]
+    fun test_self_reentrancy(creator: &signer) {
         let (creator_ref, token_object) = fungible_asset::create_test_token(creator);
         let (mint, _, _, _) = fungible_asset::init_test_metadata(&creator_ref);
         let metadata = object::convert<TestToken, Metadata>(token_object);

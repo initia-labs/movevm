@@ -9,9 +9,6 @@ Module providing debug functionality.
 -  [Constants](#@Constants_0)
 -  [Function `print`](#0x1_debug_print)
 -  [Function `print_stack_trace`](#0x1_debug_print_stack_trace)
--  [Function `format`](#0x1_debug_format)
--  [Function `native_print`](#0x1_debug_native_print)
--  [Function `native_stack_trace`](#0x1_debug_native_stack_trace)
 
 
 <pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
@@ -54,8 +51,7 @@ Module providing debug functionality.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="debug.md#0x1_debug_print">print</a>&lt;T&gt;(x: &T) {
@@ -64,8 +60,6 @@ Module providing debug functionality.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_debug_print_stack_trace"></a>
 
@@ -78,83 +72,10 @@ Module providing debug functionality.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="debug.md#0x1_debug_print_stack_trace">print_stack_trace</a>() {
     <a href="debug.md#0x1_debug_native_print">native_print</a>(<a href="debug.md#0x1_debug_native_stack_trace">native_stack_trace</a>());
 }
 </code></pre>
-
-
-
-</details>
-
-<a id="0x1_debug_format"></a>
-
-## Function `format`
-
-
-
-<pre><code><b>fun</b> <a href="debug.md#0x1_debug_format">format</a>&lt;T&gt;(x: &T): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code>inline <b>fun</b> <a href="debug.md#0x1_debug_format">format</a>&lt;T&gt;(x: &T): String {
-    debug_string(x)
-}
-</code></pre>
-
-
-
-</details>
-
-<a id="0x1_debug_native_print"></a>
-
-## Function `native_print`
-
-
-
-<pre><code><b>fun</b> <a href="debug.md#0x1_debug_native_print">native_print</a>(x: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>native</b> <b>fun</b> <a href="debug.md#0x1_debug_native_print">native_print</a>(x: String);
-</code></pre>
-
-
-
-</details>
-
-<a id="0x1_debug_native_stack_trace"></a>
-
-## Function `native_stack_trace`
-
-
-
-<pre><code><b>fun</b> <a href="debug.md#0x1_debug_native_stack_trace">native_stack_trace</a>(): <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>native</b> <b>fun</b> <a href="debug.md#0x1_debug_native_stack_trace">native_stack_trace</a>(): String;
-</code></pre>
-
-
-
-</details>

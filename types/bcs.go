@@ -1765,7 +1765,7 @@ type StakingDelta struct {
 	Validator []uint8
 	Metadata AccountAddress
 	Delegation uint64
-	Undelegation uint64
+	Undelegation string
 }
 
 func (obj *StakingDelta) Serialize(serializer serde.Serializer) error {
@@ -1773,7 +1773,7 @@ func (obj *StakingDelta) Serialize(serializer serde.Serializer) error {
 	if err := serialize_vector_u8(obj.Validator, serializer); err != nil { return err }
 	if err := obj.Metadata.Serialize(serializer); err != nil { return err }
 	if err := serializer.SerializeU64(obj.Delegation); err != nil { return err }
-	if err := serializer.SerializeU64(obj.Undelegation); err != nil { return err }
+	if err := serializer.SerializeStr(obj.Undelegation); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -1793,7 +1793,7 @@ func DeserializeStakingDelta(deserializer serde.Deserializer) (StakingDelta, err
 	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Validator = val } else { return obj, err }
 	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Metadata = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.Delegation = val } else { return obj, err }
-	if val, err := deserializer.DeserializeU64(); err == nil { obj.Undelegation = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.Undelegation = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

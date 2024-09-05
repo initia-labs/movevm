@@ -10,9 +10,11 @@ By utilizing this current module, a developer can create his own coin and care l
 
 -  [Resource `Capabilities`](#0x1_managed_coin_Capabilities)
 -  [Constants](#@Constants_0)
+-  [Function `sudo_mint`](#0x1_managed_coin_sudo_mint)
 -  [Function `initialize`](#0x1_managed_coin_initialize)
 -  [Function `burn`](#0x1_managed_coin_burn)
 -  [Function `mint`](#0x1_managed_coin_mint)
+-  [Function `mint_to`](#0x1_managed_coin_mint_to)
 
 
 <pre><code><b>use</b> <a href="coin.md#0x1_coin">0x1::coin</a>;
@@ -39,8 +41,7 @@ The resource is stored on the account that initialized coin <code>CoinType</code
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -64,8 +65,6 @@ The resource is stored on the account that initialized coin <code>CoinType</code
 </dd>
 </dl>
 
-
-</details>
 
 <a id="@Constants_0"></a>
 
@@ -92,6 +91,49 @@ Metadata has no capabilities (burn/mint).
 
 
 
+<a id="0x1_managed_coin_sudo_mint"></a>
+
+## Function `sudo_mint`
+
+Create new metadata coins and deposit them into dst_addr's account.
+
+
+<pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_sudo_mint">sudo_mint</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, dst_addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64)
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_sudo_mint">sudo_mint</a>(
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
+    dst_addr: <b>address</b>,
+    metadata: Object&lt;Metadata&gt;,
+    amount: u64
+) <b>acquires</b> <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> {
+    <a href="managed_coin.md#0x1_managed_coin_check_sudo">check_sudo</a>(<a href="account.md#0x1_account">account</a>);
+
+    <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
+    <b>assert</b>!(
+        <a href="object.md#0x1_object_is_owner">object::is_owner</a>(metadata, account_addr),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_EUNAUTHORIZED">EUNAUTHORIZED</a>)
+    );
+
+    <b>let</b> object_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&metadata);
+    <b>assert</b>!(
+        <b>exists</b>&lt;<a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a>&gt;(object_addr),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_ENO_CAPABILITIES">ENO_CAPABILITIES</a>)
+    );
+
+    <b>let</b> capabilities = <b>borrow_global</b>&lt;<a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a>&gt;(object_addr);
+    <b>let</b> fa = <a href="coin.md#0x1_coin_mint">coin::mint</a>(&capabilities.mint_cap, amount);
+    <a href="coin.md#0x1_coin_sudo_deposit">coin::sudo_deposit</a>(dst_addr, fa);
+}
+</code></pre>
+
+
+
 <a id="0x1_managed_coin_initialize"></a>
 
 ## Function `initialize`
@@ -105,8 +147,7 @@ Mint and Burn Capabilities will be stored under <code>metadata</code> in <code><
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_initialize">initialize</a>(
@@ -116,30 +157,28 @@ Mint and Burn Capabilities will be stored under <code>metadata</code> in <code><
     symbol: String,
     decimals: u8,
     icon_uri: String,
-    project_uri: String,
+    project_uri: String
 ) {
-    <b>let</b> (mint_cap, burn_cap, freeze_cap, extend_ref) = <a href="coin.md#0x1_coin_initialize_and_generate_extend_ref">coin::initialize_and_generate_extend_ref</a> (
-        <a href="account.md#0x1_account">account</a>,
-        maximum_supply,
-        name,
-        symbol,
-        decimals,
-        icon_uri,
-        project_uri,
-    );
+    <b>let</b> (mint_cap, burn_cap, freeze_cap, extend_ref) =
+        <a href="coin.md#0x1_coin_initialize_and_generate_extend_ref">coin::initialize_and_generate_extend_ref</a>(
+            <a href="account.md#0x1_account">account</a>,
+            maximum_supply,
+            name,
+            symbol,
+            decimals,
+            icon_uri,
+            project_uri
+        );
 
     <b>let</b> metadata_signer = <a href="object.md#0x1_object_generate_signer_for_extending">object::generate_signer_for_extending</a>(&extend_ref);
-    <b>move_to</b>(&metadata_signer, <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> {
-        mint_cap,
-        burn_cap,
-        freeze_cap,
-    });
+    <b>move_to</b>(
+        &metadata_signer,
+        <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> { mint_cap, burn_cap, freeze_cap }
+    );
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_managed_coin_burn"></a>
 
@@ -153,26 +192,23 @@ Withdraw an <code>amount</code> of metadata coin from <code><a href="account.md#
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_burn">burn</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
-    metadata: Object&lt;Metadata&gt;,
-    amount: u64,
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: Object&lt;Metadata&gt;, amount: u64
 ) <b>acquires</b> <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> {
     <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="object.md#0x1_object_is_owner">object::is_owner</a>(metadata, account_addr),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_EUNAUTHORIZED">EUNAUTHORIZED</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_EUNAUTHORIZED">EUNAUTHORIZED</a>)
     );
 
-    <b>let</b> object_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(metadata);
+    <b>let</b> object_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&metadata);
     <b>assert</b>!(
         <b>exists</b>&lt;<a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a>&gt;(object_addr),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_ENO_CAPABILITIES">ENO_CAPABILITIES</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_ENO_CAPABILITIES">ENO_CAPABILITIES</a>)
     );
 
     <b>let</b> capabilities = <b>borrow_global</b>&lt;<a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a>&gt;(object_addr);
@@ -184,48 +220,67 @@ Withdraw an <code>amount</code> of metadata coin from <code><a href="account.md#
 
 
 
-</details>
-
 <a id="0x1_managed_coin_mint"></a>
 
 ## Function `mint`
 
-Create new metadata coins and deposit them into dst_addr's account.
+Create new metadata coins.
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint">mint</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, dst_addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint">mint</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64): <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint">mint</a>(
-    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
-    dst_addr: <b>address</b>,
-    metadata: Object&lt;Metadata&gt;,
-    amount: u64,
-) <b>acquires</b> <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint">mint</a>(
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: Object&lt;Metadata&gt;, amount: u64
+): FungibleAsset <b>acquires</b> <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> {
     <b>let</b> account_addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>);
 
     <b>assert</b>!(
         <a href="object.md#0x1_object_is_owner">object::is_owner</a>(metadata, account_addr),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_EUNAUTHORIZED">EUNAUTHORIZED</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_EUNAUTHORIZED">EUNAUTHORIZED</a>)
     );
 
-    <b>let</b> object_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(metadata);
+    <b>let</b> object_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&metadata);
     <b>assert</b>!(
         <b>exists</b>&lt;<a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a>&gt;(object_addr),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_ENO_CAPABILITIES">ENO_CAPABILITIES</a>),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="managed_coin.md#0x1_managed_coin_ENO_CAPABILITIES">ENO_CAPABILITIES</a>)
     );
 
     <b>let</b> capabilities = <b>borrow_global</b>&lt;<a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a>&gt;(object_addr);
-    <a href="coin.md#0x1_coin_mint_to">coin::mint_to</a>(&capabilities.mint_cap, dst_addr, amount);
+    <a href="coin.md#0x1_coin_mint">coin::mint</a>(&capabilities.mint_cap, amount)
 }
 </code></pre>
 
 
 
-</details>
+<a id="0x1_managed_coin_mint_to"></a>
+
+## Function `mint_to`
+
+Create new metadata coins and deposit them into dst_addr's account.
+
+
+<pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint_to">mint_to</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, dst_addr: <b>address</b>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount: u64)
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> entry <b>fun</b> <a href="managed_coin.md#0x1_managed_coin_mint_to">mint_to</a>(
+    <a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
+    dst_addr: <b>address</b>,
+    metadata: Object&lt;Metadata&gt;,
+    amount: u64
+) <b>acquires</b> <a href="managed_coin.md#0x1_managed_coin_Capabilities">Capabilities</a> {
+    <b>let</b> fa = <a href="managed_coin.md#0x1_managed_coin_mint">mint</a>(<a href="account.md#0x1_account">account</a>, metadata, amount);
+
+    <a href="coin.md#0x1_coin_deposit">coin::deposit</a>(dst_addr, fa);
+}
+</code></pre>

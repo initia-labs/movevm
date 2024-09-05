@@ -17,36 +17,32 @@ module minitia_std::function_info {
     struct FunctionInfo has copy, drop, store {
         module_address: address,
         module_name: String,
-        function_name: String,
+        function_name: String
     }
 
     /// Creates a new function info from names.
     public fun new_function_info(
-        module_signer: &signer,
-        module_name: String,
-        function_name: String,
+        module_signer: &signer, module_name: String, function_name: String
     ): FunctionInfo {
         new_function_info_from_address(
             signer::address_of(module_signer),
             module_name,
-            function_name,
+            function_name
         )
     }
 
     public(friend) fun new_function_info_from_address(
-        module_address: address,
-        module_name: String,
-        function_name: String,
+        module_address: address, module_name: String, function_name: String
     ): FunctionInfo {
         assert!(
             is_identifier(string::bytes(&module_name)),
-            EINVALID_IDENTIFIER,
+            EINVALID_IDENTIFIER
         );
         assert!(
             is_identifier(string::bytes(&function_name)),
-            EINVALID_IDENTIFIER,
+            EINVALID_IDENTIFIER
         );
-        FunctionInfo { module_address, module_name, function_name, }
+        FunctionInfo { module_address, module_name, function_name }
     }
 
     /// Check if the dispatch target function meets the type requirements of the disptach entry point.
@@ -60,7 +56,7 @@ module minitia_std::function_info {
     ///
     /// dispatch_target also needs to be public so the type signature will remain unchanged.
     public(friend) fun check_dispatch_type_compatibility(
-        framework_function: &FunctionInfo, dispatch_target: &FunctionInfo,
+        framework_function: &FunctionInfo, dispatch_target: &FunctionInfo
     ): bool {
         load_function_impl(dispatch_target);
         check_dispatch_type_compatibility_impl(framework_function, dispatch_target)
@@ -79,7 +75,9 @@ module minitia_std::function_info {
         load_function_impl(f)
     }
 
-    native fun check_dispatch_type_compatibility_impl(lhs: &FunctionInfo, r: &FunctionInfo): bool;
+    native fun check_dispatch_type_compatibility_impl(
+        lhs: &FunctionInfo, r: &FunctionInfo
+    ): bool;
     native fun is_identifier(s: &vector<u8>): bool;
     native fun load_function_impl(f: &FunctionInfo);
 

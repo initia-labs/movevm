@@ -38,25 +38,28 @@ module initia_std::primary_fungible_store {
     /// stores for users with deterministic addresses so that users can easily deposit/withdraw/transfer fungible
     /// assets.
     struct DeriveRefPod has key {
-        metadata_derive_ref: DeriveRef,
+        metadata_derive_ref: DeriveRef
     }
 
     struct ModuleStore has key {
         issuers: Table<address /* metadata */, address /* issuer */>,
-        user_stores: Table<address /* user */, Table<address /* metadata */, address /* store */>>,
+        user_stores: Table<address /* user */, Table<address /* metadata */, address /* store */>>
     }
 
     #[event]
     struct PrimaryStoreCreatedEvent has drop, store {
         owner_addr: address,
         store_addr: address,
-        metadata_addr: address,
+        metadata_addr: address
     }
 
     fun init_module(chain: &signer) {
         move_to(
             chain,
-            ModuleStore { issuers: table::new(), user_stores: table::new(), },
+            ModuleStore {
+                issuers: table::new(),
+                user_stores: table::new()
+            }
         )
     }
 
@@ -70,7 +73,7 @@ module initia_std::primary_fungible_store {
         symbol: String,
         decimals: u8,
         icon_uri: String,
-        project_uri: String,
+        project_uri: String
     ) acquires ModuleStore {
         fungible_asset::add_fungibility(
             constructor_ref,
@@ -79,7 +82,7 @@ module initia_std::primary_fungible_store {
             symbol,
             decimals,
             icon_uri,
-            project_uri,
+            project_uri
         );
 
         let metadata = object::object_from_constructor_ref<Metadata>(constructor_ref);
@@ -87,8 +90,8 @@ module initia_std::primary_fungible_store {
         move_to(
             metadata_signer,
             DeriveRefPod {
-                metadata_derive_ref: object::generate_derive_ref(constructor_ref),
-            },
+                metadata_derive_ref: object::generate_derive_ref(constructor_ref)
+            }
         );
 
         // record issuers for cosmos side query
@@ -97,14 +100,14 @@ module initia_std::primary_fungible_store {
             table::add(
                 &mut module_store.issuers,
                 object::object_address(&metadata),
-                object::owner(metadata),
+                object::owner(metadata)
             );
         }
     }
 
     /// Ensure that the primary store object for the given address exists. If it doesn't, create it.
     public fun ensure_primary_store_exists<T: key>(
-        owner: address, metadata: Object<T>,
+        owner: address, metadata: Object<T>
     ): Object<FungibleStore> acquires DeriveRefPod, ModuleStore {
         if (!primary_store_exists(owner, metadata)) {
             create_primary_store(owner, metadata)
@@ -115,7 +118,7 @@ module initia_std::primary_fungible_store {
 
     /// Create a primary store object to hold fungible asset for the given address.
     public fun create_primary_store<T: key>(
-        owner_addr: address, metadata: Object<T>,
+        owner_addr: address, metadata: Object<T>
     ): Object<FungibleStore> acquires DeriveRefPod, ModuleStore {
         let metadata_addr = object::object_address(&metadata);
         object::address_to_object<Metadata>(metadata_addr);
@@ -135,13 +138,13 @@ module initia_std::primary_fungible_store {
         if (exists<ModuleStore>(@initia_std)) {
             let module_store = borrow_global_mut<ModuleStore>(@initia_std);
             if (!table::contains(
-                    &module_store.user_stores,
-                    owner_addr,
-                )) {
+                &module_store.user_stores,
+                owner_addr
+            )) {
                 table::add(
                     &mut module_store.user_stores,
                     owner_addr,
-                    table::new(),
+                    table::new()
                 );
             };
 
@@ -150,14 +153,12 @@ module initia_std::primary_fungible_store {
             table::add(
                 user_stores,
                 metadata_addr,
-                store_addr,
+                store_addr
             );
         };
 
         // emit store created event
-        event::emit(
-            PrimaryStoreCreatedEvent { owner_addr, store_addr, metadata_addr, },
-        );
+        event::emit(PrimaryStoreCreatedEvent { owner_addr, store_addr, metadata_addr });
         store
     }
 
@@ -167,7 +168,7 @@ module initia_std::primary_fungible_store {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         *table::borrow(
             &module_store.issuers,
-            object::object_address(&metadata),
+            object::object_address(&metadata)
         )
     }
 
@@ -182,8 +183,8 @@ module initia_std::primary_fungible_store {
 
     #[view]
     /// Get the primary store object for the given account.
-    public fun primary_store<T: key>(owner: address, metadata: Object<T>)
-        : Object<FungibleStore> {
+    public fun primary_store<T: key>(owner: address, metadata: Object<T>):
+        Object<FungibleStore> {
         let store = primary_store_address(owner, metadata);
         object::address_to_object<FungibleStore>(store)
     }
@@ -215,9 +216,7 @@ module initia_std::primary_fungible_store {
     #[view]
     /// Get the balances of `account`'s primary store of all fungible assets.
     public fun balances(
-        account: address,
-        start_after: Option<address>,
-        limit: u8,
+        account: address, start_after: Option<address>, limit: u8
     ): (vector<Object<Metadata>>, vector<u64>) acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let account_stores = table::borrow(&module_store.user_stores, account);
@@ -225,14 +224,14 @@ module initia_std::primary_fungible_store {
             account_stores,
             option::none(),
             start_after,
-            2,
+            2
         );
 
         let metadata_vec: vector<Object<Metadata>> = vector[];
         let balance_vec: vector<u64> = vector[];
 
         while (table::prepare<address, address>(iter)
-                && vector::length(&balance_vec) < (limit as u64)) {
+            && vector::length(&balance_vec) < (limit as u64)) {
             let (metadata_addr, store_addr) = table::next<address, address>(iter);
             let metadata = object::address_to_object<Metadata>(metadata_addr);
             let store = object::address_to_object<FungibleStore>(*store_addr);
@@ -240,7 +239,7 @@ module initia_std::primary_fungible_store {
             vector::push_back(&mut metadata_vec, metadata);
             vector::push_back(
                 &mut balance_vec,
-                fungible_asset::balance(store),
+                fungible_asset::balance(store)
             );
         };
 
@@ -250,7 +249,9 @@ module initia_std::primary_fungible_store {
     /// Deposit fungible asset `fa` to the given account's primary store.
     ///
     /// This function is only callable by the chain.
-    public(friend) fun sudo_deposit(owner: address, fa: FungibleAsset) acquires DeriveRefPod, ModuleStore {
+    public(friend) fun sudo_deposit(
+        owner: address, fa: FungibleAsset
+    ) acquires DeriveRefPod, ModuleStore {
         let metadata = fungible_asset::asset_metadata(&fa);
         let store = ensure_primary_store_exists(owner, metadata);
         fungible_asset::sudo_deposit(store, fa);
@@ -268,7 +269,7 @@ module initia_std::primary_fungible_store {
         sender: &signer,
         metadata: Object<T>,
         recipient: address,
-        amount: u64,
+        amount: u64
     ) acquires DeriveRefPod, ModuleStore {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
@@ -277,7 +278,7 @@ module initia_std::primary_fungible_store {
             sender,
             sender_store,
             recipient_store,
-            amount,
+            amount
         );
     }
 
@@ -310,7 +311,7 @@ module initia_std::primary_fungible_store {
         sender: &signer,
         metadata: Object<T>,
         recipient: address,
-        amount: u64,
+        amount: u64
     ) acquires DeriveRefPod, ModuleStore {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
@@ -332,7 +333,7 @@ module initia_std::primary_fungible_store {
         metadata: Object<T>,
         recipient: address,
         amount: u64,
-        expected: u64,
+        expected: u64
     ) acquires DeriveRefPod, ModuleStore {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
@@ -342,7 +343,7 @@ module initia_std::primary_fungible_store {
             sender_store,
             recipient_store,
             amount,
-            expected,
+            expected
         );
     }
 
@@ -351,7 +352,7 @@ module initia_std::primary_fungible_store {
         let primary_store =
             ensure_primary_store_exists(
                 owner,
-                fungible_asset::mint_ref_metadata(mint_ref),
+                fungible_asset::mint_ref_metadata(mint_ref)
             );
 
         fungible_asset::mint_to(mint_ref, primary_store, amount);
@@ -367,7 +368,7 @@ module initia_std::primary_fungible_store {
         let primary_store =
             primary_store(
                 owner,
-                fungible_asset::burn_ref_metadata(burn_ref),
+                fungible_asset::burn_ref_metadata(burn_ref)
             );
         fungible_asset::burn_from(burn_ref, primary_store, amount);
     }
@@ -379,7 +380,7 @@ module initia_std::primary_fungible_store {
         let primary_store =
             ensure_primary_store_exists(
                 owner,
-                fungible_asset::transfer_ref_metadata(transfer_ref),
+                fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::set_frozen_flag(transfer_ref, primary_store, frozen);
     }
@@ -391,12 +392,12 @@ module initia_std::primary_fungible_store {
         let from_primary_store =
             primary_store(
                 owner,
-                fungible_asset::transfer_ref_metadata(transfer_ref),
+                fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::withdraw_with_ref(
             transfer_ref,
             from_primary_store,
-            amount,
+            amount
         )
     }
 
@@ -407,7 +408,7 @@ module initia_std::primary_fungible_store {
         let from_primary_store =
             ensure_primary_store_exists(
                 owner,
-                fungible_asset::transfer_ref_metadata(transfer_ref),
+                fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::deposit_with_ref(transfer_ref, from_primary_store, fa);
 
@@ -427,18 +428,18 @@ module initia_std::primary_fungible_store {
         let from_primary_store =
             primary_store(
                 from,
-                fungible_asset::transfer_ref_metadata(transfer_ref),
+                fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         let to_primary_store =
             ensure_primary_store_exists(
                 to,
-                fungible_asset::transfer_ref_metadata(transfer_ref),
+                fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::transfer_with_ref(
             transfer_ref,
             from_primary_store,
             to_primary_store,
-            amount,
+            amount
         );
 
         // create cosmos side account
@@ -476,7 +477,7 @@ module initia_std::primary_fungible_store {
             string::utf8(b"@T"),
             0,
             string::utf8(b"http://example.com/icon"),
-            string::utf8(b"http://example.com"),
+            string::utf8(b"http://example.com")
         );
         let mint_ref = generate_mint_ref(constructor_ref);
         let burn_ref = generate_burn_ref(constructor_ref);
@@ -492,11 +493,11 @@ module initia_std::primary_fungible_store {
         let aaron_address = signer::address_of(aaron);
         assert!(
             !primary_store_exists(creator_address, metadata),
-            1,
+            1
         );
         assert!(
             !primary_store_exists(aaron_address, metadata),
-            2,
+            2
         );
         assert!(balance(creator_address, metadata) == 0, 3);
         assert!(balance(aaron_address, metadata) == 0, 4);
@@ -506,16 +507,16 @@ module initia_std::primary_fungible_store {
         ensure_primary_store_exists(aaron_address, metadata);
         assert!(
             primary_store_exists(creator_address, metadata),
-            7,
+            7
         );
         assert!(
             primary_store_exists(aaron_address, metadata),
-            8,
+            8
         );
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_basic_flow(creator: &signer, aaron: &signer,) acquires DeriveRefPod, ModuleStore {
+    fun test_basic_flow(creator: &signer, aaron: &signer) acquires DeriveRefPod, ModuleStore {
         let (creator_ref, metadata) = create_test_token(creator);
         let (mint_ref, transfer_ref, burn_ref) =
             init_test_metadata_with_primary_store_enabled(&creator_ref);
@@ -537,7 +538,7 @@ module initia_std::primary_fungible_store {
             &transfer_ref,
             aaron_address,
             creator_address,
-            20,
+            20
         );
         set_frozen_flag(&transfer_ref, aaron_address, false);
         assert!(!is_frozen(aaron_address, metadata), 6);

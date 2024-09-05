@@ -11,7 +11,7 @@ module std::string {
 
     /// A `String` holds a sequence of bytes which is guaranteed to be in utf8 format.
     struct String has copy, drop, store {
-        bytes: vector<u8>,
+        bytes: vector<u8>
     }
 
     /// Creates a new string from a sequence of bytes. Aborts if the bytes do not represent valid utf8.
@@ -60,7 +60,7 @@ module std::string {
         let bytes = &s.bytes;
         assert!(
             at <= vector::length(bytes) && internal_is_char_boundary(bytes, at),
-            EINVALID_INDEX,
+            EINVALID_INDEX
         );
         let l = length(s);
         let front = sub_string(s, 0, at);
@@ -78,10 +78,10 @@ module std::string {
         let l = vector::length(bytes);
         assert!(
             j <= l
-            && i <= j
-            && internal_is_char_boundary(bytes, i)
-            && internal_is_char_boundary(bytes, j),
-            EINVALID_INDEX,
+                && i <= j
+                && internal_is_char_boundary(bytes, i)
+                && internal_is_char_boundary(bytes, j),
+            EINVALID_INDEX
         );
         String { bytes: internal_sub_string(bytes, i, j) }
     }

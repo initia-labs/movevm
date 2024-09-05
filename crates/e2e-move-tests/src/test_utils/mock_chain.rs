@@ -1,8 +1,10 @@
+use bigdecimal::{num_bigint::ToBigInt, BigDecimal};
 use bytes::Bytes;
 use initia_move_storage::{state_view::StateView, table_resolver::TableResolver};
 use std::{
     collections::BTreeMap,
     ops::{Bound, RangeBounds},
+    str::FromStr,
 };
 
 use initia_move_natives::{
@@ -266,7 +268,7 @@ impl StakingAPI for MockAPI {
         validator: &[u8],
         metadata: AccountAddress,
         amount: u64,
-    ) -> anyhow::Result<u64> {
+    ) -> anyhow::Result<String> {
         self.staking_api
             .amount_to_share(validator, metadata, amount)
     }
@@ -275,7 +277,7 @@ impl StakingAPI for MockAPI {
         &self,
         validator: &[u8],
         metadata: AccountAddress,
-        share: u64,
+        share: String,
     ) -> anyhow::Result<u64> {
         self.staking_api.share_to_amount(validator, metadata, share)
     }
@@ -392,10 +394,10 @@ impl MockStakingAPI {
         validator: &[u8],
         metadata: AccountAddress,
         amount: u64,
-    ) -> anyhow::Result<u64> {
+    ) -> anyhow::Result<String> {
         match self.validators.get(validator) {
             Some(ratios) => match ratios.get(&metadata) {
-                Some((s, a)) => Ok(amount * s / a),
+                Some((s, a)) => Ok((BigDecimal::from(amount) * s / a).to_string()),
                 None => Err(anyhow!("ratio not found")),
             },
             None => Err(anyhow!("validator not found")),
@@ -406,11 +408,15 @@ impl MockStakingAPI {
         &self,
         validator: &[u8],
         metadata: AccountAddress,
-        share: u64,
+        share: String,
     ) -> anyhow::Result<u64> {
         match self.validators.get(validator) {
             Some(ratios) => match ratios.get(&metadata) {
-                Some((s, a)) => Ok(share * a / s),
+                Some((s, a)) => Ok((BigDecimal::from_str(&share).unwrap() * a / s)
+                    .to_bigint()
+                    .unwrap()
+                    .try_into()
+                    .unwrap()),
                 None => Err(anyhow!("ratio not found")),
             },
             None => Err(anyhow!("validator not found")),
@@ -568,7 +574,7 @@ impl StakingAPI for BlankStakingAPIImpl {
         _validator: &[u8],
         _metadata: AccountAddress,
         _amount: u64,
-    ) -> anyhow::Result<u64> {
+    ) -> anyhow::Result<String> {
         Err(anyhow!("validator not found"))
     }
 
@@ -576,7 +582,7 @@ impl StakingAPI for BlankStakingAPIImpl {
         &self,
         _validator: &[u8],
         _metadata: AccountAddress,
-        _share: u64,
+        _share: String,
     ) -> anyhow::Result<u64> {
         Err(anyhow!("validator not found"))
     }

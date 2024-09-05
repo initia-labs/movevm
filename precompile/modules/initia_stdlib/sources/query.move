@@ -36,7 +36,7 @@ module initia_std::query {
     */
 
     struct ProposalRequest has copy, drop {
-        proposal_id: u64,
+        proposal_id: u64
     }
 
     struct ProposalResponse has copy, drop {
@@ -45,7 +45,7 @@ module initia_std::query {
         summary: String,
         status: String,
         submit_time: String,
-        emergency: bool,
+        emergency: bool
     }
 
     #[view]
@@ -53,7 +53,7 @@ module initia_std::query {
         let response =
             query_stargate(
                 b"/initia.gov.v1.Query/Proposal",
-                json::marshal(&ProposalRequest { proposal_id, }),
+                json::marshal(&ProposalRequest { proposal_id })
             );
         let res = json::unmarshal<ProposalResponse>(response);
         (res.id, res.title, res.summary, string::utf8(response))
@@ -64,7 +64,7 @@ module initia_std::query {
         let response =
             query_stargate(
                 b"/initia.gov.v1.Query/Proposal",
-                json::marshal(&ProposalRequest { proposal_id, }),
+                json::marshal(&ProposalRequest { proposal_id })
             );
         let res = json::unmarshal<ProposalResponse>(response);
         (res.id, res.status, res.submit_time, res.emergency)
@@ -80,7 +80,9 @@ module initia_std::query {
     );
 
     #[test_only]
-    native public fun unset_query_response(path_or_name: vector<u8>, data: vector<u8>);
+    native public fun unset_query_response(
+        path_or_name: vector<u8>, data: vector<u8>
+    );
 
     #[test]
     fun test_query_custom() {

@@ -25,7 +25,7 @@ module minitia_std::coin {
     struct ManagingRefs has key {
         mint_ref: MintRef,
         burn_ref: BurnRef,
-        transfer_ref: TransferRef,
+        transfer_ref: TransferRef
     }
 
     /// Only fungible asset metadata owner can make changes.
@@ -36,19 +36,19 @@ module minitia_std::coin {
 
     #[event]
     struct CoinCreatedEvent has drop, store {
-        metadata_addr: address,
+        metadata_addr: address
     }
 
     struct MintCapability has drop, store {
-        metadata: Object<Metadata>,
+        metadata: Object<Metadata>
     }
 
     struct BurnCapability has drop, store {
-        metadata: Object<Metadata>,
+        metadata: Object<Metadata>
     }
 
     struct FreezeCapability has drop, store {
-        metadata: Object<Metadata>,
+        metadata: Object<Metadata>
     }
 
     const EUNAUTHORIZED: u64 = 1;
@@ -60,7 +60,7 @@ module minitia_std::coin {
     fun check_sudo(account: &signer) {
         assert!(
             signer::address_of(account) == @minitia_std,
-            error::permission_denied(EUNAUTHORIZED),
+            error::permission_denied(EUNAUTHORIZED)
         );
     }
 
@@ -69,7 +69,7 @@ module minitia_std::coin {
         sender: &signer,
         recipient: address,
         metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     ) {
         check_sudo(chain);
 
@@ -77,7 +77,7 @@ module minitia_std::coin {
     }
 
     public(friend) fun sudo_deposit(
-        account_addr: address, fa: FungibleAsset,
+        account_addr: address, fa: FungibleAsset
     ) {
         primary_fungible_store::sudo_deposit(account_addr, fa)
     }
@@ -93,7 +93,7 @@ module minitia_std::coin {
         symbol: String,
         decimals: u8,
         icon_uri: String,
-        project_uri: String,
+        project_uri: String
     ): (MintCapability, BurnCapability, FreezeCapability) {
         let (mint_cap, burn_cap, freeze_cap, _) =
             initialize_and_generate_extend_ref(
@@ -103,7 +103,7 @@ module minitia_std::coin {
                 symbol,
                 decimals,
                 icon_uri,
-                project_uri,
+                project_uri
             );
 
         (mint_cap, burn_cap, freeze_cap)
@@ -116,13 +116,13 @@ module minitia_std::coin {
         symbol: String,
         decimals: u8,
         icon_uri: String,
-        project_uri: String,
+        project_uri: String
     ): (MintCapability, BurnCapability, FreezeCapability, ExtendRef) {
         // create object for fungible asset metadata
         let constructor_ref =
             &object::create_named_object(
                 creator,
-                *string::bytes(&symbol),
+                *string::bytes(&symbol)
             );
 
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
@@ -132,7 +132,7 @@ module minitia_std::coin {
             symbol,
             decimals,
             icon_uri,
-            project_uri,
+            project_uri
         );
 
         let mint_ref = fungible_asset::generate_mint_ref(constructor_ref);
@@ -142,11 +142,11 @@ module minitia_std::coin {
         let object_signer = object::generate_signer(constructor_ref);
         move_to(
             &object_signer,
-            ManagingRefs { mint_ref, burn_ref, transfer_ref, },
+            ManagingRefs { mint_ref, burn_ref, transfer_ref }
         );
 
         let metadata_addr = object::address_from_constructor_ref(constructor_ref);
-        event::emit(CoinCreatedEvent { metadata_addr, });
+        event::emit(CoinCreatedEvent { metadata_addr });
 
         let metadata = object::object_from_constructor_ref<Metadata>(constructor_ref);
         (
@@ -158,14 +158,12 @@ module minitia_std::coin {
     }
 
     public fun withdraw(
-        account: &signer,
-        metadata: Object<Metadata>,
-        amount: u64,
+        account: &signer, metadata: Object<Metadata>, amount: u64
     ): FungibleAsset {
         primary_fungible_store::withdraw(account, metadata, amount)
     }
 
-    public fun deposit(account_addr: address, fa: FungibleAsset,) {
+    public fun deposit(account_addr: address, fa: FungibleAsset) {
         primary_fungible_store::deposit(account_addr, fa)
     }
 
@@ -173,7 +171,7 @@ module minitia_std::coin {
         sender: &signer,
         recipient: address,
         metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     ) {
         primary_fungible_store::transfer(sender, metadata, recipient, amount)
     }
@@ -183,13 +181,13 @@ module minitia_std::coin {
     //
 
     /// Mint FAs as the owner of metadat object.
-    public fun mint(mint_cap: &MintCapability, amount: u64,): FungibleAsset acquires ManagingRefs {
+    public fun mint(mint_cap: &MintCapability, amount: u64): FungibleAsset acquires ManagingRefs {
         let metadata = mint_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND,
+            ERR_MANAGING_REFS_NOT_FOUND
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
@@ -198,16 +196,14 @@ module minitia_std::coin {
 
     /// Mint FAs as the owner of metadat object to the primary fungible store of the given recipient.
     public fun mint_to(
-        mint_cap: &MintCapability,
-        recipient: address,
-        amount: u64,
+        mint_cap: &MintCapability, recipient: address, amount: u64
     ) acquires ManagingRefs {
         let metadata = mint_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND,
+            ERR_MANAGING_REFS_NOT_FOUND
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
@@ -215,13 +211,13 @@ module minitia_std::coin {
     }
 
     /// Burn FAs as the owner of metadat object.
-    public fun burn(burn_cap: &BurnCapability, fa: FungibleAsset,) acquires ManagingRefs {
+    public fun burn(burn_cap: &BurnCapability, fa: FungibleAsset) acquires ManagingRefs {
         let metadata = burn_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND,
+            ERR_MANAGING_REFS_NOT_FOUND
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
@@ -230,41 +226,41 @@ module minitia_std::coin {
 
     /// Freeze the primary store of an account.
     public fun freeze_coin_store(
-        freeze_cap: &FreezeCapability, account_addr: address,
+        freeze_cap: &FreezeCapability, account_addr: address
     ) acquires ManagingRefs {
         let metadata = freeze_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND,
+            ERR_MANAGING_REFS_NOT_FOUND
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         primary_fungible_store::set_frozen_flag(
             &refs.transfer_ref,
             account_addr,
-            true,
+            true
         )
     }
 
     /// Unfreeze the primary store of an account.
     public fun unfreeze_coin_store(
-        freeze_cap: &FreezeCapability, account_addr: address,
+        freeze_cap: &FreezeCapability, account_addr: address
     ) acquires ManagingRefs {
         let metadata = freeze_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
         assert!(
             exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND,
+            ERR_MANAGING_REFS_NOT_FOUND
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         primary_fungible_store::set_frozen_flag(
             &refs.transfer_ref,
             account_addr,
-            false,
+            false
         )
     }
 
@@ -284,9 +280,7 @@ module minitia_std::coin {
 
     #[view]
     public fun balances(
-        account: address,
-        start_after: Option<address>,
-        limit: u8,
+        account: address, start_after: Option<address>, limit: u8
     ): (vector<Object<Metadata>>, vector<u64>) {
         primary_fungible_store::balances(account, start_after, limit)
     }
@@ -363,7 +357,7 @@ module minitia_std::coin {
     public fun denom_to_metadata(denom: String): Object<Metadata> {
         let addr =
             if (string::length(&denom) > 5
-                    && &b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
+                && &b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
                 let len = string::length(&denom);
                 let hex_string = string::sub_string(&denom, 5, len);
                 from_bcs::to_address(hex::decode_string(&hex_string))
@@ -375,10 +369,9 @@ module minitia_std::coin {
     }
 
     #[test_only]
-    fun initialize_coin_for_testing(account: &signer, symbol: String,)
-        : (
-        BurnCapability, FreezeCapability, MintCapability
-    ) {
+    fun initialize_coin_for_testing(
+        account: &signer, symbol: String
+    ): (BurnCapability, FreezeCapability, MintCapability) {
         let (mint_cap, burn_cap, freeze_cap, _) =
             initialize_and_generate_extend_ref(
                 account,
@@ -387,25 +380,25 @@ module minitia_std::coin {
                 symbol,
                 6,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         return (burn_cap, freeze_cap, mint_cap)
     }
 
     #[test(chain = @0x1, not_chain = @0x2)]
-    fun test_denom_metadata_convert(chain: signer, not_chain: signer,) {
+    fun test_denom_metadata_convert(chain: signer, not_chain: signer) {
         minitia_std::primary_fungible_store::init_module_for_test();
         initialize_coin_for_testing(&chain, string::utf8(b"INIT"));
         initialize_coin_for_testing(&not_chain, string::utf8(b"INIT"));
         let metadata = metadata(
             std::signer::address_of(&chain),
-            string::utf8(b"INIT"),
+            string::utf8(b"INIT")
         );
         let metadata_ =
             metadata(
                 std::signer::address_of(&not_chain),
-                string::utf8(b"INIT"),
+                string::utf8(b"INIT")
             );
         let denom = metadata_to_denom(metadata);
         let denom_ = metadata_to_denom(metadata_);

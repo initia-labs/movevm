@@ -18,36 +18,32 @@ module 0xcafe::simple_token {
             function_info::new_function_info(
                 account,
                 string::utf8(b"simple_token"),
-                string::utf8(b"withdraw"),
+                string::utf8(b"withdraw")
             );
 
         let deposit =
             function_info::new_function_info(
                 account,
                 string::utf8(b"simple_token"),
-                string::utf8(b"deposit"),
+                string::utf8(b"deposit")
             );
 
         dispatchable_fungible_asset::register_dispatch_functions(
             constructor_ref,
             option::some(withdraw),
             option::some(deposit),
-            option::none(),
+            option::none()
         );
     }
 
     public fun withdraw<T: key>(
-        store: Object<T>,
-        amount: u64,
-        transfer_ref: &TransferRef,
+        store: Object<T>, amount: u64, transfer_ref: &TransferRef
     ): FungibleAsset {
         fungible_asset::withdraw_with_ref(transfer_ref, store, amount)
     }
 
     public fun deposit<T: key>(
-        store: Object<T>,
-        fa: FungibleAsset,
-        transfer_ref: &TransferRef,
+        store: Object<T>, fa: FungibleAsset, transfer_ref: &TransferRef
     ) {
         fungible_asset::deposit_with_ref(transfer_ref, store, fa)
     }

@@ -11,13 +11,13 @@ module minitia_std::vip_score {
     struct ModuleStore has key {
         init_stage: u64,
         deployers: SimpleMap<address, bool>,
-        scores: table::Table<u64 /* stage */, Scores>,
+        scores: table::Table<u64 /* stage */, Scores>
     }
 
     struct Scores has store {
         total_score: u64,
         is_finalized: bool,
-        score: table::Table<address /* user */, u64>,
+        score: table::Table<address /* user */, u64>
     }
 
     //
@@ -87,8 +87,8 @@ module minitia_std::vip_score {
             ModuleStore {
                 init_stage: 1,
                 deployers: simple_map::create<address, bool>(),
-                scores: table::new<u64, Scores>(),
-            },
+                scores: table::new<u64, Scores>()
+            }
         );
     }
 
@@ -102,7 +102,7 @@ module minitia_std::vip_score {
     fun check_chain_permission(chain: &signer) {
         assert!(
             signer::address_of(chain) == @minitia_std,
-            error::permission_denied(EUNAUTHORIZED),
+            error::permission_denied(EUNAUTHORIZED)
         );
     }
 
@@ -111,7 +111,7 @@ module minitia_std::vip_score {
         let found =
             simple_map::contains_key(
                 &module_store.deployers,
-                &signer::address_of(deployer),
+                &signer::address_of(deployer)
             );
         assert!(found, error::invalid_argument(EUNAUTHORIZED));
     }
@@ -134,7 +134,7 @@ module minitia_std::vip_score {
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
-            },
+            }
         )
     }
 
@@ -147,7 +147,7 @@ module minitia_std::vip_score {
         assert!(
             table::contains(&module_store.scores, stage - 1)
                 && table::borrow(&module_store.scores, stage - 1).is_finalized,
-            error::invalid_argument(EPREVIOUS_STAGE_NOT_FINALIZED),
+            error::invalid_argument(EPREVIOUS_STAGE_NOT_FINALIZED)
         );
 
         return
@@ -193,7 +193,7 @@ module minitia_std::vip_score {
                     total_score: 0,
                     is_finalized: false,
                     score: table::new<address, u64>()
-                },
+                }
             );
         };
     }
@@ -211,13 +211,13 @@ module minitia_std::vip_score {
 
         assert!(
             table::contains(&module_store.scores, stage),
-            error::invalid_argument(EINVALID_STAGE),
+            error::invalid_argument(EINVALID_STAGE)
         );
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
         assert!(
             !scores.is_finalized,
-            error::invalid_argument(EFINALIED_STAGE),
+            error::invalid_argument(EFINALIED_STAGE)
         );
 
         let score = table::borrow_mut_with_default(&mut scores.score, account, 0);
@@ -231,7 +231,7 @@ module minitia_std::vip_score {
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
-            },
+            }
         )
     }
 
@@ -248,19 +248,19 @@ module minitia_std::vip_score {
 
         assert!(
             table::contains(&module_store.scores, stage),
-            error::invalid_argument(EINVALID_STAGE),
+            error::invalid_argument(EINVALID_STAGE)
         );
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
         assert!(
             !scores.is_finalized,
-            error::invalid_argument(EFINALIED_STAGE),
+            error::invalid_argument(EFINALIED_STAGE)
         );
 
         let score = table::borrow_mut(&mut scores.score, account);
         assert!(
             *score >= amount,
-            error::invalid_argument(EINSUFFICIENT_SCORE),
+            error::invalid_argument(EINSUFFICIENT_SCORE)
         );
         *score = *score - amount;
         scores.total_score = scores.total_score - amount;
@@ -271,7 +271,7 @@ module minitia_std::vip_score {
                 stage: stage,
                 score: *score,
                 total_score: scores.total_score
-            },
+            }
         )
     }
 
@@ -284,20 +284,20 @@ module minitia_std::vip_score {
         check_deployer_permission(deployer);
         assert!(
             amount >= 0,
-            error::invalid_argument(EINVALID_SCORE),
+            error::invalid_argument(EINVALID_SCORE)
         );
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
-            error::invalid_argument(EINVALID_STAGE),
+            error::invalid_argument(EINVALID_STAGE)
         );
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
         assert!(
             !scores.is_finalized,
-            error::invalid_argument(EFINALIED_STAGE),
+            error::invalid_argument(EFINALIED_STAGE)
         );
 
         update_score_internal(scores, account, stage, amount);
@@ -311,13 +311,13 @@ module minitia_std::vip_score {
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(
             table::contains(&module_store.scores, stage),
-            error::invalid_argument(EINVALID_STAGE),
+            error::invalid_argument(EINVALID_STAGE)
         );
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
         assert!(
             !scores.is_finalized,
-            error::invalid_argument(EFINALIED_STAGE),
+            error::invalid_argument(EFINALIED_STAGE)
         );
         scores.is_finalized = true;
 
@@ -333,7 +333,7 @@ module minitia_std::vip_score {
     ) acquires ModuleStore {
         assert!(
             vector::length(&addrs) == vector::length(&update_scores),
-            error::invalid_argument(ENOT_MATCH_LENGTH),
+            error::invalid_argument(ENOT_MATCH_LENGTH)
         );
         // permission check is performed in prepare_stage
         prepare_stage(deployer, stage);
@@ -342,13 +342,13 @@ module minitia_std::vip_score {
         check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
-            error::invalid_argument(EINVALID_STAGE),
+            error::invalid_argument(EINVALID_STAGE)
         );
 
         let scores = table::borrow_mut(&mut module_store.scores, stage);
         assert!(
             !scores.is_finalized,
-            error::invalid_argument(EFINALIED_STAGE),
+            error::invalid_argument(EFINALIED_STAGE)
         );
         vector::enumerate_ref(
             &addrs,
@@ -357,38 +357,38 @@ module minitia_std::vip_score {
                     scores,
                     *addr,
                     stage,
-                    *vector::borrow(&update_scores, i),
+                    *vector::borrow(&update_scores, i)
                 );
-            },
+            }
         );
     }
 
     public entry fun add_deployer_script(
-        chain: &signer, deployer: address,
+        chain: &signer, deployer: address
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(
             !simple_map::contains_key(&module_store.deployers, &deployer),
-            error::invalid_argument(EDEPLOYER_ALREADY_ADDED),
+            error::invalid_argument(EDEPLOYER_ALREADY_ADDED)
         );
         simple_map::add(
             &mut module_store.deployers,
             deployer,
-            true,
+            true
         );
 
         event::emit(DeployerAddedEvent { deployer: deployer })
     }
 
     public entry fun remove_deployer_script(
-        chain: &signer, deployer: address,
+        chain: &signer, deployer: address
     ) acquires ModuleStore {
         check_chain_permission(chain);
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         assert!(
             simple_map::contains_key(&module_store.deployers, &deployer),
-            error::invalid_argument(EDEPLOYER_NOT_FOUND),
+            error::invalid_argument(EDEPLOYER_NOT_FOUND)
         );
         simple_map::remove(&mut module_store.deployers, &deployer);
 
@@ -479,7 +479,7 @@ module minitia_std::vip_score {
             deployer,
             1,
             vector[@0x123, @0x234],
-            vector[],
+            vector[]
         );
     }
 
@@ -498,7 +498,15 @@ module minitia_std::vip_score {
         increase_score(deployer, user, 1, 100);
     }
 
-    #[test(chain = @0x1, deployer_a = @0x2, deployer_b = @0x3, user_a = @0x123, user_b = @0x456)]
+    #[
+        test(
+            chain = @0x1,
+            deployer_a = @0x2,
+            deployer_b = @0x3,
+            user_a = @0x123,
+            user_b = @0x456
+        )
+    ]
     fun test_e2e(
         chain: &signer,
         deployer_a: &signer,
@@ -545,7 +553,7 @@ module minitia_std::vip_score {
             deployer_a,
             2,
             vector[user_a, user_b],
-            vector[100, 200],
+            vector[100, 200]
         );
 
         assert!(get_score(user_a, 2) == 100, 12);

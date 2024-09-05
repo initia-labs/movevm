@@ -38,6 +38,7 @@ module minitia_std::block {
     public fun emit_writeset_block_event(
         _vm: &signer, _fake_block_hash: address
     ) {
-        // no-op
+        let (block_height, block_time) = get_block_info();
+        set_block_info(block_height + 1, block_time);
     }
 }

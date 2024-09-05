@@ -5,6 +5,8 @@ module 0xCAFE::test {
     use std::vector;
     use std::option::{Self, Option};
     use std::object::{Self, Object};
+    use std::bigdecimal::{Self, BigDecimal};
+    use std::biguint::{Self, BigUint};
 
     struct ModuleData<T> has key, store {
         state: T,
@@ -152,6 +154,16 @@ module 0xCAFE::test {
                 borrow_global_mut<ModuleData<T>>(addr).state = v2;
             }
         };
+    }
+
+    public entry fun biguint_test(bn: BigUint, num: u64) {
+        let bn2 = biguint::from_u64(num);
+        assert!(biguint::eq(bn, bn2), 1);
+    }
+
+    public entry fun bigdecimal_test(bd: BigDecimal, numerator: u64, denominator: u64) {
+        let bd2 = bigdecimal::from_ratio_u64(numerator, denominator);
+        assert!(bigdecimal::eq(bd, bd2), 1);
     }
 
     fun find_hello_in_msgs_of_msgs(msgs: &vector<vector<String>>) {

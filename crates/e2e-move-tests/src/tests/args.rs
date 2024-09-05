@@ -1,4 +1,6 @@
 use crate::MoveHarness;
+use bigdecimal::num_bigint::BigUint;
+use bigdecimal::FromPrimitive;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{StructTag, TypeTag};
@@ -781,6 +783,73 @@ fn json_object_args() {
     );
     let res = h.run_view_function(vf).unwrap();
     assert_eq!(res, data_string);
+}
+
+#[test]
+fn biguint_bigdecimal() {
+    let acc = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let path = "src/tests/args.data/pack";
+    let mut h = MoveHarness::new();
+
+    h.initialize();
+
+    // publish package
+    let output = h.publish_package(&acc, path).expect("should success");
+    h.commit(output, true);
+
+    // execute create_object
+    let entry = "0xcafe::test::biguint_test";
+    h.run_entry_function(
+        vec![acc],
+        str::parse(entry).unwrap(),
+        vec![],
+        vec![
+            bcs::to_bytes(&BigUint::from_u64(100u64).unwrap().to_bytes_le()).unwrap(),
+            bcs::to_bytes(&100u64).unwrap(),
+        ],
+    )
+    .unwrap();
+
+    h.run_entry_function_with_json(
+        vec![acc],
+        str::parse(entry).unwrap(),
+        vec![],
+        vec![
+            r#""100""#.to_string(),
+            r#""100""#.to_string(),
+        ],
+    )
+    .unwrap();
+
+    let entry = "0xcafe::test::bigdecimal_test";
+    h.run_entry_function(
+        vec![acc],
+        str::parse(entry).unwrap(),
+        vec![],
+        vec![
+            bcs::to_bytes(
+                &BigUint::from_u128(50000000000000000u128)
+                    .unwrap()
+                    .to_bytes_le(),
+            )
+            .unwrap(),
+            bcs::to_bytes(&1u64).unwrap(),
+            bcs::to_bytes(&20u64).unwrap(),
+        ],
+    )
+    .unwrap();
+
+    h.run_entry_function_with_json(
+        vec![acc],
+        str::parse(entry).unwrap(),
+        vec![],
+        vec![
+            r#""0.05""#.to_string(),
+            r#""1""#.to_string(),
+            r#""20""#.to_string(),
+        ],
+    )
+    .unwrap();
 }
 
 #[derive(Deserialize)]

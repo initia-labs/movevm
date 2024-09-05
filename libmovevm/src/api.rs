@@ -42,14 +42,14 @@ pub struct GoApi_vtable {
         U8SliceView,          // validator
         U8SliceView,          // metadata
         u64,                  // amount
-        *mut u64,             // share
+        *mut UnmanagedVector, // share
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub share_to_amount: extern "C" fn(
         *const api_t,
         U8SliceView,          // validator
         U8SliceView,          // metadata
-        u64,                  // share
+        U8SliceView,          // share
         *mut u64,             // amount
         *mut UnmanagedVector, // error_msg
     ) -> i32,
@@ -126,14 +126,13 @@ impl StakingAPI for GoApi {
         validator: &[u8],
         metadata: AccountAddress,
         amount: u64,
-    ) -> anyhow::Result<u64> {
-        let mut share = 0_u64;
-
+    ) -> anyhow::Result<String> {
         // DO NOT DELETE; same reason with KeepAlive in go
         let metadata_bytes = metadata.into_bytes();
 
         let validator = U8SliceView::new(Some(validator));
         let metadata = U8SliceView::new(Some(&metadata_bytes));
+        let mut share = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
 
         let go_error: GoError = (self.vtable.amount_to_share)(
@@ -141,10 +140,12 @@ impl StakingAPI for GoApi {
             validator,
             metadata,
             amount,
-            &mut share as *mut u64,
+            &mut share as *mut UnmanagedVector,
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
+
+        let share = share.consume();
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to convert amount to share".to_string();
@@ -154,14 +155,14 @@ impl StakingAPI for GoApi {
             }
         }
 
-        Ok(share)
+        Ok(String::from_utf8_lossy(&share.ok_or_else(|| anyhow!("Unset share"))?).into())
     }
 
     fn share_to_amount(
         &self,
         validator: &[u8],
         metadata: AccountAddress,
-        share: u64,
+        share: String,
     ) -> anyhow::Result<u64> {
         let mut amount = 0_u64;
 
@@ -170,6 +171,8 @@ impl StakingAPI for GoApi {
 
         let validator = U8SliceView::new(Some(validator));
         let metadata = U8SliceView::new(Some(&metadata_bytes));
+        let share = U8SliceView::new(Some(share.as_bytes()));
+
         let mut error_msg = UnmanagedVector::default();
 
         let go_error: GoError = (self.vtable.share_to_amount)(

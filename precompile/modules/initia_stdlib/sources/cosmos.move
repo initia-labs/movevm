@@ -15,7 +15,7 @@ module initia_std::cosmos {
         proposal_id: u64,
         voter: String,
         option: u64,
-        metadata: String,
+        metadata: String
     }
 
     public entry fun stargate_vote(
@@ -33,9 +33,9 @@ module initia_std::cosmos {
                     proposal_id,
                     voter,
                     option,
-                    metadata,
-                },
-            ),
+                    metadata
+                }
+            )
         );
     }
 
@@ -49,7 +49,7 @@ module initia_std::cosmos {
         module_name: String,
         function_name: String,
         type_args: vector<String>,
-        args: vector<vector<u8>>,
+        args: vector<vector<u8>>
     ) {
         move_execute_internal(
             signer::address_of(sender),
@@ -58,7 +58,7 @@ module initia_std::cosmos {
             *string::bytes(&function_name),
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             args,
-            false,
+            false
         )
     }
 
@@ -68,7 +68,7 @@ module initia_std::cosmos {
         module_name: String,
         function_name: String,
         type_args: vector<String>,
-        args: vector<String>,
+        args: vector<String>
     ) {
         move_execute_internal(
             signer::address_of(sender),
@@ -77,7 +77,7 @@ module initia_std::cosmos {
             *string::bytes(&function_name),
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             vector::map_ref(&args, |v| *string::bytes(v)),
-            true,
+            true
         )
     }
 
@@ -85,14 +85,14 @@ module initia_std::cosmos {
         sender: &signer,
         code_bytes: vector<u8>,
         type_args: vector<String>,
-        args: vector<vector<u8>>,
+        args: vector<vector<u8>>
     ) {
         move_script_internal(
             signer::address_of(sender),
             code_bytes,
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             args,
-            false,
+            false
         )
     }
 
@@ -100,14 +100,14 @@ module initia_std::cosmos {
         sender: &signer,
         code_bytes: vector<u8>,
         type_args: vector<String>,
-        args: vector<String>,
+        args: vector<String>
     ) {
         move_script_internal(
             signer::address_of(sender),
             code_bytes,
             vector::map_ref(&type_args, |v| *string::bytes(v)),
             vector::map_ref(&args, |v| *string::bytes(v)),
-            true,
+            true
         )
     }
 
@@ -115,25 +115,23 @@ module initia_std::cosmos {
         delegator: &signer,
         validator: String,
         metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     ) {
         delegate_internal(
             signer::address_of(delegator),
             *string::bytes(&validator),
             &metadata,
-            amount,
+            amount
         )
     }
 
     public entry fun fund_community_pool(
-        sender: &signer,
-        metadata: Object<Metadata>,
-        amount: u64,
+        sender: &signer, metadata: Object<Metadata>, amount: u64
     ) {
         fund_community_pool_internal(
             signer::address_of(sender),
             &metadata,
-            amount,
+            amount
         )
     }
 
@@ -149,7 +147,7 @@ module initia_std::cosmos {
         revision_number: u64,
         revision_height: u64,
         timeout_timestamp: u64,
-        memo: String,
+        memo: String
     ) {
         transfer_internal(
             signer::address_of(sender),
@@ -161,7 +159,7 @@ module initia_std::cosmos {
             revision_number,
             revision_height,
             timeout_timestamp,
-            *string::bytes(&memo),
+            *string::bytes(&memo)
         )
     }
 
@@ -177,7 +175,7 @@ module initia_std::cosmos {
         revision_number: u64,
         revision_height: u64,
         timeout_timestamp: u64,
-        memo: String,
+        memo: String
     ) {
         nft_transfer_internal(
             signer::address_of(sender),
@@ -189,7 +187,7 @@ module initia_std::cosmos {
             revision_number,
             revision_height,
             timeout_timestamp,
-            *string::bytes(&memo),
+            *string::bytes(&memo)
         )
     }
 
@@ -204,7 +202,7 @@ module initia_std::cosmos {
         ack_fee_metadata: Object<Metadata>,
         ack_fee_amount: u64,
         timeout_fee_metadata: Object<Metadata>,
-        timeout_fee_amount: u64,
+        timeout_fee_amount: u64
     ) {
         pay_fee_internal(
             signer::address_of(sender),
@@ -215,11 +213,11 @@ module initia_std::cosmos {
             &ack_fee_metadata,
             ack_fee_amount,
             &timeout_fee_metadata,
-            timeout_fee_amount,
+            timeout_fee_amount
         )
     }
 
-    native fun stargate_internal(sender: address, data: vector<u8>,);
+    native fun stargate_internal(sender: address, data: vector<u8>);
 
     native fun move_execute_internal(
         sender: address,
@@ -228,7 +226,7 @@ module initia_std::cosmos {
         function_name: vector<u8>,
         type_args: vector<vector<u8>>,
         args: vector<vector<u8>>,
-        is_json: bool,
+        is_json: bool
     );
 
     native fun move_script_internal(
@@ -236,18 +234,18 @@ module initia_std::cosmos {
         code_bytes: vector<u8>,
         type_args: vector<vector<u8>>,
         args: vector<vector<u8>>,
-        is_json: bool,
+        is_json: bool
     );
 
     native fun delegate_internal(
         delegator: address,
         validator: vector<u8>,
         metadata: &Object<Metadata>,
-        amount: u64,
+        amount: u64
     );
 
     native fun fund_community_pool_internal(
-        sender: address, metadata: &Object<Metadata>, amount: u64,
+        sender: address, metadata: &Object<Metadata>, amount: u64
     );
 
     native fun transfer_internal(
@@ -260,7 +258,7 @@ module initia_std::cosmos {
         revision_number: u64,
         revision_height: u64,
         timeout_timestamp: u64,
-        memo: vector<u8>,
+        memo: vector<u8>
     );
 
     native fun nft_transfer_internal(
@@ -273,7 +271,7 @@ module initia_std::cosmos {
         revision_number: u64,
         revision_height: u64,
         timeout_timestamp: u64,
-        memo: vector<u8>,
+        memo: vector<u8>
     );
 
     native fun pay_fee_internal(
@@ -285,6 +283,6 @@ module initia_std::cosmos {
         ack_fee_metadata: &Object<Metadata>,
         ack_fee_amount: u64,
         timeout_fee_metadata: &Object<Metadata>,
-        timeout_fee_amount: u64,
+        timeout_fee_amount: u64
     );
 }

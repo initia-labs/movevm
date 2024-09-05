@@ -85,7 +85,7 @@ fn test_output() {
 
     let test_decimal = (
         None,
-        "0x2::test::decimal1",
+        "0x2::test::bigdecimal1",
         vec![],
         vec![],
         ExpectedOutput::new(VMStatus::Executed, Some("\"1.23\"".to_string()), None, None),
@@ -94,7 +94,7 @@ fn test_output() {
 
     let test_decimal2 = (
         None,
-        "0x2::test::decimal2",
+        "0x2::test::bigdecimal2",
         vec![],
         vec![],
         ExpectedOutput::new(
@@ -108,7 +108,7 @@ fn test_output() {
 
     let test_decimal3 = (
         None,
-        "0x2::test::decimal3",
+        "0x2::test::biguint1",
         vec![],
         vec![],
         ExpectedOutput::new(VMStatus::Executed, Some("\"123\"".to_string()), None, None),
@@ -117,12 +117,12 @@ fn test_output() {
 
     let test_decimal4 = (
         None,
-        "0x2::test::decimal4",
+        "0x2::test::biguint2",
         vec![],
         vec![],
         ExpectedOutput::new(
             VMStatus::Executed,
-            Some("\"0.000123\"".to_string()),
+            Some("\"12312983219839218392183\"".to_string()),
             None,
             None,
         ),

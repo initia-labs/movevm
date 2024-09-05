@@ -12,8 +12,8 @@ GoError cScan(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end,
 // imports (api)
 GoError cQuery(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
 GoError cGetAccountInfo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut);
-GoError cAmountToShare(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, uint64_t *share, UnmanagedVector *errOut);
-GoError cShareToAmount(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t share, uint64_t *amount, UnmanagedVector *errOut);
+GoError cAmountToShare(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, UnmanagedVector *share, UnmanagedVector *errOut);
+GoError cShareToAmount(api_t *ptr, U8SliceView validator, U8SliceView metadata, U8SliceView share, uint64_t *amount, UnmanagedVector *errOut);
 GoError cUnbondTimestamp(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);
 GoError cGetPrice(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
 // imports (iterator)
@@ -45,10 +45,10 @@ GoError cQuery_cgo(api_t *ptr, U8SliceView request, uint64_t gasBalance, Unmanag
 GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut) {
     return cGetAccountInfo(ptr, addr, found, account_number, sequence, account_type, is_blocked, errOut);
 }
-GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinType, uint64_t amount, uint64_t *share, UnmanagedVector *errOut) {
+GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinType, uint64_t amount, UnmanagedVector *share, UnmanagedVector *errOut) {
     return cAmountToShare(ptr, validator, coinType, amount, share, errOut);
 }
-GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinType, uint64_t share, uint64_t *amount, UnmanagedVector *errOut) {
+GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinType, U8SliceView share, uint64_t *amount, UnmanagedVector *errOut) {
     return cShareToAmount(ptr, validator, coinType, share, amount, errOut);
 }
 GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut) {

@@ -30,7 +30,7 @@ module initia_std::managed_coin {
     struct Capabilities has key {
         mint_cap: MintCapability,
         burn_cap: BurnCapability,
-        freeze_cap: FreezeCapability,
+        freeze_cap: FreezeCapability
     }
 
     //
@@ -40,7 +40,7 @@ module initia_std::managed_coin {
     fun check_sudo(account: &signer) {
         assert!(
             signer::address_of(account) == @initia_std,
-            error::permission_denied(EUNAUTHORIZED),
+            error::permission_denied(EUNAUTHORIZED)
         );
     }
 
@@ -49,20 +49,20 @@ module initia_std::managed_coin {
         account: &signer,
         dst_addr: address,
         metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     ) acquires Capabilities {
         check_sudo(account);
 
         let account_addr = signer::address_of(account);
         assert!(
             object::is_owner(metadata, account_addr),
-            error::not_found(EUNAUTHORIZED),
+            error::not_found(EUNAUTHORIZED)
         );
 
         let object_addr = object::object_address(&metadata);
         assert!(
             exists<Capabilities>(object_addr),
-            error::not_found(ENO_CAPABILITIES),
+            error::not_found(ENO_CAPABILITIES)
         );
 
         let capabilities = borrow_global<Capabilities>(object_addr);
@@ -83,7 +83,7 @@ module initia_std::managed_coin {
         symbol: String,
         decimals: u8,
         icon_uri: String,
-        project_uri: String,
+        project_uri: String
     ) {
         let (mint_cap, burn_cap, freeze_cap, extend_ref) =
             coin::initialize_and_generate_extend_ref(
@@ -93,33 +93,31 @@ module initia_std::managed_coin {
                 symbol,
                 decimals,
                 icon_uri,
-                project_uri,
+                project_uri
             );
 
         let metadata_signer = object::generate_signer_for_extending(&extend_ref);
         move_to(
             &metadata_signer,
-            Capabilities { mint_cap, burn_cap, freeze_cap, },
+            Capabilities { mint_cap, burn_cap, freeze_cap }
         );
     }
 
     /// Withdraw an `amount` of metadata coin from `account` and burn it.
     public entry fun burn(
-        account: &signer,
-        metadata: Object<Metadata>,
-        amount: u64,
+        account: &signer, metadata: Object<Metadata>, amount: u64
     ) acquires Capabilities {
         let account_addr = signer::address_of(account);
 
         assert!(
             object::is_owner(metadata, account_addr),
-            error::not_found(EUNAUTHORIZED),
+            error::not_found(EUNAUTHORIZED)
         );
 
         let object_addr = object::object_address(&metadata);
         assert!(
             exists<Capabilities>(object_addr),
-            error::not_found(ENO_CAPABILITIES),
+            error::not_found(ENO_CAPABILITIES)
         );
 
         let capabilities = borrow_global<Capabilities>(object_addr);
@@ -130,21 +128,19 @@ module initia_std::managed_coin {
 
     /// Create new metadata coins.
     public fun mint(
-        account: &signer,
-        metadata: Object<Metadata>,
-        amount: u64,
+        account: &signer, metadata: Object<Metadata>, amount: u64
     ): FungibleAsset acquires Capabilities {
         let account_addr = signer::address_of(account);
 
         assert!(
             object::is_owner(metadata, account_addr),
-            error::not_found(EUNAUTHORIZED),
+            error::not_found(EUNAUTHORIZED)
         );
 
         let object_addr = object::object_address(&metadata);
         assert!(
             exists<Capabilities>(object_addr),
-            error::not_found(ENO_CAPABILITIES),
+            error::not_found(ENO_CAPABILITIES)
         );
 
         let capabilities = borrow_global<Capabilities>(object_addr);
@@ -156,7 +152,7 @@ module initia_std::managed_coin {
         account: &signer,
         dst_addr: address,
         metadata: Object<Metadata>,
-        amount: u64,
+        amount: u64
     ) acquires Capabilities {
         let fa = mint(account, metadata, amount);
 
@@ -200,7 +196,7 @@ module initia_std::managed_coin {
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),
+            string::utf8(b"")
         );
 
         let metadata = test_metadata();
@@ -210,18 +206,18 @@ module initia_std::managed_coin {
             &mod_account,
             source_addr,
             metadata,
-            50,
+            50
         );
         mint_to(
             &mod_account,
             destination_addr,
             metadata,
-            10,
+            10
         );
         assert!(coin::balance(source_addr, metadata) == 50, 1);
         assert!(
             coin::balance(destination_addr, metadata) == 10,
-            2,
+            2
         );
 
         let supply = coin::supply(metadata);
@@ -231,19 +227,19 @@ module initia_std::managed_coin {
             &source,
             destination_addr,
             metadata,
-            10,
+            10
         );
         assert!(coin::balance(source_addr, metadata) == 40, 3);
         assert!(
             coin::balance(destination_addr, metadata) == 20,
-            4,
+            4
         );
 
         coin::transfer(
             &source,
             signer::address_of(&mod_account),
             metadata,
-            40,
+            40
         );
         burn(&mod_account, metadata, 40);
 
@@ -256,9 +252,7 @@ module initia_std::managed_coin {
     #[test(source = @0xa11ce, destination = @0xb0b, mod_account = @0x1)]
     #[expected_failure(abort_code = 0x60002, location = Self)]
     public entry fun fail_mint(
-        source: signer,
-        destination: signer,
-        mod_account: signer,
+        source: signer, destination: signer, mod_account: signer
     ) acquires Capabilities {
         primary_fungible_store::init_module_for_test();
 
@@ -271,7 +265,7 @@ module initia_std::managed_coin {
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),
+            string::utf8(b"")
         );
 
         let metadata = test_metadata();
@@ -279,16 +273,14 @@ module initia_std::managed_coin {
             &destination,
             source_addr,
             metadata,
-            100,
+            100
         );
     }
 
     #[test(source = @0xa11ce, destination = @0xb0b, mod_account = @0x1)]
     #[expected_failure(abort_code = 0x60002, location = Self)]
     public entry fun fail_burn(
-        source: signer,
-        destination: signer,
-        mod_account: signer,
+        source: signer, destination: signer, mod_account: signer
     ) acquires Capabilities {
         primary_fungible_store::init_module_for_test();
 
@@ -301,7 +293,7 @@ module initia_std::managed_coin {
             string::utf8(TEST_SYMBOL),
             10,
             string::utf8(b""),
-            string::utf8(b""),
+            string::utf8(b"")
         );
 
         let metadata = test_metadata();
@@ -309,7 +301,7 @@ module initia_std::managed_coin {
             &mod_account,
             source_addr,
             metadata,
-            100,
+            100
         );
         burn(&destination, metadata, 10);
     }

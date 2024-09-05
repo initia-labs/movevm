@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use move_core_types::{account_address::AccountAddress, vm_status::VMStatus};
 
 type VMOutput = (VMStatus, MessageOutput, Option<String>);
-type StakingDelta = (Vec<u8>, Vec<(AccountAddress, (u64, u64))>);
+type StakingDelta = (Vec<u8>, Vec<(AccountAddress, (u64, String))>);
 
 pub struct ExpectedOutput(pub Vec<ExpectedOutputItem>);
 
@@ -66,7 +66,7 @@ impl ExpectedOutput {
 pub enum ExpectedOutputItem {
     VMStatusReturn(VMStatus),
     Response(String),
-    StakingChange(BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, u64)>>),
+    StakingChange(BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, String)>>),
     CosmosMessages(Vec<CosmosMessage>),
 }
 

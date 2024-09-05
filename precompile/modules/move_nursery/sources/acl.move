@@ -25,7 +25,7 @@ module std::acl {
     public fun add(acl: &mut ACL, addr: address) {
         assert!(
             !vector::contains(&mut acl.list, &addr),
-            error::invalid_argument(ECONTAIN),
+            error::invalid_argument(ECONTAIN)
         );
         vector::push_back(&mut acl.list, addr);
     }
@@ -46,7 +46,7 @@ module std::acl {
     public fun assert_contains(acl: &ACL, addr: address) {
         assert!(
             contains(acl, addr),
-            error::invalid_argument(ENOT_CONTAIN),
+            error::invalid_argument(ENOT_CONTAIN)
         );
     }
 }

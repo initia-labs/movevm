@@ -131,19 +131,21 @@ module std::option {
         t: &Option<Element>, default_ref: &Element
     ): &Element {
         let vec_ref = &t.vec;
-        if (vector::is_empty(vec_ref)) default_ref else vector::borrow(vec_ref, 0)
+        if (vector::is_empty(vec_ref)) default_ref
+        else vector::borrow(vec_ref, 0)
     }
 
     spec borrow_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (spec_is_some(t)) spec_borrow(t) else default_ref);
+        ensures result == (if (spec_is_some(t)) spec_borrow(t)
+        else default_ref);
     }
 
     /// Return the value inside `t` if it holds one
     /// Return `default` if `t` does not hold a value
     public fun get_with_default<Element: copy + drop>(
-        t: &Option<Element>, default: Element,
+        t: &Option<Element>, default: Element
     ): Element {
         let vec_ref = &t.vec;
         if (vector::is_empty(vec_ref)) default else *vector::borrow(vec_ref, 0)
@@ -152,15 +154,16 @@ module std::option {
     spec get_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (spec_is_some(t)) spec_borrow(t) else default);
+        ensures result == (if (spec_is_some(t)) spec_borrow(t)
+        else default);
     }
 
     /// Convert the none option `t` to a some option by adding `e`.
     /// Aborts if `t` already holds a value
     public fun fill<Element>(t: &mut Option<Element>, e: Element) {
         let vec_ref = &mut t.vec;
-        if (vector::is_empty(vec_ref)) vector::push_back(vec_ref, e) else
-            abort EOPTION_IS_SET
+        if (vector::is_empty(vec_ref)) vector::push_back(vec_ref, e)
+        else abort EOPTION_IS_SET
     }
 
     spec fill {
@@ -221,7 +224,8 @@ module std::option {
     public fun swap_or_fill<Element>(t: &mut Option<Element>, e: Element): Option<Element> {
         let vec_ref = &mut t.vec;
         let old_value =
-            if (vector::is_empty(vec_ref)) none() else some(vector::pop_back(vec_ref));
+            if (vector::is_empty(vec_ref)) none()
+            else some(vector::pop_back(vec_ref));
         vector::push_back(vec_ref, e);
         old_value
     }
@@ -244,7 +248,8 @@ module std::option {
     spec destroy_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (spec_is_some(t)) spec_borrow(t) else default);
+        ensures result == (if (spec_is_some(t)) spec_borrow(t)
+        else default);
     }
 
     /// Unpack `t` and return its contents

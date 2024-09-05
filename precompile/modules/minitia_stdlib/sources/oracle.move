@@ -19,13 +19,16 @@ module minitia_std::oracle {
             *string::bytes(pair_id),
             price,
             updated_at,
-            decimals,
+            decimals
         )
     }
 
     #[test_only]
     native fun set_price_internal(
-        pair_id: vector<u8>, price: u256, updated_at: u64, decimals: u64
+        pair_id: vector<u8>,
+        price: u256,
+        updated_at: u64,
+        decimals: u64
     );
 
     #[test]
@@ -46,13 +49,13 @@ module minitia_std::oracle {
             &btc_usd_pair_id,
             btc_price,
             btc_updated_at,
-            btc_decimals,
+            btc_decimals
         );
         set_price(
             &eth_usd_pair_id,
             eth_price,
             eth_updated_at,
-            eth_decimals,
+            eth_decimals
         );
 
         let (price, updated_at, decimals) = get_price(btc_usd_pair_id);

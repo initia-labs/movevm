@@ -170,8 +170,8 @@ impl<'a> ExtendedChecker<'a> {
                 | "0x1::option::Option"
                 | "0x1::fixed_point32::FixedPoint32"
                 | "0x1::fixed_point64::FixedPoint64"
-                | "0x1::decimal128::Decimal128"
-                | "0x1::decimal256::Decimal256"
+                | "0x1::biguint::BigUint"
+                | "0x1::bigdecimal::BigDecimal"
         )
     }
 }

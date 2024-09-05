@@ -106,6 +106,26 @@ fn native_test_only_get_session_id(
     )])
 }
 
+#[cfg(feature = "testing")]
+fn native_test_only_set_transaction_hash(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    use crate::safely_pop_arg;
+
+    debug_assert_eq!(arguments.len(), 1);
+
+    let transaction_context = context
+        .extensions_mut()
+        .get_mut::<NativeTransactionContext>();
+
+    let tx_hash = safely_pop_arg!(arguments, Vec<u8>);
+    transaction_context.tx_hash = tx_hash.try_into().unwrap();
+
+    Ok(smallvec![])
+}
+
 /***************************************************************************************************
  * module
  *
@@ -123,10 +143,16 @@ pub fn make_all(
     ]);
 
     #[cfg(feature = "testing")]
-    natives.extend([(
-        "get_session_id",
-        native_test_only_get_session_id as RawSafeNative,
-    )]);
+    natives.extend([
+        (
+            "get_session_id",
+            native_test_only_get_session_id as RawSafeNative,
+        ),
+        (
+            "set_transaction_hash_internal",
+            native_test_only_set_transaction_hash,
+        ),
+    ]);
 
     builder.make_named_natives(natives)
 }
