@@ -44,7 +44,7 @@ jobs:
       - name: Build
         run: make release-build-macos
 
-      - uses: actions/upload-artifact@v4.4
+      - uses: actions/upload-artifact@v4
         with:
           name: libmovevm-macos
           path: api/*.dylib
@@ -55,17 +55,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get linux-glibc artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4
         with:
           name: libmovevm-linux-glibc
 
       - name: Get linux-muslc artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4
         with:
           name: libmovevm-linux-muslc
 
       - name: Get macos artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4
         with:
           name: libmovevm-macos
 
