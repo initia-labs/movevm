@@ -351,6 +351,9 @@ module minitia_std::nft {
         nft.uri = uri;
     }
 
+    #[test_only]
+    use minitia_std::bigdecimal;
+
     #[test(creator = @0x123, trader = @0x456)]
     fun test_create_and_transfer(creator: &signer, trader: &signer) acquires Nft {
         let collection_name = string::utf8(b"collection name");
@@ -379,7 +382,7 @@ module minitia_std::nft {
 
         let expected_royalty =
             royalty::create(
-                minitia_std::decimal128::from_ratio(25, 10000),
+                bigdecimal::from_ratio_u64(25, 10000),
                 creator_address
             );
         assert!(
@@ -396,7 +399,7 @@ module minitia_std::nft {
         let creator_address = signer::address_of(creator);
         let expected_royalty =
             royalty::create(
-                minitia_std::decimal128::from_ratio(10, 1000),
+                bigdecimal::from_ratio_u64(10, 1000),
                 creator_address
             );
         collection::create_fixed_collection(
@@ -575,7 +578,7 @@ module minitia_std::nft {
                 token_id,
                 option::some(
                     royalty::create(
-                        minitia_std::decimal128::from_ratio(1, 1),
+                        bigdecimal::from_ratio_u64(1, 1),
                         signer::address_of(creator)
                     )
                 ),
@@ -648,7 +651,7 @@ module minitia_std::nft {
             token_id,
             option::some(
                 royalty::create(
-                    minitia_std::decimal128::from_ratio(25, 10000),
+                    bigdecimal::from_ratio_u64(25, 10000),
                     signer::address_of(creator)
                 )
             ),

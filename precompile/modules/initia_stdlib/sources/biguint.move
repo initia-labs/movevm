@@ -5,7 +5,7 @@ module initia_std::biguint {
     const INVALID_NUMERIC_TYPE: u64 = 103;
 
     struct BigUint has copy, drop, store {
-        bytes: vector<u8>,
+        bytes: vector<u8>
     }
 
     // creation
@@ -166,10 +166,18 @@ module initia_std::biguint {
         eq(num, one())
     }
 
-    native fun add_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): vector<u8>;
-    native fun sub_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): vector<u8>;
-    native fun mul_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): vector<u8>;
-    native fun div_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): vector<u8>;
+    native fun add_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): vector<u8>;
+    native fun sub_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): vector<u8>;
+    native fun mul_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): vector<u8>;
+    native fun div_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): vector<u8>;
     native fun new_internal<T>(num: T): vector<u8>;
     native fun cast_internal<T>(num_bytes: vector<u8>): T;
     native fun lt_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
@@ -237,9 +245,15 @@ module initia_std::biguint {
         assert!(to_u256(num6) == 340282366920938463463374607431768211455u256, 3);
 
         let num7 = add_by_u256(num1, 1);
-        assert!(to_u256(num7) == 340282366920938463463374607431768211455u256 * 2u256 + 1u256, 4);
+        assert!(
+            to_u256(num7)
+                == 340282366920938463463374607431768211455u256 * 2u256 + 1u256, 4
+        );
         let num8 = sub_by_u256(num1, 1);
-        assert!(to_u256(num8) == 340282366920938463463374607431768211455u256 * 2u256 - 1u256, 5);
+        assert!(
+            to_u256(num8)
+                == 340282366920938463463374607431768211455u256 * 2u256 - 1u256, 5
+        );
         let num9 = mul_by_u256(num1, 2);
         assert!(to_u256(num9) == 340282366920938463463374607431768211455u256 * 4u256, 6);
         let num10 = div_by_u256(num1, 2);
@@ -271,7 +285,10 @@ module initia_std::biguint {
     #[test]
     #[expected_failure(abort_code = 0x10066, location = Self)]
     fun test_biguint_case_overflow_u256() {
-        let num1 = from_u256(115792089237316195423570985008687907853269984665640564039457584007913129639935u256);
+        let num1 =
+            from_u256(
+                115792089237316195423570985008687907853269984665640564039457584007913129639935u256
+            );
         let num1 = mul(num1, from_u64(2u64));
         let _ = cast_internal<u256>(num1.bytes);
     }
@@ -284,7 +301,10 @@ module initia_std::biguint {
         let num1 = from_u128(340282366920938463463374607431768211454u128);
         let _ = cast_internal<u128>(num1.bytes);
 
-        let num1 = from_u256(115792089237316195423570985008687907853269984665640564039457584007913129639935u256);
+        let num1 =
+            from_u256(
+                115792089237316195423570985008687907853269984665640564039457584007913129639935u256
+            );
         let _ = cast_internal<u256>(num1.bytes);
     }
 

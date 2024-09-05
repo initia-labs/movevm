@@ -266,7 +266,7 @@ fn test_cosmos_nft_transfer() {
             bcs::to_bytes(&true).unwrap(),
             bcs::to_bytes(&true).unwrap(),
             bcs::to_bytes(&true).unwrap(),
-            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0],
         ],
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );

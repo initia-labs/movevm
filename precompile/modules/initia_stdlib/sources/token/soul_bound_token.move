@@ -10,7 +10,7 @@ module initia_std::soul_bound_token {
     use initia_std::property_map;
     use initia_std::royalty;
     use initia_std::nft;
-    use initia_std::decimal128::Decimal128;
+    use initia_std::bigdecimal::BigDecimal;
 
     /// The collection does not exist
     const ECOLLECTION_DOES_NOT_EXIST: u64 = 1;
@@ -65,7 +65,7 @@ module initia_std::soul_bound_token {
         mutable_nft_name: bool,
         mutable_nft_properties: bool,
         mutable_nft_uri: bool,
-        royalty: Decimal128
+        royalty: BigDecimal
     ) {
         create_collection_object(
             creator,
@@ -97,7 +97,7 @@ module initia_std::soul_bound_token {
         mutable_nft_name: bool,
         mutable_nft_properties: bool,
         mutable_nft_uri: bool,
-        royalty: Decimal128
+        royalty: BigDecimal
     ): Object<SoulBoundTokenCollection> {
         let creator_addr = signer::address_of(creator);
         let royalty = royalty::create(royalty, creator_addr);
@@ -531,7 +531,7 @@ module initia_std::soul_bound_token {
     entry fun set_collection_royalties_call<T: key>(
         creator: &signer,
         collection: Object<T>,
-        royalty: Decimal128,
+        royalty: BigDecimal,
         payee_address: address
     ) acquires SoulBoundTokenCollection {
         let royalty = royalty::create(royalty, payee_address);
@@ -559,7 +559,7 @@ module initia_std::soul_bound_token {
     use std::string;
 
     #[test_only]
-    use initia_std::decimal128;
+    use initia_std::bigdecimal;
 
     #[test(creator = @0x123)]
     fun test_set_description(creator: &signer) acquires SoulBoundTokenCollection, SoulBoundToken {
@@ -888,7 +888,7 @@ module initia_std::soul_bound_token {
         set_collection_royalties_call(
             creator,
             collection,
-            decimal128::from_ratio(2, 3),
+            bigdecimal::from_ratio_u64(2, 3),
             @0x444
         );
         let royalty_after = option::extract(&mut nft::royalty(nft));
@@ -912,7 +912,7 @@ module initia_std::soul_bound_token {
             flag,
             flag,
             flag,
-            decimal128::from_ratio(1, 100)
+            bigdecimal::from_ratio_u64(1, 100)
         )
     }
 

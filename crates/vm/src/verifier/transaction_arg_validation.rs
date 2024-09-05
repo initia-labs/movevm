@@ -80,26 +80,6 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
             },
         ),
         (
-            "0x1::decimal128::Decimal128",
-            FunctionId {
-                module_id: ModuleId::new(
-                    AccountAddress::ONE,
-                    Identifier::from(ident_str!("decimal128")),
-                ),
-                func_name: ident_str!("new"),
-            },
-        ),
-        (
-            "0x1::decimal256::Decimal256",
-            FunctionId {
-                module_id: ModuleId::new(
-                    AccountAddress::ONE,
-                    Identifier::from(ident_str!("decimal256")),
-                ),
-                func_name: ident_str!("new"),
-            },
-        ),
-        (
             "0x1::biguint::BigUint",
             FunctionId {
                 module_id: ModuleId::new(

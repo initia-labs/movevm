@@ -141,52 +141,6 @@ pub fn convert_json_value_to_value(
                             bigint.try_into().map_err(deserialization_error_with_msg)?,
                         )]))
                     }
-                    "0x1::decimal128::Decimal128" => {
-                        const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
-                        let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = BigDecimal::from_str(s)
-                            .map(|v| v * DECIMAL_SCALE)
-                            .map_err(deserialization_error_with_msg)?
-                            .to_bigint()
-                            .ok_or_else(deserialization_error)?;
-
-                        Value::struct_(Struct::pack(vec![Value::u128(
-                            bigint.try_into().map_err(deserialization_error_with_msg)?,
-                        )]))
-                    }
-                    "0x1::decimal256::Decimal256" => {
-                        const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
-                        let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = BigDecimal::from_str(s)
-                            .map(|v| v * DECIMAL_SCALE)
-                            .map_err(deserialization_error_with_msg)?
-                            .to_bigint()
-                            .ok_or_else(deserialization_error)?;
-
-                        if bigint.is_negative() {
-                            return Err(deserialization_error_with_msg(
-                                format!(
-                                    "failed to convert negative value {} to Decimal256",
-                                    bigint
-                                )
-                                .as_str(),
-                            ));
-                        }
-
-                        let (_, bytes_slice) = bigint.to_bytes_le();
-                        if bytes_slice.len() > 32 {
-                            return Err(deserialization_error_with_msg(
-                                format!("failed to convert huge value {} to Decimal256", bigint)
-                                    .as_str(),
-                            ));
-                        }
-
-                        let mut bytes_array: [u8; 32] = [0u8; 32];
-                        bytes_array[0..bytes_slice.len()].copy_from_slice(&bytes_slice);
-                        Value::struct_(Struct::pack(vec![Value::u256(U256::from_le_bytes(
-                            &bytes_array,
-                        ))]))
-                    }
                     "0x1::biguint::BigUint" => {
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
                         let biguint =
@@ -527,62 +481,6 @@ mod json_arg_testing {
                 Value::vector_for_testing_only(vec![])
             ])))
             .unwrap());
-    }
-
-    #[test]
-    fn test_deserialize_json_to_value_decimal_128() {
-        let layout = MoveTypeLayout::Struct(MoveStructLayout::with_types(
-            StructTag {
-                address: AccountAddress::ONE,
-                module: ident_str!("decimal128").into(),
-                name: ident_str!("Decimal128").into(),
-                type_args: vec![],
-            },
-            vec![MoveFieldLayout {
-                name: ident_str!("value").into(),
-                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::Address)),
-            }],
-        ));
-
-        let arg = b"\"123.4567\"";
-        let result = deserialize_json_to_value(&layout, arg).unwrap();
-        assert!(result
-            .equals(&Value::struct_(Struct::pack(vec![Value::u128(
-                1234567u128 * 1_000_000_000_000_000_000 / 10000
-            )])))
-            .unwrap());
-
-        // invalid negative
-        let arg = b"\"-123.4567\"";
-        _ = deserialize_json_to_value(&layout, arg).unwrap_err();
-    }
-
-    #[test]
-    fn test_deserialize_json_to_value_decimal_256() {
-        let layout = MoveTypeLayout::Struct(MoveStructLayout::with_types(
-            StructTag {
-                address: AccountAddress::ONE,
-                module: ident_str!("decimal256").into(),
-                name: ident_str!("Decimal256").into(),
-                type_args: vec![],
-            },
-            vec![MoveFieldLayout {
-                name: ident_str!("value").into(),
-                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::Address)),
-            }],
-        ));
-
-        let arg = b"\"123.4567\"";
-        let result = deserialize_json_to_value(&layout, arg).unwrap();
-        assert!(result
-            .equals(&Value::struct_(Struct::pack(vec![Value::u256(
-                U256::from(1234567u128 * 1_000_000_000_000_000_000 / 10000)
-            )])))
-            .unwrap());
-
-        // invalid negative
-        let arg = b"\"-123.4567\"";
-        _ = deserialize_json_to_value(&layout, arg).unwrap_err();
     }
 
     #[test]

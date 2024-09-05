@@ -11,7 +11,7 @@ module initia_std::minitswap {
     use initia_std::bcs;
     use initia_std::block;
     use initia_std::cosmos;
-    use initia_std::decimal128::{Self, Decimal128};
+    use initia_std::bigdecimal::{Self, BigDecimal};
     use initia_std::table::{Self, Table};
     use initia_std::table_key;
     use initia_std::object::{Self, ExtendRef, Object};
@@ -59,7 +59,7 @@ module initia_std::minitswap {
         /// List of pools
         pools: Table<Object<Metadata>, Pools>,
         /// Max pool size change rate
-        max_change_rate: Decimal128,
+        max_change_rate: BigDecimal,
         /// If this state is True, every depositor related transaction sent to Minitswap will fail
         emergency_state: bool,
         /// admin address who can change emergency_state and pool active
@@ -83,14 +83,14 @@ module initia_std::minitswap {
         /// ANN
         stableswap_ann: u64,
         /// swap fee rate
-        stableswap_swap_fee_rate: Decimal128,
+        stableswap_swap_fee_rate: BigDecimal,
 
         // swap related configs
 
         /// Swap fee rate
-        swap_fee_rate: Decimal128,
+        swap_fee_rate: BigDecimal,
         /// Swap fee rate
-        arb_fee_rate: Decimal128,
+        arb_fee_rate: BigDecimal,
 
         // in house arb configs
 
@@ -118,11 +118,11 @@ module initia_std::minitswap {
         /// Z. Virtual pool size
         pool_size: u64,
         /// V. Recover velocity. Real recover amount = Vt
-        recover_velocity: Decimal128,
+        recover_velocity: BigDecimal,
         /// R_max max recover ratio
-        max_ratio: Decimal128,
+        max_ratio: BigDecimal,
         /// f. Flexibility
-        recover_param: Decimal128,
+        recover_param: BigDecimal,
         /// Virtual pool amount of INIT
         init_pool_amount: u64,
         /// Virtual pool amount of ibc_op_INIT
@@ -187,11 +187,11 @@ module initia_std::minitswap {
     /// Event emitted when virtual pool created
     struct CreatePoolEvent has drop, store {
         ibc_op_init_metadata: Object<Metadata>,
-        recover_velocity: Decimal128,
+        recover_velocity: BigDecimal,
         pool_size: u64,
         ann: u64,
-        max_ratio: Decimal128,
-        recover_param: Decimal128
+        max_ratio: BigDecimal,
+        recover_param: BigDecimal
     }
 
     #[event]
@@ -206,10 +206,10 @@ module initia_std::minitswap {
     /// Event emitted when update param of virtual pool
     struct UpdatePoolParamsEvent has drop, store {
         ibc_op_init_metadata: Object<Metadata>,
-        recover_velocity: Option<Decimal128>,
+        recover_velocity: Option<BigDecimal>,
         ann: Option<u64>,
-        max_ratio: Option<Decimal128>,
-        recover_param: Option<Decimal128>,
+        max_ratio: Option<BigDecimal>,
+        recover_param: Option<BigDecimal>,
         hook_contract: Option<String>
     }
 
@@ -311,7 +311,7 @@ module initia_std::minitswap {
             ModuleStore {
                 extend_ref,
                 pools: table::new(),
-                max_change_rate: decimal128::from_ratio(1, 10), // 10%
+                max_change_rate: bigdecimal::from_ratio_u64(1, 10), // 10%
                 emergency_state: false,
                 admin: @initia_std,
                 depositor_owned_init: 0,
@@ -320,9 +320,9 @@ module initia_std::minitswap {
                 mint_cap,
                 burn_cap,
                 stableswap_ann: 3000,
-                stableswap_swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1%
-                swap_fee_rate: decimal128::from_ratio(1, 1000), // 0.1%
-                arb_fee_rate: decimal128::from_ratio(1, 1000), // 0.1% TODO: set initial value
+                stableswap_swap_fee_rate: bigdecimal::from_ratio_u64(1, 1000), // 0.1%
+                swap_fee_rate: bigdecimal::from_ratio_u64(1, 1000), // 0.1%
+                arb_fee_rate: bigdecimal::from_ratio_u64(1, 1000), // 0.1% TODO: set initial value
                 trigger_fee: 50000, // 0.5 init TODO: set initial value
                 min_arb_profit: 1000000, // 1 init TODO: set initial value
                 ibc_timeout: 60 * 10, // 10 mins
@@ -453,7 +453,7 @@ module initia_std::minitswap {
     #[view]
     public fun spot_price(
         base_metadata: Object<Metadata>, quote_metadata: Object<Metadata>
-    ): Decimal128 acquires ModuleStore, VirtualPool {
+    ): BigDecimal acquires ModuleStore, VirtualPool {
         let is_init_quote = is_init_metadata(quote_metadata);
         let ibc_op_init_metadata = if (is_init_quote) {
             base_metadata
@@ -491,12 +491,12 @@ module initia_std::minitswap {
             );
 
         if (is_init_quote) {
-            decimal128::from_ratio_u64(
+            bigdecimal::from_ratio_u64(
                 init_return_amount + swap_amount,
                 ibc_op_init_return_amount + swap_amount
             )
         } else {
-            decimal128::from_ratio_u64(
+            bigdecimal::from_ratio_u64(
                 ibc_op_init_return_amount + swap_amount,
                 init_return_amount + swap_amount
             )
@@ -857,13 +857,13 @@ module initia_std::minitswap {
     }
 
     struct ModuleStoreResponse has drop {
-        max_change_rate: Decimal128,
+        max_change_rate: BigDecimal,
         emergency_state: bool,
         admin: address,
         depositor_owned_init: u64,
         unbond_period: u64,
-        swap_fee_rate: Decimal128,
-        arb_fee_rate: Decimal128,
+        swap_fee_rate: BigDecimal,
+        arb_fee_rate: BigDecimal,
         trigger_fee: u64,
         min_arb_profit: u64,
         ibc_timeout: u64,
@@ -875,13 +875,13 @@ module initia_std::minitswap {
     public fun unpack_module_store_response(
         res: ModuleStoreResponse
     ): (
-        Decimal128,
+        BigDecimal,
         bool,
         address,
         u64,
         u64,
-        Decimal128,
-        Decimal128,
+        BigDecimal,
+        BigDecimal,
         u64,
         u64,
         u64,
@@ -974,9 +974,9 @@ module initia_std::minitswap {
 
     struct VirtualPoolDetail has drop {
         pool_size: u64,
-        recover_velocity: Decimal128,
-        max_ratio: Decimal128,
-        recover_param: Decimal128,
+        recover_velocity: BigDecimal,
+        max_ratio: BigDecimal,
+        recover_param: BigDecimal,
         init_pool_amount: u64,
         ibc_op_init_pool_amount: u64,
         last_recovered_timestamp: u64,
@@ -989,7 +989,7 @@ module initia_std::minitswap {
 
     public fun unpack_virtual_pool_detail(
         res: VirtualPoolDetail
-    ): (u64, Decimal128, Decimal128, Decimal128, u64, u64, u64, u64, u64, u64, u64, bool) {
+    ): (u64, BigDecimal, BigDecimal, BigDecimal, u64, u64, u64, u64, u64, u64, u64, bool) {
         return (
             res.pool_size,
             res.recover_velocity,
@@ -1014,11 +1014,11 @@ module initia_std::minitswap {
     public entry fun create_pool(
         chain: &signer,
         ibc_op_init_metadata: Object<Metadata>,
-        recover_velocity: Decimal128,
+        recover_velocity: BigDecimal,
         pool_size: u64,
         ann: u64,
-        max_ratio: Decimal128,
-        recover_param: Decimal128,
+        max_ratio: BigDecimal,
+        recover_param: BigDecimal,
         vm_type: u8,
         hook_contract: String,
         op_bridge_id: u64,
@@ -1152,20 +1152,19 @@ module initia_std::minitswap {
 
         let change_rate =
             if (new_pool_size > pool.pool_size) {
-                decimal128::from_ratio_u64(
+                bigdecimal::from_ratio_u64(
                     new_pool_size - pool.pool_size,
                     pool.pool_size
                 )
             } else {
-                decimal128::from_ratio_u64(
+                bigdecimal::from_ratio_u64(
                     pool.pool_size - new_pool_size,
                     pool.pool_size
                 )
             };
 
         assert!(
-            decimal128::val(&module_store.max_change_rate)
-                >= decimal128::val(&change_rate),
+            bigdecimal::ge(module_store.max_change_rate, change_rate),
             error::invalid_argument(EMAX_CHANGE)
         );
 
@@ -1187,10 +1186,12 @@ module initia_std::minitswap {
                 let current_ibc_op_init_delta =
                     pool.ibc_op_init_pool_amount - pool.pool_size;
 
-                let ratio = decimal128::from_ratio_u64(new_pool_size, pool.pool_size);
-                pool.init_pool_amount = decimal128::mul_u64(&ratio, pool.init_pool_amount);
-                pool.ibc_op_init_pool_amount = decimal128::mul_u64(
-                    &ratio,
+                let ratio = bigdecimal::from_ratio_u64(new_pool_size, pool.pool_size);
+                pool.init_pool_amount = bigdecimal::mul_by_u64_truncate(
+                    ratio, pool.init_pool_amount
+                );
+                pool.ibc_op_init_pool_amount = bigdecimal::mul_by_u64_truncate(
+                    ratio,
                     pool.ibc_op_init_pool_amount
                 );
                 pool.pool_size = new_pool_size;
@@ -1280,11 +1281,11 @@ module initia_std::minitswap {
 
     public entry fun update_module_params(
         chain: &signer,
-        max_change_rate: Option<Decimal128>,
+        max_change_rate: Option<BigDecimal>,
         admin: Option<address>,
         unbond_period: Option<u64>,
-        swap_fee_rate: Option<Decimal128>,
-        arb_fee_rate: Option<Decimal128>,
+        swap_fee_rate: Option<BigDecimal>,
+        arb_fee_rate: Option<BigDecimal>,
         trigger_fee: Option<u64>,
         min_arb_profit: Option<u64>,
         ibc_timeout: Option<u64>,
@@ -1343,10 +1344,10 @@ module initia_std::minitswap {
     public entry fun update_pool_params(
         chain: &signer,
         ibc_op_init_metadata: Object<Metadata>,
-        recover_velocity: Option<Decimal128>,
+        recover_velocity: Option<BigDecimal>,
         ann: Option<u64>,
-        max_ratio: Option<Decimal128>,
-        recover_param: Option<Decimal128>,
+        max_ratio: Option<BigDecimal>,
+        recover_param: Option<BigDecimal>,
         hook_contract: Option<String>
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, false);
@@ -2011,29 +2012,28 @@ module initia_std::minitswap {
         let (_, timestamp) = block::get_block_info();
 
         let imbalance =
-            decimal128::from_ratio_u64(
+            bigdecimal::from_ratio_u64(
                 pool.peg_keeper_owned_ibc_op_init_balance
                     + pool.ibc_op_init_pool_amount - pool.pool_size, // same with real ibc op init balance
                 pool.pool_size
             );
         // Peg keeper swap
-        let r_fr =
-            get_fully_recovered_ratio(
-                &imbalance,
-                &pool.max_ratio,
-                &pool.recover_param
-            );
+        let r_fr = get_fully_recovered_ratio(
+            imbalance,
+            pool.max_ratio,
+            pool.recover_param
+        );
         let current_ratio =
-            decimal128::from_ratio_u64(
+            bigdecimal::from_ratio_u64(
                 pool.ibc_op_init_pool_amount,
                 pool.init_pool_amount + pool.ibc_op_init_pool_amount
             );
         let time_diff = timestamp - pool.last_recovered_timestamp;
-        if (decimal128::val(&current_ratio) > decimal128::val(&r_fr) && time_diff != 0) {
+        if (bigdecimal::gt(current_ratio, r_fr) && time_diff != 0) {
             let (x_fr, _) =
-                get_fully_recovered_pool_amounts(pool.pool_size, &r_fr, pool.ann);
+                get_fully_recovered_pool_amounts(pool.pool_size, r_fr, pool.ann);
             let max_recover_amount =
-                decimal128::mul_u64(&pool.recover_velocity, time_diff);
+                bigdecimal::mul_by_u64_truncate(pool.recover_velocity, time_diff);
             let swap_amount_to_reach_fr =
                 if (x_fr > pool.init_pool_amount) {
                     x_fr - pool.init_pool_amount
@@ -2097,8 +2097,8 @@ module initia_std::minitswap {
 
                 // take swap fee
                 let swap_fee_amount =
-                    decimal128::mul_u64(
-                        &module_store.swap_fee_rate,
+                    bigdecimal::mul_by_u64_ceil(
+                        module_store.swap_fee_rate,
                         return_amount
                     );
                 return_amount = return_amount - swap_fee_amount;
@@ -2108,8 +2108,8 @@ module initia_std::minitswap {
                     if (return_amount > offer_amount) {
                         return_amount - offer_amount
                     } else { 0 };
-                arb_fee_amount = decimal128::mul_u64(
-                    &module_store.arb_fee_rate,
+                arb_fee_amount = bigdecimal::mul_by_u64_ceil(
+                    module_store.arb_fee_rate,
                     arb_profit
                 );
                 return_amount = return_amount - arb_fee_amount;
@@ -2159,8 +2159,8 @@ module initia_std::minitswap {
 
                 // take swap fee
                 let swap_fee_amount =
-                    decimal128::mul_u64(
-                        &module_store.swap_fee_rate,
+                    bigdecimal::mul_by_u64_ceil(
+                        module_store.swap_fee_rate,
                         return_amount
                     );
                 let return_amount = return_amount - swap_fee_amount;
@@ -2718,48 +2718,44 @@ module initia_std::minitswap {
 
     // R_fr = 0.5 + (R_max - 0.5) * (f * I) ** 3 / (1 + (f * I) ** 3)
     fun get_fully_recovered_ratio(
-        imbalance: &Decimal128, max_ratio: &Decimal128, recover_param: &Decimal128
-    ): Decimal128 {
-        let fi = decimal128_safe_mul(recover_param, imbalance);
-        let fi3 = decimal128_safe_mul(&fi, &decimal128_safe_mul(&fi, &fi));
-        let half = decimal128::from_ratio(1, 2); // .5
+        imbalance: BigDecimal, max_ratio: BigDecimal, recover_param: BigDecimal
+    ): BigDecimal {
+        let fi = bigdecimal::mul(recover_param, imbalance);
+        let fi3 = bigdecimal::mul(fi, bigdecimal::mul(fi, fi));
+        let half = bigdecimal::from_ratio_u64(1, 2); // .5
         let to_sum =
-            decimal128_safe_mul(
-                &decimal128::sub(max_ratio, &half), // R_max - 0.5
-                &decimal128_safe_from_ratio(
-                    decimal128::val(&fi3),
-                    decimal128::val(&decimal128::add(&decimal128::one(), &fi3))
-                )
+            bigdecimal::mul(
+                bigdecimal::sub(max_ratio, half), // R_max - 0.5
+                bigdecimal::div(fi3, bigdecimal::add(bigdecimal::one(), fi3))
                 // (f * I) ** 3 / (1 + (f * I) ** 3)
             );
 
-        decimal128::add(&half, &to_sum)
+        bigdecimal::add(half, to_sum)
     }
 
     fun get_fully_recovered_pool_amounts(
-        pool_size: u64, fully_recovered_ratio: &Decimal128, ann: u64
+        pool_size: u64, fully_recovered_ratio: BigDecimal, ann: u64
     ): (u64, u64) {
-        let denominator = decimal128::val(&decimal128::one());
-        let fully_recovered_ratio_val = decimal128::val(fully_recovered_ratio);
-        let grad =
-            decimal128::from_ratio(
-                fully_recovered_ratio_val,
-                denominator - fully_recovered_ratio_val
+        let one = bigdecimal::one();
+        let g =
+            bigdecimal::div(
+                fully_recovered_ratio, bigdecimal::sub(one, fully_recovered_ratio)
             );
-        let grad_val = decimal128::val(&grad);
-
-        let pool_size = (pool_size as u128);
-        let pool_size_val = pool_size * denominator;
+        let z = pool_size;
 
         // Get first point
-        let d0 = get_d0((pool_size as u64), ann);
-        let x = (
-            2 * (pool_size_val as u256) / ((grad_val as u256) + (denominator as u256)) as u128
-        ); // x = 2z / (g + 1)
-        if (x == (pool_size as u128)) { // fully_recovered_ratio = 0.5
-            return ((pool_size as u64), (pool_size as u64))
+        let d0 = get_d0(pool_size, ann);
+        let x =
+            bigdecimal::truncate_u64(
+                bigdecimal::div(
+                    bigdecimal::mul_by_u64(bigdecimal::from_u64(z), 2),
+                    bigdecimal::add(g, one)
+                )
+            ); // x = 2z / (g + 1)
+        if (x == z) { // fully_recovered_ratio = 0.5
+            return (pool_size, pool_size)
         };
-        let y = (get_y(d0, (x as u64), ann) as u128);
+        let y = get_y(d0, (x as u64), ann);
 
         let i = 0;
         let x_prev;
@@ -2771,20 +2767,21 @@ module initia_std::minitswap {
             // x = z * (x' - y') / (g * (x'- z) - (y' - z))
             // x = z * (y' - x') / (g * (z - x') + (y' - z))
             let temp_x =
-                ((pool_size as u256) * (y - x as u256) * (denominator as u256)
-                    / ((grad_val as u256) * (pool_size - x as u256)
-                        + (y - pool_size as u256) * (denominator as u256)) as u128);
+                bigdecimal::div(
+                    bigdecimal::mul_by_u64(bigdecimal::from_u64(z), y - x),
+                    bigdecimal::add_by_u64(bigdecimal::mul_by_u64(g, z - x), y - z)
+                );
 
             // get y from temp x
-            y = decimal128::mul_u128(&grad, temp_x);
+            y = bigdecimal::truncate_u64(bigdecimal::mul(g, temp_x));
             // get x from y
-            x = (get_y(d0, (y as u64), ann) as u128);
+            x = get_y(d0, y, ann);
 
             // when fully recovered rate is too close to 0.5 y can be same with pool_size
-            if (y == pool_size) break;
+            if (y == z) break;
 
             // when fully recovered rate is too close to 0.5 x can be slightly higher than pool_size
-            if (x > pool_size) {
+            if (x > z) {
                 x = pool_size;
                 break
             };
@@ -2798,22 +2795,6 @@ module initia_std::minitswap {
         };
 
         ((x as u64), (y as u64))
-    }
-
-    fun decimal128_safe_mul(a: &Decimal128, b: &Decimal128): Decimal128 {
-        let a_val = (decimal128::val(a) as u256);
-        let b_val = (decimal128::val(b) as u256);
-        let one = (decimal128::val(&decimal128::one()) as u256);
-        let val = (a_val * b_val / one as u128);
-        decimal128::new(val)
-    }
-
-    fun decimal128_safe_from_ratio(a: u128, b: u128): Decimal128 {
-        let a = (a as u256);
-        let b = (b as u256);
-        let one = (decimal128::val(&decimal128::one()) as u256);
-        let val = (a * one / b as u128);
-        decimal128::new(val)
     }
 
     fun assert_min_amount(fa: &FungibleAsset, min_return: Option<u64>) {
@@ -2868,8 +2849,8 @@ module initia_std::minitswap {
 
                 // take swap fee
                 let swap_fee_amount =
-                    decimal128::mul_u64(
-                        &module_store.swap_fee_rate,
+                    bigdecimal::mul_by_u64_ceil(
+                        module_store.swap_fee_rate,
                         return_amount
                     );
 
@@ -2879,8 +2860,8 @@ module initia_std::minitswap {
                         return_amount - swap_fee_amount - offer_amount
                     } else { 0 };
                 let arb_fee_amount =
-                    decimal128::mul_u64(
-                        &module_store.arb_fee_rate,
+                    bigdecimal::mul_by_u64_ceil(
+                        module_store.arb_fee_rate,
                         arb_profit
                     );
                 let fee_amount = swap_fee_amount + arb_fee_amount;
@@ -2896,8 +2877,8 @@ module initia_std::minitswap {
                         ann
                     );
                 let fee_amount =
-                    decimal128::mul_u64(
-                        &module_store.swap_fee_rate,
+                    bigdecimal::mul_by_u64_ceil(
+                        module_store.swap_fee_rate,
                         return_amount
                     );
 
@@ -2942,16 +2923,13 @@ module initia_std::minitswap {
                 // and recalculate offer amount repeatly until return amount <= actual return amount
                 // note that actual return is always small or equal with target return amount
 
-                let denominator = decimal128::val(&decimal128::one());
-
                 // adjust fee. return amount before swap fee = return amount * 1 / (1 - f)
                 let return_amount_before_swap_fee =
-                    (
-                        mul_div_u128(
-                            (return_amount as u128),
-                            denominator,
-                            (denominator - decimal128::val(&module_store.swap_fee_rate))
-                        ) as u64
+                    bigdecimal::truncate_u64(
+                        bigdecimal::div(
+                            bigdecimal::from_u64(return_amount),
+                            bigdecimal::sub(bigdecimal::one(), module_store.swap_fee_rate)
+                        )
                     );
                 if (ibc_op_init_pool_amount - return_amount_before_swap_fee < pool_size) {
                     return ((U64_MAX as u64), (U64_MAX as u64))
@@ -2974,8 +2952,8 @@ module initia_std::minitswap {
                         return_amount - offer_amount
                     } else { 0 };
                 let arb_fee_amount =
-                    decimal128::mul_u64(
-                        &module_store.arb_fee_rate,
+                    bigdecimal::mul_by_u64_ceil(
+                        module_store.arb_fee_rate,
                         arb_profit
                     );
 
@@ -2994,8 +2972,8 @@ module initia_std::minitswap {
                         return ((U64_MAX as u64), (U64_MAX as u64))
                     };
 
-                    swap_fee_amount = decimal128::mul_u64(
-                        &module_store.swap_fee_rate,
+                    swap_fee_amount = bigdecimal::mul_by_u64_ceil(
+                        module_store.swap_fee_rate,
                         return_amount_before_swap_fee
                     );
 
@@ -3011,8 +2989,8 @@ module initia_std::minitswap {
                     arb_profit = if (return_amount > offer_amount) {
                         return_amount_before_swap_fee - swap_fee_amount - offer_amount
                     } else { 0 };
-                    arb_fee_amount = decimal128::mul_u64(
-                        &module_store.arb_fee_rate,
+                    arb_fee_amount = bigdecimal::mul_by_u64_ceil(
+                        module_store.arb_fee_rate,
                         arb_profit
                     );
                     actual_return_amount = return_amount_before_swap_fee
@@ -3025,16 +3003,13 @@ module initia_std::minitswap {
 
                 (offer_amount, swap_fee_amount + arb_fee_amount)
             } else {
-                let denominator = decimal128::val(&decimal128::one());
-
                 // adjust fee. amount = amount * 1 / (1 - f)
                 let return_amount_ =
-                    (
-                        mul_div_u128(
-                            (return_amount as u128),
-                            denominator,
-                            (denominator - decimal128::val(&module_store.swap_fee_rate))
-                        ) as u64
+                    bigdecimal::truncate_u64(
+                        bigdecimal::div(
+                            bigdecimal::from_u64(return_amount),
+                            bigdecimal::sub(bigdecimal::one(), module_store.swap_fee_rate)
+                        )
                     );
                 let fee_amount = return_amount_ - return_amount;
 
@@ -3051,10 +3026,6 @@ module initia_std::minitswap {
             };
 
         (offer_amount, fee_amount)
-    }
-
-    fun mul_div_u128(a: u128, b: u128, c: u128): u128 {
-        return ((a as u256) * (b as u256) / (c as u256) as u128)
     }
 
     #[test_only]
@@ -3221,11 +3192,11 @@ module initia_std::minitswap {
         create_pool(
             &chain,
             ibc_op_init_metadata,
-            decimal128::from_ratio(100000, 1),
+            bigdecimal::from_ratio_u64(100000, 1),
             10000000,
             3000,
-            decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(2, 1),
+            bigdecimal::from_ratio_u64(7, 10),
+            bigdecimal::from_ratio_u64(2, 1),
             MOVE,
             string::utf8(b"0x1"),
             1,
@@ -3343,11 +3314,11 @@ module initia_std::minitswap {
         create_pool(
             &chain,
             ibc_op_init_1_metadata,
-            decimal128::from_ratio(100000, 1),
+            bigdecimal::from_ratio_u64(100000, 1),
             10000000,
             3000,
-            decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(2, 1),
+            bigdecimal::from_ratio_u64(7, 10),
+            bigdecimal::from_ratio_u64(2, 1),
             MOVE,
             string::utf8(b"0x1"),
             1,
@@ -3357,11 +3328,11 @@ module initia_std::minitswap {
         create_pool(
             &chain,
             ibc_op_init_2_metadata,
-            decimal128::from_ratio(100000, 1),
+            bigdecimal::from_ratio_u64(100000, 1),
             10000000,
             3000,
-            decimal128::from_ratio(7, 10),
-            decimal128::from_ratio(2, 1),
+            bigdecimal::from_ratio_u64(7, 10),
+            bigdecimal::from_ratio_u64(2, 1),
             MOVE,
             string::utf8(b"0x1"),
             2,
@@ -3384,7 +3355,7 @@ module initia_std::minitswap {
                 init_metadata,
                 1000000
             );
-        assert!(return_amount == 992741, 0);
+        assert!(return_amount == 992740, 0);
 
         let balance_before = coin::balance(chain_addr, init_metadata);
         swap(
@@ -3407,7 +3378,7 @@ module initia_std::minitswap {
                 ibc_op_init_1_metadata,
                 500000
             );
-        assert!(return_amount == 504226, 0);
+        assert!(return_amount == 504224, 0);
 
         let balance_before = coin::balance(chain_addr, ibc_op_init_1_metadata);
         swap(
