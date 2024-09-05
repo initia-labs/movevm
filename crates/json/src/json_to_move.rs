@@ -177,7 +177,7 @@ fn convert_json_value_to_move_value<S: StructResolver, R: ResourceResolver>(
                     if bigint.is_negative() {
                         return Err(deserialization_error_with_msg(
                             format!(
-                                "failed to convert negative value {} to BigDecimal",
+                                "BigDecimal conversion error: negative values are not supported, received: {}",
                                 bigint
                             )
                             .as_str(),
