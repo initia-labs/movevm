@@ -1148,7 +1148,8 @@ module initia_std::stableswap {
         let ann = get_current_ann(&pool.ann);
         let withdraw_fee_rate =
             bigdecimal::div_by_u64(
-                bigdecimal::mul_by_u64(pool.swap_fee_rate, n), 4 * (n - 1)
+                bigdecimal::mul_by_u64(pool.swap_fee_rate, n),
+                4 * (n - 1)
             );
         let total_supply = option::extract(&mut fungible_asset::supply(pool_obj));
         let pool_amounts = get_pool_amounts(pool_addr, pool.coin_metadata);
@@ -1224,7 +1225,8 @@ module initia_std::stableswap {
         let ann = get_current_ann(&pool.ann);
         let withdraw_fee_rate =
             bigdecimal::div_by_u64(
-                bigdecimal::mul_by_u64(pool.swap_fee_rate, n), 4 * (n - 1)
+                bigdecimal::mul_by_u64(pool.swap_fee_rate, n),
+                4 * (n - 1)
             );
         let total_supply = option::extract(&mut fungible_asset::supply(pool_obj));
 
@@ -1355,7 +1357,8 @@ module initia_std::stableswap {
             if (total_supply > 0) {
                 let provide_fee_rate =
                     bigdecimal::div_by_u64(
-                        bigdecimal::mul_by_u64(pool.swap_fee_rate, n), 4 * (n - 1)
+                        bigdecimal::mul_by_u64(pool.swap_fee_rate, n),
+                        4 * (n - 1)
                     );
                 i = 0;
                 while (i < n) {

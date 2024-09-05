@@ -170,29 +170,28 @@ fn convert_decimal_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
                 let num = BigUint::from_bytes_le(&num.to_le_bytes());
                 BigDecimal::new(num.into(), 18)
             }
-            MoveValue::Struct(st) => match st {
+            MoveValue::Struct(
                 MoveStruct::WithTypes { type_: _, fields }
                 | MoveStruct::WithFields(fields)
-                | MoveStruct::WithVariantFields(_, _, fields) => {
-                    let (_, bytes_val) = fields.get(0).unwrap();
-                    match bytes_val {
-                        MoveValue::Vector(bytes_val) => {
-                            let bytes_le = bytes_val
-                                .iter()
-                                .map(|byte_val| match byte_val {
-                                    MoveValue::U8(byte) => *byte,
-                                    _ => unreachable!(),
-                                })
-                                .collect::<Vec<u8>>();
+                | MoveStruct::WithVariantFields(_, _, fields),
+            ) => {
+                let (_, bytes_val) = fields.first().unwrap();
+                match bytes_val {
+                    MoveValue::Vector(bytes_val) => {
+                        let bytes_le = bytes_val
+                            .iter()
+                            .map(|byte_val| match byte_val {
+                                MoveValue::U8(byte) => *byte,
+                                _ => unreachable!(),
+                            })
+                            .collect::<Vec<u8>>();
 
-                            let num = BigUint::from_bytes_le(&bytes_le);
-                            BigDecimal::new(num.into(), 18)
-                        }
-                        _ => unreachable!(),
+                        let num = BigUint::from_bytes_le(&bytes_le);
+                        BigDecimal::new(num.into(), 18)
                     }
+                    _ => unreachable!(),
                 }
-                _ => unreachable!(),
-            },
+            }
             _ => unreachable!(),
         }
         .normalized()

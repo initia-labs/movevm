@@ -34,7 +34,7 @@ Standard math utilities missing in the Move Language.
 
 
 
-<pre><code><b>const</b> <a href="math64.md#0x1_math64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>: u64 = 1;
+<pre><code><b>const</b> <a href="math64.md#0x1_math64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>: u64 = 2;
 </code></pre>
 
 
@@ -61,8 +61,7 @@ Return the largest of two numbers.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_max">max</a>(a: u64, b: u64): u64 {
@@ -71,8 +70,6 @@ Return the largest of two numbers.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math64_min"></a>
 
@@ -86,8 +83,7 @@ Return the smallest of two numbers.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <b>min</b>(a: u64, b: u64): u64 {
@@ -96,8 +92,6 @@ Return the smallest of two numbers.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math64_average"></a>
 
@@ -111,8 +105,7 @@ Return the average of two.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_average">average</a>(a: u64, b: u64): u64 {
@@ -126,8 +119,6 @@ Return the average of two.
 
 
 
-</details>
-
 <a id="0x1_math64_mul_div"></a>
 
 ## Function `mul_div`
@@ -140,8 +131,7 @@ Returns a * b / c going through u128 to prevent intermediate overflow
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_mul_div">mul_div</a>(a: u64, b: u64, c: u64): u64 {
@@ -150,8 +140,6 @@ Returns a * b / c going through u128 to prevent intermediate overflow
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math64_clamp"></a>
 
@@ -165,8 +153,7 @@ Return x clamped to the interval [lower, upper].
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_clamp">clamp</a>(x: u64, lower: u64, upper: u64): u64 {
@@ -175,8 +162,6 @@ Return x clamped to the interval [lower, upper].
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math64_pow"></a>
 
@@ -190,14 +175,12 @@ Return the value of n raised to power e
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_pow">pow</a>(n: u64, e: u64): u64 {
-    <b>if</b> (e == 0) {
-        1
-    } <b>else</b> {
+    <b>if</b> (e == 0) { 1 }
+    <b>else</b> {
         <b>let</b> p = 1;
         <b>while</b> (e &gt; 1) {
             <b>if</b> (e % 2 == 1) {
@@ -213,8 +196,6 @@ Return the value of n raised to power e
 
 
 
-</details>
-
 <a id="0x1_math64_floor_log2"></a>
 
 ## Function `floor_log2`
@@ -227,13 +208,15 @@ Returns floor(lg2(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_floor_log2">floor_log2</a>(x: u64): u8 {
     <b>let</b> res = 0;
-    <b>assert</b>!(x != 0, std::error::invalid_argument(<a href="math64.md#0x1_math64_EINVALID_ARG_FLOOR_LOG2">EINVALID_ARG_FLOOR_LOG2</a>));
+    <b>assert</b>!(
+        x != 0,
+        std::error::invalid_argument(<a href="math64.md#0x1_math64_EINVALID_ARG_FLOOR_LOG2">EINVALID_ARG_FLOOR_LOG2</a>)
+    );
     // Effectively the position of the most significant set bit
     <b>let</b> n = 32;
     <b>while</b> (n &gt; 0) {
@@ -249,8 +232,6 @@ Returns floor(lg2(x))
 
 
 
-</details>
-
 <a id="0x1_math64_log2"></a>
 
 ## Function `log2`
@@ -262,18 +243,19 @@ Returns floor(lg2(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_log2">log2</a>(x: u64): FixedPoint32 {
     <b>let</b> integer_part = <a href="math64.md#0x1_math64_floor_log2">floor_log2</a>(x);
     // Normalize x <b>to</b> [1, 2) in fixed point 32.
-    <b>let</b> y = (<b>if</b> (x &gt;= 1 &lt;&lt; 32) {
-        x &gt;&gt; (integer_part - 32)
-    } <b>else</b> {
-        x &lt;&lt; (32 - integer_part)
-    } <b>as</b> u128);
+    <b>let</b> y = (
+        <b>if</b> (x &gt;= 1 &lt;&lt; 32) {
+            x &gt;&gt; (integer_part - 32)
+        } <b>else</b> {
+            x &lt;&lt; (32 - integer_part)
+        } <b>as</b> u128
+    );
     <b>let</b> frac = 0;
     <b>let</b> delta = 1 &lt;&lt; 31;
     <b>while</b> (delta != 0) {
@@ -282,16 +264,17 @@ Returns floor(lg2(x))
         y = (y * y) &gt;&gt; 32;
         // x is now in [1, 4)
         // <b>if</b> x in [2, 4) then log x = 1 + log (x / 2)
-        <b>if</b> (y &gt;= (2 &lt;&lt; 32)) { frac = frac + delta; y = y &gt;&gt; 1; };
+        <b>if</b> (y &gt;= (2 &lt;&lt; 32)) {
+            frac = frac + delta;
+            y = y &gt;&gt; 1;
+        };
         delta = delta &gt;&gt; 1;
     };
-    <a href="../../move_nursery/../move_stdlib/doc/fixed_point32.md#0x1_fixed_point32_create_from_raw_value">fixed_point32::create_from_raw_value</a> (((integer_part <b>as</b> u64) &lt;&lt; 32) + frac)
+    <a href="../../move_nursery/../move_stdlib/doc/fixed_point32.md#0x1_fixed_point32_create_from_raw_value">fixed_point32::create_from_raw_value</a>(((integer_part <b>as</b> u64) &lt;&lt; 32) + frac)
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math64_sqrt"></a>
 
@@ -305,8 +288,7 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_sqrt">sqrt</a>(x: u64): u64 {
@@ -330,8 +312,6 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-</details>
-
 <a id="0x1_math64_ceil_div"></a>
 
 ## Function `ceil_div`
@@ -343,8 +323,7 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math64.md#0x1_math64_ceil_div">ceil_div</a>(x: u64, y: u64): u64 {
@@ -353,11 +332,6 @@ Returns square root of x, precisely floor(sqrt(x))
     <b>if</b> (x == 0) {
         <b>assert</b>!(y != 0, <a href="math64.md#0x1_math64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>);
         0
-    }
-    <b>else</b> (x - 1) / y + 1
+    } <b>else</b> (x - 1) / y + 1
 }
 </code></pre>
-
-
-
-</details>
