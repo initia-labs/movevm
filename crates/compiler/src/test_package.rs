@@ -37,10 +37,10 @@ impl TestPackage {
 
         // use v2 as default
         if new_build_config.compiler_config.compiler_version.is_none() {
-            new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
+            new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_1);
         }
         if new_build_config.compiler_config.language_version.is_none() {
-            new_build_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
+            new_build_config.compiler_config.language_version = Some(LanguageVersion::V2_1);
         }
 
         configure_for_unit_test();

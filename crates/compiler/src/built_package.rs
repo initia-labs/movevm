@@ -11,17 +11,12 @@ use itertools::Itertools;
 use move_binary_format::CompiledModule;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
-use move_core_types::{
-    language_storage::ModuleId, metadata::Metadata,
-};
+use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
-use move_model::{
-    metadata::{CompilerVersion, LanguageVersion},
-    model::GlobalEnv,
-};
+use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
-    BuildConfig, ModelConfig,
+    BuildConfig,
 };
 use std::{
     collections::BTreeMap,
@@ -35,27 +30,6 @@ pub struct BuiltPackage {
     config: BuildConfig,
     package_path: PathBuf,
     package: CompiledPackage,
-}
-
-pub fn build_model(package_path: &Path, build_config: BuildConfig) -> anyhow::Result<GlobalEnv> {
-    let compiler_version = build_config
-        .compiler_config
-        .compiler_version
-        .unwrap_or(CompilerVersion::V2_0);
-    let language_version = build_config
-        .compiler_config
-        .language_version
-        .unwrap_or(LanguageVersion::V2_0);
-
-    build_config.move_model_for_package(
-        package_path,
-        ModelConfig {
-            target_filter: None,
-            all_files_as_targets: false,
-            compiler_version,
-            language_version,
-        },
-    )
 }
 
 impl BuiltPackage {
@@ -84,10 +58,10 @@ impl BuiltPackage {
 
         // use v2 as default
         if new_config.compiler_config.compiler_version.is_none() {
-            new_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
+            new_config.compiler_config.compiler_version = Some(CompilerVersion::V1);
         }
         if new_config.compiler_config.language_version.is_none() {
-            new_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
+            new_config.compiler_config.language_version = Some(LanguageVersion::V1);
         }
 
         let (mut package, model_opt) =

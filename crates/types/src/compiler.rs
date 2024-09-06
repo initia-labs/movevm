@@ -89,12 +89,12 @@ impl From<CompilerBuildConfig> for BuildConfig {
                 },
                 compiler_version: match val.compiler_version {
                     1 => Some(CompilerVersion::V1),
-                    2 => Some(CompilerVersion::V2_0),
+                    2 => Some(CompilerVersion::V2_1),
                     _ => None,
                 },
                 language_version: match val.language_version {
                     1 => Some(LanguageVersion::V1),
-                    2 => Some(LanguageVersion::V2_0),
+                    2 => Some(LanguageVersion::V2_1),
                     _ => None,
                 },
                 ..Default::default()
