@@ -15,7 +15,7 @@ jobs:
       - name: Build
         run: make release-build-linux
 
-      - uses: actions/upload-artifact@v4.4
+      - uses: actions/upload-artifact@v4
         with:
           name: libmovevm-linux-glibc
           path: api/*.so
@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: make release-build-alpine
 
-      - uses: actions/upload-artifact@v4.4
+      - uses: actions/upload-artifact@v4
         with:
           name: libmovevm-linux-muslc
           path: api/*.a
