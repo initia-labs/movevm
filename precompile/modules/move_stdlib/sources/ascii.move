@@ -13,7 +13,7 @@ module std::ascii {
     /// characters you should use the `all_characters_printable` predicate
     /// defined in this module.
     struct String has copy, drop, store {
-        bytes: vector<u8>,
+        bytes: vector<u8>
     }
 
     spec String {
@@ -22,7 +22,7 @@ module std::ascii {
 
     /// An ASCII character.
     struct Char has copy, drop, store {
-        byte: u8,
+        byte: u8
     }
 
     spec Char {
@@ -58,12 +58,12 @@ module std::ascii {
         let len = vector::length(&bytes);
         let i = 0;
         while ({
-                spec {
-                    invariant i <= len;
-                    invariant forall j in 0..i: is_valid_char(bytes[j]);
-                };
-                i < len
-            }) {
+            spec {
+                invariant i <= len;
+                invariant forall j in 0..i: is_valid_char(bytes[j]);
+            };
+            i < len
+        }) {
             let possible_byte = *vector::borrow(&bytes, i);
             if (!is_valid_char(possible_byte)) return option::none();
             i = i + 1;
@@ -81,12 +81,12 @@ module std::ascii {
         let len = vector::length(&string.bytes);
         let i = 0;
         while ({
-                spec {
-                    invariant i <= len;
-                    invariant forall j in 0..i: is_printable_char(string.bytes[j]);
-                };
-                i < len
-            }) {
+            spec {
+                invariant i <= len;
+                invariant forall j in 0..i: is_printable_char(string.bytes[j]);
+            };
+            i < len
+        }) {
             let byte = *vector::borrow(&string.bytes, i);
             if (!is_printable_char(byte)) return false;
             i = i + 1;

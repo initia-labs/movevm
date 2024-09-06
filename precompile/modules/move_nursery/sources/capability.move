@@ -108,7 +108,7 @@ module std::capability {
         let addr = signer::address_of(owner);
         assert!(
             !exists<CapState<Feature>>(addr),
-            error::already_exists(ECAP),
+            error::already_exists(ECAP)
         );
         move_to<CapState<Feature>>(owner, CapState { delegates: vector::empty() });
     }
@@ -119,7 +119,9 @@ module std::capability {
     public fun acquire<Feature>(
         requester: &signer, _feature_witness: &Feature
     ): Cap<Feature> acquires CapState, CapDelegateState {
-        Cap<Feature> { root: validate_acquire<Feature>(requester) }
+        Cap<Feature> {
+            root: validate_acquire<Feature>(requester)
+        }
     }
 
     /// Acquires a linear capability token. It is up to the module which owns `Feature` to decide
@@ -127,7 +129,9 @@ module std::capability {
     public fun acquire_linear<Feature>(
         requester: &signer, _feature_witness: &Feature
     ): LinearCap<Feature> acquires CapState, CapDelegateState {
-        LinearCap<Feature> { root: validate_acquire<Feature>(requester) }
+        LinearCap<Feature> {
+            root: validate_acquire<Feature>(requester)
+        }
     }
 
     /// Helper to validate an acquire. Returns the root address of the capability.
@@ -138,20 +142,20 @@ module std::capability {
             // double check that requester is actually registered as a delegate
             assert!(
                 exists<CapState<Feature>>(root_addr),
-                error::invalid_state(EDELEGATE),
+                error::invalid_state(EDELEGATE)
             );
             assert!(
                 vector::contains(
                     &borrow_global<CapState<Feature>>(root_addr).delegates,
-                    &addr,
+                    &addr
                 ),
-                error::invalid_state(EDELEGATE),
+                error::invalid_state(EDELEGATE)
             );
             root_addr
         } else {
             assert!(
                 exists<CapState<Feature>>(addr),
-                error::not_found(ECAP),
+                error::not_found(ECAP)
             );
             addr
         }
@@ -182,11 +186,11 @@ module std::capability {
         if (exists<CapDelegateState<Feature>>(addr)) return;
         move_to(
             to,
-            CapDelegateState<Feature> { root: cap.root },
+            CapDelegateState<Feature> { root: cap.root }
         );
         add_element(
             &mut borrow_global_mut<CapState<Feature>>(cap.root).delegates,
-            addr,
+            addr
         );
     }
 
@@ -199,7 +203,7 @@ module std::capability {
         let CapDelegateState { root: _root } = move_from<CapDelegateState<Feature>>(from);
         remove_element(
             &mut borrow_global_mut<CapState<Feature>>(cap.root).delegates,
-            &from,
+            &from
         );
     }
 

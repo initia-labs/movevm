@@ -9,19 +9,39 @@ a 64-bit fractional part.
 
 -  [Struct `FixedPoint64`](#0x1_fixed_point64_FixedPoint64)
 -  [Constants](#@Constants_0)
+-  [Function `one`](#0x1_fixed_point64_one)
+-  [Function `zero`](#0x1_fixed_point64_zero)
+-  [Function `rev`](#0x1_fixed_point64_rev)
+-  [Function `sub`](#0x1_fixed_point64_sub)
+-  [Function `sub_u64`](#0x1_fixed_point64_sub_u64)
+-  [Function `sub_u128`](#0x1_fixed_point64_sub_u128)
+-  [Function `add`](#0x1_fixed_point64_add)
+-  [Function `add_u64`](#0x1_fixed_point64_add_u64)
+-  [Function `add_u128`](#0x1_fixed_point64_add_u128)
+-  [Function `multiply`](#0x1_fixed_point64_multiply)
+-  [Function `multiply_u64`](#0x1_fixed_point64_multiply_u64)
 -  [Function `multiply_u128`](#0x1_fixed_point64_multiply_u128)
+-  [Function `divide`](#0x1_fixed_point64_divide)
+-  [Function `divide_u64`](#0x1_fixed_point64_divide_u64)
+-  [Function `divide_by_u64`](#0x1_fixed_point64_divide_by_u64)
 -  [Function `divide_u128`](#0x1_fixed_point64_divide_u128)
+-  [Function `divide_by_u128`](#0x1_fixed_point64_divide_by_u128)
 -  [Function `create_from_rational`](#0x1_fixed_point64_create_from_rational)
 -  [Function `create_from_raw_value`](#0x1_fixed_point64_create_from_raw_value)
 -  [Function `get_raw_value`](#0x1_fixed_point64_get_raw_value)
 -  [Function `is_zero`](#0x1_fixed_point64_is_zero)
 -  [Function `min`](#0x1_fixed_point64_min)
 -  [Function `max`](#0x1_fixed_point64_max)
+-  [Function `less_or_equal`](#0x1_fixed_point64_less_or_equal)
+-  [Function `less`](#0x1_fixed_point64_less)
+-  [Function `greater_or_equal`](#0x1_fixed_point64_greater_or_equal)
+-  [Function `greater`](#0x1_fixed_point64_greater)
+-  [Function `equal`](#0x1_fixed_point64_equal)
+-  [Function `almost_equal`](#0x1_fixed_point64_almost_equal)
 -  [Function `create_from_u128`](#0x1_fixed_point64_create_from_u128)
 -  [Function `floor`](#0x1_fixed_point64_floor)
 -  [Function `ceil`](#0x1_fixed_point64_ceil)
 -  [Function `round`](#0x1_fixed_point64_round)
--  [Module Specification](#@Module_Specification_1)
 
 
 <pre><code></code></pre>
@@ -48,8 +68,7 @@ decimal.
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -62,11 +81,18 @@ decimal.
 </dl>
 
 
-</details>
-
 <a id="@Constants_0"></a>
 
 ## Constants
+
+
+<a id="0x1_fixed_point64_MAX_U64"></a>
+
+
+
+<pre><code><b>const</b> <a href="fixed_point64.md#0x1_fixed_point64_MAX_U64">MAX_U64</a>: u128 = 18446744073709551615;
+</code></pre>
+
 
 
 <a id="0x1_fixed_point64_MAX_U128"></a>
@@ -74,6 +100,16 @@ decimal.
 
 
 <pre><code><b>const</b> <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>: u256 = 340282366920938463463374607431768211455;
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_EDIVISION_BY_ZERO"></a>
+
+A division by zero was encountered
+
+
+<pre><code><b>const</b> <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>: u64 = 65540;
 </code></pre>
 
 
@@ -98,16 +134,6 @@ The quotient value would be too large to be held in a <code>u128</code>
 
 
 
-<a id="0x1_fixed_point64_EDIVISION_BY_ZERO"></a>
-
-A division by zero was encountered
-
-
-<pre><code><b>const</b> <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>: u64 = 65540;
-</code></pre>
-
-
-
 <a id="0x1_fixed_point64_EMULTIPLICATION"></a>
 
 The multiplied value would be too large to be held in a <code>u128</code>
@@ -118,12 +144,275 @@ The multiplied value would be too large to be held in a <code>u128</code>
 
 
 
+<a id="0x1_fixed_point64_ENEGATIVE_RESULT"></a>
+
+Abort code on calculation result is negative.
+
+
+<pre><code><b>const</b> <a href="fixed_point64.md#0x1_fixed_point64_ENEGATIVE_RESULT">ENEGATIVE_RESULT</a>: u64 = 65542;
+</code></pre>
+
+
+
 <a id="0x1_fixed_point64_ERATIO_OUT_OF_RANGE"></a>
 
 The computed ratio when converting to a <code><a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a></code> would be unrepresentable
 
 
 <pre><code><b>const</b> <a href="fixed_point64.md#0x1_fixed_point64_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>: u64 = 131077;
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_one"></a>
+
+## Function `one`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_one">one</a>(): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_one">one</a>(): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(1 &lt;&lt; 64)
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_zero"></a>
+
+## Function `zero`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_zero">zero</a>(): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_zero">zero</a>(): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(0)
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_rev"></a>
+
+## Function `rev`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_rev">rev</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_rev">rev</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(((1u256 &lt;&lt; 128) / (<a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self) <b>as</b> u256) <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_sub"></a>
+
+## Function `sub`
+
+Returns self - y. self must be not less than y.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_sub">sub</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_sub">sub</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <b>let</b> x_raw = <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self);
+    <b>let</b> y_raw = <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(y);
+    <b>assert</b>!(x_raw &gt;= y_raw, <a href="fixed_point64.md#0x1_fixed_point64_ENEGATIVE_RESULT">ENEGATIVE_RESULT</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(x_raw - y_raw)
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_sub_u64"></a>
+
+## Function `sub_u64`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_sub_u64">sub_u64</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: u64): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_sub_u64">sub_u64</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: u64): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <a href="fixed_point64.md#0x1_fixed_point64_sub_u128">sub_u128</a>(self, (y <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_sub_u128"></a>
+
+## Function `sub_u128`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_sub_u128">sub_u128</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_sub_u128">sub_u128</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <b>let</b> x_raw = (<a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self) <b>as</b> u256);
+    <b>let</b> y_raw = (y <b>as</b> u256) &lt;&lt; 64;
+    <b>assert</b>!(x_raw &gt;= y_raw, <a href="fixed_point64.md#0x1_fixed_point64_ENEGATIVE_RESULT">ENEGATIVE_RESULT</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(((x_raw - y_raw) <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_add"></a>
+
+## Function `add`
+
+Returns self + y. The result cannot be greater than MAX_U128.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_add">add</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_add">add</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <b>let</b> x_raw = <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self);
+    <b>let</b> y_raw = <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(y);
+    <b>let</b> result = (x_raw <b>as</b> u256) + (y_raw <b>as</b> u256);
+    <b>assert</b>!(result &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>, <a href="fixed_point64.md#0x1_fixed_point64_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>((result <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_add_u64"></a>
+
+## Function `add_u64`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_add_u64">add_u64</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: u64): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_add_u64">add_u64</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: u64): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <a href="fixed_point64.md#0x1_fixed_point64_add_u128">add_u128</a>(self, (y <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_add_u128"></a>
+
+## Function `add_u128`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_add_u128">add_u128</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_add_u128">add_u128</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <b>let</b> x_raw = (<a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self) <b>as</b> u256);
+    <b>let</b> y_raw = (y <b>as</b> u256) &lt;&lt; 64;
+    <b>let</b> result = x_raw + y_raw;
+    <b>assert</b>!(result &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>, <a href="fixed_point64.md#0x1_fixed_point64_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>((result <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_multiply"></a>
+
+## Function `multiply`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_multiply">multiply</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, y: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_multiply">multiply</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, y: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <b>let</b> x_raw = <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self);
+    <b>let</b> y_raw = <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(y);
+    <b>let</b> result = ((x_raw <b>as</b> u256) * (y_raw <b>as</b> u256)) &gt;&gt; 64;
+    <b>assert</b>!(result &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>, <a href="fixed_point64.md#0x1_fixed_point64_EMULTIPLICATION">EMULTIPLICATION</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>((result <b>as</b> u128))
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_multiply_u64"></a>
+
+## Function `multiply_u64`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_multiply_u64">multiply_u64</a>(val: u64, multiplier: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u64
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_multiply_u64">multiply_u64</a>(val: u64, multiplier: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u64 {
+    <b>let</b> res = <a href="fixed_point64.md#0x1_fixed_point64_multiply_u128">multiply_u128</a>((val <b>as</b> u128), multiplier);
+    <b>assert</b>!(res &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U64">MAX_U64</a>, <a href="fixed_point64.md#0x1_fixed_point64_EMULTIPLICATION">EMULTIPLICATION</a>);
+    (res <b>as</b> u64)
+}
 </code></pre>
 
 
@@ -142,8 +431,7 @@ overflows.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_multiply_u128">multiply_u128</a>(val: u128, multiplier: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
@@ -162,45 +450,79 @@ overflows.
 
 
 
-</details>
+<a id="0x1_fixed_point64_divide"></a>
 
-<details>
-<summary>Specification</summary>
-
+## Function `divide`
 
 
-<pre><code><b>pragma</b> opaque;
-<b>include</b> <a href="fixed_point64.md#0x1_fixed_point64_MultiplyAbortsIf">MultiplyAbortsIf</a>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_multiply_u128">spec_multiply_u128</a>(val, multiplier);
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide">divide</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
 </code></pre>
 
 
 
+##### Implementation
 
-<a id="0x1_fixed_point64_MultiplyAbortsIf"></a>
 
-
-<pre><code><b>schema</b> <a href="fixed_point64.md#0x1_fixed_point64_MultiplyAbortsIf">MultiplyAbortsIf</a> {
-    val: num;
-    multiplier: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>;
-    <b>aborts_if</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_multiply_u128">spec_multiply_u128</a>(val, multiplier) &gt; <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a> <b>with</b> <a href="fixed_point64.md#0x1_fixed_point64_EMULTIPLICATION">EMULTIPLICATION</a>;
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide">divide</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    // Check for division by zero.
+    <b>assert</b>!(divisor.value != 0, <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>);
+    // Perform the division <b>with</b> 256 bits <b>to</b> avoid losing accuracy.
+    <b>let</b> result = ((self.value <b>as</b> u256) &lt;&lt; 64) / (divisor.value <b>as</b> u256);
+    <b>assert</b>!(result &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>, <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION">EDIVISION</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>((result <b>as</b> u128))
 }
 </code></pre>
 
 
 
+<a id="0x1_fixed_point64_divide_u64"></a>
 
-<a id="0x1_fixed_point64_spec_multiply_u128"></a>
+## Function `divide_u64`
+
+Divide a u64 integer by a fixed-point number, truncating any
+fractional part of the quotient. This will abort if the divisor
+is zero or if the quotient overflows.
 
 
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_multiply_u128">spec_multiply_u128</a>(val: num, multiplier: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): num {
-   (val * multiplier.value) &gt;&gt; 64
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_u64">divide_u64</a>(val: u64, divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u64
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_u64">divide_u64</a>(val: u64, divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u64 {
+    <b>let</b> res = <a href="fixed_point64.md#0x1_fixed_point64_divide_u128">divide_u128</a>((val <b>as</b> u128), divisor);
+    <b>assert</b>!(res &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U64">MAX_U64</a>, <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION">EDIVISION</a>);
+    (res <b>as</b> u64)
 }
 </code></pre>
 
 
 
-</details>
+<a id="0x1_fixed_point64_divide_by_u64"></a>
+
+## Function `divide_by_u64`
+
+Divide a fixed-point number by a u64 integer.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_by_u64">divide_by_u64</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, divisor: u64): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_by_u64">divide_by_u64</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, divisor: u64): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    <a href="fixed_point64.md#0x1_fixed_point64_divide_by_u128">divide_by_u128</a>(val, (divisor <b>as</b> u128))
+}
+</code></pre>
+
+
 
 <a id="0x1_fixed_point64_divide_u128"></a>
 
@@ -216,8 +538,7 @@ is zero or if the quotient overflows.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_u128">divide_u128</a>(val: u128, divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
@@ -237,46 +558,29 @@ is zero or if the quotient overflows.
 
 
 
-</details>
+<a id="0x1_fixed_point64_divide_by_u128"></a>
 
-<details>
-<summary>Specification</summary>
+## Function `divide_by_u128`
+
+Divide a fixed-point number by a u128 integer.
 
 
-
-<pre><code><b>pragma</b> opaque;
-<b>include</b> <a href="fixed_point64.md#0x1_fixed_point64_DivideAbortsIf">DivideAbortsIf</a>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_divide_u128">spec_divide_u128</a>(val, divisor);
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_by_u128">divide_by_u128</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, divisor: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>
 </code></pre>
 
 
 
+##### Implementation
 
-<a id="0x1_fixed_point64_DivideAbortsIf"></a>
 
-
-<pre><code><b>schema</b> <a href="fixed_point64.md#0x1_fixed_point64_DivideAbortsIf">DivideAbortsIf</a> {
-    val: num;
-    divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>;
-    <b>aborts_if</b> divisor.value == 0 <b>with</b> <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>;
-    <b>aborts_if</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_divide_u128">spec_divide_u128</a>(val, divisor) &gt; <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a> <b>with</b> <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION">EDIVISION</a>;
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_divide_by_u128">divide_by_u128</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, divisor: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
+    // Check for division by zero.
+    <b>assert</b>!(divisor != 0, <a href="fixed_point64.md#0x1_fixed_point64_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>);
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(<a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(val) / divisor)
 }
 </code></pre>
 
 
-
-
-<a id="0x1_fixed_point64_spec_divide_u128"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_divide_u128">spec_divide_u128</a>(val: num, divisor: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): num {
-   (val &lt;&lt; 64) / divisor.value
-}
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_fixed_point64_create_from_rational"></a>
 
@@ -299,8 +603,7 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_create_from_rational">create_from_rational</a>(numerator: u128, denominator: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
@@ -320,52 +623,6 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>pragma</b> verify = <b>false</b>;
-<b>include</b> <a href="fixed_point64.md#0x1_fixed_point64_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_create_from_rational">spec_create_from_rational</a>(numerator, denominator);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_CreateFromRationalAbortsIf"></a>
-
-
-<pre><code><b>schema</b> <a href="fixed_point64.md#0x1_fixed_point64_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a> {
-    numerator: u128;
-    denominator: u128;
-    <b>let</b> scaled_numerator = (numerator <b>as</b> u256)&lt;&lt; 64;
-    <b>let</b> scaled_denominator = (denominator <b>as</b> u256);
-    <b>let</b> quotient = scaled_numerator / scaled_denominator;
-    <b>aborts_if</b> scaled_denominator == 0 <b>with</b> <a href="fixed_point64.md#0x1_fixed_point64_EDENOMINATOR">EDENOMINATOR</a>;
-    <b>aborts_if</b> quotient == 0 && scaled_numerator != 0 <b>with</b> <a href="fixed_point64.md#0x1_fixed_point64_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
-    <b>aborts_if</b> quotient &gt; <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a> <b>with</b> <a href="fixed_point64.md#0x1_fixed_point64_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
-}
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_create_from_rational"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_create_from_rational">spec_create_from_rational</a>(numerator: num, denominator: num): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
-   <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>{value: (numerator &lt;&lt; 128) / (denominator &lt;&lt; 64)}
-}
-</code></pre>
-
-
-
-</details>
-
 <a id="0x1_fixed_point64_create_from_raw_value"></a>
 
 ## Function `create_from_raw_value`
@@ -378,8 +635,7 @@ Create a fixedpoint value from a raw value.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">create_from_raw_value</a>(value: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
@@ -388,22 +644,6 @@ Create a fixedpoint value from a raw value.
 </code></pre>
 
 
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result.value == value;
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_fixed_point64_get_raw_value"></a>
 
@@ -414,23 +654,20 @@ adding or subtracting FixedPoint64 values, can be done using the raw
 values directly.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-    num.value
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_get_raw_value">get_raw_value</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
+    self.value
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_fixed_point64_is_zero"></a>
 
@@ -439,23 +676,20 @@ values directly.
 Returns true if the ratio is zero.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_is_zero">is_zero</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_is_zero">is_zero</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_is_zero">is_zero</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
-    num.value == 0
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_is_zero">is_zero</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
+    self.value == 0
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_fixed_point64_min"></a>
 
@@ -469,51 +703,16 @@ Returns the smaller of the two FixedPoint64 numbers.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <b>min</b>(num1: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
-    <b>if</b> (num1.value &lt; num2.value) {
-        num1
-    } <b>else</b> {
-        num2
-    }
+    <b>if</b> (num1.value &lt; num2.value) { num1 }
+    <b>else</b> { num2 }
 }
 </code></pre>
 
 
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_min">spec_min</a>(num1, num2);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_min"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_min">spec_min</a>(num1: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
-   <b>if</b> (num1.value &lt; num2.value) {
-       num1
-   } <b>else</b> {
-       num2
-   }
-}
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_fixed_point64_max"></a>
 
@@ -527,51 +726,154 @@ Returns the larger of the two FixedPoint64 numbers.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_max">max</a>(num1: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
-    <b>if</b> (num1.value &gt; num2.value) {
-        num1
+    <b>if</b> (num1.value &gt; num2.value) { num1 }
+    <b>else</b> { num2 }
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_less_or_equal"></a>
+
+## Function `less_or_equal`
+
+Returns true if self <= num2
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_less_or_equal">less_or_equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_less_or_equal">less_or_equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
+    self.value &lt;= num2.value
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_less"></a>
+
+## Function `less`
+
+Returns true if self < num2
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_less">less</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_less">less</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
+    self.value &lt; num2.value
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_greater_or_equal"></a>
+
+## Function `greater_or_equal`
+
+Returns true if self >= num2
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_greater_or_equal">greater_or_equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_greater_or_equal">greater_or_equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
+    self.value &gt;= num2.value
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_greater"></a>
+
+## Function `greater`
+
+Returns true if self > num2
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_greater">greater</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_greater">greater</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
+    self.value &gt; num2.value
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_equal"></a>
+
+## Function `equal`
+
+Returns true if self = num2
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_equal">equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_equal">equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): bool {
+    self.value == num2.value
+}
+</code></pre>
+
+
+
+<a id="0x1_fixed_point64_almost_equal"></a>
+
+## Function `almost_equal`
+
+Returns true if self almost equals to num2, which means abs(num1-num2) <= precision
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_almost_equal">almost_equal</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>, precision: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_almost_equal">almost_equal</a>(
+    self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, precision: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>
+): bool {
+    <b>if</b> (self.value &gt; num2.value) {
+        (self.value - num2.value &lt;= precision.value)
     } <b>else</b> {
-        num2
+        (num2.value - self.value &lt;= precision.value)
     }
 }
 </code></pre>
 
 
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_max">spec_max</a>(num1, num2);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_max"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_max">spec_max</a>(num1: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>, num2: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
-   <b>if</b> (num1.value &gt; num2.value) {
-       num1
-   } <b>else</b> {
-       num2
-   }
-}
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_fixed_point64_create_from_u128"></a>
 
@@ -585,58 +887,17 @@ Create a fixedpoint value from a u128 value.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_create_from_u128">create_from_u128</a>(val: u128): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
     <b>let</b> value = (val <b>as</b> u256) &lt;&lt; 64;
     <b>assert</b>!(value &lt;= <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>, <a href="fixed_point64.md#0x1_fixed_point64_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
-    <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {value: (value <b>as</b> u128)}
+    <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> { value: (value <b>as</b> u128) }
 }
 </code></pre>
 
 
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>include</b> <a href="fixed_point64.md#0x1_fixed_point64_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_create_from_u128">spec_create_from_u128</a>(val);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_CreateFromU64AbortsIf"></a>
-
-
-<pre><code><b>schema</b> <a href="fixed_point64.md#0x1_fixed_point64_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a> {
-    val: num;
-    <b>let</b> scaled_value = (val <b>as</b> u256) &lt;&lt; 64;
-    <b>aborts_if</b> scaled_value &gt; <a href="fixed_point64.md#0x1_fixed_point64_MAX_U128">MAX_U128</a>;
-}
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_create_from_u128"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_create_from_u128">spec_create_from_u128</a>(val: num): <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {
-   <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a> {value: val &lt;&lt; 64}
-}
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_fixed_point64_floor"></a>
 
@@ -645,53 +906,20 @@ Create a fixedpoint value from a u128 value.
 Returns the largest integer less than or equal to a given number.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-    num.value &gt;&gt; 64
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
+    self.value &gt;&gt; 64
 }
 </code></pre>
 
 
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_floor">spec_floor</a>(num);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_floor"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_floor">spec_floor</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-   <b>let</b> fractional = val.value % (1 &lt;&lt; 64);
-   <b>if</b> (fractional == 0) {
-       val.value &gt;&gt; 64
-   } <b>else</b> {
-       (val.value - fractional) &gt;&gt; 64
-   }
-}
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_fixed_point64_ceil"></a>
 
@@ -700,18 +928,17 @@ Returns the largest integer less than or equal to a given number.
 Rounds up the given FixedPoint64 to the next largest integer.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_ceil">ceil</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_ceil">ceil</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_ceil">ceil</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-    <b>let</b> floored_num = <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(num) &lt;&lt; 64;
-    <b>if</b> (num.value == floored_num) {
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_ceil">ceil</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
+    <b>let</b> floored_num = <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(self) &lt;&lt; 64;
+    <b>if</b> (self.value == floored_num) {
         <b>return</b> floored_num &gt;&gt; 64
     };
     <b>let</b> val = ((floored_num <b>as</b> u256) + (1 &lt;&lt; 64));
@@ -721,42 +948,6 @@ Rounds up the given FixedPoint64 to the next largest integer.
 
 
 
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-TODO: worked in the past but started to time out since last z3 update
-
-
-<pre><code><b>pragma</b> verify = <b>false</b>;
-<b>pragma</b> opaque;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_ceil">spec_ceil</a>(num);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_ceil"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_ceil">spec_ceil</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-   <b>let</b> fractional = val.value % (1 &lt;&lt; 64);
-   <b>let</b> one = 1 &lt;&lt; 64;
-   <b>if</b> (fractional == 0) {
-       val.value &gt;&gt; 64
-   } <b>else</b> {
-       (val.value - fractional + one) &gt;&gt; 64
-   }
-}
-</code></pre>
-
-
-
-</details>
-
 <a id="0x1_fixed_point64_round"></a>
 
 ## Function `round`
@@ -764,68 +955,21 @@ TODO: worked in the past but started to time out since last z3 update
 Returns the value of a FixedPoint64 to the nearest integer.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_round">round</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_round">round</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">fixed_point64::FixedPoint64</a>): u128
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_round">round</a>(num: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-    <b>let</b> floored_num = <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(num) &lt;&lt; 64;
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_round">round</a>(self: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
+    <b>let</b> floored_num = <a href="fixed_point64.md#0x1_fixed_point64_floor">floor</a>(self) &lt;&lt; 64;
     <b>let</b> boundary = floored_num + ((1 &lt;&lt; 64) / 2);
-    <b>if</b> (num.value &lt; boundary) {
+    <b>if</b> (self.value &lt; boundary) {
         floored_num &gt;&gt; 64
     } <b>else</b> {
-        <a href="fixed_point64.md#0x1_fixed_point64_ceil">ceil</a>(num)
+        <a href="fixed_point64.md#0x1_fixed_point64_ceil">ceil</a>(self)
     }
 }
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="fixed_point64.md#0x1_fixed_point64_spec_round">spec_round</a>(num);
-</code></pre>
-
-
-
-
-<a id="0x1_fixed_point64_spec_round"></a>
-
-
-<pre><code><b>fun</b> <a href="fixed_point64.md#0x1_fixed_point64_spec_round">spec_round</a>(val: <a href="fixed_point64.md#0x1_fixed_point64_FixedPoint64">FixedPoint64</a>): u128 {
-   <b>let</b> fractional = val.value % (1 &lt;&lt; 64);
-   <b>let</b> boundary = (1 &lt;&lt; 64) / 2;
-   <b>let</b> one = 1 &lt;&lt; 64;
-   <b>if</b> (fractional &lt; boundary) {
-       (val.value - fractional) &gt;&gt; 64
-   } <b>else</b> {
-       (val.value - fractional + one) &gt;&gt; 64
-   }
-}
-</code></pre>
-
-
-
-</details>
-
-<a id="@Module_Specification_1"></a>
-
-## Module Specification
-
-
-
-
-<pre><code><b>pragma</b> aborts_if_is_strict;
 </code></pre>

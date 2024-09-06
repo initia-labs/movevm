@@ -39,7 +39,9 @@ module std::vector {
 
     #[bytecode_instruction]
     /// Add element `e` to the end of the vector `v`.
-    native public fun push_back<Element>(v: &mut vector<Element>, e: Element);
+    native public fun push_back<Element>(
+        v: &mut vector<Element>, e: Element
+    );
 
     #[bytecode_instruction]
     /// Return a mutable reference to the `i`th element in the vector `v`.
@@ -59,7 +61,9 @@ module std::vector {
     #[bytecode_instruction]
     /// Swaps the elements at the `i`th and `j`th indices in the vector `v`.
     /// Aborts if `i` or `j` is out of bounds.
-    native public fun swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
+    native public fun swap<Element>(
+        v: &mut vector<Element>, i: u64, j: u64
+    );
 
     /// Return an vector of size one containing element `e`.
     public fun singleton<Element>(e: Element): vector<Element> {
@@ -253,7 +257,7 @@ module std::vector {
             {
                 i = i + 1;
                 i
-            },
+            }
         );
         pop_back(v)
     }
@@ -331,7 +335,9 @@ module std::vector {
 
     /// Apply the function to each pair of elements in the two given vectors, consuming them.
     public inline fun zip<Element1, Element2>(
-        v1: vector<Element1>, v2: vector<Element2>, f: |Element1, Element2|
+        v1: vector<Element1>,
+        v2: vector<Element2>,
+        f: |Element1, Element2|
     ) {
         // We need to reverse the vectors to consume it efficiently
         reverse(&mut v1);
@@ -344,7 +350,7 @@ module std::vector {
     public inline fun zip_reverse<Element1, Element2>(
         v1: vector<Element1>,
         v2: vector<Element2>,
-        f: |Element1, Element2|,
+        f: |Element1, Element2|
     ) {
         let len = length(&v1);
         // We can't use the constant EVECTORS_LENGTH_MISMATCH here as all calling code would then need to define it
@@ -363,7 +369,7 @@ module std::vector {
     public inline fun zip_ref<Element1, Element2>(
         v1: &vector<Element1>,
         v2: &vector<Element2>,
-        f: |&Element1, &Element2|,
+        f: |&Element1, &Element2|
     ) {
         let len = length(v1);
         // We can't use the constant EVECTORS_LENGTH_MISMATCH here as all calling code would then need to define it
@@ -405,7 +411,7 @@ module std::vector {
     public inline fun zip_mut<Element1, Element2>(
         v1: &mut vector<Element1>,
         v2: &mut vector<Element2>,
-        f: |&mut Element1, &mut Element2|,
+        f: |&mut Element1, &mut Element2|
     ) {
         let i = 0;
         let len = length(v1);
@@ -513,7 +519,7 @@ module std::vector {
             v,
             |elem| {
                 if (p(&elem)) push_back(&mut result, elem);
-            },
+            }
         );
         result
     }

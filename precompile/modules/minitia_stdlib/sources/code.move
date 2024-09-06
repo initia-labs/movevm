@@ -19,11 +19,11 @@ module minitia_std::code {
         allowed_publishers: vector<address>,
 
         /// The total number of modules published.
-        total_modules: u64,
+        total_modules: u64
     }
 
     struct MetadataStore has key {
-        metadata: Table<String, ModuleMetadata>,
+        metadata: Table<String, ModuleMetadata>
     }
 
     /// Describes an upgrade policy
@@ -34,7 +34,7 @@ module minitia_std::code {
     #[event]
     struct ModulePublishedEvent has store, drop {
         module_id: String,
-        upgrade_policy: u8,
+        upgrade_policy: u8
     }
 
     /// Cannot upgrade an immutable package.
@@ -80,7 +80,7 @@ module minitia_std::code {
     fun init_module(chain: &signer) {
         move_to(
             chain,
-            ModuleStore { allowed_publishers: vector[], total_modules: 0, },
+            ModuleStore { allowed_publishers: vector[], total_modules: 0 }
         );
     }
 
@@ -111,18 +111,16 @@ module minitia_std::code {
         assert!(
             vector::is_empty(allowed_publishers)
                 || vector::contains(allowed_publishers, &addr),
-            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS),
+            error::invalid_argument(EINVALID_ALLOWED_PUBLISHERS)
         )
     }
 
     public entry fun init_genesis(
-        chain: &signer,
-        module_ids: vector<String>,
-        allowed_publishers: vector<address>,
+        chain: &signer, module_ids: vector<String>, allowed_publishers: vector<address>
     ) acquires ModuleStore {
         assert!(
             signer::address_of(chain) == @minitia_std,
-            error::permission_denied(EINVALID_CHAIN_OPERATOR),
+            error::permission_denied(EINVALID_CHAIN_OPERATOR)
         );
 
         let metadata_table = table::new<String, ModuleMetadata>();
@@ -132,14 +130,14 @@ module minitia_std::code {
                 table::add<String, ModuleMetadata>(
                     &mut metadata_table,
                     *module_id,
-                    ModuleMetadata { upgrade_policy: UPGRADE_POLICY_COMPATIBLE, },
+                    ModuleMetadata { upgrade_policy: UPGRADE_POLICY_COMPATIBLE }
                 );
-            },
+            }
         );
 
         move_to<MetadataStore>(
             chain,
-            MetadataStore { metadata: metadata_table, },
+            MetadataStore { metadata: metadata_table }
         );
 
         set_allowed_publishers(chain, allowed_publishers);
@@ -151,7 +149,7 @@ module minitia_std::code {
     ) acquires ModuleStore {
         assert!(
             signer::address_of(chain) == @minitia_std,
-            error::permission_denied(EINVALID_CHAIN_OPERATOR),
+            error::permission_denied(EINVALID_CHAIN_OPERATOR)
         );
         assert_allowed(&allowed_publishers, @minitia_std);
 
@@ -165,11 +163,11 @@ module minitia_std::code {
         let code_object_addr = object::object_address(&code_object);
         assert!(
             exists<MetadataStore>(code_object_addr),
-            error::not_found(ECODE_OBJECT_DOES_NOT_EXIST),
+            error::not_found(ECODE_OBJECT_DOES_NOT_EXIST)
         );
         assert!(
             object::is_owner(code_object, signer::address_of(publisher)),
-            error::permission_denied(ENOT_PACKAGE_OWNER),
+            error::permission_denied(ENOT_PACKAGE_OWNER)
         );
 
         let registry = borrow_global_mut<MetadataStore>(code_object_addr);
@@ -190,12 +188,12 @@ module minitia_std::code {
         owner: &signer,
         module_ids: vector<String>, // 0x1::coin
         code: vector<vector<u8>>,
-        upgrade_policy: u8,
+        upgrade_policy: u8
     ) acquires ModuleStore, MetadataStore {
         // Disallow incompatible upgrade mode. Governance can decide later if this should be reconsidered.
         assert!(
             vector::length(&code) == vector::length(&module_ids),
-            error::invalid_argument(EINVALID_ARGUMENTS),
+            error::invalid_argument(EINVALID_ARGUMENTS)
         );
 
         // duplication check
@@ -205,14 +203,14 @@ module minitia_std::code {
             |module_id| {
                 assert!(
                     !simple_map::contains_key(&module_ids_set, module_id),
-                    error::invalid_argument(EDUPLICATE_MODULE_ID),
+                    error::invalid_argument(EDUPLICATE_MODULE_ID)
                 );
                 simple_map::add(
                     &mut module_ids_set,
                     *module_id,
-                    true,
+                    true
                 );
-            },
+            }
         );
 
         // Check whether arbitrary publish is allowed or not.
@@ -220,7 +218,7 @@ module minitia_std::code {
         assert!(
             upgrade_policy == UPGRADE_POLICY_COMPATIBLE
                 || upgrade_policy == UPGRADE_POLICY_IMMUTABLE,
-            error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED),
+            error::invalid_argument(EUPGRADE_POLICY_UNSPECIFIED)
         );
 
         let addr = signer::address_of(owner);
@@ -229,7 +227,7 @@ module minitia_std::code {
         if (!exists<MetadataStore>(addr)) {
             move_to<MetadataStore>(
                 owner,
-                MetadataStore { metadata: table::new(), },
+                MetadataStore { metadata: table::new() }
             );
         };
 
@@ -245,14 +243,14 @@ module minitia_std::code {
                         );
                     assert!(
                         metadata.upgrade_policy < UPGRADE_POLICY_IMMUTABLE,
-                        error::invalid_argument(EUPGRADE_IMMUTABLE),
+                        error::invalid_argument(EUPGRADE_IMMUTABLE)
                     );
                     assert!(
                         can_change_upgrade_policy_to(
                             metadata.upgrade_policy,
-                            upgrade_policy,
+                            upgrade_policy
                         ),
-                        error::invalid_argument(EUPGRADE_WEAKER_POLICY),
+                        error::invalid_argument(EUPGRADE_WEAKER_POLICY)
                     );
 
                     metadata.upgrade_policy = upgrade_policy;
@@ -260,14 +258,14 @@ module minitia_std::code {
                     table::add<String, ModuleMetadata>(
                         metadata_table,
                         *module_id,
-                        ModuleMetadata { upgrade_policy, },
+                        ModuleMetadata { upgrade_policy }
                     );
                 };
 
                 event::emit(
-                    ModulePublishedEvent { module_id: *module_id, upgrade_policy, },
+                    ModulePublishedEvent { module_id: *module_id, upgrade_policy }
                 );
-            },
+            }
         );
 
         // Request publish
@@ -277,6 +275,6 @@ module minitia_std::code {
 
     /// Native function to initiate module loading
     native fun request_publish(
-        owner: address, expected_modules: vector<String>, code: vector<vector<u8>>,
+        owner: address, expected_modules: vector<String>, code: vector<vector<u8>>
     );
 }

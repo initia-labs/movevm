@@ -63,8 +63,7 @@ Return the largest of two numbers.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_max">max</a>(a: u128, b: u128): u128 {
@@ -73,8 +72,6 @@ Return the largest of two numbers.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math128_min"></a>
 
@@ -88,8 +85,7 @@ Return the smallest of two numbers.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <b>min</b>(a: u128, b: u128): u128 {
@@ -98,8 +94,6 @@ Return the smallest of two numbers.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math128_average"></a>
 
@@ -113,8 +107,7 @@ Return the average of two.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_average">average</a>(a: u128, b: u128): u128 {
@@ -128,8 +121,6 @@ Return the average of two.
 
 
 
-</details>
-
 <a id="0x1_math128_mul_div"></a>
 
 ## Function `mul_div`
@@ -142,8 +133,7 @@ Returns a * b / c going through u128 to prevent intermediate overflow
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_mul_div">mul_div</a>(a: u128, b: u128, c: u128): u128 {
@@ -152,8 +142,6 @@ Returns a * b / c going through u128 to prevent intermediate overflow
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math128_clamp"></a>
 
@@ -167,8 +155,7 @@ Return x clamped to the interval [lower, upper].
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_clamp">clamp</a>(x: u128, lower: u128, upper: u128): u128 {
@@ -177,8 +164,6 @@ Return x clamped to the interval [lower, upper].
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math128_pow"></a>
 
@@ -192,14 +177,12 @@ Return the value of n raised to power e
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_pow">pow</a>(n: u128, e: u128): u128 {
-    <b>if</b> (e == 0) {
-        1
-    } <b>else</b> {
+    <b>if</b> (e == 0) { 1 }
+    <b>else</b> {
         <b>let</b> p = 1;
         <b>while</b> (e &gt; 1) {
             <b>if</b> (e % 2 == 1) {
@@ -215,8 +198,6 @@ Return the value of n raised to power e
 
 
 
-</details>
-
 <a id="0x1_math128_floor_log2"></a>
 
 ## Function `floor_log2`
@@ -229,13 +210,15 @@ Returns floor(log2(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_floor_log2">floor_log2</a>(x: u128): u8 {
     <b>let</b> res = 0;
-    <b>assert</b>!(x != 0, std::error::invalid_argument(<a href="math128.md#0x1_math128_EINVALID_ARG_FLOOR_LOG2">EINVALID_ARG_FLOOR_LOG2</a>));
+    <b>assert</b>!(
+        x != 0,
+        std::error::invalid_argument(<a href="math128.md#0x1_math128_EINVALID_ARG_FLOOR_LOG2">EINVALID_ARG_FLOOR_LOG2</a>)
+    );
     // Effectively the position of the most significant set bit
     <b>let</b> n = 64;
     <b>while</b> (n &gt; 0) {
@@ -251,8 +234,6 @@ Returns floor(log2(x))
 
 
 
-</details>
-
 <a id="0x1_math128_log2"></a>
 
 ## Function `log2`
@@ -264,8 +245,7 @@ Returns floor(log2(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_log2">log2</a>(x: u128): FixedPoint32 {
@@ -284,16 +264,17 @@ Returns floor(log2(x))
         x = (x * x) &gt;&gt; 32;
         // x is now in [1, 4)
         // <b>if</b> x in [2, 4) then log x = 1 + log (x / 2)
-        <b>if</b> (x &gt;= (2 &lt;&lt; 32)) { frac = frac + delta; x = x &gt;&gt; 1; };
+        <b>if</b> (x &gt;= (2 &lt;&lt; 32)) {
+            frac = frac + delta;
+            x = x &gt;&gt; 1;
+        };
         delta = delta &gt;&gt; 1;
     };
-    <a href="../../move_nursery/../move_stdlib/doc/fixed_point32.md#0x1_fixed_point32_create_from_raw_value">fixed_point32::create_from_raw_value</a> (((integer_part <b>as</b> u64) &lt;&lt; 32) + frac)
+    <a href="../../move_nursery/../move_stdlib/doc/fixed_point32.md#0x1_fixed_point32_create_from_raw_value">fixed_point32::create_from_raw_value</a>(((integer_part <b>as</b> u64) &lt;&lt; 32) + frac)
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math128_log2_64"></a>
 
@@ -306,8 +287,7 @@ Returns floor(log2(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_log2_64">log2_64</a>(x: u128): FixedPoint64 {
@@ -326,16 +306,17 @@ Returns floor(log2(x))
         x = (x * x) &gt;&gt; 63;
         // x is now in [1, 4)
         // <b>if</b> x in [2, 4) then log x = 1 + log (x / 2)
-        <b>if</b> (x &gt;= (2 &lt;&lt; 63)) { frac = frac + delta; x = x &gt;&gt; 1; };
+        <b>if</b> (x &gt;= (2 &lt;&lt; 63)) {
+            frac = frac + delta;
+            x = x &gt;&gt; 1;
+        };
         delta = delta &gt;&gt; 1;
     };
-    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">fixed_point64::create_from_raw_value</a> (((integer_part <b>as</b> u128) &lt;&lt; 64) + frac)
+    <a href="fixed_point64.md#0x1_fixed_point64_create_from_raw_value">fixed_point64::create_from_raw_value</a>(((integer_part <b>as</b> u128) &lt;&lt; 64) + frac)
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_math128_sqrt"></a>
 
@@ -349,8 +330,7 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_sqrt">sqrt</a>(x: u128): u128 {
@@ -375,8 +355,6 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-</details>
-
 <a id="0x1_math128_ceil_div"></a>
 
 ## Function `ceil_div`
@@ -388,8 +366,7 @@ Returns square root of x, precisely floor(sqrt(x))
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="math128.md#0x1_math128_ceil_div">ceil_div</a>(x: u128, y: u128): u128 {
@@ -398,11 +375,6 @@ Returns square root of x, precisely floor(sqrt(x))
     <b>if</b> (x == 0) {
         <b>assert</b>!(y != 0, <a href="math128.md#0x1_math128_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>);
         0
-    }
-    <b>else</b> (x - 1) / y + 1
+    } <b>else</b> (x - 1) / y + 1
 }
 </code></pre>
-
-
-
-</details>

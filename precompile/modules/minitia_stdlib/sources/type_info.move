@@ -4,7 +4,7 @@ module minitia_std::type_info {
     struct TypeInfo has copy, drop, store {
         account_address: address,
         module_name: vector<u8>,
-        struct_name: vector<u8>,
+        struct_name: vector<u8>
     }
 
     public fun account_address(type_info: &TypeInfo): address {
@@ -28,7 +28,7 @@ module minitia_std::type_info {
         let type_info = type_of<TypeInfo>();
         assert!(
             account_address(&type_info) == @minitia_std,
-            0,
+            0
         );
         assert!(module_name(&type_info) == b"type_info", 1);
         assert!(struct_name(&type_info) == b"TypeInfo", 2);
@@ -45,39 +45,39 @@ module minitia_std::type_info {
         assert!(type_name<u128>() == string::utf8(b"u128"), 3);
         assert!(
             type_name<address>() == string::utf8(b"address"),
-            4,
+            4
         );
         assert!(
             type_name<signer>() == string::utf8(b"signer"),
-            5,
+            5
         );
 
         // vector
         assert!(
             type_name<vector<u8>>() == string::utf8(b"vector<u8>"),
-            6,
+            6
         );
         assert!(
             type_name<vector<vector<u8>>>() == string::utf8(b"vector<vector<u8>>"),
-            7,
+            7
         );
         assert!(
             type_name<vector<vector<TypeInfo>>>()
                 == string::utf8(b"vector<vector<0x1::type_info::TypeInfo>>"),
-            8,
+            8
         );
 
         // struct
         assert!(
             type_name<TypeInfo>() == string::utf8(b"0x1::type_info::TypeInfo"),
-            9,
+            9
         );
         assert!(
             type_name<Table<TypeInfo, Table<u8, vector<TypeInfo>>>>()
                 == string::utf8(
-                    b"0x1::table::Table<0x1::type_info::TypeInfo, 0x1::table::Table<u8, vector<0x1::type_info::TypeInfo>>>",
+                    b"0x1::table::Table<0x1::type_info::TypeInfo, 0x1::table::Table<u8, vector<0x1::type_info::TypeInfo>>>"
                 ),
-            10,
+            10
         );
     }
 }

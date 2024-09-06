@@ -23,7 +23,7 @@ module minitia_std::account {
         account_number: u64,
         sequence_number: u64,
         account_type: u8,
-        is_blocked: bool,
+        is_blocked: bool
     }
 
     public entry fun create_account_script(addr: address) {
@@ -34,7 +34,7 @@ module minitia_std::account {
         let (found, _, _, _, _) = account_info(addr);
         assert!(
             !found,
-            error::already_exists(EACCOUNT_ALREADY_EXISTS),
+            error::already_exists(EACCOUNT_ALREADY_EXISTS)
         );
 
         request_create_account(addr, 0, ACCOUNT_TYPE_BASE)
@@ -45,15 +45,14 @@ module minitia_std::account {
     public(friend) fun create_table_account(addr: address): u64 {
         let (found, account_number, sequence, account_type, _) = account_info(addr);
         assert!(
-            !found
-            || (account_type == ACCOUNT_TYPE_BASE && sequence == 0),
-            error::already_exists(EACCOUNT_ALREADY_EXISTS),
+            !found || (account_type == ACCOUNT_TYPE_BASE && sequence == 0),
+            error::already_exists(EACCOUNT_ALREADY_EXISTS)
         );
 
         request_create_account(
             addr,
             account_number,
-            ACCOUNT_TYPE_TABLE,
+            ACCOUNT_TYPE_TABLE
         )
     }
 
@@ -67,7 +66,7 @@ module minitia_std::account {
             request_create_account(
                 addr,
                 account_number,
-                ACCOUNT_TYPE_OBJECT,
+                ACCOUNT_TYPE_OBJECT
             )
         } else {
             // When an Object is deleted, the ObjectAccount in CosmosSDK is designed
@@ -179,8 +178,11 @@ module minitia_std::account {
         info.sequence_number
     }
 
-    native fun request_create_account(addr: address, account_number: u64, account_type: u8): u64;
-    native public fun account_info(addr: address): (
+    native fun request_create_account(
+        addr: address, account_number: u64, account_type: u8
+    ): u64;
+    native public fun account_info(addr: address):
+        (
         bool /* found */,
         u64 /* account_number */,
         u64 /* sequence_number */,
@@ -231,7 +233,7 @@ module minitia_std::account {
         assert!(bob_account_num == get_account_number(bob), 7);
         assert!(
             carol_account_num == get_account_number(carol),
-            7,
+            7
         );
 
         // object account
@@ -243,7 +245,7 @@ module minitia_std::account {
         let dan_object_account_num = create_object_account(dan);
         assert!(
             dan_object_account_num == get_account_number(dan),
-            9,
+            9
         );
         assert!(is_object_account(dan), 10);
         assert!(exists_at(dan), 11);
@@ -257,7 +259,7 @@ module minitia_std::account {
         let erin_table_account_num = create_table_account(erin);
         assert!(
             erin_table_account_num == get_account_number(erin),
-            13,
+            13
         );
         assert!(is_table_account(erin), 14);
         assert!(exists_at(erin), 15);
@@ -275,11 +277,11 @@ module minitia_std::account {
             );
         assert!(
             bob == @0x0000000000000000000000000000000000000000000000000000000000000b0b,
-            0,
+            0
         );
         assert!(
             carol == @0x00000000000000000000000000000000000000000000000000000000000ca501,
-            1,
+            1
         );
     }
 
@@ -290,17 +292,24 @@ module minitia_std::account {
         assert!(vector::length(&authentication_key) == 32, 0);
     }
 
-    #[test(new_address = @0x41, new_address2 = @0x42, new_address3 = @0x43, new_address4 = @0x44)]
+    #[
+        test(
+            new_address = @0x41,
+            new_address2 = @0x42,
+            new_address3 = @0x43,
+            new_address4 = @0x44
+        )
+    ]
     public fun test_create_table_account_and_object_account(
         new_address: address,
         new_address2: address,
         new_address3: address,
-        new_address4: address,
+        new_address4: address
     ) {
         let table_account_num = create_table_account(new_address);
         assert!(
             table_account_num == get_account_number(new_address),
-            0,
+            0
         );
         assert!(is_table_account(new_address), 1);
         assert!(exists_at(new_address), 2);
@@ -311,12 +320,12 @@ module minitia_std::account {
             100,
             0,
             ACCOUNT_TYPE_BASE,
-            false,
+            false
         );
         let table_account_num = create_table_account(new_address2);
         assert!(
             table_account_num == get_account_number(new_address2),
-            0,
+            0
         );
         assert!(table_account_num == 100, 0);
         assert!(is_table_account(new_address2), 1);
@@ -326,7 +335,7 @@ module minitia_std::account {
         let object_account_num = create_object_account(new_address3);
         assert!(
             object_account_num == get_account_number(new_address3),
-            3,
+            3
         );
         assert!(is_object_account(new_address3), 4);
         assert!(exists_at(new_address3), 5);
@@ -337,12 +346,12 @@ module minitia_std::account {
             200,
             0,
             ACCOUNT_TYPE_BASE,
-            false,
+            false
         );
         let object_account_num = create_object_account(new_address4);
         assert!(
             object_account_num == get_account_number(new_address4),
-            0,
+            0
         );
         assert!(object_account_num == 200, 0);
         assert!(is_object_account(new_address4), 1);
@@ -359,7 +368,7 @@ module minitia_std::account {
             200,
             0,
             ACCOUNT_TYPE_BASE,
-            true,
+            true
         );
         assert!(is_blocked(new_address), 1);
 
@@ -368,7 +377,7 @@ module minitia_std::account {
             100,
             0,
             ACCOUNT_TYPE_BASE,
-            false,
+            false
         );
         assert!(!is_blocked(new_address2), 2);
     }

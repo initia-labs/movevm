@@ -4,7 +4,7 @@
 module minitia_std::royalty {
     use std::error;
     use std::option::{Self, Option};
-    use minitia_std::decimal128::{Self, Decimal128};
+    use minitia_std::bigdecimal::{Self, BigDecimal};
     use minitia_std::object::{Self, ConstructorRef, ExtendRef, Object};
 
     friend minitia_std::nft;
@@ -20,14 +20,14 @@ module minitia_std::royalty {
     ///
     /// Royalties are optional for a collection.
     struct Royalty has copy, drop, key {
-        royalty: Decimal128,
+        royalty: BigDecimal,
         /// creators.
-        payee_address: address,
+        payee_address: address
     }
 
     /// This enables creating or overwriting a `MutatorRef`.
     struct MutatorRef has drop, store {
-        inner: ExtendRef,
+        inner: ExtendRef
     }
 
     /// Add a royalty, given a ConstructorRef.
@@ -48,10 +48,10 @@ module minitia_std::royalty {
     }
 
     /// Creates a new royalty, verifying that it is a valid percentage
-    public fun create(royalty: Decimal128, payee_address: address): Royalty {
+    public fun create(royalty: BigDecimal, payee_address: address): Royalty {
         assert!(
-            decimal128::val(&royalty) <= decimal128::val(&decimal128::one()),
-            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM),
+            bigdecimal::le(royalty, bigdecimal::one()),
+            error::out_of_range(EROYALTY_EXCEEDS_MAXIMUM)
         );
 
         Royalty { royalty, payee_address }
@@ -68,7 +68,7 @@ module minitia_std::royalty {
     public(friend) fun delete(addr: address) acquires Royalty {
         assert!(
             exists<Royalty>(addr),
-            error::not_found(EROYALTY_DOES_NOT_EXIST),
+            error::not_found(EROYALTY_DOES_NOT_EXIST)
         );
         move_from<Royalty>(addr);
     }
@@ -83,7 +83,7 @@ module minitia_std::royalty {
         }
     }
 
-    public fun royalty(royalty: &Royalty): Decimal128 {
+    public fun royalty(royalty: &Royalty): BigDecimal {
         royalty.royalty
     }
 
@@ -104,26 +104,26 @@ module minitia_std::royalty {
         let constructor_ref = object::create_named_object(creator, b"");
         let object =
             object::object_from_constructor_ref<object::ObjectCore>(&constructor_ref);
-        let init_royalty = create(decimal128::from_ratio(1, 2), @0x123);
+        let init_royalty = create(bigdecimal::from_ratio_u64(1, 2), @0x123);
         init(&constructor_ref, init_royalty);
         assert!(option::some(init_royalty) == get(object), 0);
         assert!(
-            royalty(&init_royalty) == decimal128::from_ratio(1, 2),
-            1,
+            royalty(&init_royalty) == bigdecimal::from_ratio_u64(1, 2),
+            1
         );
         assert!(payee_address(&init_royalty) == @0x123, 2);
 
         let mutator_ref =
             generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
-        let update_royalty = create(decimal128::from_ratio(2, 5), @0x456);
+        let update_royalty = create(bigdecimal::from_ratio_u64(2, 5), @0x456);
         update(&mutator_ref, update_royalty);
         assert!(
             option::some(update_royalty) == get(object),
-            3,
+            3
         );
         assert!(
-            royalty(&update_royalty) == decimal128::from_ratio(2, 5),
-            4,
+            royalty(&update_royalty) == bigdecimal::from_ratio_u64(2, 5),
+            4
         );
         assert!(payee_address(&update_royalty) == @0x456, 5);
     }
@@ -137,11 +137,11 @@ module minitia_std::royalty {
 
         let mutator_ref =
             generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
-        let update_royalty = create(decimal128::from_ratio(1, 5), @0x123);
+        let update_royalty = create(bigdecimal::from_ratio_u64(1, 5), @0x123);
         update(&mutator_ref, update_royalty);
         assert!(
             option::some(update_royalty) == get(object),
-            1,
+            1
         );
     }
 
@@ -154,6 +154,6 @@ module minitia_std::royalty {
     #[test]
     #[expected_failure(abort_code = 0x20002, location = Self)]
     fun test_exceeds_maximum() {
-        create(decimal128::from_ratio(6, 5), @0x1);
+        create(bigdecimal::from_ratio_u64(6, 5), @0x1);
     }
 }

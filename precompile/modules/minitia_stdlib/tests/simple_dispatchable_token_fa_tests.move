@@ -38,7 +38,7 @@ module minitia_std::simple_token_fa_tests {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_transfer_with_ref(creator: &signer, aaron: &signer,) {
+    fun test_transfer_with_ref(creator: &signer, aaron: &signer) {
         let (creator_ref, test_token) = create_test_token(creator);
         let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref) =
             init_test_metadata(&creator_ref);

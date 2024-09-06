@@ -6,13 +6,13 @@ module TestAccount::TestCoin {
 
     struct Coin<phantom CoinType> has key, copy {
         value: u64,
-        test: bool,
+        test: bool
     }
 
     #[event]
     /// Event emitted when some amount of coins are withdrawn from an Collateral.
     struct MintEvent has drop, store {
-        amount: u64,
+        amount: u64
     }
 
     public entry fun panic() {
@@ -24,7 +24,7 @@ module TestAccount::TestCoin {
         if (!exists<Coin<CoinType>>(account_addr)) {
             move_to(
                 &account,
-                Coin<CoinType> { value, test: true },
+                Coin<CoinType> { value, test: true }
             );
         } else {
             let coin = borrow_global_mut<Coin<CoinType>>(account_addr);
@@ -32,7 +32,7 @@ module TestAccount::TestCoin {
         };
 
         // emit event
-        event::emit(MintEvent { amount: value, });
+        event::emit(MintEvent { amount: value });
     }
 
     #[view]

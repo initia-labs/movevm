@@ -63,7 +63,7 @@ module minitia_std::string_utils {
     // Helper struct to allow passing a generic heterogeneous list of values to native_format_list.
     struct Cons<T, N> has copy, drop, store {
         car: T,
-        cdr: N,
+        cdr: N
     }
 
     struct NIL has copy, drop, store {}
@@ -81,15 +81,18 @@ module minitia_std::string_utils {
     // Create a list of values.
     inline fun list1<T0>(a: T0): Cons<T0, NIL> {
         cons(a, nil())
-    } inline fun list2<T0, T1>(a: T0, b: T1): Cons<T0, Cons<T1, NIL>> {
+    }
 
+    inline fun list2<T0, T1>(a: T0, b: T1): Cons<T0, Cons<T1, NIL>> {
         cons(a, list1(b))
-    } inline fun list3<T0, T1, T2>(a: T0, b: T1, c: T2): Cons<T0, Cons<T1, Cons<T2, NIL>>> {
+    }
 
+    inline fun list3<T0, T1, T2>(a: T0, b: T1, c: T2): Cons<T0, Cons<T1, Cons<T2, NIL>>> {
         cons(a, list2(b, c))
-    } inline fun list4<T0, T1, T2, T3>(a: T0, b: T1, c: T2, d: T3)
+    }
 
-    : Cons<T0, Cons<T1, Cons<T2, Cons<T3, NIL>>>> {
+    inline fun list4<T0, T1, T2, T3>(a: T0, b: T1, c: T2, d: T3):
+        Cons<T0, Cons<T1, Cons<T2, Cons<T3, NIL>>>> {
         cons(a, list3(b, c, d))
     }
 
@@ -107,32 +110,32 @@ module minitia_std::string_utils {
     fun test_format() {
         assert!(
             to_string(&1u64) == std::string::utf8(b"1"),
-            1,
+            1
         );
         assert!(
             to_string(&false) == std::string::utf8(b"false"),
-            2,
+            2
         );
         assert!(
             to_string(&1u256) == std::string::utf8(b"1"),
-            3,
+            3
         );
         assert!(
             to_string(&vector[1, 2, 3]) == std::string::utf8(b"[ 1, 2, 3 ]"),
-            4,
+            4
         );
         assert!(
             to_string(&cons(std::string::utf8(b"My string"), 2))
                 == std::string::utf8(b"Cons { car: \"My string\", cdr: 2 }"),
-            5,
+            5
         );
         assert!(
             to_string(&std::option::none<u64>()) == std::string::utf8(b"None"),
-            6,
+            6
         );
         assert!(
             to_string(&std::option::some(1)) == std::string::utf8(b"Some(1)"),
-            7,
+            7
         );
     }
 
@@ -142,11 +145,11 @@ module minitia_std::string_utils {
             &b"a = {} b = {} c = {}",
             1,
             2,
-            std::string::utf8(b"My string"),
+            std::string::utf8(b"My string")
         );
         assert!(
             s == std::string::utf8(b"a = 1 b = 2 c = \"My string\""),
-            1,
+            1
         );
     }
 
@@ -172,7 +175,7 @@ module minitia_std::string_utils {
     /// #[test_only]
     struct FakeCons<T, N> has copy, drop, store {
         car: T,
-        cdr: N,
+        cdr: N
     }
 
     #[test]
@@ -205,7 +208,7 @@ module minitia_std::string_utils {
         let s = format3(&b"{{a = {} b = {} c = {}}}", 1, 2, 3);
         assert!(
             s == std::string::utf8(b"{a = 1 b = 2 c = 3}"),
-            1,
+            1
         );
     }
 }

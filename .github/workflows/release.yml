@@ -15,7 +15,7 @@ jobs:
       - name: Build
         run: make release-build-linux
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: libmovevm-linux-glibc
           path: api/*.so
@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: make release-build-alpine
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: libmovevm-linux-muslc
           path: api/*.a
@@ -44,7 +44,7 @@ jobs:
       - name: Build
         run: make release-build-macos
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: libmovevm-macos
           path: api/*.dylib
@@ -55,17 +55,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get linux-glibc artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libmovevm-linux-glibc
 
       - name: Get linux-muslc artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libmovevm-linux-muslc
 
       - name: Get macos artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: libmovevm-macos
 

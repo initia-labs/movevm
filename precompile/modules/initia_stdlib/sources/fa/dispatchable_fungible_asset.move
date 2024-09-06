@@ -39,20 +39,20 @@ module initia_std::dispatchable_fungible_asset {
         constructor_ref: &ConstructorRef,
         withdraw_function: Option<FunctionInfo>,
         deposit_function: Option<FunctionInfo>,
-        derived_balance_function: Option<FunctionInfo>,
+        derived_balance_function: Option<FunctionInfo>
     ) {
         fungible_asset::register_dispatch_functions(
             constructor_ref,
             withdraw_function,
             deposit_function,
-            derived_balance_function,
+            derived_balance_function
         );
         let store_obj = &object::generate_signer(constructor_ref);
         move_to<TransferRefStore>(
             store_obj,
             TransferRefStore {
-                transfer_ref: fungible_asset::generate_transfer_ref(constructor_ref),
-            },
+                transfer_ref: fungible_asset::generate_transfer_ref(constructor_ref)
+            }
         );
     }
 
@@ -68,9 +68,7 @@ module initia_std::dispatchable_fungible_asset {
     ///
     /// The semantics of deposit will be governed by the function specified in DispatchFunctionStore.
     public fun withdraw<T: key>(
-        owner: &signer,
-        store: Object<T>,
-        amount: u64,
+        owner: &signer, store: Object<T>, amount: u64
     ): FungibleAsset acquires TransferRefStore {
         fungible_asset::withdraw_sanity_check(owner, store, false);
         let func_opt = fungible_asset::withdraw_dispatch_function(store);
@@ -82,12 +80,12 @@ module initia_std::dispatchable_fungible_asset {
                 store,
                 amount,
                 borrow_transfer_ref(store),
-                func,
+                func
             );
             let end_balance = fungible_asset::balance(store);
             assert!(
                 amount <= start_balance - end_balance,
-                error::aborted(EAMOUNT_MISMATCH),
+                error::aborted(EAMOUNT_MISMATCH)
             );
             fa
         } else {
@@ -108,7 +106,7 @@ module initia_std::dispatchable_fungible_asset {
                 store,
                 fa,
                 borrow_transfer_ref(store),
-                func,
+                func
             )
         } else {
             fungible_asset::deposit_internal(object::object_address(&store), fa)
@@ -121,7 +119,7 @@ module initia_std::dispatchable_fungible_asset {
         sender: &signer,
         from: Object<T>,
         to: Object<T>,
-        amount: u64,
+        amount: u64
     ) acquires TransferRefStore {
         let fa = withdraw(sender, from, amount);
         deposit(to, fa);
@@ -174,28 +172,37 @@ module initia_std::dispatchable_fungible_asset {
         }
     }
 
-    inline fun borrow_transfer_ref<T: key>(metadata: Object<T>): &TransferRef acquires TransferRefStore {
+    inline fun borrow_transfer_ref<T: key>(
+        metadata: Object<T>
+    ): &TransferRef acquires TransferRefStore {
         let metadata_addr =
             object::object_address(&fungible_asset::store_metadata(metadata));
         assert!(
             exists<TransferRefStore>(metadata_addr),
-            error::not_found(ESTORE_NOT_FOUND),
+            error::not_found(ESTORE_NOT_FOUND)
         );
         &borrow_global<TransferRefStore>(metadata_addr).transfer_ref
     }
 
     native fun dispatchable_withdraw<T: key>(
-        store: Object<T>, amount: u64, transfer_ref: &TransferRef, function: &FunctionInfo,
+        store: Object<T>,
+        amount: u64,
+        transfer_ref: &TransferRef,
+        function: &FunctionInfo
     ): FungibleAsset;
 
     native fun dispatchable_deposit<T: key>(
         store: Object<T>,
         fa: FungibleAsset,
         transfer_ref: &TransferRef,
-        function: &FunctionInfo,
+        function: &FunctionInfo
     );
 
-    native fun dispatchable_derived_balance<T: key>(store: Object<T>, function: &FunctionInfo,): u64;
+    native fun dispatchable_derived_balance<T: key>(
+        store: Object<T>, function: &FunctionInfo
+    ): u64;
 
-    native fun dispatchable_derived_supply<T: key>(store: Object<T>, function: &FunctionInfo,): Option<u128>;
+    native fun dispatchable_derived_supply<T: key>(
+        store: Object<T>, function: &FunctionInfo
+    ): Option<u128>;
 }

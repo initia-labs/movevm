@@ -6,11 +6,11 @@ module minitia_std::address {
     use minitia_std::json;
 
     struct FromSdkRequest has copy, drop {
-        sdk_addr: String,
+        sdk_addr: String
     }
 
     struct FromSdkResponse has copy, drop {
-        vm_addr: address,
+        vm_addr: address
     }
 
     public fun from_sdk(sdk_addr: String): address {
@@ -18,19 +18,19 @@ module minitia_std::address {
             json::unmarshal<FromSdkResponse>(
                 query::query_custom(
                     b"from_sdk_address",
-                    json::marshal(&FromSdkRequest { sdk_addr: sdk_addr, }),
-                ),
+                    json::marshal(&FromSdkRequest { sdk_addr: sdk_addr })
+                )
             );
 
         res.vm_addr
     }
 
     struct ToSdkRequest has copy, drop {
-        vm_addr: address,
+        vm_addr: address
     }
 
     struct ToSdkResponse has copy, drop {
-        sdk_addr: String,
+        sdk_addr: String
     }
 
     public fun to_sdk(vm_addr: address): String {
@@ -38,8 +38,8 @@ module minitia_std::address {
             json::unmarshal<ToSdkResponse>(
                 query::query_custom(
                     b"to_sdk_address",
-                    json::marshal(&ToSdkRequest { vm_addr: vm_addr, }),
-                ),
+                    json::marshal(&ToSdkRequest { vm_addr: vm_addr })
+                )
             );
 
         res.sdk_addr

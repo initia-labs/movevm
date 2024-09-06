@@ -21,7 +21,7 @@ module 0x2::StdCoin {
                 string::utf8(b"STDC"),
                 8,
                 string::utf8(b""),
-                string::utf8(b""),
+                string::utf8(b"")
             );
 
         move_to(sender, CapStore { burn, freeze, mint });

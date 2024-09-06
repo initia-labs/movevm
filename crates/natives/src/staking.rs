@@ -1,10 +1,22 @@
+use better_any::{Tid, TidAble};
+use bigdecimal::num_bigint::BigUint;
+use bigdecimal::num_traits::FromBytes;
+use bigdecimal::Signed;
+use bigdecimal::Zero;
+use bigdecimal::{num_bigint::ToBigInt, BigDecimal};
+use move_vm_types::values::{Reference, Struct};
+use smallvec::{smallvec, SmallVec};
+use std::borrow::BorrowMut;
+use std::collections::{BTreeMap, VecDeque};
+use std::str::FromStr;
+
 use crate::{
     helpers::get_metadata_address,
     interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult},
     safely_pop_arg,
 };
-use better_any::{Tid, TidAble};
 use initia_move_types::staking_change_set::StakingChangeSet;
+
 use move_binary_format::errors::PartialVMError;
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::NumBytes, vm_status::StatusCode,
@@ -14,9 +26,6 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{StructRef, Value, Vector},
 };
-use smallvec::{smallvec, SmallVec};
-use std::borrow::BorrowMut;
-use std::collections::{BTreeMap, VecDeque};
 
 #[cfg(feature = "testing")]
 use crate::block::NativeBlockContext;
@@ -28,14 +37,14 @@ pub trait StakingAPI {
         &self,
         validator: &[u8],
         metadata: AccountAddress,
-        share: u64,
+        share: String,
     ) -> anyhow::Result<u64>;
     fn amount_to_share(
         &self,
         validator: &[u8],
         metadata: AccountAddress,
         amount: u64,
-    ) -> anyhow::Result<u64>;
+    ) -> anyhow::Result<String>;
     fn unbond_timestamp(&self) -> anyhow::Result<u64>;
 }
 
@@ -47,7 +56,7 @@ pub struct NativeStakingContext<'a> {
     api: &'a dyn StakingAPI,
     staking_data: StakingData,
     #[cfg(feature = "testing")]
-    share_ratios: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64 /* share */, u64 /* amount */)>>,
+    share_ratios: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (BigDecimal /* share */, u64 /* amount */)>>,
 }
 
 // ===========================================================================================
@@ -62,8 +71,8 @@ struct StakingData {
         BTreeMap<
             AccountAddress,
             (
-                u64, /* delegation amount */
-                u64, /* undelegation share amount */
+                u64,        /* delegation amount */
+                BigDecimal, /* undelegation share amount */
             ),
         >,
     >,
@@ -88,7 +97,25 @@ impl<'a> NativeStakingContext<'a> {
         let NativeStakingContext { staking_data, .. } = self;
         let StakingData { changes } = staking_data;
 
-        StakingChangeSet::new(changes)
+        StakingChangeSet::new(
+            changes
+                .into_iter()
+                .map(|(validator, changes)| {
+                    (
+                        validator,
+                        changes
+                            .into_iter()
+                            .map(|(metadata, (delegation, undelegation))| {
+                                (
+                                    metadata,
+                                    (delegation, big_decimal_to_string(undelegation.normalized())),
+                                )
+                            })
+                            .collect(),
+                    )
+                })
+                .collect(),
+        )
     }
 
     #[cfg(feature = "testing")]
@@ -96,7 +123,7 @@ impl<'a> NativeStakingContext<'a> {
         &mut self,
         validator: Vec<u8>,
         metadata: AccountAddress,
-        share: u64,
+        share: BigDecimal,
         amount: u64,
     ) {
         match self.share_ratios.get_mut(&validator) {
@@ -148,12 +175,12 @@ fn native_delegate(
                 dels.0 += amount;
             }
             None => {
-                val.insert(metadata, (amount, 0));
+                val.insert(metadata, (amount, BigDecimal::zero()));
             }
         },
         None => {
             let mut ratios = BTreeMap::new();
-            ratios.insert(metadata, (amount, 0));
+            ratios.insert(metadata, (amount, BigDecimal::zero()));
             staking_data.changes.insert(validator.clone(), ratios);
         }
     }
@@ -161,7 +188,9 @@ fn native_delegate(
     #[cfg(feature = "testing")]
     if let Some(ratios) = staking_context.share_ratios.get(&validator) {
         if let Some(ratio) = ratios.get(&metadata) {
-            return Ok(smallvec![Value::u64(amount * ratio.0 / ratio.1)]);
+            return Ok(smallvec![write_big_decimal(
+                BigDecimal::from(amount) * ratio.0.clone() / ratio.1
+            )?]);
         }
     }
 
@@ -170,7 +199,7 @@ fn native_delegate(
         .amount_to_share(&validator, metadata, amount)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(smallvec![Value::u64(share)])
+    Ok(smallvec![write_big_decimal(string_to_big_decimal(share)?)?])
 }
 
 fn native_undelegate(
@@ -183,7 +212,7 @@ fn native_undelegate(
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
-    let share = safely_pop_arg!(arguments, u64);
+    let share = read_big_decimal(safely_pop_arg!(arguments, StructRef))?;
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
@@ -198,15 +227,15 @@ fn native_undelegate(
     match staking_data.changes.get_mut(&validator) {
         Some(val) => match val.get_mut(&metadata) {
             Some(ratio) => {
-                ratio.1 += share;
+                ratio.1 += share.clone();
             }
             None => {
-                val.insert(metadata, (0, share));
+                val.insert(metadata, (0, share.clone()));
             }
         },
         None => {
             let mut ratios = BTreeMap::new();
-            ratios.insert(metadata, (0, share));
+            ratios.insert(metadata, (0, share.clone()));
             staking_data.changes.insert(validator.clone(), ratios);
         }
     }
@@ -214,10 +243,14 @@ fn native_undelegate(
     #[cfg(feature = "testing")]
     if staking_context.share_ratios.contains_key(&validator) {
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
-        let ratio = ratios.get(&metadata).unwrap();
-        let amount = share * ratio.1 / ratio.0;
-
         if ratios.contains_key(&metadata) {
+            let ratio = ratios.get(&metadata).unwrap();
+            let amount = (share * ratio.1 / ratio.0.clone())
+                .to_bigint()
+                .unwrap()
+                .try_into()
+                .unwrap();
+
             let block_context = context.extensions().get::<NativeBlockContext>();
             let (_, timestamp) = block_context.get_block_info();
             let unbond_timestamp = timestamp + 60 * 60 * 24 * 7;
@@ -229,7 +262,7 @@ fn native_undelegate(
     // convert share to amount
     let amount = staking_context
         .api
-        .share_to_amount(&validator, metadata, share)
+        .share_to_amount(&validator, metadata, big_decimal_to_string(share))
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
     let unbond_timestamp = staking_context
@@ -250,7 +283,7 @@ fn native_share_to_amount(
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
-    let share = safely_pop_arg!(arguments, u64);
+    let share = read_big_decimal(safely_pop_arg!(arguments, StructRef))?;
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
@@ -266,13 +299,18 @@ fn native_share_to_amount(
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            return Ok(smallvec![Value::u64(share * ratio.1 / ratio.0)]);
+            let amount = (share.clone() * ratio.1 / ratio.0.clone())
+                .to_bigint()
+                .unwrap()
+                .try_into()
+                .unwrap();
+            return Ok(smallvec![Value::u64(amount)]);
         }
     }
 
     let amount = staking_context
         .api
-        .share_to_amount(&validator, metadata, share)
+        .share_to_amount(&validator, metadata, big_decimal_to_string(share))
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
     Ok(smallvec![Value::u64(amount),])
@@ -304,7 +342,9 @@ fn native_amount_to_share(
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            return Ok(smallvec![Value::u64(amount * ratio.0 / ratio.1)]);
+            return Ok(smallvec![write_big_decimal(
+                BigDecimal::from(amount) * ratio.0.clone() / ratio.1
+            )?]);
         }
     }
 
@@ -313,7 +353,7 @@ fn native_amount_to_share(
         .amount_to_share(&validator, metadata, amount)
         .map_err(|err| partial_extension_error(format!("remote staking api failure: {}", err)))?;
 
-    Ok(smallvec![Value::u64(share),])
+    Ok(smallvec![write_big_decimal(string_to_big_decimal(share)?)?])
 }
 
 /***************************************************************************************************
@@ -350,7 +390,7 @@ fn native_test_only_set_staking_share_ratio(
     debug_assert!(arguments.len() == 4);
 
     let amount = safely_pop_arg!(arguments, u64);
-    let share = safely_pop_arg!(arguments, u64);
+    let share = read_big_decimal(safely_pop_arg!(arguments, StructRef))?;
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 
@@ -365,4 +405,44 @@ fn native_test_only_set_staking_share_ratio(
 
 fn partial_extension_error(msg: impl ToString) -> PartialVMError {
     PartialVMError::new(StatusCode::VM_EXTENSION_ERROR).with_message(msg.to_string())
+}
+
+fn string_to_big_decimal(s: String) -> SafeNativeResult<BigDecimal> {
+    Ok(BigDecimal::from_str(&s)
+        .map_err(|_| partial_extension_error("failed to convert string to BigDecimal"))?)
+}
+
+fn big_decimal_to_string(v: BigDecimal) -> String {
+    v.normalized().to_string()
+}
+
+fn write_big_decimal(v: BigDecimal) -> SafeNativeResult<Value> {
+    const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
+    let bigint = (v * DECIMAL_SCALE)
+        .to_bigint()
+        .ok_or_else(|| partial_extension_error("invalid BigDecimal"))?;
+
+    if bigint.is_negative() {
+        return Err(partial_extension_error("negative BigDecimal").into());
+    }
+
+    let (_, bytes) = bigint.to_bytes_le();
+    Ok(Value::struct_(Struct::pack(vec![Value::struct_(
+        Struct::pack(vec![Value::vector_u8(bytes)]),
+    )])))
+}
+
+fn read_big_decimal(v: StructRef) -> SafeNativeResult<BigDecimal> {
+    let scaled_le_bytes = v
+        .borrow_field(0)?
+        .value_as::<Reference>()?
+        .read_ref()?
+        .value_as::<Struct>()?
+        .unpack()?
+        .next()
+        .unwrap()
+        .value_as::<Vec<u8>>()?;
+
+    let scaled = BigUint::from_le_bytes(&scaled_le_bytes);
+    Ok(BigDecimal::new(scaled.into(), 18))
 }

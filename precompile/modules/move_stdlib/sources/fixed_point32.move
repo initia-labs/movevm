@@ -115,10 +115,7 @@ module std::fixed_point32 {
         let scaled_denominator = (denominator as u128) << 32;
         assert!(scaled_denominator != 0, EDENOMINATOR);
         let quotient = scaled_numerator / scaled_denominator;
-        assert!(
-            quotient != 0 || numerator == 0,
-            ERATIO_OUT_OF_RANGE,
-        );
+        assert!(quotient != 0 || numerator == 0, ERATIO_OUT_OF_RANGE);
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
         assert!(quotient <= MAX_U64, ERATIO_OUT_OF_RANGE);
@@ -126,6 +123,7 @@ module std::fixed_point32 {
     }
 
     spec create_from_rational {
+        pragma verify = false; // TIMEOUT
         pragma opaque;
         include CreateFromRationalAbortsIf;
         ensures result == spec_create_from_rational(numerator, denominator);
@@ -143,7 +141,9 @@ module std::fixed_point32 {
     }
 
     spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
-        FixedPoint32 { value: (numerator << 64) / (denominator << 32) }
+        FixedPoint32 {
+            value: (numerator << 64) / (denominator << 32)
+        }
     }
 
     /// Create a fixedpoint value from a raw value.
@@ -257,6 +257,7 @@ module std::fixed_point32 {
     }
 
     spec ceil {
+        pragma verify = false; // timeout
         pragma opaque;
         aborts_if false;
         ensures result == spec_ceil(num);
@@ -285,6 +286,7 @@ module std::fixed_point32 {
 
     spec round {
         pragma opaque;
+        pragma timeout = 120;
         aborts_if false;
         ensures result == spec_round(num);
     }

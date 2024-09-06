@@ -8,7 +8,7 @@ module 0xcafe::permissioned_token_tests {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_permissioned_e2e_basic_flow(
-        creator: &signer, aaron: &signer,
+        creator: &signer, aaron: &signer
     ) {
         let (creator_ref, token_object) = fungible_asset::create_test_token(creator);
         let (mint, _, _, _) = fungible_asset::init_test_metadata(&creator_ref);
@@ -18,7 +18,8 @@ module 0xcafe::permissioned_token_tests {
         let aaron_store = fungible_asset::create_test_store(aaron, metadata);
         let allowed_sender = vector[
             object::object_address(&creator_store),
-            object::object_address(&aaron_store),];
+            object::object_address(&aaron_store)
+        ];
 
         permissioned_token::initialize(creator, &creator_ref, allowed_sender);
 
@@ -41,7 +42,7 @@ module 0xcafe::permissioned_token_tests {
     #[test(creator = @0xcafe, aaron = @0xface)]
     #[expected_failure(abort_code = 1, location = 0xcafe::permissioned_token)]
     fun test_permissioned_disallowed_sender(
-        creator: &signer, aaron: &signer,
+        creator: &signer, aaron: &signer
     ) {
         let (creator_ref, token_object) = fungible_asset::create_test_token(creator);
         let (mint, _, _, _) = fungible_asset::init_test_metadata(&creator_ref);
@@ -49,7 +50,7 @@ module 0xcafe::permissioned_token_tests {
 
         let creator_store = fungible_asset::create_test_store(creator, metadata);
         let aaron_store = fungible_asset::create_test_store(aaron, metadata);
-        let allowed_sender = vector[object::object_address(&creator_store),];
+        let allowed_sender = vector[object::object_address(&creator_store)];
 
         permissioned_token::initialize(creator, &creator_ref, allowed_sender);
 
@@ -72,7 +73,7 @@ module 0xcafe::permissioned_token_tests {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_permissioned_update_disallowed_sender(
-        creator: &signer, aaron: &signer,
+        creator: &signer, aaron: &signer
     ) {
         let (creator_ref, token_object) = fungible_asset::create_test_token(creator);
         let (mint, _, _, _) = fungible_asset::init_test_metadata(&creator_ref);
@@ -80,7 +81,7 @@ module 0xcafe::permissioned_token_tests {
 
         let creator_store = fungible_asset::create_test_store(creator, metadata);
         let aaron_store = fungible_asset::create_test_store(aaron, metadata);
-        let allowed_sender = vector[object::object_address(&creator_store),];
+        let allowed_sender = vector[object::object_address(&creator_store)];
 
         permissioned_token::initialize(creator, &creator_ref, allowed_sender);
 

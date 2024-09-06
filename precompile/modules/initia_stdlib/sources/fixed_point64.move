@@ -17,6 +17,7 @@ module initia_std::fixed_point64 {
     }
 
     const MAX_U128: u256 = 340282366920938463463374607431768211455;
+    const MAX_U64: u128 = 18446744073709551615;
 
     /// The denominator provided was zero
     const EDENOMINATOR: u64 = 0x10001;
@@ -28,6 +29,86 @@ module initia_std::fixed_point64 {
     const EDIVISION_BY_ZERO: u64 = 0x10004;
     /// The computed ratio when converting to a `FixedPoint64` would be unrepresentable
     const ERATIO_OUT_OF_RANGE: u64 = 0x20005;
+    /// Abort code on calculation result is negative.
+    const ENEGATIVE_RESULT: u64 = 0x10006;
+
+    public fun one(): FixedPoint64 {
+        create_from_raw_value(1 << 64)
+    }
+
+    public fun zero(): FixedPoint64 {
+        create_from_raw_value(0)
+    }
+
+    public fun rev(self: FixedPoint64): FixedPoint64 {
+        create_from_raw_value(((1u256 << 128) / (get_raw_value(self) as u256) as u128))
+    }
+
+    /// Returns self - y. self must be not less than y.
+    public fun sub(self: FixedPoint64, y: FixedPoint64): FixedPoint64 {
+        let x_raw = get_raw_value(self);
+        let y_raw = get_raw_value(y);
+        assert!(x_raw >= y_raw, ENEGATIVE_RESULT);
+        create_from_raw_value(x_raw - y_raw)
+    }
+
+    public fun sub_u64(self: FixedPoint64, y: u64): FixedPoint64 {
+        sub_u128(self, (y as u128))
+    }
+
+    public fun sub_u128(self: FixedPoint64, y: u128): FixedPoint64 {
+        let x_raw = (get_raw_value(self) as u256);
+        let y_raw = (y as u256) << 64;
+        assert!(x_raw >= y_raw, ENEGATIVE_RESULT);
+        create_from_raw_value(((x_raw - y_raw) as u128))
+    }
+
+    spec sub {
+        pragma opaque;
+        aborts_if self.value < y.value with ENEGATIVE_RESULT;
+        ensures result.value == self.value - y.value;
+    }
+
+    /// Returns self + y. The result cannot be greater than MAX_U128.
+    public fun add(self: FixedPoint64, y: FixedPoint64): FixedPoint64 {
+        let x_raw = get_raw_value(self);
+        let y_raw = get_raw_value(y);
+        let result = (x_raw as u256) + (y_raw as u256);
+        assert!(result <= MAX_U128, ERATIO_OUT_OF_RANGE);
+        create_from_raw_value((result as u128))
+    }
+
+    public fun add_u64(self: FixedPoint64, y: u64): FixedPoint64 {
+        add_u128(self, (y as u128))
+    }
+
+    public fun add_u128(self: FixedPoint64, y: u128): FixedPoint64 {
+        let x_raw = (get_raw_value(self) as u256);
+        let y_raw = (y as u256) << 64;
+        let result = x_raw + y_raw;
+        assert!(result <= MAX_U128, ERATIO_OUT_OF_RANGE);
+        create_from_raw_value((result as u128))
+    }
+
+    spec add {
+        pragma opaque;
+        aborts_if (self.value as u256) + (y.value as u256) > MAX_U128 with ERATIO_OUT_OF_RANGE;
+        ensures result.value == self.value + y.value;
+    }
+
+    public fun multiply(self: FixedPoint64, y: FixedPoint64): FixedPoint64 {
+        let x_raw = get_raw_value(self);
+        let y_raw = get_raw_value(y);
+        let result = ((x_raw as u256) * (y_raw as u256)) >> 64;
+        assert!(result <= MAX_U128, EMULTIPLICATION);
+        create_from_raw_value((result as u128))
+    }
+
+    public fun multiply_u64(val: u64, multiplier: FixedPoint64): u64 {
+        let res = multiply_u128((val as u128), multiplier);
+        assert!(res <= MAX_U64, EMULTIPLICATION);
+        (res as u64)
+    }
 
     /// Multiply a u128 integer by a fixed-point number, truncating any
     /// fractional part of the product. This will abort if the product
@@ -61,6 +142,29 @@ module initia_std::fixed_point64 {
         (val * multiplier.value) >> 64
     }
 
+    public fun divide(self: FixedPoint64, divisor: FixedPoint64): FixedPoint64 {
+        // Check for division by zero.
+        assert!(divisor.value != 0, EDIVISION_BY_ZERO);
+        // Perform the division with 256 bits to avoid losing accuracy.
+        let result = ((self.value as u256) << 64) / (divisor.value as u256);
+        assert!(result <= MAX_U128, EDIVISION);
+        create_from_raw_value((result as u128))
+    }
+
+    /// Divide a u64 integer by a fixed-point number, truncating any
+    /// fractional part of the quotient. This will abort if the divisor
+    /// is zero or if the quotient overflows.
+    public fun divide_u64(val: u64, divisor: FixedPoint64): u64 {
+        let res = divide_u128((val as u128), divisor);
+        assert!(res <= MAX_U64, EDIVISION);
+        (res as u64)
+    }
+
+    /// Divide a fixed-point number by a u64 integer.
+    public fun divide_by_u64(val: FixedPoint64, divisor: u64): FixedPoint64 {
+        divide_by_u128(val, (divisor as u128))
+    }
+
     /// Divide a u128 integer by a fixed-point number, truncating any
     /// fractional part of the quotient. This will abort if the divisor
     /// is zero or if the quotient overflows.
@@ -76,6 +180,13 @@ module initia_std::fixed_point64 {
         // the value may be too large, which will cause the cast to fail
         // with an arithmetic error.
         (quotient as u128)
+    }
+
+    /// Divide a fixed-point number by a u128 integer.
+    public fun divide_by_u128(val: FixedPoint64, divisor: u128): FixedPoint64 {
+        // Check for division by zero.
+        assert!(divisor != 0, EDIVISION_BY_ZERO);
+        create_from_raw_value(get_raw_value(val) / divisor)
     }
 
     spec divide_u128 {
@@ -112,10 +223,7 @@ module initia_std::fixed_point64 {
         let scaled_numerator = (numerator as u256) << 64;
         assert!(denominator != 0, EDENOMINATOR);
         let quotient = scaled_numerator / (denominator as u256);
-        assert!(
-            quotient != 0 || numerator == 0,
-            ERATIO_OUT_OF_RANGE,
-        );
+        assert!(quotient != 0 || numerator == 0, ERATIO_OUT_OF_RANGE);
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
         assert!(quotient <= MAX_U128, ERATIO_OUT_OF_RANGE);
@@ -124,7 +232,7 @@ module initia_std::fixed_point64 {
 
     spec create_from_rational {
         pragma opaque;
-        pragma verify = false; // TODO: set to false because of timeout (property proved).
+        pragma verify_duration_estimate = 1000; // TODO: set because of timeout (property proved).
         include CreateFromRationalAbortsIf;
         ensures result == spec_create_from_rational(numerator, denominator);
     }
@@ -141,7 +249,9 @@ module initia_std::fixed_point64 {
     }
 
     spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint64 {
-        FixedPoint64 { value: (numerator << 128) / (denominator << 64) }
+        FixedPoint64 {
+            value: (numerator << 128) / (denominator << 64)
+        }
     }
 
     /// Create a fixedpoint value from a raw value.
@@ -158,13 +268,13 @@ module initia_std::fixed_point64 {
     /// Accessor for the raw u128 value. Other less common operations, such as
     /// adding or subtracting FixedPoint64 values, can be done using the raw
     /// values directly.
-    public fun get_raw_value(num: FixedPoint64): u128 {
-        num.value
+    public fun get_raw_value(self: FixedPoint64): u128 {
+        self.value
     }
 
     /// Returns true if the ratio is zero.
-    public fun is_zero(num: FixedPoint64): bool {
-        num.value == 0
+    public fun is_zero(self: FixedPoint64): bool {
+        self.value == 0
     }
 
     /// Returns the smaller of the two FixedPoint64 numbers.
@@ -201,6 +311,106 @@ module initia_std::fixed_point64 {
         else { num2 }
     }
 
+    /// Returns true if self <= num2
+    public fun less_or_equal(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value <= num2.value
+    }
+
+    spec less_or_equal {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_less_or_equal(self, num2);
+    }
+
+    spec fun spec_less_or_equal(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value <= num2.value
+    }
+
+    /// Returns true if self < num2
+    public fun less(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value < num2.value
+    }
+
+    spec less {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_less(self, num2);
+    }
+
+    spec fun spec_less(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value < num2.value
+    }
+
+    /// Returns true if self >= num2
+    public fun greater_or_equal(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value >= num2.value
+    }
+
+    spec greater_or_equal {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_greater_or_equal(self, num2);
+    }
+
+    spec fun spec_greater_or_equal(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value >= num2.value
+    }
+
+    /// Returns true if self > num2
+    public fun greater(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value > num2.value
+    }
+
+    spec greater {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_greater(self, num2);
+    }
+
+    spec fun spec_greater(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value > num2.value
+    }
+
+    /// Returns true if self = num2
+    public fun equal(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value == num2.value
+    }
+
+    spec equal {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_equal(self, num2);
+    }
+
+    spec fun spec_equal(self: FixedPoint64, num2: FixedPoint64): bool {
+        self.value == num2.value
+    }
+
+    /// Returns true if self almost equals to num2, which means abs(num1-num2) <= precision
+    public fun almost_equal(
+        self: FixedPoint64, num2: FixedPoint64, precision: FixedPoint64
+    ): bool {
+        if (self.value > num2.value) {
+            (self.value - num2.value <= precision.value)
+        } else {
+            (num2.value - self.value <= precision.value)
+        }
+    }
+
+    spec almost_equal {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_almost_equal(self, num2, precision);
+    }
+
+    spec fun spec_almost_equal(self: FixedPoint64, num2: FixedPoint64, precision: FixedPoint64): bool {
+        if (self.value > num2.value) {
+            (self.value - num2.value <= precision.value)
+        } else {
+            (num2.value - self.value <= precision.value)
+        }
+    }
+
     /// Create a fixedpoint value from a u128 value.
     public fun create_from_u128(val: u128): FixedPoint64 {
         let value = (val as u256) << 64;
@@ -225,29 +435,29 @@ module initia_std::fixed_point64 {
     }
 
     /// Returns the largest integer less than or equal to a given number.
-    public fun floor(num: FixedPoint64): u128 {
-        num.value >> 64
+    public fun floor(self: FixedPoint64): u128 {
+        self.value >> 64
     }
 
     spec floor {
         pragma opaque;
         aborts_if false;
-        ensures result == spec_floor(num);
+        ensures result == spec_floor(self);
     }
 
-    spec fun spec_floor(val: FixedPoint64): u128 {
-        let fractional = val.value % (1 << 64);
+    spec fun spec_floor(self: FixedPoint64): u128 {
+        let fractional = self.value % (1 << 64);
         if (fractional == 0) {
-            val.value >> 64
+            self.value >> 64
         } else {
-            (val.value - fractional) >> 64
+            (self.value - fractional) >> 64
         }
     }
 
     /// Rounds up the given FixedPoint64 to the next largest integer.
-    public fun ceil(num: FixedPoint64): u128 {
-        let floored_num = floor(num) << 64;
-        if (num.value == floored_num) {
+    public fun ceil(self: FixedPoint64): u128 {
+        let floored_num = floor(self) << 64;
+        if (self.value == floored_num) {
             return floored_num >> 64
         };
         let val = ((floored_num as u256) + (1 << 64));
@@ -255,48 +465,48 @@ module initia_std::fixed_point64 {
     }
 
     spec ceil {
-        /// TODO: worked in the past but started to time out since last z3 update
-        pragma verify = false;
+        // TODO: set because of timeout (property proved).
+        pragma verify_duration_estimate = 1000;
         pragma opaque;
         aborts_if false;
-        ensures result == spec_ceil(num);
+        ensures result == spec_ceil(self);
     }
 
-    spec fun spec_ceil(val: FixedPoint64): u128 {
-        let fractional = val.value % (1 << 64);
+    spec fun spec_ceil(self: FixedPoint64): u128 {
+        let fractional = self.value % (1 << 64);
         let one = 1 << 64;
         if (fractional == 0) {
-            val.value >> 64
+            self.value >> 64
         } else {
-            (val.value - fractional + one) >> 64
+            (self.value - fractional + one) >> 64
         }
     }
 
     /// Returns the value of a FixedPoint64 to the nearest integer.
-    public fun round(num: FixedPoint64): u128 {
-        let floored_num = floor(num) << 64;
+    public fun round(self: FixedPoint64): u128 {
+        let floored_num = floor(self) << 64;
         let boundary = floored_num + ((1 << 64) / 2);
-        if (num.value < boundary) {
+        if (self.value < boundary) {
             floored_num >> 64
         } else {
-            ceil(num)
+            ceil(self)
         }
     }
 
     spec round {
         pragma opaque;
         aborts_if false;
-        ensures result == spec_round(num);
+        ensures result == spec_round(self);
     }
 
-    spec fun spec_round(val: FixedPoint64): u128 {
-        let fractional = val.value % (1 << 64);
+    spec fun spec_round(self: FixedPoint64): u128 {
+        let fractional = self.value % (1 << 64);
         let boundary = (1 << 64) / 2;
         let one = 1 << 64;
         if (fractional < boundary) {
-            (val.value - fractional) >> 64
+            (self.value - fractional) >> 64
         } else {
-            (val.value - fractional + one) >> 64
+            (self.value - fractional + one) >> 64
         }
     }
 
@@ -306,5 +516,173 @@ module initia_std::fixed_point64 {
 
     spec module {
         pragma aborts_if_is_strict;
+    }
+
+    #[test]
+    public entry fun test_sub() {
+        let x = create_from_rational(9, 7);
+        let y = create_from_rational(1, 3);
+        let result = sub(x, y);
+        // 9/7 - 1/3 = 20/21
+        let expected_result = create_from_rational(20, 21);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0x10006, location = Self)]
+    public entry fun test_sub_should_abort() {
+        let x = create_from_rational(1, 3);
+        let y = create_from_rational(9, 7);
+        let _ = sub(x, y);
+    }
+
+    #[test_only]
+    /// For functions that approximate a value it's useful to test a value is close
+    /// to the most correct value up to last digit
+    fun assert_approx_the_same(x: u256, y: u256, precission: u128) {
+        if (x < y) {
+            let tmp = x;
+            x = y;
+            y = tmp;
+        };
+        let mult = 1u256;
+        let n = 10u256;
+        while (precission > 0) {
+            if (precission % 2 == 1) {
+                mult = mult * n;
+            };
+            precission = precission / 2;
+            n = n * n;
+        };
+        assert!((x - y) * mult < x, 0);
+    }
+
+    #[test]
+    public entry fun test_div() {
+        let x = create_from_rational(9, 7);
+        let y = create_from_rational(1, 3);
+        let result = divide(x, y);
+        // 9/7 / 1/3 = 27/7
+        let expected_result = create_from_rational(27, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_div_u64() {
+        let x = create_from_rational(9, 7);
+        let y = 3u64;
+        let result = divide_u64(y, x);
+        // 3 / 9/7 = 21/9
+        let expected_result = create_from_rational(21, 9);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_div_u128() {
+        let x = create_from_rational(9, 7);
+        let y = 3u128;
+        let result = divide_u128(y, x);
+        // 3 / 9/7 = 21/9
+        let expected_result = create_from_rational(21, 9);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_multiply() {
+        let x = create_from_rational(9, 7);
+        let y = create_from_rational(1, 3);
+        let result = multiply(x, y);
+        // 9/7 * 1/3 = 3/7
+        let expected_result = create_from_rational(3, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_multiply_u64() {
+        let x = create_from_rational(9, 7);
+        let y = 3u64;
+        let result = multiply_u64(y, x);
+        // 3 * 9/7 = 27/7
+        let expected_result = create_from_rational(27, 7);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_multiply_u128() {
+        let x = create_from_rational(9, 7);
+        let y = 3u128;
+        let result = multiply_u128(y, x);
+        // 3 * 9/7 = 27/7
+        let expected_result = create_from_rational(27, 7);
+        assert_approx_the_same(
+            (result as u256),
+            (get_raw_value(expected_result) as u256) >> 64,
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_rev() {
+        let x = create_from_rational(9, 7);
+        let result = rev(x);
+        // 1 / 9/7 = 7/9
+        let expected_result = create_from_rational(7, 9);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_divide_by_u64() {
+        let x = create_from_rational(9, 7);
+        let y = 3u64;
+        let result = divide_by_u64(x, y);
+        // 9/7 / 3 = 3/7
+        let expected_result = create_from_rational(3, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
+    }
+
+    #[test]
+    public entry fun test_divide_by_u128() {
+        let x = create_from_rational(9, 7);
+        let y = 3u128;
+        let result = divide_by_u128(x, y);
+        // 9/7 / 3 = 3/7
+        let expected_result = create_from_rational(3, 7);
+        assert_approx_the_same(
+            (get_raw_value(result) as u256),
+            (get_raw_value(expected_result) as u256),
+            16
+        );
     }
 }

@@ -32,8 +32,7 @@ return big endian bytes of <code>u64</code>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="table_key.md#0x1_table_key_encode_u64">encode_u64</a>(key: u64): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
@@ -45,8 +44,6 @@ return big endian bytes of <code>u64</code>
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_table_key_decode_u64"></a>
 
@@ -60,8 +57,7 @@ return <code>u64</code> from the big endian key bytes
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="table_key.md#0x1_table_key_decode_u64">decode_u64</a>(key_bytes: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64 {
@@ -71,8 +67,6 @@ return <code>u64</code> from the big endian key bytes
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_table_key_encode_u128"></a>
 
@@ -86,8 +80,7 @@ return big endian bytes of <code>u128</code>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="table_key.md#0x1_table_key_encode_u128">encode_u128</a>(key: u128): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
@@ -99,8 +92,6 @@ return big endian bytes of <code>u128</code>
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_table_key_decode_u128"></a>
 
@@ -114,8 +105,7 @@ return <code>u128</code> from the big endian key bytes
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="table_key.md#0x1_table_key_decode_u128">decode_u128</a>(key_bytes: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): u128 {
@@ -125,8 +115,6 @@ return <code>u128</code> from the big endian key bytes
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_table_key_encode_u256"></a>
 
@@ -140,8 +128,7 @@ return big endian bytes of <code>u256</code>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="table_key.md#0x1_table_key_encode_u256">encode_u256</a>(key: u256): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
@@ -153,8 +140,6 @@ return big endian bytes of <code>u256</code>
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_table_key_decode_u256"></a>
 
@@ -168,8 +153,7 @@ return <code>u256</code> from the big endian key bytes
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="table_key.md#0x1_table_key_decode_u256">decode_u256</a>(key_bytes: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): u256 {
@@ -177,7 +161,3 @@ return <code>u256</code> from the big endian key bytes
     <a href="from_bcs.md#0x1_from_bcs_to_u256">from_bcs::to_u256</a>(key_bytes)
 }
 </code></pre>
-
-
-
-</details>

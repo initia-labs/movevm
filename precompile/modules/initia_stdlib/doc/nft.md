@@ -16,14 +16,12 @@ nft are:
 -  [Struct `MutationEvent`](#0x1_nft_MutationEvent)
 -  [Struct `NftInfoResponse`](#0x1_nft_NftInfoResponse)
 -  [Constants](#@Constants_0)
--  [Function `create_common`](#0x1_nft_create_common)
 -  [Function `create`](#0x1_nft_create)
 -  [Function `create_nft_address`](#0x1_nft_create_nft_address)
 -  [Function `create_nft_seed`](#0x1_nft_create_nft_seed)
 -  [Function `generate_mutator_ref`](#0x1_nft_generate_mutator_ref)
 -  [Function `generate_burn_ref`](#0x1_nft_generate_burn_ref)
 -  [Function `address_from_burn_ref`](#0x1_nft_address_from_burn_ref)
--  [Function `borrow`](#0x1_nft_borrow)
 -  [Function `is_nft`](#0x1_nft_is_nft)
 -  [Function `creator`](#0x1_nft_creator)
 -  [Function `collection_name`](#0x1_nft_collection_name)
@@ -34,7 +32,6 @@ nft are:
 -  [Function `royalty`](#0x1_nft_royalty)
 -  [Function `nft_info`](#0x1_nft_nft_info)
 -  [Function `nft_infos`](#0x1_nft_nft_infos)
--  [Function `borrow_mut`](#0x1_nft_borrow_mut)
 -  [Function `burn`](#0x1_nft_burn)
 -  [Function `set_description`](#0x1_nft_set_description)
 -  [Function `set_uri`](#0x1_nft_set_uri)
@@ -65,8 +62,7 @@ Represents the common fields to all nfts.
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -99,8 +95,6 @@ Represents the common fields to all nfts.
 </dl>
 
 
-</details>
-
 <a id="0x1_nft_BurnRef"></a>
 
 ## Struct `BurnRef`
@@ -115,8 +109,7 @@ a small optimization to support either and take a fixed amount of 34-bytes.
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -128,8 +121,6 @@ a small optimization to support either and take a fixed amount of 34-bytes.
 </dd>
 </dl>
 
-
-</details>
 
 <a id="0x1_nft_MutatorRef"></a>
 
@@ -143,8 +134,7 @@ This enables mutating descritpion and URI by higher level services.
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -156,8 +146,6 @@ This enables mutating descritpion and URI by higher level services.
 </dd>
 </dl>
 
-
-</details>
 
 <a id="0x1_nft_MutationEvent"></a>
 
@@ -173,8 +161,7 @@ directly understand the behavior in a writeset.
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -205,8 +192,6 @@ directly understand the behavior in a writeset.
 </dl>
 
 
-</details>
-
 <a id="0x1_nft_NftInfoResponse"></a>
 
 ## Struct `NftInfoResponse`
@@ -219,8 +204,7 @@ Struct for nft info query response
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -250,8 +234,6 @@ Struct for nft info query response
 </dd>
 </dl>
 
-
-</details>
 
 <a id="@Constants_0"></a>
 
@@ -302,6 +284,16 @@ The field being changed is not mutable
 
 
 <pre><code><b>const</b> <a href="nft.md#0x1_nft_EFIELD_NOT_MUTABLE">EFIELD_NOT_MUTABLE</a>: u64 = 3;
+</code></pre>
+
+
+
+<a id="0x1_nft_EINVALID_TOKEN_ID"></a>
+
+The provided token id is invalid
+
+
+<pre><code><b>const</b> <a href="nft.md#0x1_nft_EINVALID_TOKEN_ID">EINVALID_TOKEN_ID</a>: u64 = 9;
 </code></pre>
 
 
@@ -364,58 +356,6 @@ The query length is over the maximum length
 
 
 
-<a id="0x1_nft_create_common"></a>
-
-## Function `create_common`
-
-
-
-<pre><code><b>fun</b> <a href="nft.md#0x1_nft_create_common">create_common</a>(constructor_ref: &<a href="object.md#0x1_object_ConstructorRef">object::ConstructorRef</a>, creator_address: <b>address</b>, collection_name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, token_id: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="royalty.md#0x1_royalty_Royalty">royalty::Royalty</a>&gt;, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code>inline <b>fun</b> <a href="nft.md#0x1_nft_create_common">create_common</a>(
-    constructor_ref: &ConstructorRef,
-    creator_address: <b>address</b>,
-    collection_name: String,
-    description: String,
-    token_id: String,
-    <a href="royalty.md#0x1_royalty">royalty</a>: Option&lt;Royalty&gt;,
-    uri: String,
-) {
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&token_id) &lt;= <a href="nft.md#0x1_nft_MAX_NFT_TOKEN_ID_LENGTH">MAX_NFT_TOKEN_ID_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_ENFT_TOKEN_ID_TOO_LONG">ENFT_TOKEN_ID_TOO_LONG</a>));
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&description) &lt;= <a href="nft.md#0x1_nft_MAX_DESCRIPTION_LENGTH">MAX_DESCRIPTION_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_EDESCRIPTION_TOO_LONG">EDESCRIPTION_TOO_LONG</a>));
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&uri) &lt;= <a href="nft.md#0x1_nft_MAX_URI_LENGTH">MAX_URI_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_EURI_TOO_LONG">EURI_TOO_LONG</a>));
-
-    <b>let</b> object_signer = <a href="object.md#0x1_object_generate_signer">object::generate_signer</a>(constructor_ref);
-
-    <b>let</b> collection_addr = <a href="collection.md#0x1_collection_create_collection_address">collection::create_collection_address</a>(creator_address, &collection_name);
-    <b>let</b> <a href="collection.md#0x1_collection">collection</a> = <a href="object.md#0x1_object_address_to_object">object::address_to_object</a>&lt;Collection&gt;(collection_addr);
-    <a href="collection.md#0x1_collection_increment_supply">collection::increment_supply</a>(<a href="collection.md#0x1_collection">collection</a>, token_id, <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(&object_signer));
-
-    <b>let</b> <a href="nft.md#0x1_nft">nft</a> = <a href="nft.md#0x1_nft_Nft">Nft</a> {
-        <a href="collection.md#0x1_collection">collection</a>,
-        description,
-        token_id,
-        uri,
-    };
-    <b>move_to</b>(&object_signer, <a href="nft.md#0x1_nft">nft</a>);
-
-    <b>if</b> (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&<a href="royalty.md#0x1_royalty">royalty</a>)) {
-        <a href="royalty.md#0x1_royalty_init">royalty::init</a>(constructor_ref, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <a href="royalty.md#0x1_royalty">royalty</a>))
-    };
-}
-</code></pre>
-
-
-
-</details>
-
 <a id="0x1_nft_create"></a>
 
 ## Function `create`
@@ -429,8 +369,7 @@ additional specialization.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create">create</a>(
@@ -439,20 +378,26 @@ additional specialization.
     description: String,
     token_id: String,
     <a href="royalty.md#0x1_royalty">royalty</a>: Option&lt;Royalty&gt;,
-    uri: String,
+    uri: String
 ): ConstructorRef {
     <b>let</b> creator_address = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator);
     <b>let</b> seed = <a href="nft.md#0x1_nft_create_nft_seed">create_nft_seed</a>(&collection_name, &token_id);
 
-    <b>let</b> constructor_ref = <a href="object.md#0x1_object_create_named_object">object::create_named_object</a>(creator, seed, <b>true</b>);
-    <a href="nft.md#0x1_nft_create_common">create_common</a>(&constructor_ref, creator_address, collection_name, description, token_id, <a href="royalty.md#0x1_royalty">royalty</a>, uri);
+    <b>let</b> constructor_ref = <a href="object.md#0x1_object_create_deletable_named_object">object::create_deletable_named_object</a>(creator, seed);
+    <a href="nft.md#0x1_nft_create_common">create_common</a>(
+        &constructor_ref,
+        creator_address,
+        collection_name,
+        description,
+        token_id,
+        <a href="royalty.md#0x1_royalty">royalty</a>,
+        uri
+    );
     constructor_ref
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_create_nft_address"></a>
 
@@ -466,18 +411,20 @@ Generates the nft's address based upon the creator's address, the collection's n
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create_nft_address">create_nft_address</a>(creator: <b>address</b>, <a href="collection.md#0x1_collection">collection</a>: &String, token_id: &String): <b>address</b> {
-    <a href="object.md#0x1_object_create_object_address">object::create_object_address</a>(creator, <a href="nft.md#0x1_nft_create_nft_seed">create_nft_seed</a>(<a href="collection.md#0x1_collection">collection</a>, token_id))
+<pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create_nft_address">create_nft_address</a>(
+    creator: <b>address</b>, <a href="collection.md#0x1_collection">collection</a>: &String, token_id: &String
+): <b>address</b> {
+    <a href="object.md#0x1_object_create_object_address">object::create_object_address</a>(
+        &creator,
+        <a href="nft.md#0x1_nft_create_nft_seed">create_nft_seed</a>(<a href="collection.md#0x1_collection">collection</a>, token_id)
+    )
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_create_nft_seed"></a>
 
@@ -491,12 +438,14 @@ Named objects are derived from a seed, the nft's seed is its token_id appended t
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create_nft_seed">create_nft_seed</a>(<a href="collection.md#0x1_collection">collection</a>: &String, token_id: &String): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt; {
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(token_id) &lt;= <a href="nft.md#0x1_nft_MAX_NFT_TOKEN_ID_LENGTH">MAX_NFT_TOKEN_ID_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_ENFT_TOKEN_ID_TOO_LONG">ENFT_TOKEN_ID_TOO_LONG</a>));
+    <b>assert</b>!(
+        <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(token_id) &lt;= <a href="nft.md#0x1_nft_MAX_NFT_TOKEN_ID_LENGTH">MAX_NFT_TOKEN_ID_LENGTH</a>,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_ENFT_TOKEN_ID_TOO_LONG">ENFT_TOKEN_ID_TOO_LONG</a>)
+    );
     <b>let</b> seed = *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(<a href="collection.md#0x1_collection">collection</a>);
     <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_append">vector::append</a>(&<b>mut</b> seed, b"::");
     <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_append">vector::append</a>(&<b>mut</b> seed, *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(token_id));
@@ -505,8 +454,6 @@ Named objects are derived from a seed, the nft's seed is its token_id appended t
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_generate_mutator_ref"></a>
 
@@ -520,19 +467,16 @@ Creates a MutatorRef, which gates the ability to mutate any fields that support 
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_generate_mutator_ref">generate_mutator_ref</a>(ref: &ConstructorRef): <a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a> {
     <b>let</b> <a href="object.md#0x1_object">object</a> = <a href="object.md#0x1_object_object_from_constructor_ref">object::object_from_constructor_ref</a>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(ref);
-    <a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a> { self: <a href="object.md#0x1_object_object_address">object::object_address</a>(<a href="object.md#0x1_object">object</a>) }
+    <a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a> { self: <a href="object.md#0x1_object_object_address">object::object_address</a>(&<a href="object.md#0x1_object">object</a>) }
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_generate_burn_ref"></a>
 
@@ -546,8 +490,7 @@ Creates a BurnRef, which gates the ability to burn the given nft.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_generate_burn_ref">generate_burn_ref</a>(ref: &ConstructorRef): <a href="nft.md#0x1_nft_BurnRef">BurnRef</a> {
@@ -557,8 +500,6 @@ Creates a BurnRef, which gates the ability to burn the given nft.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_address_from_burn_ref"></a>
 
@@ -572,8 +513,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_address_from_burn_ref">address_from_burn_ref</a>(ref: &<a href="nft.md#0x1_nft_BurnRef">BurnRef</a>): <b>address</b> {
@@ -582,37 +522,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
-
-<a id="0x1_nft_borrow"></a>
-
-## Function `borrow`
-
-
-
-<pre><code><b>fun</b> <a href="nft.md#0x1_nft_borrow">borrow</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;): &<a href="nft.md#0x1_nft_Nft">nft::Nft</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code>inline <b>fun</b> <a href="nft.md#0x1_nft_borrow">borrow</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): &<a href="nft.md#0x1_nft_Nft">Nft</a> <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
-    <b>let</b> nft_address = <a href="object.md#0x1_object_object_address">object::object_address</a>(<a href="nft.md#0x1_nft">nft</a>);
-    <b>assert</b>!(
-        <b>exists</b>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(nft_address),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="nft.md#0x1_nft_ENFT_DOES_NOT_EXIST">ENFT_DOES_NOT_EXIST</a>),
-    );
-    <b>borrow_global</b>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(nft_address)
-}
-</code></pre>
-
-
-
-</details>
 
 <a id="0x1_nft_is_nft"></a>
 
@@ -626,8 +535,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_is_nft">is_nft</a>(object_address: <b>address</b>): bool {
@@ -636,8 +544,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_creator"></a>
 
@@ -651,8 +557,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_creator">creator</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): <b>address</b> <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -661,8 +566,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_collection_name"></a>
 
@@ -676,8 +579,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_collection_name">collection_name</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): String <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -686,8 +588,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_collection_object"></a>
 
@@ -701,8 +601,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_collection_object">collection_object</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): Object&lt;Collection&gt; <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -711,8 +610,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_description"></a>
 
@@ -726,8 +623,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_description">description</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): String <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -736,8 +632,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_token_id"></a>
 
@@ -751,8 +645,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_token_id">token_id</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): String <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -761,8 +654,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_uri"></a>
 
@@ -776,8 +667,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_uri">uri</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): String <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -786,8 +676,6 @@ Extracts the nfts address from a BurnRef.
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_royalty"></a>
 
@@ -801,8 +689,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="royalty.md#0x1_royalty">royalty</a>&lt;T: key&gt;(<a href="nft.md#0x1_nft">nft</a>: Object&lt;T&gt;): Option&lt;Royalty&gt; <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -813,16 +700,16 @@ Extracts the nfts address from a BurnRef.
     } <b>else</b> {
         <b>let</b> creator = <a href="nft.md#0x1_nft_creator">creator</a>(<a href="nft.md#0x1_nft">nft</a>);
         <b>let</b> collection_name = <a href="nft.md#0x1_nft_collection_name">collection_name</a>(<a href="nft.md#0x1_nft">nft</a>);
-        <b>let</b> collection_address = <a href="collection.md#0x1_collection_create_collection_address">collection::create_collection_address</a>(creator, &collection_name);
-        <b>let</b> <a href="collection.md#0x1_collection">collection</a> = <a href="object.md#0x1_object_address_to_object">object::address_to_object</a>&lt;<a href="collection.md#0x1_collection_Collection">collection::Collection</a>&gt;(collection_address);
+        <b>let</b> collection_address =
+            <a href="collection.md#0x1_collection_create_collection_address">collection::create_collection_address</a>(creator, &collection_name);
+        <b>let</b> <a href="collection.md#0x1_collection">collection</a> =
+            <a href="object.md#0x1_object_address_to_object">object::address_to_object</a>&lt;<a href="collection.md#0x1_collection_Collection">collection::Collection</a>&gt;(collection_address);
         <a href="royalty.md#0x1_royalty_get">royalty::get</a>(<a href="collection.md#0x1_collection">collection</a>)
     }
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_nft_info"></a>
 
@@ -836,8 +723,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_nft_info">nft_info</a>(<a href="nft.md#0x1_nft">nft</a>: Object&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;): <a href="nft.md#0x1_nft_NftInfoResponse">NftInfoResponse</a> <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -846,14 +732,12 @@ Extracts the nfts address from a BurnRef.
         <a href="collection.md#0x1_collection">collection</a>: <a href="nft.md#0x1_nft">nft</a>.<a href="collection.md#0x1_collection">collection</a>,
         description: <a href="nft.md#0x1_nft">nft</a>.description,
         token_id: <a href="nft.md#0x1_nft">nft</a>.token_id,
-        uri: <a href="nft.md#0x1_nft">nft</a>.uri,
+        uri: <a href="nft.md#0x1_nft">nft</a>.uri
     }
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_nft_infos"></a>
 
@@ -867,13 +751,15 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_nft_infos">nft_infos</a>(nfts: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;Object&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;&gt;): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="nft.md#0x1_nft_NftInfoResponse">NftInfoResponse</a>&gt; <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
     <b>let</b> len = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&nfts);
-    <b>assert</b>!(len &lt;= <a href="nft.md#0x1_nft_MAX_QUERY_LENGTH">MAX_QUERY_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="nft.md#0x1_nft_EQUERY_LENGTH_TOO_LONG">EQUERY_LENGTH_TOO_LONG</a>));
+    <b>assert</b>!(
+        len &lt;= <a href="nft.md#0x1_nft_MAX_QUERY_LENGTH">MAX_QUERY_LENGTH</a>,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="nft.md#0x1_nft_EQUERY_LENGTH_TOO_LONG">EQUERY_LENGTH_TOO_LONG</a>)
+    );
     <b>let</b> index = 0;
     <b>let</b> res: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="nft.md#0x1_nft_NftInfoResponse">NftInfoResponse</a>&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
     <b>while</b> (index &lt; len) {
@@ -888,36 +774,6 @@ Extracts the nfts address from a BurnRef.
 
 
 
-</details>
-
-<a id="0x1_nft_borrow_mut"></a>
-
-## Function `borrow_mut`
-
-
-
-<pre><code><b>fun</b> <a href="nft.md#0x1_nft_borrow_mut">borrow_mut</a>(mutator_ref: &<a href="nft.md#0x1_nft_MutatorRef">nft::MutatorRef</a>): &<b>mut</b> <a href="nft.md#0x1_nft_Nft">nft::Nft</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code>inline <b>fun</b> <a href="nft.md#0x1_nft_borrow_mut">borrow_mut</a>(mutator_ref: &<a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a>): &<b>mut</b> <a href="nft.md#0x1_nft_Nft">Nft</a> <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
-    <b>assert</b>!(
-        <b>exists</b>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(mutator_ref.self),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="nft.md#0x1_nft_ENFT_DOES_NOT_EXIST">ENFT_DOES_NOT_EXIST</a>),
-    );
-    <b>borrow_global_mut</b>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(mutator_ref.self)
-}
-</code></pre>
-
-
-
-</details>
-
 <a id="0x1_nft_burn"></a>
 
 ## Function `burn`
@@ -929,8 +785,7 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_burn">burn</a>(burn_ref: <a href="nft.md#0x1_nft_BurnRef">BurnRef</a>) <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
@@ -942,20 +797,13 @@ Extracts the nfts address from a BurnRef.
         <a href="royalty.md#0x1_royalty_delete">royalty::delete</a>(addr)
     };
 
-    <b>let</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
-        <a href="collection.md#0x1_collection">collection</a>,
-        description: _,
-        token_id,
-        uri: _,
-    } = <b>move_from</b>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(addr);
+    <b>let</b> <a href="nft.md#0x1_nft_Nft">Nft</a> { <a href="collection.md#0x1_collection">collection</a>, description: _, token_id, uri: _ } = <b>move_from</b>&lt;<a href="nft.md#0x1_nft_Nft">Nft</a>&gt;(addr);
 
     <a href="collection.md#0x1_collection_decrement_supply">collection::decrement_supply</a>(<a href="collection.md#0x1_collection">collection</a>, token_id, addr);
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_set_description"></a>
 
@@ -968,12 +816,16 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_set_description">set_description</a>(mutator_ref: &<a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a>, description: String) <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&description) &lt;= <a href="nft.md#0x1_nft_MAX_DESCRIPTION_LENGTH">MAX_DESCRIPTION_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_EDESCRIPTION_TOO_LONG">EDESCRIPTION_TOO_LONG</a>));
+<pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_set_description">set_description</a>(
+    mutator_ref: &<a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a>, description: String
+) <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
+    <b>assert</b>!(
+        <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&description) &lt;= <a href="nft.md#0x1_nft_MAX_DESCRIPTION_LENGTH">MAX_DESCRIPTION_LENGTH</a>,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_EDESCRIPTION_TOO_LONG">EDESCRIPTION_TOO_LONG</a>)
+    );
     <b>let</b> <a href="nft.md#0x1_nft">nft</a> = <a href="nft.md#0x1_nft_borrow_mut">borrow_mut</a>(mutator_ref);
     <a href="event.md#0x1_event_emit">event::emit</a>(
         <a href="nft.md#0x1_nft_MutationEvent">MutationEvent</a> {
@@ -981,15 +833,13 @@ Extracts the nfts address from a BurnRef.
             mutated_field_name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"description"),
             old_value: <a href="nft.md#0x1_nft">nft</a>.description,
             new_value: description
-        },
+        }
     );
     <a href="nft.md#0x1_nft">nft</a>.description = description;
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_nft_set_uri"></a>
 
@@ -1002,25 +852,23 @@ Extracts the nfts address from a BurnRef.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_set_uri">set_uri</a>(mutator_ref: &<a href="nft.md#0x1_nft_MutatorRef">MutatorRef</a>, uri: String) <b>acquires</b> <a href="nft.md#0x1_nft_Nft">Nft</a> {
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&uri) &lt;= <a href="nft.md#0x1_nft_MAX_URI_LENGTH">MAX_URI_LENGTH</a>, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_EURI_TOO_LONG">EURI_TOO_LONG</a>));
+    <b>assert</b>!(
+        <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_length">string::length</a>(&uri) &lt;= <a href="nft.md#0x1_nft_MAX_URI_LENGTH">MAX_URI_LENGTH</a>,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_out_of_range">error::out_of_range</a>(<a href="nft.md#0x1_nft_EURI_TOO_LONG">EURI_TOO_LONG</a>)
+    );
     <b>let</b> <a href="nft.md#0x1_nft">nft</a> = <a href="nft.md#0x1_nft_borrow_mut">borrow_mut</a>(mutator_ref);
     <a href="event.md#0x1_event_emit">event::emit</a>(
         <a href="nft.md#0x1_nft_MutationEvent">MutationEvent</a> {
             <a href="nft.md#0x1_nft">nft</a>: mutator_ref.self,
             mutated_field_name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"uri"),
             old_value: <a href="nft.md#0x1_nft">nft</a>.uri,
-            new_value: uri,
-        },
+            new_value: uri
+        }
     );
     <a href="nft.md#0x1_nft">nft</a>.uri = uri;
 }
 </code></pre>
-
-
-
-</details>

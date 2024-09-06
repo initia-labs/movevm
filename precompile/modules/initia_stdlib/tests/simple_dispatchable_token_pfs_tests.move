@@ -16,7 +16,7 @@ module initia_std::simple_token_pfs_tests {
         deposit_with_ref,
         withdraw_with_ref,
         primary_store_exists,
-        ensure_primary_store_exists,
+        ensure_primary_store_exists
     };
     use 0xcafe::simple_token;
     use std::signer;
@@ -42,7 +42,7 @@ module initia_std::simple_token_pfs_tests {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_basic_flow(creator: &signer, aaron: &signer,) {
+    fun test_basic_flow(creator: &signer, aaron: &signer) {
         let (creator_ref, metadata) = create_test_token(creator);
         let (mint_ref, transfer_ref, burn_ref) =
             init_test_metadata_with_primary_store_enabled(&creator_ref);
@@ -71,7 +71,7 @@ module initia_std::simple_token_pfs_tests {
 
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_basic_flow_with_min_balance(
-        creator: &signer, aaron: &signer,
+        creator: &signer, aaron: &signer
     ) {
         let (creator_ref, metadata) = create_test_token(creator);
         let (mint_ref, _transfer_ref, _) =

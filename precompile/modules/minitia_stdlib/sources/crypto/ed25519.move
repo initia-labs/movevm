@@ -44,7 +44,7 @@ module minitia_std::ed25519 {
     public fun public_key_from_bytes(bytes: vector<u8>): PublicKey {
         assert!(
             std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
-            std::error::invalid_argument(PUBLIC_KEY_SIZE),
+            std::error::invalid_argument(PUBLIC_KEY_SIZE)
         );
         PublicKey { bytes }
     }
@@ -53,7 +53,7 @@ module minitia_std::ed25519 {
     public fun signature_from_bytes(bytes: vector<u8>): Signature {
         assert!(
             std::vector::length(&bytes) == SIGNATURE_SIZE,
-            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE),
+            std::error::invalid_argument(E_WRONG_SIGNATURE_SIZE)
         );
         Signature { bytes }
     }
@@ -70,14 +70,12 @@ module minitia_std::ed25519 {
 
     /// Verifies a Ed25519 `signature` under an `public_key` on the specified `message`.
     public fun verify(
-        message: vector<u8>,
-        public_key: &PublicKey,
-        signature: &Signature,
+        message: vector<u8>, public_key: &PublicKey, signature: &Signature
     ): bool {
         verify_internal(
             message,
             public_key.bytes,
-            signature.bytes,
+            signature.bytes
         )
     }
 
@@ -100,7 +98,7 @@ module minitia_std::ed25519 {
     public fun batch_verify(
         messages: vector<vector<u8>>,
         public_keys: vector<PublicKey>,
-        signatures: vector<Signature>,
+        signatures: vector<Signature>
     ): bool {
         let message_length = std::vector::length(&messages);
         let public_key_length = std::vector::length(&public_keys);
@@ -109,19 +107,20 @@ module minitia_std::ed25519 {
         if (message_length == 1) {
             assert!(
                 public_key_length == signature_length,
-                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH),
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH)
             );
             if (public_key_length == 0) return true;
         } else if (public_key_length == 1) {
             assert!(
                 message_length == signature_length,
-                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH),
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH)
             );
             if (message_length == 0) return true;
         } else {
             assert!(
-                message_length == public_key_length && public_key_length == signature_length,
-                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH),
+                message_length == public_key_length
+                    && public_key_length == signature_length,
+                std::error::invalid_argument(E_UNMATCHED_ARGS_LENGTH)
             );
             if (message_length == 0) return true;
         };

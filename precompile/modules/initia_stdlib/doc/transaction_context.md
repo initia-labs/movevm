@@ -25,16 +25,13 @@ Return a transaction hash of this execution.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="transaction_context.md#0x1_transaction_context_get_transaction_hash">get_transaction_hash</a>(): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;;
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_transaction_context_generate_unique_address"></a>
 
@@ -52,13 +49,8 @@ the sequence number and generates a new unique address.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="transaction_context.md#0x1_transaction_context_generate_unique_address">generate_unique_address</a>(): <b>address</b>;
 </code></pre>
-
-
-
-</details>

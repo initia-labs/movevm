@@ -11,17 +11,20 @@
 -  [Struct `ModulePublishedEvent`](#0x1_code_ModulePublishedEvent)
 -  [Constants](#@Constants_0)
 -  [Function `can_change_upgrade_policy_to`](#0x1_code_can_change_upgrade_policy_to)
--  [Function `init_module`](#0x1_code_init_module)
+-  [Function `allowed_publishers`](#0x1_code_allowed_publishers)
+-  [Function `total_modules`](#0x1_code_total_modules)
 -  [Function `init_genesis`](#0x1_code_init_genesis)
 -  [Function `set_allowed_publishers`](#0x1_code_set_allowed_publishers)
--  [Function `assert_allowed`](#0x1_code_assert_allowed)
+-  [Function `freeze_code_object`](#0x1_code_freeze_code_object)
 -  [Function `publish`](#0x1_code_publish)
--  [Function `request_publish`](#0x1_code_request_publish)
 
 
 <pre><code><b>use</b> <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error">0x1::error</a>;
 <b>use</b> <a href="event.md#0x1_event">0x1::event</a>;
+<b>use</b> <a href="object.md#0x1_object">0x1::object</a>;
+<b>use</b> <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option">0x1::option</a>;
 <b>use</b> <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">0x1::signer</a>;
+<b>use</b> <a href="simple_map.md#0x1_simple_map">0x1::simple_map</a>;
 <b>use</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string">0x1::string</a>;
 <b>use</b> <a href="table.md#0x1_table">0x1::table</a>;
 <b>use</b> <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">0x1::vector</a>;
@@ -40,8 +43,7 @@
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -52,10 +54,14 @@
  It is a list of addresses with permission to distribute contracts,
  and an empty list is interpreted as allowing anyone to distribute.
 </dd>
+<dt>
+<code>total_modules: u64</code>
+</dt>
+<dd>
+ The total number of modules published.
+</dd>
 </dl>
 
-
-</details>
 
 <a id="0x1_code_MetadataStore"></a>
 
@@ -68,8 +74,7 @@
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -81,8 +86,6 @@
 </dd>
 </dl>
 
-
-</details>
 
 <a id="0x1_code_ModuleMetadata"></a>
 
@@ -96,8 +99,7 @@ Describes an upgrade policy
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -109,8 +111,6 @@ Describes an upgrade policy
 </dd>
 </dl>
 
-
-</details>
 
 <a id="0x1_code_ModulePublishedEvent"></a>
 
@@ -124,8 +124,7 @@ Describes an upgrade policy
 
 
 
-<details>
-<summary>Fields</summary>
+##### Fields
 
 
 <dl>
@@ -144,11 +143,29 @@ Describes an upgrade policy
 </dl>
 
 
-</details>
-
 <a id="@Constants_0"></a>
 
 ## Constants
+
+
+<a id="0x1_code_ECODE_OBJECT_DOES_NOT_EXIST"></a>
+
+<code>code_object</code> does not exist.
+
+
+<pre><code><b>const</b> <a href="code.md#0x1_code_ECODE_OBJECT_DOES_NOT_EXIST">ECODE_OBJECT_DOES_NOT_EXIST</a>: u64 = 9;
+</code></pre>
+
+
+
+<a id="0x1_code_EDUPLICATE_MODULE_ID"></a>
+
+The module ID is duplicated.
+
+
+<pre><code><b>const</b> <a href="code.md#0x1_code_EDUPLICATE_MODULE_ID">EDUPLICATE_MODULE_ID</a>: u64 = 7;
+</code></pre>
+
 
 
 <a id="0x1_code_EINVALID_ALLOWED_PUBLISHERS"></a>
@@ -177,6 +194,16 @@ The operation is expected to be executed by chain signer.
 
 
 <pre><code><b>const</b> <a href="code.md#0x1_code_EINVALID_CHAIN_OPERATOR">EINVALID_CHAIN_OPERATOR</a>: u64 = 5;
+</code></pre>
+
+
+
+<a id="0x1_code_ENOT_PACKAGE_OWNER"></a>
+
+Not the owner of the package registry.
+
+
+<pre><code><b>const</b> <a href="code.md#0x1_code_ENOT_PACKAGE_OWNER">ENOT_PACKAGE_OWNER</a>: u64 = 8;
 </code></pre>
 
 
@@ -232,16 +259,6 @@ Whether the modules in the package are immutable and cannot be upgraded.
 
 
 
-<a id="0x1_code_UPGRADE_POLICY_UNSPECIFIED"></a>
-
-The upgrade policy is unspecified.
-
-
-<pre><code><b>const</b> <a href="code.md#0x1_code_UPGRADE_POLICY_UNSPECIFIED">UPGRADE_POLICY_UNSPECIFIED</a>: u8 = 0;
-</code></pre>
-
-
-
 <a id="0x1_code_can_change_upgrade_policy_to"></a>
 
 ## Function `can_change_upgrade_policy_to`
@@ -255,8 +272,7 @@ strengthened but not weakened.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="code.md#0x1_code_can_change_upgrade_policy_to">can_change_upgrade_policy_to</a>(from: u8, <b>to</b>: u8): bool {
@@ -266,33 +282,51 @@ strengthened but not weakened.
 
 
 
-</details>
+<a id="0x1_code_allowed_publishers"></a>
 
-<a id="0x1_code_init_module"></a>
-
-## Function `init_module`
+## Function `allowed_publishers`
 
 
 
-<pre><code><b>fun</b> <a href="code.md#0x1_code_init_module">init_module</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>)
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="code.md#0x1_code_allowed_publishers">allowed_publishers</a>(): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>fun</b> <a href="code.md#0x1_code_init_module">init_module</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>) {
-    <b>move_to</b>(chain, <a href="code.md#0x1_code_ModuleStore">ModuleStore</a> {
-        allowed_publishers: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[],
-    });
+<pre><code><b>public</b> <b>fun</b> <a href="code.md#0x1_code_allowed_publishers">allowed_publishers</a>(): <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt; <b>acquires</b> <a href="code.md#0x1_code_ModuleStore">ModuleStore</a> {
+    <b>let</b> module_store = <b>borrow_global</b>&lt;<a href="code.md#0x1_code_ModuleStore">ModuleStore</a>&gt;(@minitia_std);
+    module_store.allowed_publishers
 }
 </code></pre>
 
 
 
-</details>
+<a id="0x1_code_total_modules"></a>
+
+## Function `total_modules`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="code.md#0x1_code_total_modules">total_modules</a>(): u64
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="code.md#0x1_code_total_modules">total_modules</a>(): u64 <b>acquires</b> <a href="code.md#0x1_code_ModuleStore">ModuleStore</a> {
+    <b>let</b> module_store = <b>borrow_global</b>&lt;<a href="code.md#0x1_code_ModuleStore">ModuleStore</a>&gt;(@minitia_std);
+    module_store.total_modules
+}
+</code></pre>
+
+
 
 <a id="0x1_code_init_genesis"></a>
 
@@ -305,37 +339,40 @@ strengthened but not weakened.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="code.md#0x1_code_init_genesis">init_genesis</a>(
-    chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
-    module_ids: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
-    allowed_publishers: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;,
+    chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, module_ids: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;, allowed_publishers: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;
 ) <b>acquires</b> <a href="code.md#0x1_code_ModuleStore">ModuleStore</a> {
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain) == @minitia_std, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="code.md#0x1_code_EINVALID_CHAIN_OPERATOR">EINVALID_CHAIN_OPERATOR</a>));
+    <b>assert</b>!(
+        <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain) == @minitia_std,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="code.md#0x1_code_EINVALID_CHAIN_OPERATOR">EINVALID_CHAIN_OPERATOR</a>)
+    );
 
     <b>let</b> metadata_table = <a href="table.md#0x1_table_new">table::new</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;();
-    <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(&module_ids,
+    <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(
+        &module_ids,
         |module_id| {
-            <a href="table.md#0x1_table_add">table::add</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(&<b>mut</b> metadata_table, *module_id, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a> {
-                upgrade_policy: <a href="code.md#0x1_code_UPGRADE_POLICY_COMPATIBLE">UPGRADE_POLICY_COMPATIBLE</a>,
-            });
+            <a href="table.md#0x1_table_add">table::add</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(
+                &<b>mut</b> metadata_table,
+                *module_id,
+                <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a> { upgrade_policy: <a href="code.md#0x1_code_UPGRADE_POLICY_COMPATIBLE">UPGRADE_POLICY_COMPATIBLE</a> }
+            );
         }
     );
 
-    <b>move_to</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(chain, <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> {
-        metadata: metadata_table,
-    });
+    <b>move_to</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(
+        chain,
+        <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> { metadata: metadata_table }
+    );
 
     <a href="code.md#0x1_code_set_allowed_publishers">set_allowed_publishers</a>(chain, allowed_publishers);
+    <a href="code.md#0x1_code_increase_total_modules">increase_total_modules</a>(<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&module_ids));
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_code_set_allowed_publishers"></a>
 
@@ -348,12 +385,16 @@ strengthened but not weakened.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>public</b> entry <b>fun</b> <a href="code.md#0x1_code_set_allowed_publishers">set_allowed_publishers</a>(chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, allowed_publishers: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;) <b>acquires</b> <a href="code.md#0x1_code_ModuleStore">ModuleStore</a> {
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain) == @minitia_std, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="code.md#0x1_code_EINVALID_CHAIN_OPERATOR">EINVALID_CHAIN_OPERATOR</a>));
+<pre><code><b>public</b> entry <b>fun</b> <a href="code.md#0x1_code_set_allowed_publishers">set_allowed_publishers</a>(
+    chain: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, allowed_publishers: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;
+) <b>acquires</b> <a href="code.md#0x1_code_ModuleStore">ModuleStore</a> {
+    <b>assert</b>!(
+        <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain) == @minitia_std,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="code.md#0x1_code_EINVALID_CHAIN_OPERATOR">EINVALID_CHAIN_OPERATOR</a>)
+    );
     <a href="code.md#0x1_code_assert_allowed">assert_allowed</a>(&allowed_publishers, @minitia_std);
 
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_ModuleStore">ModuleStore</a>&gt;(@minitia_std);
@@ -363,34 +404,47 @@ strengthened but not weakened.
 
 
 
-</details>
+<a id="0x1_code_freeze_code_object"></a>
 
-<a id="0x1_code_assert_allowed"></a>
-
-## Function `assert_allowed`
+## Function `freeze_code_object`
 
 
 
-<pre><code><b>fun</b> <a href="code.md#0x1_code_assert_allowed">assert_allowed</a>(allowed_publishers: &<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;, addr: <b>address</b>)
+<pre><code><b>public</b> <b>fun</b> <a href="code.md#0x1_code_freeze_code_object">freeze_code_object</a>(publisher: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, code_object: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="code.md#0x1_code_MetadataStore">code::MetadataStore</a>&gt;)
 </code></pre>
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
-<pre><code><b>fun</b> <a href="code.md#0x1_code_assert_allowed">assert_allowed</a>(allowed_publishers: &<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<b>address</b>&gt;, addr: <b>address</b>) {
+<pre><code><b>public</b> <b>fun</b> <a href="code.md#0x1_code_freeze_code_object">freeze_code_object</a>(
+    publisher: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, code_object: Object&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;
+) <b>acquires</b> <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> {
+    <b>let</b> code_object_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&code_object);
     <b>assert</b>!(
-        <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_is_empty">vector::is_empty</a>(allowed_publishers) || <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_contains">vector::contains</a>(allowed_publishers, &addr),
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EINVALID_ALLOWED_PUBLISHERS">EINVALID_ALLOWED_PUBLISHERS</a>),
-    )
+        <b>exists</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(code_object_addr),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="code.md#0x1_code_ECODE_OBJECT_DOES_NOT_EXIST">ECODE_OBJECT_DOES_NOT_EXIST</a>)
+    );
+    <b>assert</b>!(
+        <a href="object.md#0x1_object_is_owner">object::is_owner</a>(code_object, <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(publisher)),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="code.md#0x1_code_ENOT_PACKAGE_OWNER">ENOT_PACKAGE_OWNER</a>)
+    );
+
+    <b>let</b> registry = <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(code_object_addr);
+    <b>let</b> iter = <a href="table.md#0x1_table_iter_mut">table::iter_mut</a>(
+        &<b>mut</b> registry.metadata, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), 1
+    );
+    <b>loop</b> {
+        <b>if</b> (!<a href="table.md#0x1_table_prepare_mut">table::prepare_mut</a>(iter)) { <b>break</b> };
+
+        <b>let</b> (_, metadata) = <a href="table.md#0x1_table_next_mut">table::next_mut</a>(iter);
+        metadata.upgrade_policy = <a href="code.md#0x1_code_UPGRADE_POLICY_IMMUTABLE">UPGRADE_POLICY_IMMUTABLE</a>;
+    }
 }
 </code></pre>
 
 
-
-</details>
 
 <a id="0x1_code_publish"></a>
 
@@ -405,93 +459,95 @@ package.
 
 
 
-<details>
-<summary>Implementation</summary>
+##### Implementation
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="code.md#0x1_code_publish">publish</a>(
     owner: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
     module_ids: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;, // <a href="coin.md#0x1_coin">0x1::coin</a>
     <a href="code.md#0x1_code">code</a>: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;,
-    upgrade_policy: u8,
+    upgrade_policy: u8
 ) <b>acquires</b> <a href="code.md#0x1_code_ModuleStore">ModuleStore</a>, <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> {
     // Disallow incompatible upgrade mode. Governance can decide later <b>if</b> this should be reconsidered.
-    <b>assert</b>!(<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&<a href="code.md#0x1_code">code</a>) == <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&module_ids), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EINVALID_ARGUMENTS">EINVALID_ARGUMENTS</a>));
+    <b>assert</b>!(
+        <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&<a href="code.md#0x1_code">code</a>) == <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&module_ids),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EINVALID_ARGUMENTS">EINVALID_ARGUMENTS</a>)
+    );
+
+    // duplication check
+    <b>let</b> module_ids_set = <a href="simple_map.md#0x1_simple_map_create">simple_map::create</a>&lt;String, bool&gt;();
+    <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(
+        &module_ids,
+        |module_id| {
+            <b>assert</b>!(
+                !<a href="simple_map.md#0x1_simple_map_contains_key">simple_map::contains_key</a>(&module_ids_set, module_id),
+                <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EDUPLICATE_MODULE_ID">EDUPLICATE_MODULE_ID</a>)
+            );
+            <a href="simple_map.md#0x1_simple_map_add">simple_map::add</a>(
+                &<b>mut</b> module_ids_set,
+                *module_id,
+                <b>true</b>
+            );
+        }
+    );
 
     // Check whether arbitrary publish is allowed or not.
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_ModuleStore">ModuleStore</a>&gt;(@minitia_std);
     <b>assert</b>!(
-        upgrade_policy &gt; <a href="code.md#0x1_code_UPGRADE_POLICY_UNSPECIFIED">UPGRADE_POLICY_UNSPECIFIED</a>,
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_POLICY_UNSPECIFIED">EUPGRADE_POLICY_UNSPECIFIED</a>),
+        upgrade_policy == <a href="code.md#0x1_code_UPGRADE_POLICY_COMPATIBLE">UPGRADE_POLICY_COMPATIBLE</a>
+            || upgrade_policy == <a href="code.md#0x1_code_UPGRADE_POLICY_IMMUTABLE">UPGRADE_POLICY_IMMUTABLE</a>,
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_POLICY_UNSPECIFIED">EUPGRADE_POLICY_UNSPECIFIED</a>)
     );
 
     <b>let</b> addr = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(owner);
     <a href="code.md#0x1_code_assert_allowed">assert_allowed</a>(&module_store.allowed_publishers, addr);
 
     <b>if</b> (!<b>exists</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(addr)) {
-        <b>move_to</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(owner, <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> {
-            metadata: <a href="table.md#0x1_table_new">table::new</a>(),
-        });
+        <b>move_to</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(
+            owner,
+            <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> { metadata: <a href="table.md#0x1_table_new">table::new</a>() }
+        );
     };
 
     // Check upgradability
     <b>let</b> metadata_table = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(addr).metadata;
-    <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(&module_ids,
+    <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(
+        &module_ids,
         |module_id| {
             <b>if</b> (<a href="table.md#0x1_table_contains">table::contains</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(metadata_table, *module_id)) {
-                <b>let</b> metadata = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(metadata_table, *module_id);
-                <b>assert</b>!(metadata.upgrade_policy &lt; <a href="code.md#0x1_code_UPGRADE_POLICY_IMMUTABLE">UPGRADE_POLICY_IMMUTABLE</a>,
-                    <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_IMMUTABLE">EUPGRADE_IMMUTABLE</a>));
-                <b>assert</b>!(<a href="code.md#0x1_code_can_change_upgrade_policy_to">can_change_upgrade_policy_to</a>(metadata.upgrade_policy, upgrade_policy),
-                    <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_WEAKER_POLICY">EUPGRADE_WEAKER_POLICY</a>));
+                <b>let</b> metadata =
+                    <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(
+                        metadata_table, *module_id
+                    );
+                <b>assert</b>!(
+                    metadata.upgrade_policy &lt; <a href="code.md#0x1_code_UPGRADE_POLICY_IMMUTABLE">UPGRADE_POLICY_IMMUTABLE</a>,
+                    <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_IMMUTABLE">EUPGRADE_IMMUTABLE</a>)
+                );
+                <b>assert</b>!(
+                    <a href="code.md#0x1_code_can_change_upgrade_policy_to">can_change_upgrade_policy_to</a>(
+                        metadata.upgrade_policy,
+                        upgrade_policy
+                    ),
+                    <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_WEAKER_POLICY">EUPGRADE_WEAKER_POLICY</a>)
+                );
 
                 metadata.upgrade_policy = upgrade_policy;
             } <b>else</b> {
-                <a href="table.md#0x1_table_add">table::add</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(metadata_table, *module_id, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a> {
-                    upgrade_policy,
-                });
+                <a href="table.md#0x1_table_add">table::add</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;(
+                    metadata_table,
+                    *module_id,
+                    <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a> { upgrade_policy }
+                );
             };
 
-            <a href="event.md#0x1_event_emit">event::emit</a>(<a href="code.md#0x1_code_ModulePublishedEvent">ModulePublishedEvent</a> {
-                module_id: *module_id,
-                upgrade_policy,
-            });
+            <a href="event.md#0x1_event_emit">event::emit</a>(
+                <a href="code.md#0x1_code_ModulePublishedEvent">ModulePublishedEvent</a> { module_id: *module_id, upgrade_policy }
+            );
         }
     );
 
     // Request publish
-    <a href="code.md#0x1_code_request_publish">request_publish</a>(addr, module_ids, <a href="code.md#0x1_code">code</a>, upgrade_policy)
+    <a href="code.md#0x1_code_increase_total_modules">increase_total_modules</a>(<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&module_ids));
+    <a href="code.md#0x1_code_request_publish">request_publish</a>(addr, module_ids, <a href="code.md#0x1_code">code</a>)
 }
 </code></pre>
-
-
-
-</details>
-
-<a id="0x1_code_request_publish"></a>
-
-## Function `request_publish`
-
-Native function to initiate module loading
-
-
-<pre><code><b>fun</b> <a href="code.md#0x1_code_request_publish">request_publish</a>(owner: <b>address</b>, expected_modules: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>&gt;, <a href="code.md#0x1_code">code</a>: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;, policy: u8)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>native</b> <b>fun</b> <a href="code.md#0x1_code_request_publish">request_publish</a>(
-    owner: <b>address</b>,
-    expected_modules: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;String&gt;,
-    <a href="code.md#0x1_code">code</a>: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;&gt;,
-    policy: u8
-);
-</code></pre>
-
-
-
-</details>
