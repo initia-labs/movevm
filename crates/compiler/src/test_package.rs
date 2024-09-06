@@ -11,6 +11,7 @@ use move_cli::base::{
     test::{run_move_unit_tests_with_factory, Test, UnitTestResult},
 };
 use move_core_types::effects::ChangeSet;
+use move_coverage::source_coverage::{ColorChoice, TextIndicator};
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
@@ -76,6 +77,8 @@ impl TestPackage {
                         functions: false,
                         output_csv: false,
                     },
+                    color: ColorChoice::Default,
+                    tag: TextIndicator::Explicit,
                 },
                 Some(self.package_path.clone()),
                 self.build_config.clone(),
