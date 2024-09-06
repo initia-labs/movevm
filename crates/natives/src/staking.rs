@@ -56,7 +56,7 @@ pub struct NativeStakingContext<'a> {
     api: &'a dyn StakingAPI,
     staking_data: StakingData,
     #[cfg(feature = "testing")]
-    share_ratios: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64 /* share */, u64 /* amount */)>>,
+    share_ratios: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (BigDecimal /* share */, u64 /* amount */)>>,
 }
 
 // ===========================================================================================
@@ -123,7 +123,7 @@ impl<'a> NativeStakingContext<'a> {
         &mut self,
         validator: Vec<u8>,
         metadata: AccountAddress,
-        share: u64,
+        share: BigDecimal,
         amount: u64,
     ) {
         match self.share_ratios.get_mut(&validator) {
@@ -189,7 +189,7 @@ fn native_delegate(
     if let Some(ratios) = staking_context.share_ratios.get(&validator) {
         if let Some(ratio) = ratios.get(&metadata) {
             return Ok(smallvec![write_big_decimal(
-                BigDecimal::from(amount) * ratio.0 / ratio.1
+                BigDecimal::from(amount) * ratio.0.clone() / ratio.1
             )?]);
         }
     }
@@ -245,7 +245,7 @@ fn native_undelegate(
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            let amount = (share * ratio.1 / ratio.0)
+            let amount = (share * ratio.1 / ratio.0.clone())
                 .to_bigint()
                 .unwrap()
                 .try_into()
@@ -299,7 +299,7 @@ fn native_share_to_amount(
         let ratios = staking_context.share_ratios.get(&validator).unwrap();
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
-            let amount = (share.clone() * ratio.1 / ratio.0)
+            let amount = (share.clone() * ratio.1 / ratio.0.clone())
                 .to_bigint()
                 .unwrap()
                 .try_into()
@@ -343,7 +343,7 @@ fn native_amount_to_share(
         if ratios.contains_key(&metadata) {
             let ratio = ratios.get(&metadata).unwrap();
             return Ok(smallvec![write_big_decimal(
-                BigDecimal::from(amount) * ratio.0 / ratio.1
+                BigDecimal::from(amount) * ratio.0.clone() / ratio.1
             )?]);
         }
     }
@@ -390,7 +390,7 @@ fn native_test_only_set_staking_share_ratio(
     debug_assert!(arguments.len() == 4);
 
     let amount = safely_pop_arg!(arguments, u64);
-    let share = safely_pop_arg!(arguments, u64);
+    let share = read_big_decimal(safely_pop_arg!(arguments, StructRef))?;
     let metadata = get_metadata_address(&safely_pop_arg!(arguments, StructRef))?;
     let validator = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
 

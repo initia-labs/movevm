@@ -1610,7 +1610,7 @@ module initia_std::staking {
     native public fun set_staking_share_ratio(
         validator: vector<u8>,
         metadata: &Object<Metadata>,
-        share: u64,
+        share: &BigDecimal,
         amount: u64
     );
 
@@ -1733,7 +1733,7 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            1,
+            &bigdecimal::one(),
             1
         );
 
@@ -1876,7 +1876,7 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            3,
+            &bigdecimal::from_u64(3),
             2
         );
 
@@ -1995,7 +1995,7 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            1,
+            &bigdecimal::from_u64(1),
             1
         );
 
@@ -2152,7 +2152,7 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            1,
+            &bigdecimal::from_u64(1),
             1
         );
 
@@ -2328,7 +2328,7 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            1,
+            &bigdecimal::from_u64(1),
             1
         );
 
@@ -2378,13 +2378,13 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator1),
             &metadata,
-            1,
+            &bigdecimal::from_u64(1),
             1
         );
         set_staking_share_ratio(
             *string::bytes(&validator2),
             &metadata,
-            1,
+            &bigdecimal::from_u64(1),
             1
         );
 
@@ -2549,7 +2549,7 @@ module initia_std::staking {
 
         let metadata = staking_metadata_for_test();
         let validator = vector::singleton(1u8);
-        set_staking_share_ratio(validator, &metadata, 100u64, 50u64);
+        set_staking_share_ratio(validator, &metadata, &bigdecimal::from_u64(100), 50u64);
 
         let amount =
             share_to_amount(
@@ -2566,7 +2566,7 @@ module initia_std::staking {
 
         let metadata = staking_metadata_for_test();
         let validator = vector::singleton(1u8);
-        set_staking_share_ratio(validator, &metadata, 100u64, 50u64);
+        set_staking_share_ratio(validator, &metadata, &bigdecimal::from_u64(100), 50u64);
 
         let share = amount_to_share(validator, &metadata, 1);
         assert!(bigdecimal::truncate_u64(share) == 2u64, 0);
@@ -2589,7 +2589,7 @@ module initia_std::staking {
         set_staking_share_ratio(
             *string::bytes(&validator),
             &metadata,
-            1,
+            &bigdecimal::from_u64(1),
             1
         );
 
