@@ -43,7 +43,7 @@ pub(crate) fn verify_module_init_function(module: &CompiledModule) -> PartialVMR
     let parameters = module.signature_at(fhandle.parameters);
     if parameters.0.len() != 1 {
         return Err(PartialVMError::new(StatusCode::VERIFICATION_ERROR)
-            .with_message("module_init_function can only take at most one parameter".to_string()));
+            .with_message("module_init_function must take exactly one parameter".to_string()));
     }
 
     // check init_module has only signer arguments
