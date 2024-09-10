@@ -13,6 +13,7 @@ move-cli = { workspace = true }
 move-docgen = { workspace = true }
 move-package = { workspace = true }
 move-model = { workspace = true }
+move-coverage = { workspace = true }
 
 anyhow = { workspace = true }
 bcs = { workspace = true }

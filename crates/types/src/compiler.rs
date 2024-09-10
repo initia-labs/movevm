@@ -8,6 +8,7 @@ use move_cli::{
     Move,
 };
 use move_core_types::account_address::AccountAddress;
+use move_coverage::source_coverage::{ColorChoice, TextIndicator};
 use move_docgen::DocgenOptions;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::{Architecture, BuildConfig, CompilerConfig};
@@ -88,12 +89,12 @@ impl From<CompilerBuildConfig> for BuildConfig {
                 },
                 compiler_version: match val.compiler_version {
                     1 => Some(CompilerVersion::V1),
-                    2 => Some(CompilerVersion::V2_0),
+                    2 => Some(CompilerVersion::V2_1),
                     _ => None,
                 },
                 language_version: match val.language_version {
                     1 => Some(LanguageVersion::V1),
-                    2 => Some(LanguageVersion::V2_0),
+                    2 => Some(LanguageVersion::V2_1),
                     _ => None,
                 },
                 ..Default::default()
@@ -150,6 +151,8 @@ impl From<CompilerCoverageSummaryOptions> for Coverage {
                 functions: val.functions,
                 output_csv: val.output_csv,
             },
+            color: ColorChoice::Default,
+            tag: TextIndicator::Explicit,
         }
     }
 }
@@ -166,6 +169,8 @@ impl From<CompilerCoverageSourceOptions> for Coverage {
             options: CoverageSummaryOptions::Source {
                 module_name: module_name.unwrap(),
             },
+            color: ColorChoice::Default,
+            tag: TextIndicator::Explicit,
         }
     }
 }
@@ -182,6 +187,8 @@ impl From<CompilerCoverageBytecodeOptions> for Coverage {
             options: CoverageSummaryOptions::Bytecode {
                 module_name: module_name.unwrap(),
             },
+            color: ColorChoice::Default,
+            tag: TextIndicator::Explicit,
         }
     }
 }

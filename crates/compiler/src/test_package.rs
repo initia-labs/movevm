@@ -11,6 +11,7 @@ use move_cli::base::{
     test::{run_move_unit_tests_with_factory, Test, UnitTestResult},
 };
 use move_core_types::effects::ChangeSet;
+use move_coverage::source_coverage::{ColorChoice, TextIndicator};
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
@@ -36,10 +37,10 @@ impl TestPackage {
 
         // use v2 as default
         if new_build_config.compiler_config.compiler_version.is_none() {
-            new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
+            new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_1);
         }
         if new_build_config.compiler_config.language_version.is_none() {
-            new_build_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
+            new_build_config.compiler_config.language_version = Some(LanguageVersion::V2_1);
         }
 
         configure_for_unit_test();
@@ -76,6 +77,8 @@ impl TestPackage {
                         functions: false,
                         output_csv: false,
                     },
+                    color: ColorChoice::Default,
+                    tag: TextIndicator::Explicit,
                 },
                 Some(self.package_path.clone()),
                 self.build_config.clone(),

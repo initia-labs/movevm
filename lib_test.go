@@ -414,7 +414,7 @@ func Test_DecodeScript(t *testing.T) {
 	vm, _ := initializeVM(t, true)
 	defer vm.Destroy()
 
-	f, err := os.ReadFile("./precompile/binaries/tests/main_0.mv")
+	f, err := os.ReadFile("./precompile/binaries/tests/main.mv")
 	require.NoError(t, err)
 
 	bz, err := api.DecodeScriptBytes(f)
@@ -428,7 +428,7 @@ func Test_ExecuteScript(t *testing.T) {
 
 	publishModuleBundle(t, vm, kvStore)
 
-	f, err := os.ReadFile("./precompile/binaries/tests/main_0.mv")
+	f, err := os.ReadFile("./precompile/binaries/tests/main.mv")
 	require.NoError(t, err)
 
 	testAccount, err := types.NewAccountAddress("0x2")
