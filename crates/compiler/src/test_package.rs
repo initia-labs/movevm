@@ -35,7 +35,7 @@ impl TestPackage {
             .known_attributes
             .clone_from(metadata::get_all_attribute_names());
 
-        // use v2 as default
+        // use v2.1 as default
         if new_build_config.compiler_config.compiler_version.is_none() {
             new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_1);
         }

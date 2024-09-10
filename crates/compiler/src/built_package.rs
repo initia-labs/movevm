@@ -58,10 +58,10 @@ impl BuiltPackage {
 
         // use v2 as default
         if new_config.compiler_config.compiler_version.is_none() {
-            new_config.compiler_config.compiler_version = Some(CompilerVersion::V1);
+            new_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
         }
         if new_config.compiler_config.language_version.is_none() {
-            new_config.compiler_config.language_version = Some(LanguageVersion::V1);
+            new_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
         }
 
         let (mut package, model_opt) =

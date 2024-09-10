@@ -156,8 +156,8 @@ type CompilerBuildConfig struct {
 	FetchDepsOnly bool
 	SkipFetchLatestGitDeps bool
 	BytecodeVersion uint32
-	CompilerVersion uint32
-	LanguageVersion uint32
+	CompilerVersion string
+	LanguageVersion string
 	AdditionalNamedAddresses []struct {Field0 string; Field1 AccountAddress}
 }
 
@@ -172,8 +172,8 @@ func (obj *CompilerBuildConfig) Serialize(serializer serde.Serializer) error {
 	if err := serializer.SerializeBool(obj.FetchDepsOnly); err != nil { return err }
 	if err := serializer.SerializeBool(obj.SkipFetchLatestGitDeps); err != nil { return err }
 	if err := serializer.SerializeU32(obj.BytecodeVersion); err != nil { return err }
-	if err := serializer.SerializeU32(obj.CompilerVersion); err != nil { return err }
-	if err := serializer.SerializeU32(obj.LanguageVersion); err != nil { return err }
+	if err := serializer.SerializeStr(obj.CompilerVersion); err != nil { return err }
+	if err := serializer.SerializeStr(obj.LanguageVersion); err != nil { return err }
 	if err := serialize_vector_tuple2_str_AccountAddress(obj.AdditionalNamedAddresses, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
@@ -200,8 +200,8 @@ func DeserializeCompilerBuildConfig(deserializer serde.Deserializer) (CompilerBu
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.FetchDepsOnly = val } else { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.SkipFetchLatestGitDeps = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU32(); err == nil { obj.BytecodeVersion = val } else { return obj, err }
-	if val, err := deserializer.DeserializeU32(); err == nil { obj.CompilerVersion = val } else { return obj, err }
-	if val, err := deserializer.DeserializeU32(); err == nil { obj.LanguageVersion = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.CompilerVersion = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.LanguageVersion = val } else { return obj, err }
 	if val, err := deserialize_vector_tuple2_str_AccountAddress(deserializer); err == nil { obj.AdditionalNamedAddresses = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
