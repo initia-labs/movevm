@@ -61,9 +61,9 @@ pub struct CompilerBuildConfig {
     /// bytecode version. set 0 to unset and to use default
     pub bytecode_version: u32,
     /// Compiler version. set 0 to unset and to use default
-    pub compiler_version: u32,
+    pub compiler_version: String,
     /// language version. set 0 to unset and to use default
-    pub language_version: u32,
+    pub language_version: String,
     /// Additional named address mapping. Useful for tools in rust
     pub additional_named_addresses: Vec<(String, AccountAddress)>,
 }
@@ -87,14 +87,16 @@ impl From<CompilerBuildConfig> for BuildConfig {
                 } else {
                     Some(val.bytecode_version)
                 },
-                compiler_version: match val.compiler_version {
-                    1 => Some(CompilerVersion::V1),
-                    2 => Some(CompilerVersion::V2_1),
+                compiler_version: match val.compiler_version.as_str() {
+                    "1" | "1.0" => Some(CompilerVersion::V1),
+                    "2" | "2.0" => Some(CompilerVersion::V2_0),
+                    "2.1" => Some(CompilerVersion::V2_1),
                     _ => None,
                 },
-                language_version: match val.language_version {
-                    1 => Some(LanguageVersion::V1),
-                    2 => Some(LanguageVersion::V2_1),
+                language_version: match val.language_version.as_str() {
+                    "1" | "1.0" => Some(LanguageVersion::V1),
+                    "2" | "2.0" => Some(LanguageVersion::V2_0),
+                    "2.1" => Some(LanguageVersion::V2_1),
                     _ => None,
                 },
                 ..Default::default()

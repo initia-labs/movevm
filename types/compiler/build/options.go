@@ -70,13 +70,13 @@ func WithBytecodeVersion(ver uint32) func(*types.CompilerBuildConfig) {
 	}
 }
 
-func WithCompilerVersion(ver uint32) func(*types.CompilerBuildConfig) {
+func WithCompilerVersion(ver string) func(*types.CompilerBuildConfig) {
 	return func(bc *types.CompilerBuildConfig) {
 		bc.CompilerVersion = ver
 	}
 }
 
-func WithLanguageVersion(ver uint32) func(*types.CompilerBuildConfig) {
+func WithLanguageVersion(ver string) func(*types.CompilerBuildConfig) {
 	return func(bc *types.CompilerBuildConfig) {
 		bc.LanguageVersion = ver
 	}
