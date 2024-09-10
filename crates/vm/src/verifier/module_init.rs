@@ -41,7 +41,7 @@ pub(crate) fn verify_module_init_function(module: &CompiledModule) -> PartialVMR
 
     // check init_module has exactly one argument
     let parameters = module.signature_at(fhandle.parameters);
-    if parameters.0.len() > 1 {
+    if parameters.0.len() != 1 {
         return Err(PartialVMError::new(StatusCode::VERIFICATION_ERROR)
             .with_message("module_init_function can only take at most one parameter".to_string()));
     }

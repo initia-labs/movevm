@@ -450,6 +450,9 @@ impl InitiaVM {
         }?;
 
         if let Some(publish_request) = session.extract_publish_request() {
+            // mark loader cache as invalid until loader v2 is implemented
+            self.move_vm.mark_loader_cache_as_invalid();
+
             self.resolve_pending_code_publish(
                 state_view_impl,
                 &mut session,
@@ -457,9 +460,6 @@ impl InitiaVM {
                 publish_request,
                 traversal_context,
             )?;
-
-            // mark loader cache as invalid until loader v2 is implemented
-            self.move_vm.mark_loader_cache_as_invalid();
         }
 
         let session_output = session.finish()?;
