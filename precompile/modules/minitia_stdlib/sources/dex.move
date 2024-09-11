@@ -253,7 +253,7 @@ module minitia_std::dex {
         let base_addr = object::object_address(&base_coin);
         assert!(
             base_addr == pair_key.coin_a || base_addr == pair_key.coin_b,
-            error::invalid_argument(ECOIN_TYPE)
+            error::invalid_argument(ECOIN_TYPE),
         );
         let is_base_a = base_addr == pair_key.coin_a;
         let (base_pool, quote_pool, base_weight, quote_weight) =
@@ -265,7 +265,7 @@ module minitia_std::dex {
 
         bigdecimal::div(
             bigdecimal::mul_by_u64(base_weight, quote_pool),
-            bigdecimal::mul_by_u64(quote_weight, base_pool)
+            bigdecimal::mul_by_u64(quote_weight, base_pool),
         )
     }
 
@@ -287,7 +287,7 @@ module minitia_std::dex {
         let offer_address = object::object_address(&offer_metadata);
         assert!(
             offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
-            error::invalid_argument(ECOIN_TYPE)
+            error::invalid_argument(ECOIN_TYPE),
         );
         let is_offer_a = offer_address == pair_key.coin_a;
         let (pool_a, pool_b, weight_a, weight_b, swap_fee_rate) = pool_info(pair, true);
@@ -304,7 +304,7 @@ module minitia_std::dex {
                 offer_weight,
                 return_weight,
                 offer_amount,
-                swap_fee_rate
+                swap_fee_rate,
             );
 
         return_amount
@@ -319,7 +319,7 @@ module minitia_std::dex {
         get_swap_simulation(
             object::convert(pair_metadata),
             offer_metadata,
-            offer_amount
+            offer_amount,
         )
     }
 
@@ -332,7 +332,7 @@ module minitia_std::dex {
         let offer_address = object::object_address(&offer_metadata);
         assert!(
             offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
-            error::invalid_argument(ECOIN_TYPE)
+            error::invalid_argument(ECOIN_TYPE),
         );
         let is_offer_a = offer_address == pair_key.coin_a;
         let (pool_a, pool_b, weight_a, weight_b, swap_fee_rate) = pool_info(pair, true);
@@ -349,7 +349,7 @@ module minitia_std::dex {
                 offer_weight,
                 return_weight,
                 return_amount,
-                swap_fee_rate
+                swap_fee_rate,
             );
 
         offer_amount
@@ -364,8 +364,37 @@ module minitia_std::dex {
         get_swap_simulation_given_out(
             object::convert(pair_metadata),
             offer_metadata,
-            return_amount
+            return_amount,
         )
+    }
+
+    #[view]
+    public fun get_provide_simulation(
+        pair: Object<Config>,
+        coin_a_amount_in: u64,
+        coin_b_amount_in: u64,
+    ): u64 acquires Pool {
+        let pool_addr = object::object_address(&pair);
+        let pool = borrow_global<Pool>(pool_addr);
+
+        calculate_provide_liquidity_return_amount(
+            pool, pair, coin_a_amount_in, coin_b_amount_in
+        )
+    }
+
+    #[view]
+    public fun get_single_asset_provide_simulation(
+        pair: Object<Config>, offer_asset_metadata: Object<Metadata>, amount_in: u64
+    ): u64 acquires Config, Pool {
+        let pair_addr = object::object_address(&pair);
+        let pool = borrow_global<Pool>(pair_addr);
+
+        let (liquidity_amount, _, _) =
+            calculate_single_asset_provide_liquidity_return_amount(
+                pool, pair, offer_asset_metadata, amount_in
+            );
+
+        liquidity_amount
     }
 
     #[view]
@@ -412,9 +441,7 @@ module minitia_std::dex {
     }
 
     #[view]
-    public fun get_current_weight_by_denom(
-        pair_denom: String
-    ): CurrentWeightResponse acquires Config {
+    public fun get_current_weight_by_denom(pair_denom: String): CurrentWeightResponse acquires Config {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         get_current_weight(object::convert(pair_metadata))
     }
@@ -433,11 +460,10 @@ module minitia_std::dex {
         };
 
         assert!(
-            option::is_some(&coin_a_start_after)
-                == option::is_some(&coin_b_start_after)
+            option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after)
                 && option::is_some(&coin_b_start_after)
                     == option::is_some(&liquidity_token_start_after),
-            ESTART_AFTER
+            ESTART_AFTER,
         );
 
         let module_store = borrow_global<ModuleStore>(@minitia_std);
@@ -449,7 +475,7 @@ module minitia_std::dex {
                         coin_a: option::extract(&mut coin_a_start_after),
                         coin_b: option::extract(&mut coin_b_start_after),
                         liquidity_token: option::extract(&mut liquidity_token_start_after)
-                    }
+                    },
                 )
             } else {
                 option::some(
@@ -462,11 +488,11 @@ module minitia_std::dex {
             &module_store.pairs,
             start_after,
             option::none(),
-            1
+            1,
         );
 
         while (vector::length(&res) < (limit as u64)
-            && table::prepare<PairKey, PairResponse>(pairs_iter)) {
+                && table::prepare<PairKey, PairResponse>(pairs_iter)) {
             let (key, value) = table::next<PairKey, PairResponse>(pairs_iter);
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(&mut res, *value)
@@ -490,11 +516,10 @@ module minitia_std::dex {
         };
 
         assert!(
-            option::is_some(&coin_a_start_after)
-                == option::is_some(&coin_b_start_after)
+            option::is_some(&coin_a_start_after) == option::is_some(&coin_b_start_after)
                 && option::is_some(&coin_b_start_after)
                     == option::is_some(&liquidity_token_start_after),
-            ESTART_AFTER
+            ESTART_AFTER,
         );
 
         let module_store = borrow_global<ModuleStore>(@minitia_std);
@@ -516,7 +541,7 @@ module minitia_std::dex {
                         liquidity_token: object::object_address(
                             &liquidity_token_start_after
                         )
-                    }
+                    },
                 )
             } else {
                 option::some(
@@ -529,11 +554,11 @@ module minitia_std::dex {
             &module_store.pairs,
             start_after,
             option::none(),
-            1
+            1,
         );
 
         while (vector::length(&res) < (limit as u64)
-            && table::prepare<PairKey, PairResponse>(pairs_iter)) {
+                && table::prepare<PairKey, PairResponse>(pairs_iter)) {
             let (key, value) = table::next<PairKey, PairResponse>(pairs_iter);
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(
@@ -550,7 +575,7 @@ module minitia_std::dex {
                         ),
                         weights: value.weights,
                         swap_fee_rate: value.swap_fee_rate
-                    }
+                    },
                 )
             }
         };
@@ -580,7 +605,7 @@ module minitia_std::dex {
                         coin_a,
                         coin_b,
                         liquidity_token: option::extract(&mut start_after)
-                    }
+                    },
                 )
             } else {
                 option::some(PairKey { coin_a, coin_b, liquidity_token: @0x0 })
@@ -591,14 +616,14 @@ module minitia_std::dex {
             &module_store.pairs,
             start_after,
             option::none(),
-            1
+            1,
         );
 
         while (vector::length(&res) < (limit as u64)
-            && table::prepare<PairKey, PairResponse>(pairs_iter)) {
+                && table::prepare<PairKey, PairResponse>(pairs_iter)) {
             let (key, value) = table::next<PairKey, PairResponse>(pairs_iter);
             if (coin_a != key.coin_a || coin_b != key.coin_b)
-                break;
+            break;
             if (&key != option::borrow(&start_after)) {
                 vector::push_back(&mut res, *value)
             }
@@ -655,9 +680,10 @@ module minitia_std::dex {
         weight.timestamp
     }
 
-    public fun unpack_pair_response(
-        pair_response: &PairResponse
-    ): (address, address, address, Weights, BigDecimal) {
+    public fun unpack_pair_response(pair_response: &PairResponse)
+        : (
+        address, address, address, Weights, BigDecimal
+    ) {
         (
             pair_response.coin_a,
             pair_response.coin_b,
@@ -677,17 +703,14 @@ module minitia_std::dex {
     fun check_chain_permission(chain: &signer) {
         assert!(
             signer::address_of(chain) == @minitia_std,
-            error::permission_denied(EUNAUTHORIZED)
+            error::permission_denied(EUNAUTHORIZED),
         );
     }
 
     fun init_module(chain: &signer) {
         move_to(
             chain,
-            ModuleStore {
-                pairs: table::new<PairKey, PairResponse>(),
-                pair_count: 0
-            }
+            ModuleStore { pairs: table::new<PairKey, PairResponse>(), pair_count: 0 },
         );
     }
 
@@ -712,12 +735,12 @@ module minitia_std::dex {
         let coin_a = coin::withdraw(
             creator,
             coin_a_metadata,
-            coin_a_amount
+            coin_a_amount,
         );
         let coin_b = coin::withdraw(
             creator,
             coin_b_metadata,
-            coin_b_amount
+            coin_b_amount,
         );
 
         let liquidity_token =
@@ -728,7 +751,7 @@ module minitia_std::dex {
                 swap_fee_rate,
                 coin_a,
                 coin_b,
-                weights
+                weights,
             );
         coin::deposit(signer::address_of(creator), liquidity_token);
     }
@@ -755,11 +778,11 @@ module minitia_std::dex {
         let (_, timestamp) = get_block_info();
         assert!(
             start_time > timestamp,
-            error::invalid_argument(ELBP_START_TIME)
+            error::invalid_argument(ELBP_START_TIME),
         );
         assert!(
             end_time > start_time,
-            error::invalid_argument(EWEIGHTS_TIMESTAMP)
+            error::invalid_argument(EWEIGHTS_TIMESTAMP),
         );
         let weights = Weights {
             weights_before: Weight {
@@ -777,12 +800,12 @@ module minitia_std::dex {
         let coin_a = coin::withdraw(
             creator,
             coin_a_metadata,
-            coin_a_amount
+            coin_a_amount,
         );
         let coin_b = coin::withdraw(
             creator,
             coin_b_metadata,
-            coin_b_amount
+            coin_b_amount,
         );
 
         let liquidity_token =
@@ -793,7 +816,7 @@ module minitia_std::dex {
                 swap_fee_rate,
                 coin_a,
                 coin_b,
-                weights
+                weights,
             );
         coin::deposit(signer::address_of(creator), liquidity_token);
     }
@@ -811,7 +834,7 @@ module minitia_std::dex {
         let config = borrow_global_mut<Config>(object::object_address(&pair));
         assert!(
             bigdecimal::le(swap_fee_rate, max_fee_rate()),
-            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
+            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE),
         );
 
         config.swap_fee_rate = swap_fee_rate;
@@ -830,7 +853,7 @@ module minitia_std::dex {
                 coin_b: pair_key.coin_b,
                 liquidity_token: pair_key.liquidity_token,
                 swap_fee_rate
-            }
+            },
         );
     }
 
@@ -847,7 +870,7 @@ module minitia_std::dex {
             pair,
             coin_a_amount_in,
             coin_b_amount_in,
-            min_liquidity
+            min_liquidity,
         );
     }
 
@@ -872,12 +895,12 @@ module minitia_std::dex {
                     coin::withdraw(
                         account,
                         fungible_asset::store_metadata(pool.coin_a_store),
-                        coin_a_amount_in
+                        coin_a_amount_in,
                     ),
                     coin::withdraw(
                         account,
                         fungible_asset::store_metadata(pool.coin_b_store),
-                        coin_b_amount_in
+                        coin_b_amount_in,
                     )
                 )
             } else {
@@ -899,12 +922,12 @@ module minitia_std::dex {
                     coin::withdraw(
                         account,
                         fungible_asset::store_metadata(pool.coin_a_store),
-                        coin_a_amount_in
+                        coin_a_amount_in,
                     ),
                     coin::withdraw(
                         account,
                         fungible_asset::store_metadata(pool.coin_b_store),
-                        coin_b_amount_in
+                        coin_b_amount_in,
                     )
                 )
             };
@@ -927,7 +950,7 @@ module minitia_std::dex {
     ) acquires CoinCapabilities, Config, Pool {
         assert!(
             liquidity != 0,
-            error::invalid_argument(EZERO_LIQUIDITY)
+            error::invalid_argument(EZERO_LIQUIDITY),
         );
 
         let addr = signer::address_of(account);
@@ -935,13 +958,13 @@ module minitia_std::dex {
             coin::withdraw(
                 account,
                 object::convert<Config, Metadata>(pair),
-                liquidity
+                liquidity,
             );
         let (coin_a, coin_b) =
             withdraw_liquidity(
                 liquidity_token,
                 min_coin_a_amount,
-                min_coin_b_amount
+                min_coin_b_amount,
             );
 
         coin::deposit(addr, coin_a);
@@ -959,7 +982,7 @@ module minitia_std::dex {
         let offer_coin = coin::withdraw(
             account,
             offer_coin,
-            offer_coin_amount
+            offer_coin_amount,
         );
         let return_coin = swap(pair, offer_coin);
 
@@ -968,7 +991,7 @@ module minitia_std::dex {
                 || *option::borrow(&min_return) <= fungible_asset::amount(
                     &return_coin
                 ),
-            error::invalid_state(EMIN_RETURN)
+            error::invalid_state(EMIN_RETURN),
         );
 
         coin::deposit(signer::address_of(account), return_coin);
@@ -1004,7 +1027,7 @@ module minitia_std::dex {
             option::extract(
                 &mut fungible_asset::supply(
                     fungible_asset::metadata_from_asset(&lp_token)
-                )
+                ),
             );
         let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
         let given_token_amount = fungible_asset::amount(&lp_token);
@@ -1020,19 +1043,19 @@ module minitia_std::dex {
         assert!(
             option::is_none(&min_coin_a_amount)
                 || *option::borrow(&min_coin_a_amount) <= coin_a_amount_out,
-            error::invalid_state(EMIN_WITHDRAW)
+            error::invalid_state(EMIN_WITHDRAW),
         );
         assert!(
             option::is_none(&min_coin_b_amount)
                 || *option::borrow(&min_coin_b_amount) <= coin_b_amount_out,
-            error::invalid_state(EMIN_WITHDRAW)
+            error::invalid_state(EMIN_WITHDRAW),
         );
 
         // burn liquidity token
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
         coin::burn(
             &liquidity_token_capabilities.burn_cap,
-            lp_token
+            lp_token,
         );
 
         // emit events
@@ -1045,7 +1068,7 @@ module minitia_std::dex {
                 coin_a_amount: coin_a_amount_out,
                 coin_b_amount: coin_b_amount_out,
                 liquidity: given_token_amount
-            }
+            },
         );
         let pool = borrow_global_mut<Pool>(pair_addr);
 
@@ -1055,12 +1078,12 @@ module minitia_std::dex {
             fungible_asset::withdraw(
                 pair_signer,
                 pool.coin_a_store,
-                coin_a_amount_out
+                coin_a_amount_out,
             ),
             fungible_asset::withdraw(
                 pair_signer,
                 pool.coin_b_store,
-                coin_b_amount_out
+                coin_b_amount_out,
             )
         )
     }
@@ -1074,92 +1097,30 @@ module minitia_std::dex {
         min_liquidity_amount: Option<u64>
     ): FungibleAsset acquires Config, CoinCapabilities, Pool {
         let pair_addr = object::object_address(&pair);
-        let config = borrow_global<Config>(pair_addr);
-        check_lbp_ended(&config.weights);
-
-        // provide coin type must be one of coin a or coin b coin type
-        let provide_metadata = fungible_asset::metadata_from_asset(&provide_coin);
-        let provide_address = object::object_address(&provide_metadata);
-        let pair_key = generate_pair_key(pair);
-        assert!(
-            provide_address == pair_key.coin_a || provide_address == pair_key.coin_b,
-            error::invalid_argument(ECOIN_TYPE)
-        );
-        let is_provide_a = provide_address == pair_key.coin_a;
-
-        let total_share = option::extract(&mut fungible_asset::supply(pair));
-        assert!(
-            total_share != 0,
-            error::invalid_state(EZERO_LIQUIDITY)
-        );
-
-        // load values for fee and increased liquidity amount calculation
-        let amount_in = fungible_asset::amount(&provide_coin);
-        let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
         let pool = borrow_global_mut<Pool>(pair_addr);
-        let (normalized_weight, pool_amount_in, provide_coin_addr) =
-            if (is_provide_a) {
-                let normalized_weight =
-                    bigdecimal::div(
-                        coin_a_weight,
-                        bigdecimal::add(coin_a_weight, coin_b_weight)
-                    );
-                let pool_amount_in = fungible_asset::balance(pool.coin_a_store);
-                fungible_asset::deposit(pool.coin_a_store, provide_coin);
 
-                (normalized_weight, pool_amount_in, pair_key.coin_a)
-            } else {
-                let normalized_weight =
-                    bigdecimal::div(
-                        coin_b_weight,
-                        bigdecimal::add(coin_a_weight, coin_b_weight)
-                    );
+        let provide_metadata = fungible_asset::metadata_from_asset(&provide_coin);
+        let provide_amount = fungible_asset::amount(&provide_coin);
 
-                let pool_amount_in = fungible_asset::balance(pool.coin_b_store);
-                fungible_asset::deposit(pool.coin_b_store, provide_coin);
-
-                (normalized_weight, pool_amount_in, pair_key.coin_b)
-            };
-
-        // CONTRACT: cannot provide more than the pool amount to prevent huge price impact
-        assert!(
-            pool_amount_in > amount_in,
-            error::invalid_argument(EPRICE_IMPACT)
-        );
-
-        // compute fee amount with the assumption that we will swap (1 - normalized_weight) of amount_in
-        let adjusted_swap_amount =
-            bigdecimal::mul_by_u64_truncate(
-                bigdecimal::sub(
-                    bigdecimal::one(),
-                    normalized_weight
-                ),
-                amount_in
-            );
-        let fee_amount =
-            calculate_fee_with_minimum(
-                config.swap_fee_rate,
-                adjusted_swap_amount
+        let (liquidity, fee_amount, is_provide_a) =
+            calculate_single_asset_provide_liquidity_return_amount(
+                pool, pair, provide_metadata, provide_amount
             );
 
-        // actual amount in after deducting fee amount
-        let adjusted_amount_in = amount_in - fee_amount;
+        // deposit token
+        if (is_provide_a) {
+            fungible_asset::deposit(pool.coin_a_store, provide_coin);
+        } else {
+            fungible_asset::deposit(pool.coin_b_store, provide_coin);
+        };
 
-        // calculate new total share and new liquidity
-        let base =
-            bigdecimal::from_ratio_u64(
-                adjusted_amount_in + pool_amount_in,
-                pool_amount_in
-            );
-        let pool_ratio = pow(base, normalized_weight);
-        let new_total_share = bigdecimal::mul_by_u128_truncate(pool_ratio, total_share);
-        let liquidity = (new_total_share - total_share as u64);
+        let pair_key = generate_pair_key(pair);
 
         // check min liquidity assertion
         assert!(
             option::is_none(&min_liquidity_amount)
                 || *option::borrow(&min_liquidity_amount) <= liquidity,
-            error::invalid_state(EMIN_LIQUIDITY)
+            error::invalid_state(EMIN_LIQUIDITY),
         );
 
         // emit events
@@ -1167,33 +1128,31 @@ module minitia_std::dex {
             SingleAssetProvideEvent {
                 coin_a: pair_key.coin_a,
                 coin_b: pair_key.coin_b,
-                provide_coin: provide_coin_addr,
+                provide_coin: object::object_address(&provide_metadata),
                 liquidity_token: pair_addr,
-                provide_amount: amount_in,
+                provide_amount,
                 fee_amount,
                 liquidity
-            }
+            },
         );
 
         // mint liquidity tokens to provider
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
         coin::mint(
             &liquidity_token_capabilities.mint_cap,
-            liquidity
+            liquidity,
         )
     }
 
     /// Swap directly
-    public fun swap(
-        pair: Object<Config>, offer_coin: FungibleAsset
-    ): FungibleAsset acquires Config, Pool {
+    public fun swap(pair: Object<Config>, offer_coin: FungibleAsset): FungibleAsset acquires Config, Pool {
         let offer_amount = fungible_asset::amount(&offer_coin);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_address = object::object_address(&offer_metadata);
         let pair_key = generate_pair_key(pair);
         assert!(
             offer_address == pair_key.coin_a || offer_address == pair_key.coin_b,
-            error::invalid_argument(ECOIN_TYPE)
+            error::invalid_argument(ECOIN_TYPE),
         );
         let is_offer_a = offer_address == pair_key.coin_a;
 
@@ -1218,7 +1177,7 @@ module minitia_std::dex {
                 offer_weight,
                 return_weight,
                 fungible_asset::amount(&offer_coin),
-                swap_fee_rate
+                swap_fee_rate,
             );
 
         // apply swap result to pool
@@ -1232,14 +1191,14 @@ module minitia_std::dex {
                 fungible_asset::withdraw(
                     pair_signer,
                     pool.coin_b_store,
-                    return_amount
+                    return_amount,
                 )
             } else {
                 fungible_asset::deposit(pool.coin_b_store, offer_coin);
                 fungible_asset::withdraw(
                     pair_signer,
                     pool.coin_a_store,
-                    return_amount
+                    return_amount,
                 )
             };
 
@@ -1252,7 +1211,7 @@ module minitia_std::dex {
                 fee_amount,
                 offer_amount,
                 return_amount
-            }
+            },
         );
 
         return_coin
@@ -1265,20 +1224,20 @@ module minitia_std::dex {
                 bigdecimal::one(),
                 bigdecimal::add(
                     weights.weights_before.coin_a_weight,
-                    weights.weights_before.coin_b_weight
-                )
+                    weights.weights_before.coin_b_weight,
+                ),
             ),
-            EINVALID_WEIGHTS
+            EINVALID_WEIGHTS,
         );
         assert!(
             bigdecimal::eq(
                 bigdecimal::one(),
                 bigdecimal::add(
                     weights.weights_after.coin_a_weight,
-                    weights.weights_after.coin_b_weight
-                )
+                    weights.weights_after.coin_b_weight,
+                ),
             ),
-            EINVALID_WEIGHTS
+            EINVALID_WEIGHTS,
         );
     }
 
@@ -1299,19 +1258,19 @@ module minitia_std::dex {
                 symbol,
                 6,
                 string::utf8(b""),
-                string::utf8(b"")
+                string::utf8(b""),
             );
 
         assert_weights(weights);
 
         assert!(
             bigdecimal::le(swap_fee_rate, max_fee_rate()),
-            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
+            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE),
         );
 
         assert!(
             coin_address(&coin_a) != coin_address(&coin_b),
-            error::invalid_argument(ESAME_COIN_TYPE)
+            error::invalid_argument(ESAME_COIN_TYPE),
         );
 
         let pair_signer = &object::generate_signer_for_extending(&extend_ref);
@@ -1322,24 +1281,24 @@ module minitia_std::dex {
         let coin_a_store =
             primary_fungible_store::create_primary_store(
                 pair_address,
-                fungible_asset::asset_metadata(&coin_a)
+                fungible_asset::asset_metadata(&coin_a),
             );
         let coin_b_store =
             primary_fungible_store::create_primary_store(
                 pair_address,
-                fungible_asset::asset_metadata(&coin_b)
+                fungible_asset::asset_metadata(&coin_b),
             );
         let coin_a_addr = coin_address(&coin_a);
         let coin_b_addr = coin_address(&coin_b);
 
         move_to(
             pair_signer,
-            Pool { coin_a_store, coin_b_store }
+            Pool { coin_a_store, coin_b_store },
         );
 
         move_to(
             pair_signer,
-            CoinCapabilities { mint_cap, freeze_cap, burn_cap }
+            CoinCapabilities { mint_cap, freeze_cap, burn_cap },
         );
 
         move_to(
@@ -1360,7 +1319,7 @@ module minitia_std::dex {
                     }
                 },
                 swap_fee_rate
-            }
+            },
         );
 
         let liquidity_token =
@@ -1368,7 +1327,7 @@ module minitia_std::dex {
                 object::address_to_object<Config>(pair_address),
                 coin_a,
                 coin_b,
-                option::none()
+                option::none(),
             );
 
         // update weights
@@ -1398,7 +1357,7 @@ module minitia_std::dex {
                 liquidity_token: pair_address,
                 weights,
                 swap_fee_rate
-            }
+            },
         );
 
         // emit create pair event
@@ -1409,7 +1368,7 @@ module minitia_std::dex {
                 liquidity_token: pair_address,
                 weights,
                 swap_fee_rate
-            }
+            },
         );
 
         liquidity_token
@@ -1429,38 +1388,17 @@ module minitia_std::dex {
         check_lbp_ended(&config.weights);
 
         let coin_a_amount_in = fungible_asset::amount(&coin_a);
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
         let coin_b_amount_in = fungible_asset::amount(&coin_b);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
 
-        let total_share = option::extract(&mut fungible_asset::supply(pair));
         let liquidity =
-            if (total_share == 0) {
-                if (coin_a_amount_in > coin_b_amount_in) {
-                    coin_a_amount_in
-                } else {
-                    coin_b_amount_in
-                }
-            } else {
-                let coin_a_share_ratio =
-                    bigdecimal::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-                let coin_b_share_ratio =
-                    bigdecimal::from_ratio_u64(coin_b_amount_in, coin_b_amount);
-                if (bigdecimal::gt(coin_a_share_ratio, coin_b_share_ratio)) {
-                    (
-                        bigdecimal::mul_by_u128_truncate(coin_b_share_ratio, total_share) as u64
-                    )
-                } else {
-                    (
-                        bigdecimal::mul_by_u128_truncate(coin_a_share_ratio, total_share) as u64
-                    )
-                }
-            };
+            calculate_provide_liquidity_return_amount(
+                pool, pair, coin_a_amount_in, coin_b_amount_in
+            );
 
         assert!(
             option::is_none(&min_liquidity_amount)
                 || *option::borrow(&min_liquidity_amount) <= liquidity,
-            error::invalid_state(EMIN_LIQUIDITY)
+            error::invalid_state(EMIN_LIQUIDITY),
         );
 
         event::emit<ProvideEvent>(
@@ -1471,7 +1409,7 @@ module minitia_std::dex {
                 coin_a_amount: coin_a_amount_in,
                 coin_b_amount: coin_b_amount_in,
                 liquidity
-            }
+            },
         );
 
         fungible_asset::deposit(pool.coin_a_store, coin_a);
@@ -1480,7 +1418,7 @@ module minitia_std::dex {
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pool_addr);
         coin::mint(
             &liquidity_token_capabilities.mint_cap,
-            liquidity
+            liquidity,
         )
     }
 
@@ -1494,7 +1432,7 @@ module minitia_std::dex {
 
         assert!(
             timestamp >= weights.weights_after.timestamp,
-            error::invalid_state(ELBP_NOT_ENDED)
+            error::invalid_state(ELBP_NOT_ENDED),
         )
     }
 
@@ -1562,10 +1500,120 @@ module minitia_std::dex {
         }
     }
 
+    fun calculate_provide_liquidity_return_amount(
+        pool: &Pool, pair: Object<Config>, coin_a_amount_in: u64, coin_b_amount_in: u64
+    ): u64 {
+        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
+        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
+        let total_share = option::extract(&mut fungible_asset::supply(pair));
+
+        if (total_share == 0) {
+            if (coin_a_amount_in > coin_b_amount_in) {
+                coin_a_amount_in
+            } else {
+                coin_b_amount_in
+            }
+        } else {
+            let coin_a_share_ratio =
+                bigdecimal::from_ratio_u64(coin_a_amount_in, coin_a_amount);
+            let coin_b_share_ratio =
+                bigdecimal::from_ratio_u64(coin_b_amount_in, coin_b_amount);
+            if (bigdecimal::gt(coin_a_share_ratio, coin_b_share_ratio)) {
+                (bigdecimal::mul_by_u128_truncate(coin_b_share_ratio, total_share) as u64)
+            } else {
+                (bigdecimal::mul_by_u128_truncate(coin_a_share_ratio, total_share) as u64)
+            }
+        }
+    }
+
+    fun calculate_single_asset_provide_liquidity_return_amount(
+        pool: &Pool,
+        pair: Object<Config>,
+        provide_metadata: Object<Metadata>,
+        amount_in: u64
+    ): (u64, u64, bool) acquires Config {
+        let pair_addr = object::object_address(&pair);
+        let config = borrow_global<Config>(pair_addr);
+        check_lbp_ended(&config.weights);
+
+        // provide coin type must be one of coin a or coin b coin type
+        assert!(
+            provide_metadata == fungible_asset::store_metadata(pool.coin_a_store)
+                || provide_metadata == fungible_asset::store_metadata(pool.coin_b_store),
+            error::invalid_argument(ECOIN_TYPE),
+        );
+        let is_provide_a =
+            provide_metadata == fungible_asset::store_metadata(pool.coin_a_store);
+
+        let total_share = option::extract(&mut fungible_asset::supply(pair));
+        assert!(
+            total_share != 0,
+            error::invalid_state(EZERO_LIQUIDITY),
+        );
+
+        // load values for fee and increased liquidity amount calculation
+        let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
+        let (normalized_weight, pool_amount_in) =
+            if (is_provide_a) {
+                let normalized_weight =
+                    bigdecimal::div(
+                        coin_a_weight,
+                        bigdecimal::add(coin_a_weight, coin_b_weight),
+                    );
+                let pool_amount_in = fungible_asset::balance(pool.coin_a_store);
+                (normalized_weight, pool_amount_in)
+            } else {
+                let normalized_weight =
+                    bigdecimal::div(
+                        coin_b_weight,
+                        bigdecimal::add(coin_a_weight, coin_b_weight),
+                    );
+
+                let pool_amount_in = fungible_asset::balance(pool.coin_b_store);
+
+                (normalized_weight, pool_amount_in)
+            };
+
+        // CONTRACT: cannot provide more than the pool amount to prevent huge price impact
+        assert!(
+            pool_amount_in > amount_in,
+            error::invalid_argument(EPRICE_IMPACT),
+        );
+
+        // compute fee amount with the assumption that we will swap (1 - normalized_weight) of amount_in
+        let adjusted_swap_amount =
+            bigdecimal::mul_by_u64_truncate(
+                bigdecimal::sub(
+                    bigdecimal::one(),
+                    normalized_weight,
+                ),
+                amount_in,
+            );
+        let fee_amount =
+            calculate_fee_with_minimum(
+                config.swap_fee_rate,
+                adjusted_swap_amount,
+            );
+
+        // actual amount in after deducting fee amount
+        let adjusted_amount_in = amount_in - fee_amount;
+
+        // calculate new total share and new liquidity
+        let base =
+            bigdecimal::from_ratio_u64(
+                adjusted_amount_in + pool_amount_in,
+                pool_amount_in,
+            );
+        let pool_ratio = pow(base, normalized_weight);
+        let new_total_share = bigdecimal::mul_by_u128_truncate(pool_ratio, total_share);
+        ((new_total_share - total_share as u64), fee_amount, is_provide_a)
+    }
+
     /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
-    public fun pool_info(
-        pair: Object<Config>, lbp_assertion: bool
-    ): (u64, u64, BigDecimal, BigDecimal, BigDecimal) acquires Config, Pool {
+    public fun pool_info(pair: Object<Config>, lbp_assertion: bool)
+        : (
+        u64, u64, BigDecimal, BigDecimal, BigDecimal
+    ) acquires Config, Pool {
         let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         if (lbp_assertion) {
@@ -1573,7 +1621,7 @@ module minitia_std::dex {
             let (_, timestamp) = get_block_info();
             assert!(
                 timestamp >= config.weights.weights_before.timestamp,
-                error::invalid_state(ELBP_NOT_STARTED)
+                error::invalid_state(ELBP_NOT_STARTED),
             );
         };
 
@@ -1614,7 +1662,7 @@ module minitia_std::dex {
     ): (u64, u64) {
         assert!(
             amount_in > 0,
-            error::invalid_argument(EZERO_AMOUNT_IN)
+            error::invalid_argument(EZERO_AMOUNT_IN),
         );
 
         let one = bigdecimal::one();
@@ -1625,13 +1673,13 @@ module minitia_std::dex {
         let base =
             bigdecimal::from_ratio_u64(
                 pool_amount_in,
-                pool_amount_in + adjusted_amount_in
+                pool_amount_in + adjusted_amount_in,
             );
         let sub_amount = pow(base, exp);
         (
             bigdecimal::mul_by_u64_truncate(
                 bigdecimal::sub(one, sub_amount),
-                pool_amount_out
+                pool_amount_out,
             ),
             fee_amount
         )
@@ -1661,9 +1709,7 @@ module minitia_std::dex {
         (amount_in, fee_amount)
     }
 
-    public fun pool_metadata(
-        pair: Object<Config>
-    ): (Object<Metadata>, Object<Metadata>) acquires Pool {
+    public fun pool_metadata(pair: Object<Config>): (Object<Metadata>, Object<Metadata>) acquires Pool {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
         (
@@ -1677,7 +1723,7 @@ module minitia_std::dex {
     fun pow(base: BigDecimal, exp: BigDecimal): BigDecimal {
         assert!(
             !bigdecimal::is_zero(base) && bigdecimal::lt(base, bigdecimal::from_u64(2)),
-            error::invalid_argument(EOUT_OF_BASE_RANGE)
+            error::invalid_argument(EOUT_OF_BASE_RANGE),
         );
 
         let res = bigdecimal::one();
@@ -1736,7 +1782,7 @@ module minitia_std::dex {
             // comp(new) = comp(old) * a * n / (n + 1) = a ^ (n + 1) / (n + 1)
             comp = bigdecimal::div_by_u64(
                 bigdecimal::mul_by_u64(bigdecimal::mul(comp, a), index), // comp * a * index
-                index + 1
+                index + 1,
             );
 
             index = index + 1;
@@ -1768,9 +1814,10 @@ module minitia_std::dex {
     }
 
     #[test_only]
-    fun initialized_coin(
-        account: &signer, symbol: String
-    ): (coin::BurnCapability, coin::FreezeCapability, coin::MintCapability) {
+    fun initialized_coin(account: &signer, symbol: String)
+        : (
+        coin::BurnCapability, coin::FreezeCapability, coin::MintCapability
+    ) {
         let (mint_cap, burn_cap, freeze_cap, _) =
             coin::initialize_and_generate_extend_ref(
                 account,
@@ -1779,7 +1826,7 @@ module minitia_std::dex {
                 symbol,
                 6,
                 string::utf8(b""),
-                string::utf8(b"")
+                string::utf8(b""),
             );
 
         return (burn_cap, freeze_cap, mint_cap)
@@ -1802,12 +1849,12 @@ module minitia_std::dex {
         coin::mint_to(
             &initia_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
         coin::mint_to(
             &usdc_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
 
         // spot price is 1
@@ -1821,7 +1868,7 @@ module minitia_std::dex {
             coin::metadata(chain_addr, string::utf8(b"INIT")),
             coin::metadata(chain_addr, string::utf8(b"USDC")),
             80000000,
-            20000000
+            20000000,
         );
 
         let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
@@ -1829,15 +1876,15 @@ module minitia_std::dex {
 
         assert!(
             coin::balance(chain_addr, init_metadata) == 20000000,
-            0
+            0,
         );
         assert!(
             coin::balance(chain_addr, usdc_metadata) == 80000000,
-            1
+            1,
         );
         assert!(
             coin::balance(chain_addr, lp_metadata) == 80000000,
-            2
+            2,
         );
 
         // swap init to usdc
@@ -1846,15 +1893,15 @@ module minitia_std::dex {
             pair,
             init_metadata,
             1000,
-            option::none()
+            option::none(),
         );
         assert!(
             coin::balance(chain_addr, init_metadata) == 20000000 - 1000,
-            3
+            3,
         );
         assert!(
             coin::balance(chain_addr, usdc_metadata) == 80000000 + 996,
-            4
+            4,
         ); // return 999 commission 3
 
         // swap usdc to init
@@ -1863,15 +1910,15 @@ module minitia_std::dex {
             pair,
             usdc_metadata,
             1000,
-            option::none()
+            option::none(),
         );
         assert!(
             coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997,
-            5
+            5,
         ); // return 1000 commission 3
         assert!(
             coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000,
-            6
+            6,
         );
 
         // withdraw liquidity
@@ -1880,17 +1927,15 @@ module minitia_std::dex {
             pair,
             40000000,
             option::none(),
-            option::none()
+            option::none(),
         );
         assert!(
-            coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997
-                + 40000001,
-            7
+            coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997 + 40000001,
+            7,
         );
         assert!(
-            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000
-                + 10000002,
-            8
+            coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000 + 10000002,
+            8,
         );
 
         // single asset provide liquidity (coin b)
@@ -1900,11 +1945,11 @@ module minitia_std::dex {
             pair,
             usdc_metadata,
             100000,
-            option::none()
+            option::none(),
         );
         assert!(
             coin::balance(chain_addr, lp_metadata) == 40000000 + 79491,
-            9
+            9,
         );
 
         // single asset provide liquidity (coin a)
@@ -1914,11 +1959,11 @@ module minitia_std::dex {
             pair,
             init_metadata,
             100000,
-            option::none()
+            option::none(),
         );
         assert!(
             coin::balance(chain_addr, lp_metadata) == 40000000 + 79491 + 80090,
-            10
+            10,
         );
 
         move_to(
@@ -1927,7 +1972,7 @@ module minitia_std::dex {
                 burn_cap: initia_burn_cap,
                 freeze_cap: initia_freeze_cap,
                 mint_cap: initia_mint_cap
-            }
+            },
         );
 
         move_to(
@@ -1936,7 +1981,7 @@ module minitia_std::dex {
                 burn_cap: usdc_burn_cap,
                 freeze_cap: usdc_freeze_cap,
                 mint_cap: usdc_mint_cap
-            }
+            },
         );
     }
 
@@ -1957,12 +2002,12 @@ module minitia_std::dex {
         coin::mint_to(
             &initia_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
         coin::mint_to(
             &usdc_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
 
         set_block_info(10, 1000);
@@ -1981,21 +2026,21 @@ module minitia_std::dex {
             init_metadata,
             usdc_metadata,
             80000000,
-            20000000
+            20000000,
         );
         let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
         let pair = object::convert<Metadata, Config>(lp_metadata);
 
         assert!(
             get_spot_price(pair, init_metadata) == bigdecimal::from_ratio_u64(2475, 100),
-            0
+            0,
         );
 
         // 0.8 : 0.2
         set_block_info(11, 2500);
         assert!(
             get_spot_price(pair, init_metadata) == bigdecimal::one(),
-            1
+            1,
         );
 
         // 0.61 : 0.39
@@ -2003,20 +2048,20 @@ module minitia_std::dex {
         assert!(
             get_spot_price(pair, init_metadata)
                 == bigdecimal::from_ratio_u64(391025641025641025, 1000000000000000000),
-            2
+            2,
         );
 
         assert!(
             coin::balance(chain_addr, init_metadata) == 20000000,
-            0
+            0,
         );
         assert!(
             coin::balance(chain_addr, usdc_metadata) == 80000000,
-            1
+            1,
         );
         assert!(
             coin::balance(chain_addr, lp_metadata) == 80000000,
-            3
+            3,
         );
 
         // swap test during LBP (0.8: 0.2)
@@ -2028,15 +2073,15 @@ module minitia_std::dex {
             pair,
             init_metadata,
             1000,
-            option::none()
+            option::none(),
         );
         assert!(
             coin::balance(chain_addr, init_metadata) == 20000000 - 1000,
-            4
+            4,
         );
         assert!(
             coin::balance(chain_addr, usdc_metadata) == 80000000 + 996,
-            5
+            5,
         ); // return 999 commission 3
 
         // swap usdc to init
@@ -2045,15 +2090,15 @@ module minitia_std::dex {
             pair,
             usdc_metadata,
             1000,
-            option::none()
+            option::none(),
         );
         assert!(
             coin::balance(chain_addr, init_metadata) == 20000000 - 1000 + 997,
-            6
+            6,
         ); // return 1000 commission 3
         assert!(
             coin::balance(chain_addr, usdc_metadata) == 80000000 + 996 - 1000,
-            7
+            7,
         );
 
         move_to(
@@ -2062,7 +2107,7 @@ module minitia_std::dex {
                 burn_cap: initia_burn_cap,
                 freeze_cap: initia_freeze_cap,
                 mint_cap: initia_mint_cap
-            }
+            },
         );
 
         move_to(
@@ -2071,7 +2116,7 @@ module minitia_std::dex {
                 burn_cap: usdc_burn_cap,
                 freeze_cap: usdc_freeze_cap,
                 mint_cap: usdc_mint_cap
-            }
+            },
         );
     }
 
@@ -2095,7 +2140,7 @@ module minitia_std::dex {
         assert!(
             coin_a_weight == bigdecimal::from_ratio_u64(2, 10)
                 && coin_b_weight == bigdecimal::from_ratio_u64(8, 10),
-            0
+            0,
         );
 
         set_block_info(15, 1500);
@@ -2103,7 +2148,7 @@ module minitia_std::dex {
         assert!(
             coin_a_weight == bigdecimal::from_ratio_u64(5, 10)
                 && coin_b_weight == bigdecimal::from_ratio_u64(5, 10),
-            1
+            1,
         );
 
         set_block_info(20, 2000);
@@ -2111,7 +2156,7 @@ module minitia_std::dex {
         assert!(
             coin_a_weight == bigdecimal::from_ratio_u64(8, 10)
                 && coin_b_weight == bigdecimal::from_ratio_u64(2, 10),
-            2
+            2,
         );
 
         set_block_info(30, 3000);
@@ -2119,7 +2164,7 @@ module minitia_std::dex {
         assert!(
             coin_a_weight == bigdecimal::from_ratio_u64(8, 10)
                 && coin_b_weight == bigdecimal::from_ratio_u64(2, 10),
-            3
+            3,
         );
     }
 
@@ -2144,17 +2189,17 @@ module minitia_std::dex {
         coin::mint_to(
             &coin_a_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
         coin::mint_to(
             &coin_b_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
         coin::mint_to(
             &coin_c_mint_cap,
             chain_addr,
-            100000000
+            100000000,
         );
 
         create_pair_script(
@@ -2167,7 +2212,7 @@ module minitia_std::dex {
             a_metadata,
             b_metadata,
             1,
-            1
+            1,
         );
         let lp_1_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL1"));
         let pair_1 = object::convert<Metadata, Config>(lp_1_metadata);
@@ -2183,7 +2228,7 @@ module minitia_std::dex {
             a_metadata,
             b_metadata,
             1,
-            1
+            1,
         );
         let lp_2_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL2"));
         let pair_2 = object::convert<Metadata, Config>(lp_2_metadata);
@@ -2199,7 +2244,7 @@ module minitia_std::dex {
             a_metadata,
             c_metadata,
             1,
-            1
+            1,
         );
         let lp_3_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL3"));
         let pair_3 = object::convert<Metadata, Config>(lp_3_metadata);
@@ -2215,7 +2260,7 @@ module minitia_std::dex {
             a_metadata,
             c_metadata,
             1,
-            1
+            1,
         );
         let lp_4_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL4"));
         let pair_4 = object::convert<Metadata, Config>(lp_4_metadata);
@@ -2241,7 +2286,7 @@ module minitia_std::dex {
             option::none(),
             option::none(),
             option::none(),
-            10
+            10,
         );
         assert!(
             res
@@ -2273,9 +2318,8 @@ module minitia_std::dex {
                         liquidity_token: pair_4_addr,
                         weights,
                         swap_fee_rate
-                    }
-                ],
-            0
+                    }],
+            0,
         );
 
         let res =
@@ -2283,7 +2327,7 @@ module minitia_std::dex {
                 option::some(a_addr),
                 option::some(b_addr),
                 option::some(pair_1_addr),
-                10
+                10,
             );
         assert!(
             res
@@ -2308,9 +2352,8 @@ module minitia_std::dex {
                         liquidity_token: pair_4_addr,
                         weights,
                         swap_fee_rate
-                    }
-                ],
-            1
+                    }],
+            1,
         );
 
         let res =
@@ -2318,7 +2361,7 @@ module minitia_std::dex {
                 option::some(a_addr),
                 option::some(a_addr),
                 option::some(pair_1_addr),
-                10
+                10,
             );
         assert!(
             res
@@ -2350,16 +2393,15 @@ module minitia_std::dex {
                         liquidity_token: pair_4_addr,
                         weights,
                         swap_fee_rate
-                    }
-                ],
-            2
+                    }],
+            2,
         );
 
         let res = get_pairs(
             a_addr,
             b_addr,
             option::none(),
-            10
+            10,
         );
         assert!(
             res
@@ -2377,16 +2419,15 @@ module minitia_std::dex {
                         liquidity_token: pair_2_addr,
                         weights,
                         swap_fee_rate
-                    }
-                ],
-            3
+                    }],
+            3,
         );
 
         let res = get_pairs(
             a_addr,
             b_addr,
             option::some(pair_1_addr),
-            10
+            10,
         );
         assert!(
             res
@@ -2397,9 +2438,8 @@ module minitia_std::dex {
                         liquidity_token: pair_2_addr,
                         weights,
                         swap_fee_rate
-                    }
-                ],
-            3
+                    }],
+            3,
         );
     }
 }
