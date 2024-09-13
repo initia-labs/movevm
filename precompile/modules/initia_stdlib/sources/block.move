@@ -35,9 +35,20 @@ module initia_std::block {
     }
 
     #[test_only]
+    use initia_std::signer;
+
+    #[test_only]
+    struct HasGenesisBlock has key {}
+
+    #[test_only]
     public fun emit_writeset_block_event(
-        _vm: &signer, _fake_block_hash: address
+        vm: &signer, _fake_block_hash: address
     ) {
+        if (!exists<HasGenesisBlock>(signer::address_of(vm))) {
+            move_to(vm, HasGenesisBlock{});
+            return
+        };
+
         let (block_height, block_time) = get_block_info();
         set_block_info(block_height + 1, block_time);
     }
