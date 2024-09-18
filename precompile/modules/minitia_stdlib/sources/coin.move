@@ -368,6 +368,9 @@ module minitia_std::coin {
         object::address_to_object(addr)
     }
 
+    // for lz compatibility
+    struct Coin<phantom CoinType> {}
+
     #[test_only]
     fun initialize_coin_for_testing(
         account: &signer, symbol: String
