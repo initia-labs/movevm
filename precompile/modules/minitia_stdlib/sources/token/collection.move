@@ -271,9 +271,6 @@ module minitia_std::collection {
             )
         };
 
-        let transfer_ref = object::generate_transfer_ref(&constructor_ref);
-        object::disable_ungated_transfer(&transfer_ref);
-
         constructor_ref
     }
 
@@ -537,15 +534,8 @@ module minitia_std::collection {
         assert!(count(collection) == option::some(0), 0);
     }
 
-    #[test(creator = @0x123)]
-    #[expected_failure(abort_code = 0x10007, location = Self)]
-    fun test_create_collection_with_invalid_name(creator: &signer) {
-        create_collection_helper(creator, string::utf8(b"collection::hello"));
-    }
-
-    #[test(creator = @0x123, trader = @0x456)]
-    #[expected_failure(abort_code = 0x50003, location = minitia_std::object)]
-    entry fun test_create_and_transfer(creator: &signer, trader: &signer) {
+   #[test(creator = @0x123, receipient = @0x456)]
+    entry fun test_create_and_transfer(creator: &signer, receipient: &signer) {
         let creator_address = signer::address_of(creator);
         let collection_name = string::utf8(b"collection name");
         create_collection_helper(creator, collection_name);
@@ -561,9 +551,16 @@ module minitia_std::collection {
         object::transfer(
             creator,
             collection,
-            signer::address_of(trader)
+            signer::address_of(receipient)
         );
     }
+
+    #[test(creator = @0x123)]
+    #[expected_failure(abort_code = 0x10007, location = Self)]
+    fun test_create_collection_with_invalid_name(creator: &signer) {
+        create_collection_helper(creator, string::utf8(b"collection::hello"));
+    }
+
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x80001, location = minitia_std::object)]

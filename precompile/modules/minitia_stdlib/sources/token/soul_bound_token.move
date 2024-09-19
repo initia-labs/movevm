@@ -6,7 +6,7 @@ module minitia_std::soul_bound_token {
     use std::string::String;
     use std::signer;
     use minitia_std::object::{Self, ConstructorRef, Object};
-    use minitia_std::collection;
+    use minitia_std::collection::{Self, Collection};
     use minitia_std::property_map;
     use minitia_std::royalty;
     use minitia_std::nft;
@@ -203,7 +203,7 @@ module minitia_std::soul_bound_token {
 
     fun mint_internal(
         creator: &signer,
-        collection: String,
+        collection_name: String,
         description: String,
         name: String,
         uri: String,
@@ -211,10 +211,11 @@ module minitia_std::soul_bound_token {
         property_types: vector<String>,
         property_values: vector<vector<u8>>
     ): ConstructorRef acquires SoulBoundTokenCollection {
+        let collection_obj = collection_object(creator, &collection_name);
         let constructor_ref =
             nft::create(
                 creator,
-                collection,
+                object::convert<SoulBoundTokenCollection, Collection>(collection_obj),
                 description,
                 name,
                 option::none(),
@@ -224,7 +225,6 @@ module minitia_std::soul_bound_token {
 
         let object_signer = object::generate_signer(&constructor_ref);
 
-        let collection_obj = collection_object(creator, &collection);
         let collection = borrow_collection(collection_obj);
 
         let mutator_ref =

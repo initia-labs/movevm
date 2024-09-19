@@ -4,7 +4,9 @@ use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
 
 use libsecp256k1::{
-    recover, util::MESSAGE_SIZE, util::SIGNATURE_SIZE, Message, RecoveryId, Signature,
+    recover,
+    util::{COMPRESSED_PUBLIC_KEY_SIZE, MESSAGE_SIZE, SIGNATURE_SIZE},
+    verify, Message, PublicKey, RecoveryId, Signature,
 };
 
 use smallvec::{smallvec, SmallVec};
@@ -31,6 +33,56 @@ fn read_signature(data: &[u8]) -> Result<[u8; SIGNATURE_SIZE], TryFromSliceError
 
 fn read_hash(data: &[u8]) -> Result<[u8; MESSAGE_SIZE], TryFromSliceError> {
     data.try_into()
+}
+
+fn read_pubkey(data: &[u8]) -> Result<[u8; COMPRESSED_PUBLIC_KEY_SIZE], TryFromSliceError> {
+    data.try_into()
+}
+
+pub fn native_verify(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.crypto_secp256k1_base)?;
+
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 3);
+
+    let signature = safely_pop_arg!(arguments, Vec<u8>);
+    let pubkey = safely_pop_arg!(arguments, Vec<u8>);
+    let message = safely_pop_arg!(arguments, Vec<u8>);
+
+    let msg = match read_hash(&message) {
+        Ok(mh) => Message::parse(&mh),
+        Err(_) => {
+            return Err(SafeNativeError::Abort {
+                abort_code: UNABLE_TO_DESERIALIZE,
+            });
+        }
+    };
+
+    context.charge(gas_params.crypto_secp256k1_per_pubkey_deserialize * NumArgs::one())?;
+    let pk = match read_pubkey(&pubkey) {
+        Ok(pk) => match PublicKey::parse_compressed(&pk) {
+            Ok(pk) => pk,
+            Err(_) => return Ok(smallvec![Value::bool(false)]),
+        },
+        Err(_) => return Ok(smallvec![Value::bool(false)]),
+    };
+
+    context.charge(gas_params.crypto_secp256k1_per_sig_deserialize * NumArgs::one())?;
+    let sig = match read_signature(&signature) {
+        Ok(sig) => match Signature::parse_standard(&sig) {
+            Ok(sig) => sig,
+            Err(_) => return Ok(smallvec![Value::bool(false)]),
+        },
+        Err(_) => return Ok(smallvec![Value::bool(false)]),
+    };
+
+    context.charge(gas_params.crypto_secp256k1_per_sig_verify * NumArgs::one())?;
+    Ok(smallvec![Value::bool(verify(&msg, &sig, &pk))])
 }
 
 pub fn native_recover_public_key(
@@ -102,7 +154,7 @@ pub fn native_recover_public_key(
 use rand_core::OsRng;
 
 #[cfg(feature = "testing")]
-use libsecp256k1::{sign, PublicKey, SecretKey};
+use libsecp256k1::{sign, SecretKey};
 
 #[cfg(feature = "testing")]
 pub fn native_test_only_generate_keys(
@@ -151,10 +203,10 @@ pub fn make_all(
     builder: &SafeNativeBuilder,
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
-    natives.extend([(
-        "recover_public_key_internal",
-        native_recover_public_key as RawSafeNative,
-    )]);
+    natives.extend([
+        ("verify_internal", native_verify as RawSafeNative),
+        ("recover_public_key_internal", native_recover_public_key),
+    ]);
 
     #[cfg(feature = "testing")]
     natives.extend([
@@ -162,7 +214,7 @@ pub fn make_all(
             "generate_keys",
             native_test_only_generate_keys as RawSafeNative,
         ),
-        ("sign", native_test_only_sign as RawSafeNative),
+        ("sign", native_test_only_sign),
     ]);
 
     builder.make_named_natives(natives)

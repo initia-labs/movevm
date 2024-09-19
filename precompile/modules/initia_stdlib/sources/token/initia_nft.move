@@ -13,7 +13,7 @@ module initia_std::initia_nft {
     use std::string::String;
     use std::signer;
     use initia_std::object::{Self, ConstructorRef, ExtendRef, Object};
-    use initia_std::collection;
+    use initia_std::collection::{Self, Collection};
     use initia_std::royalty;
     use initia_std::nft;
     use initia_std::bigdecimal::BigDecimal;
@@ -205,16 +205,17 @@ module initia_std::initia_nft {
 
     fun mint_internal(
         creator: &signer,
-        collection: String,
+        collection_name: String,
         description: String,
         token_id: String,
         uri: String,
         can_burn: bool
     ): ConstructorRef acquires InitiaNftCollection {
+        let collection_obj = collection_object(creator, &collection_name);
         let constructor_ref =
             nft::create(
                 creator,
-                collection,
+                object::convert<InitiaNftCollection, Collection>(collection_obj),
                 description,
                 token_id,
                 option::none(),
@@ -222,8 +223,6 @@ module initia_std::initia_nft {
             );
 
         let object_signer = object::generate_signer(&constructor_ref);
-
-        let collection_obj = collection_object(creator, &collection);
         let collection = borrow_collection(collection_obj);
 
         let mutator_ref =

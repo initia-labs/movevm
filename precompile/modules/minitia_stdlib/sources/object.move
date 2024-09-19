@@ -28,6 +28,7 @@ module minitia_std::object {
     use minitia_std::event;
 
     friend minitia_std::primary_fungible_store;
+    friend minitia_std::nft;
 
     /// An object already exists at this address
     const EOBJECT_EXISTS: u64 = 1;
@@ -241,6 +242,16 @@ module minitia_std::object {
         let creator_address = signer::address_of(creator);
         let obj_addr = create_object_address(&creator_address, seed);
         create_object_internal(creator_address, obj_addr, true)
+    }
+
+    /// Create a new object to represent an NFT and return the ConstructorRef.
+    /// Nft objects can be queried globally by knowing the user generated seed used to create them
+    /// and the creator's address. NFT objects can be deleted.
+    public(friend) fun create_nft_object(
+        owner: address, creator: address, seed: vector<u8>
+    ): ConstructorRef acquires Tombstone {
+        let obj_addr = create_object_address(&creator, seed);
+        create_object_internal(owner, obj_addr, true)
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.

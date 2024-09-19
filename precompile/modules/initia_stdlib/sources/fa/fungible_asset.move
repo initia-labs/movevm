@@ -483,7 +483,8 @@ module initia_std::fungible_asset {
     /// Get the symbol of the fungible asset from the `metadata` object.
     public fun symbol<T: key>(metadata: Object<T>): String acquires Metadata {
         let md = borrow_fungible_metadata(&metadata);
-        if (object::is_owner(metadata, @initia_std) && md.symbol == string::utf8(b"uinit")) {
+        if (object::is_owner(metadata, @initia_std)
+            && md.symbol == string::utf8(b"uinit")) {
             return string::utf8(b"INIT")
         };
 
@@ -512,7 +513,8 @@ module initia_std::fungible_asset {
     /// Get the decimals from the `metadata` object.
     public fun decimals<T: key>(metadata: Object<T>): u8 acquires Metadata {
         let md = borrow_fungible_metadata(&metadata);
-        if (object::is_owner(metadata, @initia_std) && md.symbol == string::utf8(b"uinit")) {
+        if (object::is_owner(metadata, @initia_std)
+            && md.symbol == string::utf8(b"uinit")) {
             return 6
         };
 

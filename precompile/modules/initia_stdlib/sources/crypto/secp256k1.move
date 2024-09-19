@@ -91,6 +91,24 @@ module initia_std::secp256k1 {
         sig.bytes
     }
 
+    /// Returns `true` if the signature can verify the public key on the message
+    public fun verify(
+        message: vector<u8>,
+        public_key: &ECDSACompressedPublicKey,
+        signature: &ECDSASignature
+    ): bool {
+        assert!(
+            std::vector::length(&message) == MESSAGE_SIZE,
+            std::error::invalid_argument(E_DESERIALIZE)
+        );
+
+        return verify_internal(
+            message,
+            public_key.bytes,
+            signature.bytes
+        )
+    }
+
     /// Recovers the signer's raw (64-byte) public key from a secp256k1 ECDSA `signature` given the `recovery_id` and the signed
     /// `message` (32 byte digest).
     ///
@@ -151,6 +169,18 @@ module initia_std::secp256k1 {
     // Native functions
     //
 
+    /// Returns `true` if `signature` verifies on `public_key` and `message`
+    /// and returns `false` otherwise.
+    /// 
+    /// - `message`: A 32-byte hashed message.
+    /// - `public_key`: A compressed public key in bytes.
+    /// - `signature`: A 64-byte ECDSA signature.
+    native fun verify_internal(
+        message: vector<u8>,
+        public_key: vector<u8>,
+        signature: vector<u8>
+    ): bool;
+
     /// Returns `(public_key, true)` if `signature` verifies on `message` under the recovered `public_key`
     /// and returns `([], false)` otherwise.
     native fun recover_public_key_internal(
@@ -171,6 +201,29 @@ module initia_std::secp256k1 {
     //
     // Tests
     //
+
+    #[test]
+    fun test_secp256k1_sign_verify() {
+        use std::hash;
+
+        let (sk, vk) = generate_keys(true);
+        let pk = ecdsa_compressed_public_key_from_bytes(vk);
+
+        let msg: vector<u8> = hash::sha2_256(b"test initia secp256k1");
+        let (_rid, sig_bytes) = sign(msg, sk);
+        let sig = ecdsa_signature_from_bytes(sig_bytes);
+        assert!(verify(msg, &pk, &sig), 1);
+
+        // Test with an incorrect message
+        let wrong_msg: vector<u8> = hash::sha2_256(b"wrong message");
+        assert!(!verify(wrong_msg, &pk, &sig), 2);
+
+        // Test with an incorrect signature
+        let invalid_sig_bytes = sig_bytes;
+        *std::vector::borrow_mut(&mut invalid_sig_bytes, 0) = 0xFF; // Corrupt the signature
+        let invalid_sig = ecdsa_signature_from_bytes(invalid_sig_bytes);
+        assert!(!verify(msg, &pk, &invalid_sig), 3);
+    }
 
     #[test]
     fun test_gen_sign_recover() {
