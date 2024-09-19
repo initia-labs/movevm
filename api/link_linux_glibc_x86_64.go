@@ -1,4 +1,4 @@
-//go:build linux && !muslc && amd64 && !sys_movevm
+//go:build linux && !muslc && amd64
 
 package api
 
