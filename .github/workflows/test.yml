@@ -53,5 +53,6 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
       - name: Test
         run: |
+          make build-rust
           make precompile
           make test-go
