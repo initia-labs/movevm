@@ -54,5 +54,6 @@ jobs:
           go-version: "1.22"
       - name: Test
         run: |
+          go clean -cache
           make build-go 
           make test-go
