@@ -1,4 +1,4 @@
-//go:build linux && muslc && !sys_movevm
+//go:build linux && muslc
 
 package api
 
