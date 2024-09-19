@@ -52,6 +52,5 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: "1.22"
-          cache: false
       - name: Test
-        run: make test-go
+        run: go clean -testcache && make test-go
