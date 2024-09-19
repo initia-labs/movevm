@@ -114,8 +114,8 @@ build-rust-release:
 	cargo build -p movevm --release
 	cargo build -p compiler --release
 
-	cp -fp target/release/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
-	cp -fp target/release/$(COMPILER_SHARED_LIB_SRC) api/$(COMPILER_SHARED_LIB_DST)
+	cp -fp target/release/$(SHARED_LIB_SRC) api
+	cp -fp target/release/$(COMPILER_SHARED_LIB_SRC) api
 
 	make update-bindings
 
