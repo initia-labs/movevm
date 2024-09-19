@@ -115,6 +115,10 @@ build-rust-release:
 	cargo build -p compiler --release
 	rm -f api/$(SHARED_LIB_DST)
 	rm -f api/$(COMPILER_SHARED_LIB_DST)
+	ls api/$(SHARED_LIB_DST)
+	ls api/$(COMPILER_SHARED_LIB_DST)
+	ls target/release/$(SHARED_LIB_SRC)
+	ls target/release/$(COMPILER_SHARED_LIB_SRC)
 	cp -fp target/release/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
 	cp -fp target/release/$(COMPILER_SHARED_LIB_SRC) api/$(COMPILER_SHARED_LIB_DST)
 	make update-bindings
