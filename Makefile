@@ -119,6 +119,7 @@ build-rust-release:
 	ls target/release/
 	cp -fp target/release/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
 	cp -fp target/release/$(COMPILER_SHARED_LIB_SRC) api/$(COMPILER_SHARED_LIB_DST)
+	ls api/
 	make update-bindings
 	@ #this pulls out ELF symbols, 80% size reduction!
 
