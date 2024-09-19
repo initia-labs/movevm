@@ -45,7 +45,7 @@ module minitia_std::block {
         vm: &signer, _fake_block_hash: address
     ) {
         if (!exists<HasGenesisBlock>(signer::address_of(vm))) {
-            move_to(vm, HasGenesisBlock{});
+            move_to(vm, HasGenesisBlock {});
             return
         };
 

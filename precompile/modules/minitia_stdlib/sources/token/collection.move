@@ -271,9 +271,6 @@ module minitia_std::collection {
             )
         };
 
-        let transfer_ref = object::generate_transfer_ref(&constructor_ref);
-        object::disable_ungated_transfer(&transfer_ref);
-
         constructor_ref
     }
 

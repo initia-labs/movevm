@@ -28,6 +28,7 @@ module initia_std::object {
     use initia_std::event;
 
     friend initia_std::primary_fungible_store;
+    friend initia_std::nft;
 
     /// An object already exists at this address
     const EOBJECT_EXISTS: u64 = 1;
@@ -241,6 +242,14 @@ module initia_std::object {
         let creator_address = signer::address_of(creator);
         let obj_addr = create_object_address(&creator_address, seed);
         create_object_internal(creator_address, obj_addr, true)
+    }
+
+    /// Create a new object to represent an NFT and return the ConstructorRef.
+    public(friend) fun create_nft_object(
+        owner: address, creator: address, seed: vector<u8>
+    ): ConstructorRef acquires Tombstone {
+        let obj_addr = create_object_address(&creator, seed);
+        create_object_internal(owner, obj_addr, true)
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.
