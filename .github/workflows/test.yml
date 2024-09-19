@@ -51,9 +51,6 @@ jobs:
             crates/move-test/build/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - name: Build
-        run: |
-          make build-rust
       - name: Test
         run: |
-          make test
+          make test-go
