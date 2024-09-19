@@ -245,6 +245,8 @@ module initia_std::object {
     }
 
     /// Create a new object to represent an NFT and return the ConstructorRef.
+    /// Nft objects can be queried globally by knowing the user generated seed used to create them
+    /// and the creator's address. NFT objects can be deleted.
     public(friend) fun create_nft_object(
         owner: address, creator: address, seed: vector<u8>
     ): ConstructorRef acquires Tombstone {

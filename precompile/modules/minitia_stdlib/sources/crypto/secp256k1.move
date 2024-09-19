@@ -91,7 +91,7 @@ module minitia_std::secp256k1 {
         sig.bytes
     }
 
-    /// Returns `true` only the signature can verify the public key on the message
+    /// Returns `true` if the signature can verify the public key on the message
     public fun verify(
         message: vector<u8>,
         public_key: &ECDSACompressedPublicKey,
@@ -171,6 +171,10 @@ module minitia_std::secp256k1 {
 
     /// Returns `true` if `signature` verifies on `public_key` and `message`
     /// and returns `false` otherwise.
+    ///
+    /// - `message`: A 32-byte hashed message.
+    /// - `public_key`: A compressed public key in bytes.
+    /// - `signature`: A 64-byte ECDSA signature.
     native fun verify_internal(
         message: vector<u8>,
         public_key: vector<u8>,
@@ -209,6 +213,16 @@ module minitia_std::secp256k1 {
         let (_rid, sig_bytes) = sign(msg, sk);
         let sig = ecdsa_signature_from_bytes(sig_bytes);
         assert!(verify(msg, &pk, &sig), 1);
+
+        // Test with an incorrect message
+        let wrong_msg: vector<u8> = hash::sha2_256(b"wrong message");
+        assert!(!verify(wrong_msg, &pk, &sig), 2);
+
+        // Test with an incorrect signature
+        let invalid_sig_bytes = sig_bytes;
+        *std::vector::borrow_mut(&mut invalid_sig_bytes, 0) = 0xFF; // Corrupt the signature
+        let invalid_sig = ecdsa_signature_from_bytes(invalid_sig_bytes);
+        assert!(!verify(msg, &pk, &invalid_sig), 3);
     }
 
     #[test]
