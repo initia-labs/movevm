@@ -183,7 +183,10 @@ module initia_std::json {
         assert!(option::extract(&mut get_elem<vector<u8>>(&json_obj, string::utf8(b"c"))) == vector[1, 2, 3], 6);
         assert!(option::extract(&mut get_elem<address>(&json_obj, string::utf8(b"d"))) == @0x1, 7);
 
-        set_elem(&mut json_obj, string::utf8(b"c"), &b"hello");
-        assert!(option::extract(&mut get_elem<vector<u8>>(&json_obj, string::utf8(b"c"))) == b"hello", 8);
+        set_elem(&mut json_obj, string::utf8(b"c"), &string::utf8(b"hello"));
+        assert!(option::extract(&mut get_elem<String>(&json_obj, string::utf8(b"c"))) == string::utf8(b"hello"), 8);
+
+        let json5 = marshal(&json_obj);
+        assert!(json5 == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}", 9);
     }
 }

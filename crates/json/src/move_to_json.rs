@@ -157,7 +157,7 @@ fn convert_json_object_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
                     | MoveStruct::WithVariantFields(_, _, fields),
                 ) => {
                     let key =
-                        std::str::from_utf8(&bytes_from_move_value(&fields.get(0).unwrap().1))
+                        std::str::from_utf8(&bytes_from_move_value(&fields.first().unwrap().1))
                             .map_err(deserialization_error_with_msg)?
                             .to_string();
                     let val = convert_json_value_to_json_value(&fields.get(1).unwrap().1)?;
