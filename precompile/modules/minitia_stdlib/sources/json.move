@@ -19,6 +19,11 @@ module minitia_std::json {
         value: vector<u8>
     }
 
+    /// Unmarshal JSON value to the given type.
+    public fun unmarshal_json_value<T: drop>(json_value: JSONValue): T {
+        unmarshal(json_value.value)
+    }
+
     /// Get the list of keys from the JSON object.
     public fun keys(obj: &JSONObject): vector<String> {
         vector::map_ref(&obj.elems, |elem| {
@@ -174,9 +179,13 @@ module minitia_std::json {
         let json3 = marshal(&json_val);
         assert!(json3 == json, 2);
 
-        let json_obj = unmarshal<JSONObject>(json);
-        let json4 = marshal(&json_obj);
+        let obj3 = unmarshal_json_value<TestObject>(json_val);
+        let json4 = marshal(&obj3);
         assert!(json4 == json, 3);
+
+        let json_obj = unmarshal<JSONObject>(json);
+        let json5 = marshal(&json_obj);
+        assert!(json5 == json, 4);
 
         assert!(option::extract(&mut get_elem<u64>(&json_obj, string::utf8(b"a"))) == 42, 4);
         assert!(option::extract(&mut get_elem<bool>(&json_obj, string::utf8(b"b"))) == true, 5);
