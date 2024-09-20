@@ -249,6 +249,11 @@ module initia_std::multisig_v2 {
             vector::length(&members) >= threshold,
             error::invalid_argument(EINVALID_THRESHOLD)
         );
+        assert!(
+            threshold > 0,
+            error::invalid_argument(EINVALID_THRESHOLD)
+        );
+
         let constructor_ref =
             object::create_named_object(account, create_multisig_seed(&name));
         let extend_ref = object::generate_extend_ref(&constructor_ref);
@@ -301,16 +306,20 @@ module initia_std::multisig_v2 {
         assert_tier_config(tiers, tier_weights, &members, member_tiers);
 
         // check threshold computed from each member weights
-        let total_weight: u64 = 0;
-        vector::for_each(
+        let total_weight = vector::fold(
             member_tiers,
-            |tier| {
+            0u64,
+            |acc, tier| {
                 let (_, index) = vector::index_of(&tiers, &tier);
-                total_weight = total_weight + *vector::borrow(&tier_weights, index)
+                acc + *vector::borrow(&tier_weights, index)
             }
         );
         assert!(
             total_weight >= threshold,
+            error::invalid_argument(EINVALID_THRESHOLD)
+        );
+        assert!(
+            threshold > 0,
             error::invalid_argument(EINVALID_THRESHOLD)
         );
 
@@ -376,21 +385,18 @@ module initia_std::multisig_v2 {
     }
 
     fun total_weight(members: &vector<Member>): u64 {
-        let total_weight: u64 = 0;
-        vector::for_each_ref(
-            members,
-            |member| {
-                let m: &Member = member;
-                if (option::is_some(&m.tier)) {
-                    let tier = *option::borrow(&m.tier);
-                    total_weight = total_weight + tier.weight
-                } else {
-                    total_weight = total_weight + 1
-                }
+        vector::fold(
+            *members,
+            0u64,
+            |acc, member| {
+                let m: Member = member;
+                acc
+                    + if (option::is_some(&m.tier)) {
+                        let tier = *option::borrow(&m.tier);
+                        tier.weight
+                    } else { 1u64 }
             }
-        );
-
-        total_weight
+        )
     }
 
     /// Create new proposal
@@ -559,18 +565,21 @@ module initia_std::multisig_v2 {
             );
 
             // check threshold computed from each member weights
-            let total_weight: u64 = 0;
-            vector::for_each(
+            let total_weight = vector::fold(
                 new_member_tiers,
-                |tier| {
+                0u64,
+                |acc, tier| {
                     let (_, index) = vector::index_of(&new_tiers, &tier);
-                    total_weight = total_weight
-                        + *vector::borrow(&new_tier_weights, index)
+                    acc + *vector::borrow(&new_tier_weights, index)
                 }
             );
 
             assert!(
                 total_weight >= new_threshold,
+                error::invalid_argument(EINVALID_THRESHOLD)
+            );
+            assert!(
+                new_threshold > 0,
                 error::invalid_argument(EINVALID_THRESHOLD)
             );
 
@@ -608,8 +617,6 @@ module initia_std::multisig_v2 {
                 option::none(),
                 2
             );
-
-        // TODO: Optimize this in the future since iterating over all proposals is not efficient
         while (table::prepare<u64, Proposal>(iter)) {
             let (_, proposal) = table::next_mut<u64, Proposal>(iter);
             // only cares about active proposals
@@ -783,24 +790,22 @@ module initia_std::multisig_v2 {
     fun yes_vote_score(
         votes: &SimpleMap<Member, bool>, members: &vector<Member>
     ): u64 {
-        let yes_score = 0;
-        vector::for_each_ref(
-            members,
-            |member| {
-                let m: &Member = member;
+        vector::fold(
+            *members,
+            0u64,
+            |acc, member| {
+                let m: Member = member;
                 let weight =
                     if (option::is_some(&m.tier)) {
                         let tier = *option::borrow(&m.tier);
                         tier.weight
-                    } else { 1 };
-
-                if (simple_map::contains_key(votes, m) && *simple_map::borrow(votes, m)) {
-                    yes_score = yes_score + weight;
-                }
+                    } else { 1u64 };
+                if (simple_map::contains_key(votes, &m)
+                    && *simple_map::borrow(votes, &m)) {
+                    acc + weight
+                } else { acc }
             }
-        );
-
-        yes_score
+        )
     }
 
     fun proposal_to_proposal_response(
@@ -961,9 +966,7 @@ module initia_std::multisig_v2 {
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
     #[expected_failure(abort_code = 0x2000b, location = Self)]
     fun wallet_name_too_long(
-        account1: signer,
-        account2: signer,
-        account3: signer
+        account1: signer, account2: signer, account3: signer
     ) {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
