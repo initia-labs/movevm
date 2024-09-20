@@ -4,7 +4,10 @@
 
 use crate::test_utils::mock_chain::{BlankAPIImpl, BlankTableViewImpl};
 
-use initia_move_gas::{InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters};
+use initia_move_compiler::unit_test_factory::InitiaUnitTestFactory;
+use initia_move_gas::{
+    InitiaGasParameters, InitialGasSchedule, MiscGasParameters, NativeGasParameters,
+};
 use initia_move_natives::{
     account::NativeAccountContext, all_natives, block::NativeBlockContext, code::NativeCodeContext,
     cosmos::NativeCosmosContext, event::NativeEventContext, oracle::NativeOracleContext,
@@ -12,7 +15,6 @@ use initia_move_natives::{
     transaction_context::NativeTransactionContext,
 };
 use initia_move_types::metadata;
-use initia_move_compiler::unit_test_factory::InitiaUnitTestFactory;
 
 use move_cli::base::test::{run_move_unit_tests_with_factory, UnitTestResult};
 use move_core_types::effects::ChangeSet;

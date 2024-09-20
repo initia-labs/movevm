@@ -216,7 +216,10 @@ pub fn make_all(
         #[cfg(feature = "testing")]
         ("set_query_response", native_test_only_set_query_response),
         #[cfg(feature = "testing")]
-        ("unset_query_response", native_test_only_unset_query_response),
+        (
+            "unset_query_response",
+            native_test_only_unset_query_response,
+        ),
     ];
 
     builder.make_named_natives(natives)

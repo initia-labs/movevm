@@ -64,7 +64,8 @@ pub extern "C" fn coverage_summary_move_package(
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
         bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
-    let coverage_opt: CompilerCoverageSummaryOptions = bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
+    let coverage_opt: CompilerCoverageSummaryOptions =
+        bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
 
     let cmd = Command::Coverage(coverage_opt.into());
     let res = catch_unwind(AssertUnwindSafe(move || {
@@ -84,7 +85,8 @@ pub extern "C" fn coverage_source_move_package(
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
         bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
-    let coverage_opt: CompilerCoverageSourceOptions = bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
+    let coverage_opt: CompilerCoverageSourceOptions =
+        bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
 
     let cmd = Command::Coverage(coverage_opt.into());
     let res = catch_unwind(AssertUnwindSafe(move || {
@@ -104,7 +106,8 @@ pub extern "C" fn coverage_bytecode_move_package(
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
         bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
-    let coverage_opt: CompilerCoverageBytecodeOptions = bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
+    let coverage_opt: CompilerCoverageBytecodeOptions =
+        bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
 
     let cmd = Command::Coverage(coverage_opt.into());
     let res = catch_unwind(AssertUnwindSafe(move || {
@@ -124,7 +127,8 @@ pub extern "C" fn docgen_move_package(
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
         bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
-    let docgen_opt: CompilerDocgenOptions = bcs::from_bytes(docgen_opt_payload.read().unwrap()).unwrap();
+    let docgen_opt: CompilerDocgenOptions =
+        bcs::from_bytes(docgen_opt_payload.read().unwrap()).unwrap();
 
     let cmd = Command::Document(docgen_opt.into());
     let res: Result<_, Error> = catch_unwind(AssertUnwindSafe(move || {

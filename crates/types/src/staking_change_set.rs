@@ -22,7 +22,7 @@ pub struct StakingChangeSet(
         BTreeMap<
             AccountAddress,
             (
-                u64, /* delegation amount */
+                u64,    /* delegation amount */
                 String, /* undelegation share amount */
             ),
         >,
@@ -30,7 +30,9 @@ pub struct StakingChangeSet(
 );
 
 impl StakingChangeSet {
-    pub fn new(map: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, String)>>) -> StakingChangeSet {
+    pub fn new(
+        map: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (u64, String)>>,
+    ) -> StakingChangeSet {
         Self(map)
     }
 
