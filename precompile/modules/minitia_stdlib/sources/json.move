@@ -8,7 +8,7 @@ module minitia_std::json {
         value: vector<u8>
     }
 
-    /// JSONObject is a struct to hold any data which is unknown at compile time in Object form.
+    /// JSONObject is a struct to hold any json object which is unknown at compile time.
     struct JSONObject has copy, drop {
         elems: vector<Element>
     }
