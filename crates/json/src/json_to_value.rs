@@ -110,6 +110,28 @@ pub fn convert_json_value_to_value(
                 let full_name =
                     format!("{}::{}", type_.module_id().short_str_lossless(), type_.name);
                 match full_name.as_str() {
+                    "0x1::json::JSONValue" => Value::struct_(Struct::pack(vec![Value::vector_u8(
+                        serde_json::to_vec(&json_val).map_err(deserialization_error_with_msg)?,
+                    )])),
+                    "0x1::json::JSONObject" => {
+                        let json_obj = json_val
+                            .as_object()
+                            .ok_or_else(deserialization_error)?
+                            .to_owned();
+                        let elems = json_obj
+                            .into_iter()
+                            .map(|(k, v)| {
+                                let key = k.into_bytes();
+                                let value = serde_json::to_vec(&v)
+                                    .map_err(deserialization_error_with_msg)?;
+                                Ok(Value::struct_(Struct::pack(vec![
+                                    Value::vector_u8(key),
+                                    Value::vector_u8(value),
+                                ])))
+                            })
+                            .collect::<VMResult<Vec<_>>>()?;
+                        Value::struct_(Struct::pack(vec![Value::vector_for_testing_only(elems)]))
+                    }
                     "0x1::string::String" => Value::struct_(Struct::pack(vec![Value::vector_u8(
                         json_val
                             .as_str()
@@ -597,5 +619,81 @@ mod json_arg_testing {
         // invalid negative
         let arg = b"\"-123.4567\"";
         _ = deserialize_json_to_value(&layout, arg).unwrap_err();
+    }
+
+    #[test]
+    fn test_deserialize_json_to_value_json_value() {
+        let layout = MoveTypeLayout::Struct(MoveStructLayout::with_types(
+            StructTag {
+                address: AccountAddress::ONE,
+                module: ident_str!("json").into(),
+                name: ident_str!("JSONValue").into(),
+                type_args: vec![],
+            },
+            vec![MoveFieldLayout {
+                name: ident_str!("value").into(),
+                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)),
+            }],
+        ));
+
+        let arg = b"\"123\"";
+        let result = deserialize_json_to_value(&layout, arg).unwrap();
+        assert!(result
+            .equals(&Value::struct_(Struct::pack(vec![Value::vector_u8(
+                b"\"123\"".to_vec()
+            )])))
+            .unwrap());
+    }
+
+    #[test]
+    fn test_deserialize_json_to_value_json_object() {
+        let layout = MoveTypeLayout::Struct(MoveStructLayout::with_types(
+            StructTag {
+                address: AccountAddress::ONE,
+                module: ident_str!("json").into(),
+                name: ident_str!("JSONObject").into(),
+                type_args: vec![],
+            },
+            vec![MoveFieldLayout {
+                name: ident_str!("elems").into(),
+                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::Struct(
+                    MoveStructLayout::with_types(
+                        StructTag {
+                            address: AccountAddress::ONE,
+                            module: ident_str!("json").into(),
+                            name: ident_str!("Element").into(),
+                            type_args: vec![],
+                        },
+                        vec![
+                            MoveFieldLayout {
+                                name: ident_str!("key").into(),
+                                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)),
+                            },
+                            MoveFieldLayout {
+                                name: ident_str!("value").into(),
+                                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)),
+                            },
+                        ],
+                    ),
+                ))),
+            }],
+        ));
+
+        let arg = b"{\"key1\": \"value1\", \"key2\": \"value2\"}";
+        let result = deserialize_json_to_value(&layout, arg).unwrap();
+        assert!(result
+            .equals(&Value::struct_(Struct::pack(vec![
+                Value::vector_for_testing_only(vec![
+                    Value::struct_(Struct::pack(vec![
+                        Value::vector_u8(b"key1".to_vec()),
+                        Value::vector_u8(b"\"value1\"".to_vec())
+                    ])),
+                    Value::struct_(Struct::pack(vec![
+                        Value::vector_u8(b"key2".to_vec()),
+                        Value::vector_u8(b"\"value2\"".to_vec())
+                    ]))
+                ])
+            ])))
+            .unwrap());
     }
 }
