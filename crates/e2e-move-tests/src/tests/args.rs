@@ -814,10 +814,7 @@ fn biguint_bigdecimal() {
         vec![acc],
         str::parse(entry).unwrap(),
         vec![],
-        vec![
-            r#""100""#.to_string(),
-            r#""100""#.to_string(),
-        ],
+        vec![r#""100""#.to_string(), r#""100""#.to_string()],
     )
     .unwrap();
 

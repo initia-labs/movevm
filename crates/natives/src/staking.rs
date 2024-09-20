@@ -56,7 +56,8 @@ pub struct NativeStakingContext<'a> {
     api: &'a dyn StakingAPI,
     staking_data: StakingData,
     #[cfg(feature = "testing")]
-    share_ratios: BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (BigDecimal /* share */, u64 /* amount */)>>,
+    share_ratios:
+        BTreeMap<Vec<u8>, BTreeMap<AccountAddress, (BigDecimal /* share */, u64 /* amount */)>>,
 }
 
 // ===========================================================================================

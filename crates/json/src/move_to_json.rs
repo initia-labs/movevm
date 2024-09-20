@@ -81,7 +81,11 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                 // check the struct type is string
                 // if yes, then convert move value to json string
                 // else, execute convert function recursively
-                if is_utf8_string(type_) {
+                if is_json_value(type_) {
+                    convert_json_value_to_json_value(&fields[0].1)
+                } else if is_json_object(type_) {
+                    convert_json_object_to_json_value(&fields[0].1)
+                } else if is_utf8_string(type_) {
                     convert_string_to_json_value(&fields[0].1)
                 } else if is_biguint(type_) {
                     convert_biguint_to_json_value(&fields[0].1)
@@ -122,6 +126,51 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
             PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR).finish(Location::Undefined)
         }),
     }
+}
+
+fn bytes_from_move_value(val: &MoveValue) -> VMResult<Vec<u8>> {
+    match val {
+        MoveValue::Vector(bytes_val) => bytes_val
+            .iter()
+            .map(|byte_val| match byte_val {
+                MoveValue::U8(byte) => Ok(*byte),
+                _ => Err(deserialization_error_with_msg("Expected U8 in vector")),
+            })
+            .collect::<VMResult<Vec<u8>>>(),
+        _ => Err(deserialization_error_with_msg("Expected vector of U8s")),
+    }
+}
+
+fn convert_json_value_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
+    let bz = bytes_from_move_value(val)?;
+    serde_json::from_slice(&bz).map_err(deserialization_error_with_msg)
+}
+
+fn convert_json_object_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
+    let elems = match val {
+        MoveValue::Vector(elems) => elems
+            .iter()
+            .map(|elem| match elem {
+                MoveValue::Struct(
+                    MoveStruct::WithTypes { type_: _, fields }
+                    | MoveStruct::WithFields(fields)
+                    | MoveStruct::WithVariantFields(_, _, fields),
+                ) => {
+                    let key =
+                        std::str::from_utf8(&bytes_from_move_value(&fields.first().unwrap().1)?)
+                            .map_err(deserialization_error_with_msg)?
+                            .to_string();
+                    let val = convert_json_value_to_json_value(&fields.get(1).unwrap().1)?;
+
+                    Ok((key, val))
+                }
+                _ => unreachable!(),
+            })
+            .collect::<VMResult<Map<_, _>>>()?,
+        _ => unreachable!(),
+    };
+
+    Ok(JSONValue::Object(elems))
 }
 
 fn convert_string_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
@@ -232,6 +281,18 @@ fn convert_object_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
 }
 
 // check functions
+fn is_json_value(type_: &StructTag) -> bool {
+    type_.address == CORE_CODE_ADDRESS
+        && type_.module.as_str() == "json"
+        && type_.name.as_str() == "JSONValue"
+}
+
+fn is_json_object(type_: &StructTag) -> bool {
+    type_.address == CORE_CODE_ADDRESS
+        && type_.module.as_str() == "json"
+        && type_.name.as_str() == "JSONObject"
+}
+
 fn is_utf8_string(type_: &StructTag) -> bool {
     type_.address == CORE_CODE_ADDRESS
         && type_.module.as_str() == "string"
@@ -453,5 +514,105 @@ mod move_to_json_tests {
         });
         let val = convert_move_value_to_json_value(&mv, 1).unwrap();
         assert_eq!(val, json!(addr.to_hex_literal()));
+
+        // json value
+        let mv = MoveValue::Struct(MoveStruct::WithTypes {
+            type_: StructTag {
+                address: CORE_CODE_ADDRESS,
+                module: ident_str!("json").into(),
+                name: ident_str!("JSONValue").into(),
+                type_args: vec![],
+            },
+            fields: vec![(
+                ident_str!("val").into(),
+                MoveValue::Vector(vec![
+                    MoveValue::U8(34),
+                    MoveValue::U8(109),
+                    MoveValue::U8(111),
+                    MoveValue::U8(118),
+                    MoveValue::U8(101),
+                    MoveValue::U8(34),
+                ]),
+            )],
+        });
+        let val = convert_move_value_to_json_value(&mv, 1).unwrap();
+        assert_eq!(val, json!("move"));
+
+        // json object
+        let mv = MoveValue::Struct(MoveStruct::WithTypes {
+            type_: StructTag {
+                address: CORE_CODE_ADDRESS,
+                module: ident_str!("json").into(),
+                name: ident_str!("JSONObject").into(),
+                type_args: vec![],
+            },
+            fields: vec![(
+                ident_str!("elems").into(),
+                MoveValue::Vector(vec![
+                    MoveValue::Struct(MoveStruct::WithTypes {
+                        type_: StructTag {
+                            address: CORE_CODE_ADDRESS,
+                            module: ident_str!("json").into(),
+                            name: ident_str!("Element").into(),
+                            type_args: vec![],
+                        },
+                        fields: vec![
+                            (
+                                ident_str!("key").into(),
+                                MoveValue::Vector(vec![
+                                    MoveValue::U8(109),
+                                    MoveValue::U8(111),
+                                    MoveValue::U8(118),
+                                    MoveValue::U8(101),
+                                ]),
+                            ),
+                            (
+                                ident_str!("value").into(),
+                                MoveValue::Vector(vec![
+                                    MoveValue::U8(34),
+                                    MoveValue::U8(109),
+                                    MoveValue::U8(111),
+                                    MoveValue::U8(118),
+                                    MoveValue::U8(101),
+                                    MoveValue::U8(34),
+                                ]),
+                            ),
+                        ],
+                    }),
+                    MoveValue::Struct(MoveStruct::WithTypes {
+                        type_: StructTag {
+                            address: CORE_CODE_ADDRESS,
+                            module: ident_str!("json").into(),
+                            name: ident_str!("Element").into(),
+                            type_args: vec![],
+                        },
+                        fields: vec![
+                            (
+                                ident_str!("key").into(),
+                                MoveValue::Vector(vec![MoveValue::U8(102)]),
+                            ),
+                            (
+                                ident_str!("value").into(),
+                                MoveValue::Vector(vec![
+                                    MoveValue::U8(110),
+                                    MoveValue::U8(117),
+                                    MoveValue::U8(108),
+                                    MoveValue::U8(108),
+                                ]),
+                            ),
+                        ],
+                    }),
+                ]),
+            )],
+        });
+
+        let val = convert_move_value_to_json_value(&mv, 1).unwrap();
+        assert_eq!(
+            val,
+            json!({
+                "move": json!("move"),
+                "f": json!(null),
+            })
+        );
     }
 }

@@ -137,6 +137,20 @@ fn convert_json_value_to_move_value<S: StructResolver, R: ResourceResolver>(
                 .ok_or_else(deserialization_error)?;
             let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
             match full_name.as_str() {
+                // JSONValue and JSONObject are not supported as entry function arguments
+                //
+                // "0x1::json::JSONValue" => MoveValue::vector_u8(
+                //     serde_json::to_vec(&json_val).map_err(deserialization_error_with_msg)?,
+                // ),
+                // "0x1::json::JSONObject" => {
+                //         let json_obj = json_val.as_object().ok_or_else(deserialization_error)?.to_owned();
+                //         let elems = json_obj.into_iter().map(|(k, v)| {
+                //             let key = k.into_bytes();
+                //             let value = serde_json::to_vec(&v).map_err(deserialization_error_with_msg)?;
+                //             Ok(MoveValue::Struct(MoveStruct::new(vec![MoveValue::vector_u8(key), MoveValue::vector_u8(value)])))
+                //         }).collect::<VMResult<Vec<_>>>()?;
+                //         MoveValue::Vector(elems)
+                //     },
                 "0x1::string::String" => MoveValue::vector_u8(
                     json_val.as_str().ok_or_else(deserialization_error)?.into(),
                 ),
@@ -780,10 +794,9 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_big_uint() {
         let mut mock_state = mock_state();
-        mock_state.structs.insert(
-            StructNameIndex(0),
-            Arc::new(for_test("biguint", "BigUint")),
-        );
+        mock_state
+            .structs
+            .insert(StructNameIndex(0), Arc::new(for_test("biguint", "BigUint")));
 
         let state_view = StateViewImpl::new(&mock_state);
 
@@ -823,7 +836,12 @@ mod json_arg_testing {
 
         assert_eq!(
             result,
-            bcs::to_bytes(&BigUint::from_u128(1234567u128 * (1e14 as u128)).unwrap().to_bytes_le()).unwrap()
+            bcs::to_bytes(
+                &BigUint::from_u128(1234567u128 * (1e14 as u128))
+                    .unwrap()
+                    .to_bytes_le()
+            )
+            .unwrap()
         );
 
         // invalid negative

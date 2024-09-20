@@ -98,7 +98,7 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
                 ),
                 func_name: ident_str!("from_scaled_le_bytes"),
             },
-        )
+        ),
     ]
     .into_iter()
     .map(|(s, validator)| (s.to_string(), validator))
