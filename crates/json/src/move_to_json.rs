@@ -128,21 +128,21 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
     }
 }
 
-fn bytes_from_move_value(val: &MoveValue) -> Vec<u8> {
+fn bytes_from_move_value(val: &MoveValue) -> VMResult<Vec<u8>> {
     match val {
         MoveValue::Vector(bytes_val) => bytes_val
             .iter()
             .map(|byte_val| match byte_val {
-                MoveValue::U8(byte) => *byte,
-                _ => unreachable!(),
+                MoveValue::U8(byte) => Ok(*byte),
+                _ => Err(deserialization_error_with_msg("Expected U8 in vector")),
             })
-            .collect::<Vec<u8>>(),
-        _ => unreachable!(),
+            .collect::<VMResult<Vec<u8>>>(),
+        _ => Err(deserialization_error_with_msg("Expected vector of U8s")),
     }
 }
 
 fn convert_json_value_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
-    let bz = bytes_from_move_value(val);
+    let bz = bytes_from_move_value(val)?;
     serde_json::from_slice(&bz).map_err(deserialization_error_with_msg)
 }
 
@@ -157,7 +157,7 @@ fn convert_json_object_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
                     | MoveStruct::WithVariantFields(_, _, fields),
                 ) => {
                     let key =
-                        std::str::from_utf8(&bytes_from_move_value(&fields.first().unwrap().1))
+                        std::str::from_utf8(&bytes_from_move_value(&fields.first().unwrap().1)?)
                             .map_err(deserialization_error_with_msg)?
                             .to_string();
                     let val = convert_json_value_to_json_value(&fields.get(1).unwrap().1)?;
