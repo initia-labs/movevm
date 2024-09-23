@@ -120,10 +120,7 @@ module minitia_std::coin {
     ): (MintCapability, BurnCapability, FreezeCapability, ExtendRef) {
         // create object for fungible asset metadata
         let constructor_ref =
-            &object::create_named_object(
-                creator,
-                *string::bytes(&symbol)
-            );
+            &object::create_named_object(creator, *string::bytes(&symbol));
 
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
             constructor_ref,
@@ -237,11 +234,7 @@ module minitia_std::coin {
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
-        primary_fungible_store::set_frozen_flag(
-            &refs.transfer_ref,
-            account_addr,
-            true
-        )
+        primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, true)
     }
 
     /// Unfreeze the primary store of an account.
@@ -257,11 +250,7 @@ module minitia_std::coin {
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
-        primary_fungible_store::set_frozen_flag(
-            &refs.transfer_ref,
-            account_addr,
-            false
-        )
+        primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, false)
     }
 
     //

@@ -2205,11 +2205,7 @@ Event emitted when arb reverted
     offer_amount: u64
 ): (u64, u64) <b>acquires</b> <a href="minitswap.md#0x1_minitswap_ModuleStore">ModuleStore</a>, <a href="minitswap.md#0x1_minitswap_VirtualPool">VirtualPool</a> {
     <b>let</b> (return_amount, fee_amount) =
-        <a href="minitswap.md#0x1_minitswap_safe_swap_simulation">safe_swap_simulation</a>(
-            offer_metadata,
-            return_metadata,
-            offer_amount
-        );
+        <a href="minitswap.md#0x1_minitswap_safe_swap_simulation">safe_swap_simulation</a>(offer_metadata, return_metadata, offer_amount);
     <b>assert</b>!(
         return_amount != 0,
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="minitswap.md#0x1_minitswap_EIBC_OP_INIT_PRICE_TOO_LOW">EIBC_OP_INIT_PRICE_TOO_LOW</a>)
@@ -2276,11 +2272,7 @@ Event emitted when arb reverted
 ): (u64, u64) <b>acquires</b> <a href="minitswap.md#0x1_minitswap_ModuleStore">ModuleStore</a>, <a href="minitswap.md#0x1_minitswap_VirtualPool">VirtualPool</a> {
     <b>let</b> offer_metadata = <a href="coin.md#0x1_coin_denom_to_metadata">coin::denom_to_metadata</a>(offer_denom);
     <b>let</b> return_metadata = <a href="coin.md#0x1_coin_denom_to_metadata">coin::denom_to_metadata</a>(return_denom);
-    <a href="minitswap.md#0x1_minitswap_swap_simulation">swap_simulation</a>(
-        offer_metadata,
-        return_metadata,
-        offer_amount
-    )
+    <a href="minitswap.md#0x1_minitswap_swap_simulation">swap_simulation</a>(offer_metadata, return_metadata, offer_amount)
 }
 </code></pre>
 
@@ -2377,10 +2369,7 @@ Event emitted when arb reverted
     <b>let</b> module_store = <b>borrow_global</b>&lt;<a href="minitswap.md#0x1_minitswap_ModuleStore">ModuleStore</a>&gt;(@initia_std);
     <b>let</b> start_key =
         <b>if</b> (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&start_after)) {
-            <a href="minitswap.md#0x1_minitswap_generate_unbond_key">generate_unbond_key</a>(
-                <a href="account.md#0x1_account">account</a>,
-                *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&start_after) + 1
-            )
+            <a href="minitswap.md#0x1_minitswap_generate_unbond_key">generate_unbond_key</a>(<a href="account.md#0x1_account">account</a>, *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&start_after) + 1)
         } <b>else</b> {
             <a href="minitswap.md#0x1_minitswap_generate_unbond_key">generate_unbond_key</a>(<a href="account.md#0x1_account">account</a>, 0)
         };
@@ -3247,15 +3236,9 @@ Event emitted when arb reverted
 
     <b>let</b> change_rate =
         <b>if</b> (new_pool_size &gt; pool.pool_size) {
-            <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(
-                new_pool_size - pool.pool_size,
-                pool.pool_size
-            )
+            <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(new_pool_size - pool.pool_size, pool.pool_size)
         } <b>else</b> {
-            <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(
-                pool.pool_size - new_pool_size,
-                pool.pool_size
-            )
+            <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(pool.pool_size - new_pool_size, pool.pool_size)
         };
 
     <b>assert</b>!(
@@ -3286,8 +3269,7 @@ Event emitted when arb reverted
                 ratio, pool.init_pool_amount
             );
             pool.ibc_op_init_pool_amount = <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_truncate">bigdecimal::mul_by_u64_truncate</a>(
-                ratio,
-                pool.ibc_op_init_pool_amount
+                ratio, pool.ibc_op_init_pool_amount
             );
             pool.pool_size = new_pool_size;
 
@@ -3565,11 +3547,7 @@ Event emitted when arb reverted
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="minitswap.md#0x1_minitswap_unbond">unbond</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, amount: u64) <b>acquires</b> <a href="minitswap.md#0x1_minitswap_ModuleStore">ModuleStore</a> {
     <b>let</b> share_token =
-        <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(
-            <a href="account.md#0x1_account">account</a>,
-            <a href="minitswap.md#0x1_minitswap_share_token_metadata">share_token_metadata</a>(),
-            amount
-        );
+        <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(<a href="account.md#0x1_account">account</a>, <a href="minitswap.md#0x1_minitswap_share_token_metadata">share_token_metadata</a>(), amount);
     <a href="minitswap.md#0x1_minitswap_unbond_internal">unbond_internal</a>(<a href="account.md#0x1_account">account</a>, share_token);
 }
 </code></pre>
@@ -3657,11 +3635,7 @@ Event emitted when arb reverted
     min_return_amount: Option&lt;u64&gt;
 ) <b>acquires</b> <a href="minitswap.md#0x1_minitswap_ModuleStore">ModuleStore</a>, <a href="minitswap.md#0x1_minitswap_VirtualPool">VirtualPool</a> {
     <b>let</b> offer_asset =
-        <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(
-            <a href="account.md#0x1_account">account</a>,
-            offer_asset_metadata,
-            amount
-        );
+        <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(<a href="account.md#0x1_account">account</a>, offer_asset_metadata, amount);
 
     <b>let</b> return_asset = <a href="minitswap.md#0x1_minitswap_swap_internal">swap_internal</a>(offer_asset, return_asset_metadata);
     <a href="minitswap.md#0x1_minitswap_assert_min_amount">assert_min_amount</a>(&return_asset, min_return_amount);
@@ -3866,11 +3840,7 @@ Event emitted when arb reverted
     <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_append">string::append</a>(&<b>mut</b> symbol, ibc_denom);
 
     <b>let</b> coins: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;FungibleAsset&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[
-        <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
-            <a href="account.md#0x1_account">account</a>,
-            <a href="minitswap.md#0x1_minitswap_init_metadata">init_metadata</a>(),
-            init_amount
-        ),
+        <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(<a href="account.md#0x1_account">account</a>, <a href="minitswap.md#0x1_minitswap_init_metadata">init_metadata</a>(), init_amount),
         <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
             <a href="account.md#0x1_account">account</a>,
             ibc_op_init_metadata,
@@ -4160,11 +4130,7 @@ Event emitted when arb reverted
         };
 
     // check arb
-    <a href="minitswap.md#0x1_minitswap_check_arb">check_arb</a>(
-        module_store,
-        pool,
-        ibc_op_init_metadata
-    );
+    <a href="minitswap.md#0x1_minitswap_check_arb">check_arb</a>(module_store, pool, ibc_op_init_metadata);
 
     <a href="event.md#0x1_event_emit">event::emit</a>&lt;<a href="minitswap.md#0x1_minitswap_SwapEvent">SwapEvent</a>&gt;(
         <a href="minitswap.md#0x1_minitswap_SwapEvent">SwapEvent</a> {
@@ -4318,8 +4284,7 @@ Event emitted when arb reverted
             // take swap fee
             <b>let</b> swap_fee_amount =
                 <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(
-                    module_store.swap_fee_rate,
-                    return_amount
+                    module_store.swap_fee_rate, return_amount
                 );
 
             // take arb fee
@@ -4328,10 +4293,7 @@ Event emitted when arb reverted
                     return_amount - swap_fee_amount - offer_amount
                 } <b>else</b> { 0 };
             <b>let</b> arb_fee_amount =
-                <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(
-                    module_store.arb_fee_rate,
-                    arb_profit
-                );
+                <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(module_store.arb_fee_rate, arb_profit);
             <b>let</b> fee_amount = swap_fee_amount + arb_fee_amount;
 
             (return_amount, fee_amount)
@@ -4346,8 +4308,7 @@ Event emitted when arb reverted
                 );
             <b>let</b> fee_amount =
                 <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(
-                    module_store.swap_fee_rate,
-                    return_amount
+                    module_store.swap_fee_rate, return_amount
                 );
 
             (return_amount, fee_amount)
@@ -4413,7 +4374,9 @@ Event emitted when arb reverted
                 <a href="bigdecimal.md#0x1_bigdecimal_truncate_u64">bigdecimal::truncate_u64</a>(
                     <a href="bigdecimal.md#0x1_bigdecimal_div">bigdecimal::div</a>(
                         <a href="bigdecimal.md#0x1_bigdecimal_from_u64">bigdecimal::from_u64</a>(return_amount),
-                        <a href="bigdecimal.md#0x1_bigdecimal_sub">bigdecimal::sub</a>(<a href="bigdecimal.md#0x1_bigdecimal_one">bigdecimal::one</a>(), module_store.swap_fee_rate)
+                        <a href="bigdecimal.md#0x1_bigdecimal_sub">bigdecimal::sub</a>(
+                            <a href="bigdecimal.md#0x1_bigdecimal_one">bigdecimal::one</a>(), module_store.swap_fee_rate
+                        )
                     )
                 );
             <b>if</b> (ibc_op_init_pool_amount - return_amount_before_swap_fee &lt; pool_size) {
@@ -4437,10 +4400,7 @@ Event emitted when arb reverted
                     return_amount - offer_amount
                 } <b>else</b> { 0 };
             <b>let</b> arb_fee_amount =
-                <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(
-                    module_store.arb_fee_rate,
-                    arb_profit
-                );
+                <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(module_store.arb_fee_rate, arb_profit);
 
             // actual <b>return</b> amount is <b>return</b> amount - arb fee
             <b>let</b> actual_return_amount = return_amount - arb_fee_amount;
@@ -4475,8 +4435,7 @@ Event emitted when arb reverted
                     return_amount_before_swap_fee - swap_fee_amount - offer_amount
                 } <b>else</b> { 0 };
                 arb_fee_amount = <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_ceil">bigdecimal::mul_by_u64_ceil</a>(
-                    module_store.arb_fee_rate,
-                    arb_profit
+                    module_store.arb_fee_rate, arb_profit
                 );
                 actual_return_amount = return_amount_before_swap_fee
                     - swap_fee_amount - arb_fee_amount;
@@ -4493,7 +4452,9 @@ Event emitted when arb reverted
                 <a href="bigdecimal.md#0x1_bigdecimal_truncate_u64">bigdecimal::truncate_u64</a>(
                     <a href="bigdecimal.md#0x1_bigdecimal_div">bigdecimal::div</a>(
                         <a href="bigdecimal.md#0x1_bigdecimal_from_u64">bigdecimal::from_u64</a>(return_amount),
-                        <a href="bigdecimal.md#0x1_bigdecimal_sub">bigdecimal::sub</a>(<a href="bigdecimal.md#0x1_bigdecimal_one">bigdecimal::one</a>(), module_store.swap_fee_rate)
+                        <a href="bigdecimal.md#0x1_bigdecimal_sub">bigdecimal::sub</a>(
+                            <a href="bigdecimal.md#0x1_bigdecimal_one">bigdecimal::one</a>(), module_store.swap_fee_rate
+                        )
                     )
                 );
             <b>let</b> fee_amount = return_amount_ - return_amount;

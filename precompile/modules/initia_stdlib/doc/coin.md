@@ -11,6 +11,7 @@ TODO - make is_module_account or some blacklist from freeze.
 -  [Struct `MintCapability`](#0x1_coin_MintCapability)
 -  [Struct `BurnCapability`](#0x1_coin_BurnCapability)
 -  [Struct `FreezeCapability`](#0x1_coin_FreezeCapability)
+-  [Struct `Coin`](#0x1_coin_Coin)
 -  [Constants](#@Constants_0)
 -  [Function `sudo_transfer`](#0x1_coin_sudo_transfer)
 -  [Function `sudo_deposit`](#0x1_coin_sudo_deposit)
@@ -188,6 +189,30 @@ TODO - make is_module_account or some blacklist from freeze.
 </dl>
 
 
+<a id="0x1_coin_Coin"></a>
+
+## Struct `Coin`
+
+
+
+<pre><code><b>struct</b> <a href="coin.md#0x1_coin_Coin">Coin</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+##### Fields
+
+
+<dl>
+<dt>
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
 <a id="@Constants_0"></a>
 
 ## Constants
@@ -339,10 +364,7 @@ Only fungible asset metadata owner can make changes.
 ): (<a href="coin.md#0x1_coin_MintCapability">MintCapability</a>, <a href="coin.md#0x1_coin_BurnCapability">BurnCapability</a>, <a href="coin.md#0x1_coin_FreezeCapability">FreezeCapability</a>, ExtendRef) {
     // create <a href="object.md#0x1_object">object</a> for fungible asset metadata
     <b>let</b> constructor_ref =
-        &<a href="object.md#0x1_object_create_named_object">object::create_named_object</a>(
-            creator,
-            *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&symbol)
-        );
+        &<a href="object.md#0x1_object_create_named_object">object::create_named_object</a>(creator, *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&symbol));
 
     <a href="primary_fungible_store.md#0x1_primary_fungible_store_create_primary_store_enabled_fungible_asset">primary_fungible_store::create_primary_store_enabled_fungible_asset</a>(
         constructor_ref,
@@ -571,11 +593,7 @@ Freeze the primary store of an account.
     );
     <b>let</b> refs = <b>borrow_global</b>&lt;<a href="coin.md#0x1_coin_ManagingRefs">ManagingRefs</a>&gt;(metadata_addr);
 
-    <a href="primary_fungible_store.md#0x1_primary_fungible_store_set_frozen_flag">primary_fungible_store::set_frozen_flag</a>(
-        &refs.transfer_ref,
-        account_addr,
-        <b>true</b>
-    )
+    <a href="primary_fungible_store.md#0x1_primary_fungible_store_set_frozen_flag">primary_fungible_store::set_frozen_flag</a>(&refs.transfer_ref, account_addr, <b>true</b>)
 }
 </code></pre>
 
@@ -608,11 +626,7 @@ Unfreeze the primary store of an account.
     );
     <b>let</b> refs = <b>borrow_global</b>&lt;<a href="coin.md#0x1_coin_ManagingRefs">ManagingRefs</a>&gt;(metadata_addr);
 
-    <a href="primary_fungible_store.md#0x1_primary_fungible_store_set_frozen_flag">primary_fungible_store::set_frozen_flag</a>(
-        &refs.transfer_ref,
-        account_addr,
-        <b>false</b>
-    )
+    <a href="primary_fungible_store.md#0x1_primary_fungible_store_set_frozen_flag">primary_fungible_store::set_frozen_flag</a>(&refs.transfer_ref, account_addr, <b>false</b>)
 }
 </code></pre>
 

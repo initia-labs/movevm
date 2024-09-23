@@ -251,14 +251,10 @@ module std::vector {
         if (i >= len) abort EINDEX_OUT_OF_BOUNDS;
 
         len = len - 1;
-        while (i < len) swap(
-            v,
-            i,
-            {
-                i = i + 1;
-                i
-            }
-        );
+        while (i < len) swap(v, i, {
+            i = i + 1;
+            i
+        });
         pop_back(v)
     }
 
@@ -652,7 +648,10 @@ module std::vector {
     public fun slice<Element: copy>(
         v: &vector<Element>, start: u64, end: u64
     ): vector<Element> {
-        assert!(start <= end && end <= length(v), EINVALID_SLICE_RANGE);
+        assert!(
+            start <= end && end <= length(v),
+            EINVALID_SLICE_RANGE
+        );
 
         let vec = vector[];
         while (start < end) {

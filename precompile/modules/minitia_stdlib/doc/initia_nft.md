@@ -181,22 +181,22 @@ The provided signer is not the creator
 
 
 
-<a id="0x1_initia_nft_ECAN_NOT_BURN"></a>
-
-The NFT is not allowed to burn
-
-
-<pre><code><b>const</b> <a href="initia_nft.md#0x1_initia_nft_ECAN_NOT_BURN">ECAN_NOT_BURN</a>: u64 = 6;
-</code></pre>
-
-
-
 <a id="0x1_initia_nft_ENOT_OWNER"></a>
 
 The provided signer is not the owner
 
 
 <pre><code><b>const</b> <a href="initia_nft.md#0x1_initia_nft_ENOT_OWNER">ENOT_OWNER</a>: u64 = 5;
+</code></pre>
+
+
+
+<a id="0x1_initia_nft_ECAN_NOT_BURN"></a>
+
+The NFT is not allowed to burn
+
+
+<pre><code><b>const</b> <a href="initia_nft.md#0x1_initia_nft_ECAN_NOT_BURN">ECAN_NOT_BURN</a>: u64 = 6;
 </code></pre>
 
 
@@ -366,11 +366,7 @@ With an existing collection, directly mint a viable nft into the creators accoun
             can_burn
         );
     <b>if</b> (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&<b>to</b>)) {
-        <a href="object.md#0x1_object_transfer">object::transfer</a>(
-            creator,
-            nft_object,
-            <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <b>to</b>)
-        );
+        <a href="object.md#0x1_object_transfer">object::transfer</a>(creator, nft_object, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <b>to</b>));
     }
 }
 </code></pre>

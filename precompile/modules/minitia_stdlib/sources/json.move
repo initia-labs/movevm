@@ -2,7 +2,7 @@ module minitia_std::json {
     use std::vector;
     use std::string::{Self, String};
     use std::option::{Self, Option};
-    
+
     /// JSONValue is a struct to hold any JSON value which is unknown at compile time.
     struct JSONValue has copy, drop {
         value: vector<u8>
@@ -26,19 +26,25 @@ module minitia_std::json {
 
     /// Get the list of keys from the JSON object.
     public fun keys(obj: &JSONObject): vector<String> {
-        vector::map_ref(&obj.elems, |elem| {
-            use_elem(elem);
-            string::utf8(elem.key)
-        })
+        vector::map_ref(
+            &obj.elems,
+            |elem| {
+                use_elem(elem);
+                string::utf8(elem.key)
+            }
+        )
     }
 
     /// Get the value of the given key from the JSON object.
     public fun get_elem<T: drop>(obj: &JSONObject, key: String): Option<T> {
         let key_bytes = string::bytes(&key);
-        let (found, idx) = vector::find(&obj.elems, |elem| {
-            use_elem(elem);
-            elem.key == *key_bytes
-        });
+        let (found, idx) = vector::find(
+            &obj.elems,
+            |elem| {
+                use_elem(elem);
+                elem.key == *key_bytes
+            }
+        );
 
         if (!found) {
             return option::none()
@@ -49,18 +55,23 @@ module minitia_std::json {
     }
 
     /// Set or overwrite the element in the JSON object.
-    public fun set_elem<T: drop>(obj: &mut JSONObject, key: String, value: &T) {
+    public fun set_elem<T: drop>(
+        obj: &mut JSONObject, key: String, value: &T
+    ) {
         let key_bytes = string::bytes(&key);
-        let (found, idx) = vector::find(&obj.elems, |elem| {
-            use_elem(elem);
-            elem.key == *key_bytes
-        });
+        let (found, idx) = vector::find(
+            &obj.elems,
+            |elem| {
+                use_elem(elem);
+                elem.key == *key_bytes
+            }
+        );
 
         if (!found) {
-            vector::push_back(&mut obj.elems, Element {
-                key: *key_bytes,
-                value: marshal(value)
-            });
+            vector::push_back(
+                &mut obj.elems,
+                Element { key: *key_bytes, value: marshal(value) }
+            );
         } else {
             let elem = vector::borrow_mut(&mut obj.elems, idx);
             elem.value = marshal(value);
@@ -154,9 +165,7 @@ module minitia_std::json {
             b: true,
             c: vector[1, 2, 3],
             d: @0x1,
-            e: option::some(
-                TestObject2 { a: 42, b: true, c: vector[1, 2, 3] }
-            ),
+            e: option::some(TestObject2 { a: 42, b: true, c: vector[1, 2, 3] }),
             f: option::none(),
             _type_: string::utf8(b"/cosmos.gov.v1.MsgVote"),
             _move_: string::utf8(b"move"),
@@ -187,15 +196,44 @@ module minitia_std::json {
         let json5 = marshal(&json_obj);
         assert!(json5 == json, 4);
 
-        assert!(option::extract(&mut get_elem<u64>(&json_obj, string::utf8(b"a"))) == 42, 4);
-        assert!(option::extract(&mut get_elem<bool>(&json_obj, string::utf8(b"b"))) == true, 5);
-        assert!(option::extract(&mut get_elem<vector<u8>>(&json_obj, string::utf8(b"c"))) == vector[1, 2, 3], 6);
-        assert!(option::extract(&mut get_elem<address>(&json_obj, string::utf8(b"d"))) == @0x1, 7);
+        assert!(
+            option::extract(
+                &mut get_elem<u64>(&json_obj, string::utf8(b"a"))
+            ) == 42,
+            4
+        );
+        assert!(
+            option::extract(
+                &mut get_elem<bool>(&json_obj, string::utf8(b"b"))
+            ) == true,
+            5
+        );
+        assert!(
+            option::extract(
+                &mut get_elem<vector<u8>>(&json_obj, string::utf8(b"c"))
+            ) == vector[1, 2, 3],
+            6
+        );
+        assert!(
+            option::extract(
+                &mut get_elem<address>(&json_obj, string::utf8(b"d"))
+            ) == @0x1,
+            7
+        );
 
         set_elem(&mut json_obj, string::utf8(b"c"), &string::utf8(b"hello"));
-        assert!(option::extract(&mut get_elem<String>(&json_obj, string::utf8(b"c"))) == string::utf8(b"hello"), 8);
+        assert!(
+            option::extract(
+                &mut get_elem<String>(&json_obj, string::utf8(b"c"))
+            ) == string::utf8(b"hello"),
+            8
+        );
 
         let json5 = marshal(&json_obj);
-        assert!(json5 == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}", 9);
+        assert!(
+            json5
+                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}",
+            9
+        );
     }
 }

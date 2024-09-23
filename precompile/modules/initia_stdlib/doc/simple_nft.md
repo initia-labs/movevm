@@ -293,11 +293,7 @@ With an existing collection, directly mint a viable nft into the creators accoun
             property_values
         );
     <b>if</b> (<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_some">option::is_some</a>(&<b>to</b>)) {
-        <a href="object.md#0x1_object_transfer">object::transfer</a>(
-            creator,
-            nft_object,
-            <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <b>to</b>)
-        );
+        <a href="object.md#0x1_object_transfer">object::transfer</a>(creator, nft_object, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <b>to</b>));
     }
 }
 </code></pre>
@@ -625,11 +621,7 @@ Mint a nft into an existing collection, and retrieve the object / address of the
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="simple_nft.md#0x1_simple_nft_EPROPERTIES_NOT_MUTABLE">EPROPERTIES_NOT_MUTABLE</a>)
     );
 
-    <a href="property_map.md#0x1_property_map_update_typed">property_map::update_typed</a>(
-        &<a href="simple_nft.md#0x1_simple_nft">simple_nft</a>.property_mutator_ref,
-        &key,
-        value
-    );
+    <a href="property_map.md#0x1_property_map_update_typed">property_map::update_typed</a>(&<a href="simple_nft.md#0x1_simple_nft">simple_nft</a>.property_mutator_ref, &key, value);
 }
 </code></pre>
 

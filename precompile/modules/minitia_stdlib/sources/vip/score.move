@@ -372,11 +372,7 @@ module minitia_std::vip_score {
             !simple_map::contains_key(&module_store.deployers, &deployer),
             error::invalid_argument(EDEPLOYER_ALREADY_ADDED)
         );
-        simple_map::add(
-            &mut module_store.deployers,
-            deployer,
-            true
-        );
+        simple_map::add(&mut module_store.deployers, deployer, true);
 
         event::emit(DeployerAddedEvent { deployer: deployer })
     }
@@ -475,12 +471,7 @@ module minitia_std::vip_score {
         init_module_for_test();
         add_deployer_script(chain, signer::address_of(deployer));
 
-        update_score_script(
-            deployer,
-            1,
-            vector[@0x123, @0x234],
-            vector[]
-        );
+        update_score_script(deployer, 1, vector[@0x123, @0x234], vector[]);
     }
 
     #[test(chain = @0x1, deployer = @0x2, user = @0x123)]

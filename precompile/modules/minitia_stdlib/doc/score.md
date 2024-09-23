@@ -700,11 +700,7 @@ Decrease a score of an account.
         !<a href="simple_map.md#0x1_simple_map_contains_key">simple_map::contains_key</a>(&module_store.deployers, &deployer),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="score.md#0x1_vip_score_EDEPLOYER_ALREADY_ADDED">EDEPLOYER_ALREADY_ADDED</a>)
     );
-    <a href="simple_map.md#0x1_simple_map_add">simple_map::add</a>(
-        &<b>mut</b> module_store.deployers,
-        deployer,
-        <b>true</b>
-    );
+    <a href="simple_map.md#0x1_simple_map_add">simple_map::add</a>(&<b>mut</b> module_store.deployers, deployer, <b>true</b>);
 
     <a href="event.md#0x1_event_emit">event::emit</a>(<a href="score.md#0x1_vip_score_DeployerAddedEvent">DeployerAddedEvent</a> { deployer: deployer })
 }

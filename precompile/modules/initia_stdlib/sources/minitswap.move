@@ -406,11 +406,7 @@ module initia_std::minitswap {
         offer_amount: u64
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let (return_amount, fee_amount) =
-            safe_swap_simulation(
-                offer_metadata,
-                return_metadata,
-                offer_amount
-            );
+            safe_swap_simulation(offer_metadata, return_metadata, offer_amount);
         assert!(
             return_amount != 0,
             error::invalid_state(EIBC_OP_INIT_PRICE_TOO_LOW)
@@ -443,11 +439,7 @@ module initia_std::minitswap {
     ): (u64, u64) acquires ModuleStore, VirtualPool {
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         let return_metadata = coin::denom_to_metadata(return_denom);
-        swap_simulation(
-            offer_metadata,
-            return_metadata,
-            offer_amount
-        )
+        swap_simulation(offer_metadata, return_metadata, offer_amount)
     }
 
     #[view]
@@ -510,10 +502,7 @@ module initia_std::minitswap {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let start_key =
             if (option::is_some(&start_after)) {
-                generate_unbond_key(
-                    account,
-                    *option::borrow(&start_after) + 1
-                )
+                generate_unbond_key(account, *option::borrow(&start_after) + 1)
             } else {
                 generate_unbond_key(account, 0)
             };
@@ -1152,15 +1141,9 @@ module initia_std::minitswap {
 
         let change_rate =
             if (new_pool_size > pool.pool_size) {
-                bigdecimal::from_ratio_u64(
-                    new_pool_size - pool.pool_size,
-                    pool.pool_size
-                )
+                bigdecimal::from_ratio_u64(new_pool_size - pool.pool_size, pool.pool_size)
             } else {
-                bigdecimal::from_ratio_u64(
-                    pool.pool_size - new_pool_size,
-                    pool.pool_size
-                )
+                bigdecimal::from_ratio_u64(pool.pool_size - new_pool_size, pool.pool_size)
             };
 
         assert!(
@@ -1191,8 +1174,7 @@ module initia_std::minitswap {
                     ratio, pool.init_pool_amount
                 );
                 pool.ibc_op_init_pool_amount = bigdecimal::mul_by_u64_truncate(
-                    ratio,
-                    pool.ibc_op_init_pool_amount
+                    ratio, pool.ibc_op_init_pool_amount
                 );
                 pool.pool_size = new_pool_size;
 
@@ -1406,11 +1388,7 @@ module initia_std::minitswap {
 
     public entry fun unbond(account: &signer, amount: u64) acquires ModuleStore {
         let share_token =
-            primary_fungible_store::withdraw(
-                account,
-                share_token_metadata(),
-                amount
-            );
+            primary_fungible_store::withdraw(account, share_token_metadata(), amount);
         unbond_internal(account, share_token);
     }
 
@@ -1464,11 +1442,7 @@ module initia_std::minitswap {
         min_return_amount: Option<u64>
     ) acquires ModuleStore, VirtualPool {
         let offer_asset =
-            primary_fungible_store::withdraw(
-                account,
-                offer_asset_metadata,
-                amount
-            );
+            primary_fungible_store::withdraw(account, offer_asset_metadata, amount);
 
         let return_asset = swap_internal(offer_asset, return_asset_metadata);
         assert_min_amount(&return_asset, min_return_amount);
@@ -1624,11 +1598,7 @@ module initia_std::minitswap {
         string::append(&mut symbol, ibc_denom);
 
         let coins: vector<FungibleAsset> = vector[
-            coin::withdraw(
-                account,
-                init_metadata(),
-                init_amount
-            ),
+            coin::withdraw(account, init_metadata(), init_amount),
             coin::withdraw(
                 account,
                 ibc_op_init_metadata,
@@ -1867,11 +1837,7 @@ module initia_std::minitswap {
             };
 
         // check arb
-        check_arb(
-            module_store,
-            pool,
-            ibc_op_init_metadata
-        );
+        check_arb(module_store, pool, ibc_op_init_metadata);
 
         event::emit<SwapEvent>(
             SwapEvent {
@@ -2019,9 +1985,7 @@ module initia_std::minitswap {
             );
         // Peg keeper swap
         let r_fr = get_fully_recovered_ratio(
-            imbalance,
-            pool.max_ratio,
-            pool.recover_param
+            imbalance, pool.max_ratio, pool.recover_param
         );
         let current_ratio =
             bigdecimal::from_ratio_u64(
@@ -2098,8 +2062,7 @@ module initia_std::minitswap {
                 // take swap fee
                 let swap_fee_amount =
                     bigdecimal::mul_by_u64_ceil(
-                        module_store.swap_fee_rate,
-                        return_amount
+                        module_store.swap_fee_rate, return_amount
                     );
                 return_amount = return_amount - swap_fee_amount;
 
@@ -2109,8 +2072,7 @@ module initia_std::minitswap {
                         return_amount - offer_amount
                     } else { 0 };
                 arb_fee_amount = bigdecimal::mul_by_u64_ceil(
-                    module_store.arb_fee_rate,
-                    arb_profit
+                    module_store.arb_fee_rate, arb_profit
                 );
                 return_amount = return_amount - arb_fee_amount;
                 let total_fee_amount = swap_fee_amount + arb_fee_amount;
@@ -2134,9 +2096,7 @@ module initia_std::minitswap {
 
                 (
                     primary_fungible_store::withdraw(
-                        &pool_signer,
-                        return_metadata,
-                        return_amount
+                        &pool_signer, return_metadata, return_amount
                     ),
                     swap_fee_amount,
                     depositor_return_amount
@@ -2160,8 +2120,7 @@ module initia_std::minitswap {
                 // take swap fee
                 let swap_fee_amount =
                     bigdecimal::mul_by_u64_ceil(
-                        module_store.swap_fee_rate,
-                        return_amount
+                        module_store.swap_fee_rate, return_amount
                     );
                 let return_amount = return_amount - swap_fee_amount;
 
@@ -2292,10 +2251,7 @@ module initia_std::minitswap {
         ibc_channel: String
     ): &mut Pools {
         if (table::contains(&module_store.pools, ibc_op_init_metadata)) {
-            table::borrow_mut(
-                &mut module_store.pools,
-                ibc_op_init_metadata
-            )
+            table::borrow_mut(&mut module_store.pools, ibc_op_init_metadata)
         } else {
             table::add(
                 &mut module_store.pools,
@@ -2308,10 +2264,7 @@ module initia_std::minitswap {
                 }
             );
 
-            table::borrow_mut(
-                &mut module_store.pools,
-                ibc_op_init_metadata
-            )
+            table::borrow_mut(&mut module_store.pools, ibc_op_init_metadata)
         }
     }
 
@@ -2850,8 +2803,7 @@ module initia_std::minitswap {
                 // take swap fee
                 let swap_fee_amount =
                     bigdecimal::mul_by_u64_ceil(
-                        module_store.swap_fee_rate,
-                        return_amount
+                        module_store.swap_fee_rate, return_amount
                     );
 
                 // take arb fee
@@ -2860,10 +2812,7 @@ module initia_std::minitswap {
                         return_amount - swap_fee_amount - offer_amount
                     } else { 0 };
                 let arb_fee_amount =
-                    bigdecimal::mul_by_u64_ceil(
-                        module_store.arb_fee_rate,
-                        arb_profit
-                    );
+                    bigdecimal::mul_by_u64_ceil(module_store.arb_fee_rate, arb_profit);
                 let fee_amount = swap_fee_amount + arb_fee_amount;
 
                 (return_amount, fee_amount)
@@ -2878,8 +2827,7 @@ module initia_std::minitswap {
                     );
                 let fee_amount =
                     bigdecimal::mul_by_u64_ceil(
-                        module_store.swap_fee_rate,
-                        return_amount
+                        module_store.swap_fee_rate, return_amount
                     );
 
                 (return_amount, fee_amount)
@@ -2928,7 +2876,9 @@ module initia_std::minitswap {
                     bigdecimal::truncate_u64(
                         bigdecimal::div(
                             bigdecimal::from_u64(return_amount),
-                            bigdecimal::sub(bigdecimal::one(), module_store.swap_fee_rate)
+                            bigdecimal::sub(
+                                bigdecimal::one(), module_store.swap_fee_rate
+                            )
                         )
                     );
                 if (ibc_op_init_pool_amount - return_amount_before_swap_fee < pool_size) {
@@ -2952,10 +2902,7 @@ module initia_std::minitswap {
                         return_amount - offer_amount
                     } else { 0 };
                 let arb_fee_amount =
-                    bigdecimal::mul_by_u64_ceil(
-                        module_store.arb_fee_rate,
-                        arb_profit
-                    );
+                    bigdecimal::mul_by_u64_ceil(module_store.arb_fee_rate, arb_profit);
 
                 // actual return amount is return amount - arb fee
                 let actual_return_amount = return_amount - arb_fee_amount;
@@ -2990,8 +2937,7 @@ module initia_std::minitswap {
                         return_amount_before_swap_fee - swap_fee_amount - offer_amount
                     } else { 0 };
                     arb_fee_amount = bigdecimal::mul_by_u64_ceil(
-                        module_store.arb_fee_rate,
-                        arb_profit
+                        module_store.arb_fee_rate, arb_profit
                     );
                     actual_return_amount = return_amount_before_swap_fee
                         - swap_fee_amount - arb_fee_amount;
@@ -3008,7 +2954,9 @@ module initia_std::minitswap {
                     bigdecimal::truncate_u64(
                         bigdecimal::div(
                             bigdecimal::from_u64(return_amount),
-                            bigdecimal::sub(bigdecimal::one(), module_store.swap_fee_rate)
+                            bigdecimal::sub(
+                                bigdecimal::one(), module_store.swap_fee_rate
+                            )
                         )
                     );
                 let fee_amount = return_amount_ - return_amount;
@@ -3177,16 +3125,8 @@ module initia_std::minitswap {
                     b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
                 )
             );
-        coin::mint_to(
-            &initia_mint_cap,
-            chain_addr,
-            1000000000
-        );
-        coin::mint_to(
-            &ibc_op_init_mint_cap,
-            chain_addr,
-            1000000000
-        );
+        coin::mint_to(&initia_mint_cap, chain_addr, 1000000000);
+        coin::mint_to(&ibc_op_init_mint_cap, chain_addr, 1000000000);
         provide(&chain, 15000000, option::none());
 
         create_pool(
@@ -3294,11 +3234,7 @@ module initia_std::minitswap {
                 )
             );
 
-        coin::mint_to(
-            &initia_mint_cap,
-            chain_addr,
-            100000000
-        );
+        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
         coin::mint_to(
             &ibc_op_init_1_mint_cap,
             chain_addr,
@@ -3373,11 +3309,7 @@ module initia_std::minitswap {
 
         // swap init to ibc op init
         let (return_amount, _) =
-            swap_simulation(
-                init_metadata,
-                ibc_op_init_1_metadata,
-                500000
-            );
+            swap_simulation(init_metadata, ibc_op_init_1_metadata, 500000);
         assert!(return_amount == 504224, 0);
 
         let balance_before = coin::balance(chain_addr, ibc_op_init_1_metadata);
@@ -3394,11 +3326,7 @@ module initia_std::minitswap {
             0
         );
 
-        change_pool_size(
-            &chain,
-            ibc_op_init_1_metadata,
-            9000000
-        );
+        change_pool_size(&chain, ibc_op_init_1_metadata, 9000000);
     }
 
     #[test]

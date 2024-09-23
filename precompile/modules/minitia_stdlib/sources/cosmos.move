@@ -128,11 +128,7 @@ module minitia_std::cosmos {
     public entry fun fund_community_pool(
         sender: &signer, metadata: Object<Metadata>, amount: u64
     ) {
-        fund_community_pool_internal(
-            signer::address_of(sender),
-            &metadata,
-            amount
-        )
+        fund_community_pool_internal(signer::address_of(sender), &metadata, amount)
     }
 
     /// ICS20 ibc transfer

@@ -126,11 +126,7 @@ module initia_std::simple_nft {
                 property_values
             );
         if (option::is_some(&to)) {
-            object::transfer(
-                creator,
-                nft_object,
-                option::extract(&mut to)
-            );
+            object::transfer(creator, nft_object, option::extract(&mut to));
         }
     }
 
@@ -315,11 +311,7 @@ module initia_std::simple_nft {
             error::permission_denied(EPROPERTIES_NOT_MUTABLE)
         );
 
-        property_map::update_typed(
-            &simple_nft.property_mutator_ref,
-            &key,
-            value
-        );
+        property_map::update_typed(&simple_nft.property_mutator_ref, &key, value);
     }
 
     // Collection accessors

@@ -43,6 +43,7 @@ make it so that a reference to a global object can be returned from a function.
 -  [Function `convert`](#0x1_object_convert)
 -  [Function `create_named_object`](#0x1_object_create_named_object)
 -  [Function `create_deletable_named_object`](#0x1_object_create_deletable_named_object)
+-  [Function `create_nft_object`](#0x1_object_create_nft_object)
 -  [Function `create_user_derived_object`](#0x1_object_create_user_derived_object)
 -  [Function `create_object`](#0x1_object_create_object)
 -  [Function `generate_delete_ref`](#0x1_object_generate_delete_ref)
@@ -858,6 +859,33 @@ Named objects can be queried globally by knowing the user generated seed used to
 
 
 
+<a id="0x1_object_create_nft_object"></a>
+
+## Function `create_nft_object`
+
+Create a new object to represent an NFT and return the ConstructorRef.
+Nft objects can be queried globally by knowing the user generated seed used to create them
+and the creator's address. NFT objects can be deleted.
+
+
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="object.md#0x1_object_create_nft_object">create_nft_object</a>(owner: <b>address</b>, creator: <b>address</b>, seed: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="object.md#0x1_object_ConstructorRef">object::ConstructorRef</a>
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="object.md#0x1_object_create_nft_object">create_nft_object</a>(
+    owner: <b>address</b>, creator: <b>address</b>, seed: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;
+): <a href="object.md#0x1_object_ConstructorRef">ConstructorRef</a> <b>acquires</b> <a href="object.md#0x1_object_Tombstone">Tombstone</a> {
+    <b>let</b> obj_addr = <a href="object.md#0x1_object_create_object_address">create_object_address</a>(&creator, seed);
+    <a href="object.md#0x1_object_create_object_internal">create_object_internal</a>(owner, obj_addr, <b>true</b>)
+}
+</code></pre>
+
+
+
 <a id="0x1_object_create_user_derived_object"></a>
 
 ## Function `create_user_derived_object`
@@ -879,11 +907,7 @@ Derivde objects, similar to named objects, cannot be deleted.
 ): <a href="object.md#0x1_object_ConstructorRef">ConstructorRef</a> <b>acquires</b> <a href="object.md#0x1_object_Tombstone">Tombstone</a> {
     <b>let</b> obj_addr =
         <a href="object.md#0x1_object_create_user_derived_object_address">create_user_derived_object_address</a>(creator_address, derive_ref.self);
-    <a href="object.md#0x1_object_create_object_internal">create_object_internal</a>(
-        creator_address,
-        obj_addr,
-        can_delete
-    )
+    <a href="object.md#0x1_object_create_object_internal">create_object_internal</a>(creator_address, obj_addr, can_delete)
 }
 </code></pre>
 
@@ -909,11 +933,7 @@ The unique address is computed sha3_256([transaction hash | auid counter | 0xFB]
     owner_address: <b>address</b>, can_delete: bool
 ): <a href="object.md#0x1_object_ConstructorRef">ConstructorRef</a> <b>acquires</b> <a href="object.md#0x1_object_Tombstone">Tombstone</a> {
     <b>let</b> unique_address = <a href="transaction_context.md#0x1_transaction_context_generate_unique_address">transaction_context::generate_unique_address</a>();
-    <a href="object.md#0x1_object_create_object_internal">create_object_internal</a>(
-        owner_address,
-        unique_address,
-        can_delete
-    )
+    <a href="object.md#0x1_object_create_object_internal">create_object_internal</a>(owner_address, unique_address, can_delete)
 }
 </code></pre>
 

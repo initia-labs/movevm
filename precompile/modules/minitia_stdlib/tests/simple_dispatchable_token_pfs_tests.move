@@ -62,7 +62,12 @@ module minitia_std::simple_token_pfs_tests {
         assert!(is_frozen(aaron_address, metadata), 5);
         let fa = withdraw_with_ref(&transfer_ref, aaron_address, 30);
         deposit_with_ref(&transfer_ref, aaron_address, fa);
-        transfer_with_ref(&transfer_ref, aaron_address, creator_address, 20);
+        transfer_with_ref(
+            &transfer_ref,
+            aaron_address,
+            creator_address,
+            20
+        );
         set_frozen_flag(&transfer_ref, aaron_address, false);
         assert!(!is_frozen(aaron_address, metadata), 6);
         burn(&burn_ref, aaron_address, 50);

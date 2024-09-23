@@ -328,6 +328,16 @@ The provided signer is not the creator
 
 
 
+<a id="0x1_nft_ENOT_OWNER"></a>
+
+The calling signer is not the owner
+
+
+<pre><code><b>const</b> <a href="nft.md#0x1_nft_ENOT_OWNER">ENOT_OWNER</a>: u64 = 10;
+</code></pre>
+
+
+
 <a id="0x1_nft_EQUERY_LENGTH_TOO_LONG"></a>
 
 The query length is over the maximum length
@@ -364,7 +374,7 @@ Creates a new nft object from a nft name and returns the ConstructorRef for
 additional specialization.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create">create</a>(creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, collection_name: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, token_id: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="royalty.md#0x1_royalty_Royalty">royalty::Royalty</a>&gt;, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="object.md#0x1_object_ConstructorRef">object::ConstructorRef</a>
+<pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create">create</a>(owner: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, <a href="collection.md#0x1_collection">collection</a>: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="collection.md#0x1_collection_Collection">collection::Collection</a>&gt;, description: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, token_id: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, <a href="royalty.md#0x1_royalty">royalty</a>: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_Option">option::Option</a>&lt;<a href="royalty.md#0x1_royalty_Royalty">royalty::Royalty</a>&gt;, uri: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>): <a href="object.md#0x1_object_ConstructorRef">object::ConstructorRef</a>
 </code></pre>
 
 
@@ -373,21 +383,24 @@ additional specialization.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="nft.md#0x1_nft_create">create</a>(
-    creator: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
-    collection_name: String,
+    owner: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>,
+    <a href="collection.md#0x1_collection">collection</a>: Object&lt;Collection&gt;,
     description: String,
     token_id: String,
     <a href="royalty.md#0x1_royalty">royalty</a>: Option&lt;Royalty&gt;,
     uri: String
 ): ConstructorRef {
-    <b>let</b> creator_address = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator);
+    <b>let</b> owner_address = <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(owner);
+    <b>let</b> creator_address = <a href="collection.md#0x1_collection_creator">collection::creator</a>(<a href="collection.md#0x1_collection">collection</a>);
+    <b>let</b> collection_name = <a href="collection.md#0x1_collection_name">collection::name</a>(<a href="collection.md#0x1_collection">collection</a>);
     <b>let</b> seed = <a href="nft.md#0x1_nft_create_nft_seed">create_nft_seed</a>(&collection_name, &token_id);
 
-    <b>let</b> constructor_ref = <a href="object.md#0x1_object_create_deletable_named_object">object::create_deletable_named_object</a>(creator, seed);
+    <b>let</b> constructor_ref =
+        <a href="object.md#0x1_object_create_nft_object">object::create_nft_object</a>(owner_address, creator_address, seed);
     <a href="nft.md#0x1_nft_create_common">create_common</a>(
+        owner,
         &constructor_ref,
-        creator_address,
-        collection_name,
+        <a href="collection.md#0x1_collection">collection</a>,
         description,
         token_id,
         <a href="royalty.md#0x1_royalty">royalty</a>,

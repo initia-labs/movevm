@@ -17,6 +17,7 @@ This module implements ECDSA signatures based on the prime-order secp256k1 ellpt
 -  [Function `ecdsa_raw_public_key_to_bytes`](#0x1_secp256k1_ecdsa_raw_public_key_to_bytes)
 -  [Function `ecdsa_compressed_public_key_to_bytes`](#0x1_secp256k1_ecdsa_compressed_public_key_to_bytes)
 -  [Function `ecdsa_signature_to_bytes`](#0x1_secp256k1_ecdsa_signature_to_bytes)
+-  [Function `verify`](#0x1_secp256k1_verify)
 -  [Function `ecdsa_recover`](#0x1_secp256k1_ecdsa_recover)
 -  [Function `ecdsa_recover_compressed`](#0x1_secp256k1_ecdsa_recover_compressed)
 
@@ -326,6 +327,37 @@ Serializes an ECDSASignature struct to 64-bytes.
 
 
 
+<a id="0x1_secp256k1_verify"></a>
+
+## Function `verify`
+
+Returns <code><b>true</b></code> if the signature can verify the public key on the message
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="secp256k1.md#0x1_secp256k1_verify">verify</a>(message: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;, public_key: &<a href="secp256k1.md#0x1_secp256k1_ECDSACompressedPublicKey">secp256k1::ECDSACompressedPublicKey</a>, signature: &<a href="secp256k1.md#0x1_secp256k1_ECDSASignature">secp256k1::ECDSASignature</a>): bool
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="secp256k1.md#0x1_secp256k1_verify">verify</a>(
+    message: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u8&gt;,
+    public_key: &<a href="secp256k1.md#0x1_secp256k1_ECDSACompressedPublicKey">ECDSACompressedPublicKey</a>,
+    signature: &<a href="secp256k1.md#0x1_secp256k1_ECDSASignature">ECDSASignature</a>
+): bool {
+    <b>assert</b>!(
+        std::vector::length(&message) == <a href="secp256k1.md#0x1_secp256k1_MESSAGE_SIZE">MESSAGE_SIZE</a>,
+        std::error::invalid_argument(<a href="secp256k1.md#0x1_secp256k1_E_DESERIALIZE">E_DESERIALIZE</a>)
+    );
+
+    <b>return</b> <a href="secp256k1.md#0x1_secp256k1_verify_internal">verify_internal</a>(message, public_key.bytes, signature.bytes)
+}
+</code></pre>
+
+
+
 <a id="0x1_secp256k1_ecdsa_recover"></a>
 
 ## Function `ecdsa_recover`
@@ -355,12 +387,7 @@ public key (or its hash) is known beforehand.
     );
 
     <b>let</b> (pk, success) =
-        <a href="secp256k1.md#0x1_secp256k1_recover_public_key_internal">recover_public_key_internal</a>(
-            recovery_id,
-            message,
-            signature.bytes,
-            <b>false</b>
-        );
+        <a href="secp256k1.md#0x1_secp256k1_recover_public_key_internal">recover_public_key_internal</a>(recovery_id, message, signature.bytes, <b>false</b>);
     <b>if</b> (success) {
         std::option::some(<a href="secp256k1.md#0x1_secp256k1_ecdsa_raw_public_key_from_bytes">ecdsa_raw_public_key_from_bytes</a>(pk))
     } <b>else</b> {
@@ -400,12 +427,7 @@ public key (or its hash) is known beforehand.
     );
 
     <b>let</b> (pk, success) =
-        <a href="secp256k1.md#0x1_secp256k1_recover_public_key_internal">recover_public_key_internal</a>(
-            recovery_id,
-            message,
-            signature.bytes,
-            <b>true</b>
-        );
+        <a href="secp256k1.md#0x1_secp256k1_recover_public_key_internal">recover_public_key_internal</a>(recovery_id, message, signature.bytes, <b>true</b>);
     <b>if</b> (success) {
         std::option::some(<a href="secp256k1.md#0x1_secp256k1_ecdsa_compressed_public_key_from_bytes">ecdsa_compressed_public_key_from_bytes</a>(pk))
     } <b>else</b> {

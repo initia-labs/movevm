@@ -31,7 +31,8 @@ module initia_std::ten_x_token_tests {
 
         // The derived supply is 10x
         assert!(
-            dispatchable_fungible_asset::derived_supply(metadata) == option::some(1000), 5
+            dispatchable_fungible_asset::derived_supply(metadata) == option::some(1000),
+            5
         );
     }
 }

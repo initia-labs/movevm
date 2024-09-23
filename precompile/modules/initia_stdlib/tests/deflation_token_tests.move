@@ -333,7 +333,10 @@ module 0xcafe::deflation_token_tests {
 
         assert!(primary_fungible_store::balance(aaron_address, metadata) == 69, 4);
         primary_fungible_store::transfer_with_ref(
-            &transfer_ref, aaron_address, creator_address, 20
+            &transfer_ref,
+            aaron_address,
+            creator_address,
+            20
         );
 
         assert!(primary_fungible_store::balance(creator_address, metadata) == 42, 3);

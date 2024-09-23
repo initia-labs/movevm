@@ -1172,8 +1172,7 @@ Define the derived supply dispatch with the provided function.
             // Verify that caller type matches callee type so wrongly typed function cannot be registered.
             <b>assert</b>!(
                 <a href="function_info.md#0x1_function_info_check_dispatch_type_compatibility">function_info::check_dispatch_type_compatibility</a>(
-                    &<a href="function_info.md#0x1_function_info">function_info</a>,
-                    supply_function
+                    &<a href="function_info.md#0x1_function_info">function_info</a>, supply_function
                 ),
                 <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(
                     <a href="fungible_asset.md#0x1_fungible_asset_EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH">EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH</a>
