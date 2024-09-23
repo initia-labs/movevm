@@ -123,6 +123,23 @@ module initia_std::code {
             error::permission_denied(EINVALID_CHAIN_OPERATOR)
         );
 
+        // duplication check
+        let module_ids_set = simple_map::create<String, bool>();
+        vector::for_each_ref(
+            &module_ids,
+            |module_id| {
+                assert!(
+                    !simple_map::contains_key(&module_ids_set, module_id),
+                    error::invalid_argument(EDUPLICATE_MODULE_ID)
+                );
+                simple_map::add(
+                    &mut module_ids_set,
+                    *module_id,
+                    true
+                );
+            }
+        );
+
         let metadata_table = table::new<String, ModuleMetadata>();
         vector::for_each_ref(
             &module_ids,
@@ -231,6 +248,7 @@ module initia_std::code {
             );
         };
 
+        let new_modules = 0;
         // Check upgradability
         let metadata_table = &mut borrow_global_mut<MetadataStore>(addr).metadata;
         vector::for_each_ref(
@@ -260,6 +278,7 @@ module initia_std::code {
                         *module_id,
                         ModuleMetadata { upgrade_policy }
                     );
+                    new_modules = new_modules + 1;
                 };
 
                 event::emit(
@@ -269,7 +288,7 @@ module initia_std::code {
         );
 
         // Request publish
-        increase_total_modules(vector::length(&module_ids));
+        increase_total_modules(new_modules);
         request_publish(addr, module_ids, code)
     }
 
