@@ -992,10 +992,7 @@ Vote proposal
     <a href="multisig.md#0x1_multisig_assert_member">assert_member</a>(&multisig_wallet.members, &voter);
 
     <b>assert</b>!(
-        <a href="table.md#0x1_table_contains">table::contains</a>(
-            &multisig_wallet.proposals,
-            proposal_id
-        ),
+        <a href="table.md#0x1_table_contains">table::contains</a>(&multisig_wallet.proposals, proposal_id),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="multisig.md#0x1_multisig_EPROPOSAL_NOT_FOUND">EPROPOSAL_NOT_FOUND</a>)
     );
     <b>let</b> proposal = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(&<b>mut</b> multisig_wallet.proposals, proposal_id);
@@ -1036,10 +1033,7 @@ Execute proposal
     <a href="multisig.md#0x1_multisig_assert_member">assert_member</a>(&multisig_wallet.members, &executor);
 
     <b>assert</b>!(
-        <a href="table.md#0x1_table_contains">table::contains</a>(
-            &multisig_wallet.proposals,
-            proposal_id
-        ),
+        <a href="table.md#0x1_table_contains">table::contains</a>(&multisig_wallet.proposals, proposal_id),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="multisig.md#0x1_multisig_EPROPOSAL_NOT_FOUND">EPROPOSAL_NOT_FOUND</a>)
     );
     <b>let</b> proposal = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(&<b>mut</b> multisig_wallet.proposals, proposal_id);
@@ -1049,10 +1043,8 @@ Execute proposal
 
     // check passed
     <b>assert</b>!(
-        <a href="multisig.md#0x1_multisig_yes_vote_count">yes_vote_count</a>(
-            &proposal.votes,
-            &multisig_wallet.members
-        ) &gt;= multisig_wallet.threshold,
+        <a href="multisig.md#0x1_multisig_yes_vote_count">yes_vote_count</a>(&proposal.votes, &multisig_wallet.members)
+            &gt;= multisig_wallet.threshold,
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="multisig.md#0x1_multisig_ENOT_PASS">ENOT_PASS</a>)
     );
 

@@ -349,6 +349,7 @@ strengthened but not weakened.
         <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(chain) == @initia_std,
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_permission_denied">error::permission_denied</a>(<a href="code.md#0x1_code_EINVALID_CHAIN_OPERATOR">EINVALID_CHAIN_OPERATOR</a>)
     );
+    <a href="code.md#0x1_code_assert_no_duplication">assert_no_duplication</a>(&module_ids);
 
     <b>let</b> metadata_table = <a href="table.md#0x1_table_new">table::new</a>&lt;String, <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a>&gt;();
     <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(
@@ -433,7 +434,10 @@ strengthened but not weakened.
 
     <b>let</b> registry = <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(code_object_addr);
     <b>let</b> iter = <a href="table.md#0x1_table_iter_mut">table::iter_mut</a>(
-        &<b>mut</b> registry.metadata, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), 1
+        &<b>mut</b> registry.metadata,
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
+        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
+        1
     );
     <b>loop</b> {
         <b>if</b> (!<a href="table.md#0x1_table_prepare_mut">table::prepare_mut</a>(iter)) { <b>break</b> };
@@ -473,23 +477,7 @@ package.
         <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&<a href="code.md#0x1_code">code</a>) == <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&module_ids),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EINVALID_ARGUMENTS">EINVALID_ARGUMENTS</a>)
     );
-
-    // duplication check
-    <b>let</b> module_ids_set = <a href="simple_map.md#0x1_simple_map_create">simple_map::create</a>&lt;String, bool&gt;();
-    <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(
-        &module_ids,
-        |module_id| {
-            <b>assert</b>!(
-                !<a href="simple_map.md#0x1_simple_map_contains_key">simple_map::contains_key</a>(&module_ids_set, module_id),
-                <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EDUPLICATE_MODULE_ID">EDUPLICATE_MODULE_ID</a>)
-            );
-            <a href="simple_map.md#0x1_simple_map_add">simple_map::add</a>(
-                &<b>mut</b> module_ids_set,
-                *module_id,
-                <b>true</b>
-            );
-        }
-    );
+    <a href="code.md#0x1_code_assert_no_duplication">assert_no_duplication</a>(&module_ids);
 
     // Check whether arbitrary publish is allowed or not.
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_ModuleStore">ModuleStore</a>&gt;(@initia_std);
@@ -503,13 +491,11 @@ package.
     <a href="code.md#0x1_code_assert_allowed">assert_allowed</a>(&module_store.allowed_publishers, addr);
 
     <b>if</b> (!<b>exists</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(addr)) {
-        <b>move_to</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(
-            owner,
-            <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> { metadata: <a href="table.md#0x1_table_new">table::new</a>() }
-        );
+        <b>move_to</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(owner, <a href="code.md#0x1_code_MetadataStore">MetadataStore</a> { metadata: <a href="table.md#0x1_table_new">table::new</a>() });
     };
 
     // Check upgradability
+    <b>let</b> new_modules = 0;
     <b>let</b> metadata_table = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="code.md#0x1_code_MetadataStore">MetadataStore</a>&gt;(addr).metadata;
     <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_for_each_ref">vector::for_each_ref</a>(
         &module_ids,
@@ -525,8 +511,7 @@ package.
                 );
                 <b>assert</b>!(
                     <a href="code.md#0x1_code_can_change_upgrade_policy_to">can_change_upgrade_policy_to</a>(
-                        metadata.upgrade_policy,
-                        upgrade_policy
+                        metadata.upgrade_policy, upgrade_policy
                     ),
                     <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="code.md#0x1_code_EUPGRADE_WEAKER_POLICY">EUPGRADE_WEAKER_POLICY</a>)
                 );
@@ -538,6 +523,7 @@ package.
                     *module_id,
                     <a href="code.md#0x1_code_ModuleMetadata">ModuleMetadata</a> { upgrade_policy }
                 );
+                new_modules = new_modules + 1;
             };
 
             <a href="event.md#0x1_event_emit">event::emit</a>(
@@ -546,8 +532,11 @@ package.
         }
     );
 
+    <b>if</b> (new_modules &gt; 0) {
+        <a href="code.md#0x1_code_increase_total_modules">increase_total_modules</a>(new_modules)
+    };
+
     // Request publish
-    <a href="code.md#0x1_code_increase_total_modules">increase_total_modules</a>(<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&module_ids));
     <a href="code.md#0x1_code_request_publish">request_publish</a>(addr, module_ids, <a href="code.md#0x1_code">code</a>)
 }
 </code></pre>

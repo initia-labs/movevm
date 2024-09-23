@@ -843,11 +843,7 @@ Return swap simulation result
     pool_obj: Object&lt;<a href="stableswap.md#0x1_stableswap_Pool">Pool</a>&gt;, coin_amounts: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt;
 ): u64 <b>acquires</b> <a href="stableswap.md#0x1_stableswap_Pool">Pool</a> {
     <b>let</b> (liquidity_amount, _) =
-        <a href="stableswap.md#0x1_stableswap_imbalance_withdraw_simulation">imbalance_withdraw_simulation</a>(
-            pool_obj,
-            coin_amounts,
-            <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>()
-        );
+        <a href="stableswap.md#0x1_stableswap_imbalance_withdraw_simulation">imbalance_withdraw_simulation</a>(pool_obj, coin_amounts, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>());
     liquidity_amount
 }
 </code></pre>
@@ -883,11 +879,7 @@ Return swap simulation result
     <b>assert</b>!(found, <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="stableswap.md#0x1_stableswap_ECOIN_TYPE">ECOIN_TYPE</a>));
 
     <b>let</b> (liquidity_amount, _) =
-        <a href="stableswap.md#0x1_stableswap_single_asset_withdraw_simulation">single_asset_withdraw_simulation</a>(
-            pool_obj,
-            liquidity_amount,
-            return_index
-        );
+        <a href="stableswap.md#0x1_stableswap_single_asset_withdraw_simulation">single_asset_withdraw_simulation</a>(pool_obj, liquidity_amount, return_index);
     liquidity_amount
 }
 </code></pre>
@@ -1106,12 +1098,7 @@ Return swap simulation result
     };
 
     <b>let</b> liquidity_token = <a href="stableswap.md#0x1_stableswap_create_pool">create_pool</a>(
-        creator,
-        name,
-        symbol,
-        swap_fee_rate,
-        coins,
-        ann
+        creator, name, symbol, swap_fee_rate, coins, ann
     );
     <a href="primary_fungible_store.md#0x1_primary_fungible_store_deposit">primary_fungible_store::deposit</a>(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(creator), liquidity_token);
 }
@@ -1291,11 +1278,7 @@ Return swap simulation result
     max_liquidity: Option&lt;u64&gt;
 ) <b>acquires</b> <a href="stableswap.md#0x1_stableswap_Pool">Pool</a> {
     <b>let</b> (liquidity_amount, fee_amounts) =
-        <a href="stableswap.md#0x1_stableswap_imbalance_withdraw_simulation">imbalance_withdraw_simulation</a>(
-            pool_obj,
-            coin_amounts,
-            max_liquidity
-        );
+        <a href="stableswap.md#0x1_stableswap_imbalance_withdraw_simulation">imbalance_withdraw_simulation</a>(pool_obj, coin_amounts, max_liquidity);
     <b>let</b> liquidity_token =
         <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(<a href="account.md#0x1_account">account</a>, pool_obj, liquidity_amount);
     <b>let</b> pool = <a href="stableswap.md#0x1_stableswap_borrow_pool">borrow_pool</a>(pool_obj);
@@ -1386,11 +1369,7 @@ Return swap simulation result
     min_return_amount: Option&lt;u64&gt;
 ) <b>acquires</b> <a href="stableswap.md#0x1_stableswap_Pool">Pool</a> {
     <b>let</b> offer_coin =
-        <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(
-            <a href="account.md#0x1_account">account</a>,
-            offer_coin_metadata,
-            offer_amount
-        );
+        <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(<a href="account.md#0x1_account">account</a>, offer_coin_metadata, offer_amount);
     <b>let</b> return_coin =
         <a href="stableswap.md#0x1_stableswap_swap">swap</a>(
             pool_obj,
@@ -1501,11 +1480,7 @@ Return swap simulation result
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="stableswap.md#0x1_stableswap_ModuleStore">ModuleStore</a>&gt;(@initia_std);
     module_store.pool_count = module_store.pool_count + 1;
 
-    <a href="table.md#0x1_table_add">table::add</a>(
-        &<b>mut</b> module_store.pools,
-        pool_address,
-        <b>true</b>
-    );
+    <a href="table.md#0x1_table_add">table::add</a>(&<b>mut</b> module_store.pools, pool_address, <b>true</b>);
 
     // emit create pool <a href="event.md#0x1_event">event</a>
     <a href="event.md#0x1_event_emit">event::emit</a>&lt;<a href="stableswap.md#0x1_stableswap_CreatePoolEvent">CreatePoolEvent</a>&gt;(
@@ -1642,9 +1617,7 @@ Return swap simulation result
         <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_push_back">vector::push_back</a>(
             &<b>mut</b> return_coins,
             <a href="primary_fungible_store.md#0x1_primary_fungible_store_withdraw">primary_fungible_store::withdraw</a>(
-                &pool_signer,
-                coin_metadata,
-                return_amount
+                &pool_signer, coin_metadata, return_amount
             )
         );
         i = i + 1;
@@ -1711,11 +1684,7 @@ Return swap simulation result
 
     // calculate amount of returning asset
     <b>let</b> (return_amount, fee) =
-        <a href="stableswap.md#0x1_stableswap_single_asset_withdraw_simulation">single_asset_withdraw_simulation</a>(
-            pool_obj,
-            liquidity_amount,
-            return_index
-        );
+        <a href="stableswap.md#0x1_stableswap_single_asset_withdraw_simulation">single_asset_withdraw_simulation</a>(pool_obj, liquidity_amount, return_index);
     <b>assert</b>!(
         <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_none">option::is_none</a>(&min_return_amount)
             || *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&min_return_amount) &lt;= return_amount,
@@ -1898,12 +1867,7 @@ Return swap simulation result
                 ) <b>as</b> u64
             );
 
-    <b>let</b> y_without_fee = <a href="stableswap.md#0x1_stableswap_get_y_with_given_d">get_y_with_given_d</a>(
-        pool_amounts,
-        return_index,
-        ann,
-        d_after
-    );
+    <b>let</b> y_without_fee = <a href="stableswap.md#0x1_stableswap_get_y_with_given_d">get_y_with_given_d</a>(pool_amounts, return_index, ann, d_after);
     <b>let</b> return_amount_without_fee =
         *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&pool_amounts, return_index) - y_without_fee;
 
@@ -2148,11 +2112,11 @@ Return swap simulation result
             i = 0;
             <b>while</b> (i &lt; n) {
                 <b>let</b> pool_amount_before = *<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow">vector::borrow</a>(&pool_amounts_before, i);
-                <b>let</b> pool_amount_after = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow_mut">vector::borrow_mut</a>(&<b>mut</b> pool_amounts_after, i);
+                <b>let</b> pool_amount_after = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_borrow_mut">vector::borrow_mut</a>(
+                    &<b>mut</b> pool_amounts_after, i
+                );
                 <b>let</b> ideal_balance = <a href="stableswap.md#0x1_stableswap_mul_div_u64">mul_div_u64</a>(
-                    d_ideal,
-                    pool_amount_before,
-                    d_before
+                    d_ideal, pool_amount_before, d_before
                 );
                 <b>let</b> diff =
                     <b>if</b> (ideal_balance &gt; *pool_amount_after) {

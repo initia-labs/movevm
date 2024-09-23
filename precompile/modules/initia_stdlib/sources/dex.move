@@ -370,9 +370,7 @@ module initia_std::dex {
 
     #[view]
     public fun get_provide_simulation(
-        pair: Object<Config>,
-        coin_a_amount_in: u64,
-        coin_b_amount_in: u64
+        pair: Object<Config>, coin_a_amount_in: u64, coin_b_amount_in: u64
     ): u64 acquires Pool {
         let pool_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pool_addr);
@@ -477,7 +475,9 @@ module initia_std::dex {
                     PairKey {
                         coin_a: option::extract(&mut coin_a_start_after),
                         coin_b: option::extract(&mut coin_b_start_after),
-                        liquidity_token: option::extract(&mut liquidity_token_start_after)
+                        liquidity_token: option::extract(
+                            &mut liquidity_token_start_after
+                        )
                     }
                 )
             } else {
@@ -738,16 +738,8 @@ module initia_std::dex {
             weights_after: Weight { coin_a_weight, coin_b_weight, timestamp }
         };
 
-        let coin_a = coin::withdraw(
-            creator,
-            coin_a_metadata,
-            coin_a_amount
-        );
-        let coin_b = coin::withdraw(
-            creator,
-            coin_b_metadata,
-            coin_b_amount
-        );
+        let coin_a = coin::withdraw(creator, coin_a_metadata, coin_a_amount);
+        let coin_b = coin::withdraw(creator, coin_b_metadata, coin_b_amount);
 
         let liquidity_token =
             create_pair(
@@ -803,16 +795,8 @@ module initia_std::dex {
             }
         };
 
-        let coin_a = coin::withdraw(
-            creator,
-            coin_a_metadata,
-            coin_a_amount
-        );
-        let coin_b = coin::withdraw(
-            creator,
-            coin_b_metadata,
-            coin_b_amount
-        );
+        let coin_a = coin::withdraw(creator, coin_a_metadata, coin_a_amount);
+        let coin_b = coin::withdraw(creator, coin_b_metadata, coin_b_amount);
 
         let liquidity_token =
             create_pair(
@@ -985,18 +969,12 @@ module initia_std::dex {
         offer_coin_amount: u64,
         min_return: Option<u64>
     ) acquires Config, Pool {
-        let offer_coin = coin::withdraw(
-            account,
-            offer_coin,
-            offer_coin_amount
-        );
+        let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
         let return_coin = swap(pair, offer_coin);
 
         assert!(
             option::is_none(&min_return)
-                || *option::borrow(&min_return) <= fungible_asset::amount(
-                    &return_coin
-                ),
+                || *option::borrow(&min_return) <= fungible_asset::amount(&return_coin),
             error::invalid_state(EMIN_RETURN)
         );
 
@@ -1196,18 +1174,10 @@ module initia_std::dex {
         let return_coin =
             if (is_offer_a) {
                 fungible_asset::deposit(pool.coin_a_store, offer_coin);
-                fungible_asset::withdraw(
-                    pair_signer,
-                    pool.coin_b_store,
-                    return_amount
-                )
+                fungible_asset::withdraw(pair_signer, pool.coin_b_store, return_amount)
             } else {
                 fungible_asset::deposit(pool.coin_b_store, offer_coin);
-                fungible_asset::withdraw(
-                    pair_signer,
-                    pool.coin_a_store,
-                    return_amount
-                )
+                fungible_asset::withdraw(pair_signer, pool.coin_a_store, return_amount)
             };
 
         // emit events
@@ -1299,10 +1269,7 @@ module initia_std::dex {
         let coin_a_addr = coin_address(&coin_a);
         let coin_b_addr = coin_address(&coin_b);
 
-        move_to(
-            pair_signer,
-            Pool { coin_a_store, coin_b_store }
-        );
+        move_to(pair_signer, Pool { coin_a_store, coin_b_store });
 
         move_to(
             pair_signer,
@@ -1400,10 +1367,7 @@ module initia_std::dex {
 
         let liquidity =
             calculate_provide_liquidity_return_amount(
-                pool,
-                pair,
-                coin_a_amount_in,
-                coin_b_amount_in
+                pool, pair, coin_a_amount_in, coin_b_amount_in
             );
 
         assert!(
@@ -1598,17 +1562,11 @@ module initia_std::dex {
         // compute fee amount with the assumption that we will swap (1 - normalized_weight) of amount_in
         let adjusted_swap_amount =
             bigdecimal::mul_by_u64_truncate(
-                bigdecimal::sub(
-                    bigdecimal::one(),
-                    normalized_weight
-                ),
+                bigdecimal::sub(bigdecimal::one(), normalized_weight),
                 amount_in
             );
         let fee_amount =
-            calculate_fee_with_minimum(
-                config.swap_fee_rate,
-                adjusted_swap_amount
-            );
+            calculate_fee_with_minimum(config.swap_fee_rate, adjusted_swap_amount);
 
         // actual amount in after deducting fee amount
         let adjusted_amount_in = amount_in - fee_amount;
@@ -1861,16 +1819,8 @@ module initia_std::dex {
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
         let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
 
-        coin::mint_to(
-            &initia_mint_cap,
-            chain_addr,
-            100000000
-        );
-        coin::mint_to(
-            &usdc_mint_cap,
-            chain_addr,
-            100000000
-        );
+        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
 
         // spot price is 1
         create_pair_script(
@@ -2016,16 +1966,8 @@ module initia_std::dex {
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
         let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
 
-        coin::mint_to(
-            &initia_mint_cap,
-            chain_addr,
-            100000000
-        );
-        coin::mint_to(
-            &usdc_mint_cap,
-            chain_addr,
-            100000000
-        );
+        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
 
         set_block_info(10, 1000);
 
@@ -2203,21 +2145,9 @@ module initia_std::dex {
         let b_addr = object::object_address(&b_metadata);
         let c_addr = object::object_address(&c_metadata);
 
-        coin::mint_to(
-            &coin_a_mint_cap,
-            chain_addr,
-            100000000
-        );
-        coin::mint_to(
-            &coin_b_mint_cap,
-            chain_addr,
-            100000000
-        );
-        coin::mint_to(
-            &coin_c_mint_cap,
-            chain_addr,
-            100000000
-        );
+        coin::mint_to(&coin_a_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&coin_b_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&coin_c_mint_cap, chain_addr, 100000000);
 
         create_pair_script(
             &chain,
@@ -2417,12 +2347,7 @@ module initia_std::dex {
             2
         );
 
-        let res = get_pairs(
-            a_addr,
-            b_addr,
-            option::none(),
-            10
-        );
+        let res = get_pairs(a_addr, b_addr, option::none(), 10);
         assert!(
             res
                 == vector[
@@ -2444,12 +2369,7 @@ module initia_std::dex {
             3
         );
 
-        let res = get_pairs(
-            a_addr,
-            b_addr,
-            option::some(pair_1_addr),
-            10
-        );
+        let res = get_pairs(a_addr, b_addr, option::some(pair_1_addr), 10);
         assert!(
             res
                 == vector[

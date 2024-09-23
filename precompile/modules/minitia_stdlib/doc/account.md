@@ -211,11 +211,7 @@ as both cannot have a pubkey, there is no way to use the account externally.
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_already_exists">error::already_exists</a>(<a href="account.md#0x1_account_EACCOUNT_ALREADY_EXISTS">EACCOUNT_ALREADY_EXISTS</a>)
     );
 
-    <a href="account.md#0x1_account_request_create_account">request_create_account</a>(
-        addr,
-        account_number,
-        <a href="account.md#0x1_account_ACCOUNT_TYPE_TABLE">ACCOUNT_TYPE_TABLE</a>
-    )
+    <a href="account.md#0x1_account_request_create_account">request_create_account</a>(addr, account_number, <a href="account.md#0x1_account_ACCOUNT_TYPE_TABLE">ACCOUNT_TYPE_TABLE</a>)
 }
 </code></pre>
 
@@ -242,11 +238,7 @@ as both cannot have a pubkey, there is no way to use the account externally.
 
     // base <a href="account.md#0x1_account">account</a> <b>with</b> sequence 0 is considered <b>as</b> not created.
     <b>if</b> (!found || (account_type == <a href="account.md#0x1_account_ACCOUNT_TYPE_BASE">ACCOUNT_TYPE_BASE</a> && sequence == 0)) {
-        <a href="account.md#0x1_account_request_create_account">request_create_account</a>(
-            addr,
-            account_number,
-            <a href="account.md#0x1_account_ACCOUNT_TYPE_OBJECT">ACCOUNT_TYPE_OBJECT</a>
-        )
+        <a href="account.md#0x1_account_request_create_account">request_create_account</a>(addr, account_number, <a href="account.md#0x1_account_ACCOUNT_TYPE_OBJECT">ACCOUNT_TYPE_OBJECT</a>)
     } <b>else</b> {
         // When an Object is deleted, the ObjectAccount in CosmosSDK is designed
         // not <b>to</b> be deleted in order <b>to</b> prevent unexpected issues. Therefore,

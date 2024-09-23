@@ -248,10 +248,7 @@ module minitia_std::collection {
         move_to(object_signer, collection);
 
         if (option::is_some(&supply)) {
-            move_to(
-                object_signer,
-                option::destroy_some(supply)
-            );
+            move_to(object_signer, option::destroy_some(supply));
             let collection_addr = signer::address_of(object_signer);
             event::emit(
                 CreateCollectionEvent {
@@ -415,10 +412,7 @@ module minitia_std::collection {
             && vector::length(&res) < (limit as u64)) {
             let (token_id, nft) = table::next<String, address>(nfts_iter);
 
-            vector::push_back(
-                &mut res,
-                NftResponse { token_id, nft: *nft }
-            );
+            vector::push_back(&mut res, NftResponse { token_id, nft: *nft });
         };
 
         res
@@ -534,8 +528,10 @@ module minitia_std::collection {
         assert!(count(collection) == option::some(0), 0);
     }
 
-   #[test(creator = @0x123, receipient = @0x456)]
-    entry fun test_create_and_transfer(creator: &signer, receipient: &signer) {
+    #[test(creator = @0x123, receipient = @0x456)]
+    entry fun test_create_and_transfer(
+        creator: &signer, receipient: &signer
+    ) {
         let creator_address = signer::address_of(creator);
         let collection_name = string::utf8(b"collection name");
         create_collection_helper(creator, collection_name);
@@ -560,7 +556,6 @@ module minitia_std::collection {
     fun test_create_collection_with_invalid_name(creator: &signer) {
         create_collection_helper(creator, string::utf8(b"collection::hello"));
     }
-
 
     #[test(creator = @0x123)]
     #[expected_failure(abort_code = 0x80001, location = minitia_std::object)]
@@ -619,21 +614,9 @@ module minitia_std::collection {
         );
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
-        increment_supply(
-            collection,
-            string::utf8(b"1"),
-            @0x001
-        );
-        increment_supply(
-            collection,
-            string::utf8(b"2"),
-            @0x002
-        );
-        increment_supply(
-            collection,
-            string::utf8(b"3"),
-            @0x003
-        );
+        increment_supply(collection, string::utf8(b"1"), @0x001);
+        increment_supply(collection, string::utf8(b"2"), @0x002);
+        increment_supply(collection, string::utf8(b"3"), @0x003);
 
         let nfts = nfts(collection, option::none(), 5);
         assert!(

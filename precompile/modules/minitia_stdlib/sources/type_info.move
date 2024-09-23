@@ -26,10 +26,7 @@ module minitia_std::type_info {
     #[test]
     fun test() {
         let type_info = type_of<TypeInfo>();
-        assert!(
-            account_address(&type_info) == @minitia_std,
-            0
-        );
+        assert!(account_address(&type_info) == @minitia_std, 0);
         assert!(module_name(&type_info) == b"type_info", 1);
         assert!(struct_name(&type_info) == b"TypeInfo", 2);
     }

@@ -322,11 +322,7 @@ execution after the move execution finished.
 <pre><code><b>public</b> entry <b>fun</b> <a href="cosmos.md#0x1_cosmos_fund_community_pool">fund_community_pool</a>(
     sender: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: Object&lt;Metadata&gt;, amount: u64
 ) {
-    <a href="cosmos.md#0x1_cosmos_fund_community_pool_internal">fund_community_pool_internal</a>(
-        <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(sender),
-        &metadata,
-        amount
-    )
+    <a href="cosmos.md#0x1_cosmos_fund_community_pool_internal">fund_community_pool_internal</a>(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(sender), &metadata, amount)
 }
 </code></pre>
 

@@ -906,10 +906,7 @@ if <code>start_after</code> is not none, seach nfts in range (start_after, ...]
         && <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&res) &lt; (limit <b>as</b> u64)) {
         <b>let</b> (token_id, <a href="nft.md#0x1_nft">nft</a>) = <a href="table.md#0x1_table_next">table::next</a>&lt;String, <b>address</b>&gt;(nfts_iter);
 
-        <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_push_back">vector::push_back</a>(
-            &<b>mut</b> res,
-            <a href="collection.md#0x1_collection_NftResponse">NftResponse</a> { token_id, <a href="nft.md#0x1_nft">nft</a>: *<a href="nft.md#0x1_nft">nft</a> }
-        );
+        <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_push_back">vector::push_back</a>(&<b>mut</b> res, <a href="collection.md#0x1_collection_NftResponse">NftResponse</a> { token_id, <a href="nft.md#0x1_nft">nft</a>: *<a href="nft.md#0x1_nft">nft</a> });
     };
 
     res

@@ -34,6 +34,8 @@
 -  [Function `get_swap_simulation_by_denom`](#0x1_dex_get_swap_simulation_by_denom)
 -  [Function `get_swap_simulation_given_out`](#0x1_dex_get_swap_simulation_given_out)
 -  [Function `get_swap_simulation_given_out_by_denom`](#0x1_dex_get_swap_simulation_given_out_by_denom)
+-  [Function `get_provide_simulation`](#0x1_dex_get_provide_simulation)
+-  [Function `get_single_asset_provide_simulation`](#0x1_dex_get_single_asset_provide_simulation)
 -  [Function `get_pool_info`](#0x1_dex_get_pool_info)
 -  [Function `get_pool_info_by_denom`](#0x1_dex_get_pool_info_by_denom)
 -  [Function `get_config`](#0x1_dex_get_config)
@@ -1377,6 +1379,67 @@ Return swap simulation result
 
 
 
+<a id="0x1_dex_get_provide_simulation"></a>
+
+## Function `get_provide_simulation`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="dex.md#0x1_dex_get_provide_simulation">get_provide_simulation</a>(pair: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="dex.md#0x1_dex_Config">dex::Config</a>&gt;, coin_a_amount_in: u64, coin_b_amount_in: u64): u64
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="dex.md#0x1_dex_get_provide_simulation">get_provide_simulation</a>(
+    pair: Object&lt;<a href="dex.md#0x1_dex_Config">Config</a>&gt;, coin_a_amount_in: u64, coin_b_amount_in: u64
+): u64 <b>acquires</b> <a href="dex.md#0x1_dex_Pool">Pool</a> {
+    <b>let</b> pool_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&pair);
+    <b>let</b> pool = <b>borrow_global</b>&lt;<a href="dex.md#0x1_dex_Pool">Pool</a>&gt;(pool_addr);
+
+    <a href="dex.md#0x1_dex_calculate_provide_liquidity_return_amount">calculate_provide_liquidity_return_amount</a>(
+        pool, pair, coin_a_amount_in, coin_b_amount_in
+    )
+}
+</code></pre>
+
+
+
+<a id="0x1_dex_get_single_asset_provide_simulation"></a>
+
+## Function `get_single_asset_provide_simulation`
+
+
+
+<pre><code>#[view]
+<b>public</b> <b>fun</b> <a href="dex.md#0x1_dex_get_single_asset_provide_simulation">get_single_asset_provide_simulation</a>(pair: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="dex.md#0x1_dex_Config">dex::Config</a>&gt;, offer_asset_metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, amount_in: u64): u64
+</code></pre>
+
+
+
+##### Implementation
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="dex.md#0x1_dex_get_single_asset_provide_simulation">get_single_asset_provide_simulation</a>(
+    pair: Object&lt;<a href="dex.md#0x1_dex_Config">Config</a>&gt;, offer_asset_metadata: Object&lt;Metadata&gt;, amount_in: u64
+): u64 <b>acquires</b> <a href="dex.md#0x1_dex_Config">Config</a>, <a href="dex.md#0x1_dex_Pool">Pool</a> {
+    <b>let</b> pair_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&pair);
+    <b>let</b> pool = <b>borrow_global</b>&lt;<a href="dex.md#0x1_dex_Pool">Pool</a>&gt;(pair_addr);
+
+    <b>let</b> (liquidity_amount, _, _) =
+        <a href="dex.md#0x1_dex_calculate_single_asset_provide_liquidity_return_amount">calculate_single_asset_provide_liquidity_return_amount</a>(
+            pool, pair, offer_asset_metadata, amount_in
+        );
+
+    liquidity_amount
+}
+</code></pre>
+
+
+
 <a id="0x1_dex_get_pool_info"></a>
 
 ## Function `get_pool_info`
@@ -1571,7 +1634,9 @@ get config
                 <a href="dex.md#0x1_dex_PairKey">PairKey</a> {
                     coin_a: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> coin_a_start_after),
                     coin_b: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> coin_b_start_after),
-                    liquidity_token: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> liquidity_token_start_after)
+                    liquidity_token: <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(
+                        &<b>mut</b> liquidity_token_start_after
+                    )
                 }
             )
         } <b>else</b> {
@@ -2046,16 +2111,8 @@ get config
         weights_after: <a href="dex.md#0x1_dex_Weight">Weight</a> { coin_a_weight, coin_b_weight, <a href="timestamp.md#0x1_timestamp">timestamp</a> }
     };
 
-    <b>let</b> coin_a = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
-        creator,
-        coin_a_metadata,
-        coin_a_amount
-    );
-    <b>let</b> coin_b = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
-        creator,
-        coin_b_metadata,
-        coin_b_amount
-    );
+    <b>let</b> coin_a = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(creator, coin_a_metadata, coin_a_amount);
+    <b>let</b> coin_b = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(creator, coin_b_metadata, coin_b_amount);
 
     <b>let</b> liquidity_token =
         <a href="dex.md#0x1_dex_create_pair">create_pair</a>(
@@ -2128,16 +2185,8 @@ only LP struct owner can initialize
         }
     };
 
-    <b>let</b> coin_a = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
-        creator,
-        coin_a_metadata,
-        coin_a_amount
-    );
-    <b>let</b> coin_b = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
-        creator,
-        coin_b_metadata,
-        coin_b_amount
-    );
+    <b>let</b> coin_a = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(creator, coin_a_metadata, coin_a_amount);
+    <b>let</b> coin_b = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(creator, coin_b_metadata, coin_b_amount);
 
     <b>let</b> liquidity_token =
         <a href="dex.md#0x1_dex_create_pair">create_pair</a>(
@@ -2391,18 +2440,12 @@ Swap with the coin in the coin store
     offer_coin_amount: u64,
     min_return: Option&lt;u64&gt;
 ) <b>acquires</b> <a href="dex.md#0x1_dex_Config">Config</a>, <a href="dex.md#0x1_dex_Pool">Pool</a> {
-    <b>let</b> offer_coin = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(
-        <a href="account.md#0x1_account">account</a>,
-        offer_coin,
-        offer_coin_amount
-    );
+    <b>let</b> offer_coin = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(<a href="account.md#0x1_account">account</a>, offer_coin, offer_coin_amount);
     <b>let</b> return_coin = <a href="dex.md#0x1_dex_swap">swap</a>(pair, offer_coin);
 
     <b>assert</b>!(
         <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_none">option::is_none</a>(&min_return)
-            || *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&min_return) &lt;= <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(
-                &return_coin
-            ),
+            || *<a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_borrow">option::borrow</a>(&min_return) &lt;= <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&return_coin),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="dex.md#0x1_dex_EMIN_RETURN">EMIN_RETURN</a>)
     );
 
@@ -2560,86 +2603,24 @@ CONTRACT: not allow until LBP is ended
     min_liquidity_amount: Option&lt;u64&gt;
 ): FungibleAsset <b>acquires</b> <a href="dex.md#0x1_dex_Config">Config</a>, <a href="dex.md#0x1_dex_CoinCapabilities">CoinCapabilities</a>, <a href="dex.md#0x1_dex_Pool">Pool</a> {
     <b>let</b> pair_addr = <a href="object.md#0x1_object_object_address">object::object_address</a>(&pair);
-    <b>let</b> config = <b>borrow_global</b>&lt;<a href="dex.md#0x1_dex_Config">Config</a>&gt;(pair_addr);
-    <a href="dex.md#0x1_dex_check_lbp_ended">check_lbp_ended</a>(&config.weights);
-
-    // provide <a href="coin.md#0x1_coin">coin</a> type must be one of <a href="coin.md#0x1_coin">coin</a> a or <a href="coin.md#0x1_coin">coin</a> b <a href="coin.md#0x1_coin">coin</a> type
-    <b>let</b> provide_metadata = <a href="fungible_asset.md#0x1_fungible_asset_metadata_from_asset">fungible_asset::metadata_from_asset</a>(&provide_coin);
-    <b>let</b> provide_address = <a href="object.md#0x1_object_object_address">object::object_address</a>(&provide_metadata);
-    <b>let</b> pair_key = <a href="dex.md#0x1_dex_generate_pair_key">generate_pair_key</a>(pair);
-    <b>assert</b>!(
-        provide_address == pair_key.coin_a || provide_address == pair_key.coin_b,
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="dex.md#0x1_dex_ECOIN_TYPE">ECOIN_TYPE</a>)
-    );
-    <b>let</b> is_provide_a = provide_address == pair_key.coin_a;
-
-    <b>let</b> total_share = <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <a href="fungible_asset.md#0x1_fungible_asset_supply">fungible_asset::supply</a>(pair));
-    <b>assert</b>!(
-        total_share != 0,
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="dex.md#0x1_dex_EZERO_LIQUIDITY">EZERO_LIQUIDITY</a>)
-    );
-
-    // load values for fee and increased liquidity amount calculation
-    <b>let</b> amount_in = <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&provide_coin);
-    <b>let</b> (coin_a_weight, coin_b_weight) = <a href="dex.md#0x1_dex_get_weight">get_weight</a>(&config.weights);
     <b>let</b> pool = <b>borrow_global_mut</b>&lt;<a href="dex.md#0x1_dex_Pool">Pool</a>&gt;(pair_addr);
-    <b>let</b> (normalized_weight, pool_amount_in, provide_coin_addr) =
-        <b>if</b> (is_provide_a) {
-            <b>let</b> normalized_weight =
-                <a href="bigdecimal.md#0x1_bigdecimal_div">bigdecimal::div</a>(
-                    coin_a_weight,
-                    <a href="bigdecimal.md#0x1_bigdecimal_add">bigdecimal::add</a>(coin_a_weight, coin_b_weight)
-                );
-            <b>let</b> pool_amount_in = <a href="fungible_asset.md#0x1_fungible_asset_balance">fungible_asset::balance</a>(pool.coin_a_store);
-            <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(pool.coin_a_store, provide_coin);
 
-            (normalized_weight, pool_amount_in, pair_key.coin_a)
-        } <b>else</b> {
-            <b>let</b> normalized_weight =
-                <a href="bigdecimal.md#0x1_bigdecimal_div">bigdecimal::div</a>(
-                    coin_b_weight,
-                    <a href="bigdecimal.md#0x1_bigdecimal_add">bigdecimal::add</a>(coin_a_weight, coin_b_weight)
-                );
+    <b>let</b> provide_metadata = <a href="fungible_asset.md#0x1_fungible_asset_metadata_from_asset">fungible_asset::metadata_from_asset</a>(&provide_coin);
+    <b>let</b> provide_amount = <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&provide_coin);
 
-            <b>let</b> pool_amount_in = <a href="fungible_asset.md#0x1_fungible_asset_balance">fungible_asset::balance</a>(pool.coin_b_store);
-            <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(pool.coin_b_store, provide_coin);
-
-            (normalized_weight, pool_amount_in, pair_key.coin_b)
-        };
-
-    // CONTRACT: cannot provide more than the pool amount <b>to</b> prevent huge price impact
-    <b>assert</b>!(
-        pool_amount_in &gt; amount_in,
-        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="dex.md#0x1_dex_EPRICE_IMPACT">EPRICE_IMPACT</a>)
-    );
-
-    // compute fee amount <b>with</b> the assumption that we will <a href="dex.md#0x1_dex_swap">swap</a> (1 - normalized_weight) of amount_in
-    <b>let</b> adjusted_swap_amount =
-        <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u64_truncate">bigdecimal::mul_by_u64_truncate</a>(
-            <a href="bigdecimal.md#0x1_bigdecimal_sub">bigdecimal::sub</a>(
-                <a href="bigdecimal.md#0x1_bigdecimal_one">bigdecimal::one</a>(),
-                normalized_weight
-            ),
-            amount_in
-        );
-    <b>let</b> fee_amount =
-        <a href="dex.md#0x1_dex_calculate_fee_with_minimum">calculate_fee_with_minimum</a>(
-            config.swap_fee_rate,
-            adjusted_swap_amount
+    <b>let</b> (liquidity, fee_amount, is_provide_a) =
+        <a href="dex.md#0x1_dex_calculate_single_asset_provide_liquidity_return_amount">calculate_single_asset_provide_liquidity_return_amount</a>(
+            pool, pair, provide_metadata, provide_amount
         );
 
-    // actual amount in after deducting fee amount
-    <b>let</b> adjusted_amount_in = amount_in - fee_amount;
+    // deposit token
+    <b>if</b> (is_provide_a) {
+        <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(pool.coin_a_store, provide_coin);
+    } <b>else</b> {
+        <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(pool.coin_b_store, provide_coin);
+    };
 
-    // calculate new total share and new liquidity
-    <b>let</b> base =
-        <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(
-            adjusted_amount_in + pool_amount_in,
-            pool_amount_in
-        );
-    <b>let</b> pool_ratio = <a href="dex.md#0x1_dex_pow">pow</a>(base, normalized_weight);
-    <b>let</b> new_total_share = <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u128_truncate">bigdecimal::mul_by_u128_truncate</a>(pool_ratio, total_share);
-    <b>let</b> liquidity = (new_total_share - total_share <b>as</b> u64);
+    <b>let</b> pair_key = <a href="dex.md#0x1_dex_generate_pair_key">generate_pair_key</a>(pair);
 
     // check <b>min</b> liquidity assertion
     <b>assert</b>!(
@@ -2653,9 +2634,9 @@ CONTRACT: not allow until LBP is ended
         <a href="dex.md#0x1_dex_SingleAssetProvideEvent">SingleAssetProvideEvent</a> {
             coin_a: pair_key.coin_a,
             coin_b: pair_key.coin_b,
-            provide_coin: provide_coin_addr,
+            provide_coin: <a href="object.md#0x1_object_object_address">object::object_address</a>(&provide_metadata),
             liquidity_token: pair_addr,
-            provide_amount: amount_in,
+            provide_amount,
             fee_amount,
             liquidity
         }
@@ -2732,18 +2713,10 @@ Swap directly
     <b>let</b> return_coin =
         <b>if</b> (is_offer_a) {
             <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(pool.coin_a_store, offer_coin);
-            <a href="fungible_asset.md#0x1_fungible_asset_withdraw">fungible_asset::withdraw</a>(
-                pair_signer,
-                pool.coin_b_store,
-                return_amount
-            )
+            <a href="fungible_asset.md#0x1_fungible_asset_withdraw">fungible_asset::withdraw</a>(pair_signer, pool.coin_b_store, return_amount)
         } <b>else</b> {
             <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(pool.coin_b_store, offer_coin);
-            <a href="fungible_asset.md#0x1_fungible_asset_withdraw">fungible_asset::withdraw</a>(
-                pair_signer,
-                pool.coin_a_store,
-                return_amount
-            )
+            <a href="fungible_asset.md#0x1_fungible_asset_withdraw">fungible_asset::withdraw</a>(pair_signer, pool.coin_a_store, return_amount)
         };
 
     // emit events
@@ -2828,10 +2801,7 @@ Swap directly
     <b>let</b> coin_a_addr = <a href="dex.md#0x1_dex_coin_address">coin_address</a>(&coin_a);
     <b>let</b> coin_b_addr = <a href="dex.md#0x1_dex_coin_address">coin_address</a>(&coin_b);
 
-    <b>move_to</b>(
-        pair_signer,
-        <a href="dex.md#0x1_dex_Pool">Pool</a> { coin_a_store, coin_b_store }
-    );
+    <b>move_to</b>(pair_signer, <a href="dex.md#0x1_dex_Pool">Pool</a> { coin_a_store, coin_b_store });
 
     <b>move_to</b>(
         pair_signer,
@@ -2942,33 +2912,12 @@ CONTRACT: not allow until LBP is ended
     <a href="dex.md#0x1_dex_check_lbp_ended">check_lbp_ended</a>(&config.weights);
 
     <b>let</b> coin_a_amount_in = <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&coin_a);
-    <b>let</b> coin_a_amount = <a href="fungible_asset.md#0x1_fungible_asset_balance">fungible_asset::balance</a>(pool.coin_a_store);
     <b>let</b> coin_b_amount_in = <a href="fungible_asset.md#0x1_fungible_asset_amount">fungible_asset::amount</a>(&coin_b);
-    <b>let</b> coin_b_amount = <a href="fungible_asset.md#0x1_fungible_asset_balance">fungible_asset::balance</a>(pool.coin_b_store);
 
-    <b>let</b> total_share = <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_extract">option::extract</a>(&<b>mut</b> <a href="fungible_asset.md#0x1_fungible_asset_supply">fungible_asset::supply</a>(pair));
     <b>let</b> liquidity =
-        <b>if</b> (total_share == 0) {
-            <b>if</b> (coin_a_amount_in &gt; coin_b_amount_in) {
-                coin_a_amount_in
-            } <b>else</b> {
-                coin_b_amount_in
-            }
-        } <b>else</b> {
-            <b>let</b> coin_a_share_ratio =
-                <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(coin_a_amount_in, coin_a_amount);
-            <b>let</b> coin_b_share_ratio =
-                <a href="bigdecimal.md#0x1_bigdecimal_from_ratio_u64">bigdecimal::from_ratio_u64</a>(coin_b_amount_in, coin_b_amount);
-            <b>if</b> (<a href="bigdecimal.md#0x1_bigdecimal_gt">bigdecimal::gt</a>(coin_a_share_ratio, coin_b_share_ratio)) {
-                (
-                    <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u128_truncate">bigdecimal::mul_by_u128_truncate</a>(coin_b_share_ratio, total_share) <b>as</b> u64
-                )
-            } <b>else</b> {
-                (
-                    <a href="bigdecimal.md#0x1_bigdecimal_mul_by_u128_truncate">bigdecimal::mul_by_u128_truncate</a>(coin_a_share_ratio, total_share) <b>as</b> u64
-                )
-            }
-        };
+        <a href="dex.md#0x1_dex_calculate_provide_liquidity_return_amount">calculate_provide_liquidity_return_amount</a>(
+            pool, pair, coin_a_amount_in, coin_b_amount_in
+        );
 
     <b>assert</b>!(
         <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_is_none">option::is_none</a>(&min_liquidity_amount)

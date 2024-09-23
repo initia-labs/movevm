@@ -337,7 +337,8 @@ Create a BigDecimal from a scaled BigUint le_bytes value.
 
 <pre><code><b>public</b> <b>fun</b> <a href="bigdecimal.md#0x1_bigdecimal_from_ratio">from_ratio</a>(numerator: BigUint, denominator: BigUint): <a href="bigdecimal.md#0x1_bigdecimal_BigDecimal">BigDecimal</a> {
     <b>assert</b>!(
-        !<a href="biguint.md#0x1_biguint_is_zero">biguint::is_zero</a>(denominator), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="bigdecimal.md#0x1_bigdecimal_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>)
+        !<a href="biguint.md#0x1_biguint_is_zero">biguint::is_zero</a>(denominator),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="bigdecimal.md#0x1_bigdecimal_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>)
     );
 
     <b>let</b> numerator = <a href="biguint.md#0x1_biguint_mul">biguint::mul</a>(numerator, <a href="bigdecimal.md#0x1_bigdecimal_f">f</a>());
@@ -1093,7 +1094,8 @@ Create a BigDecimal from a scaled BigUint le_bytes value.
 
 <pre><code><b>public</b> <b>fun</b> <a href="bigdecimal.md#0x1_bigdecimal_div">div</a>(num1: <a href="bigdecimal.md#0x1_bigdecimal_BigDecimal">BigDecimal</a>, num2: <a href="bigdecimal.md#0x1_bigdecimal_BigDecimal">BigDecimal</a>): <a href="bigdecimal.md#0x1_bigdecimal_BigDecimal">BigDecimal</a> {
     <b>assert</b>!(
-        !<a href="biguint.md#0x1_biguint_is_zero">biguint::is_zero</a>(num2.scaled), <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="bigdecimal.md#0x1_bigdecimal_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>)
+        !<a href="biguint.md#0x1_biguint_is_zero">biguint::is_zero</a>(num2.scaled),
+        <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(<a href="bigdecimal.md#0x1_bigdecimal_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>)
     );
 
     <a href="bigdecimal.md#0x1_bigdecimal_BigDecimal">BigDecimal</a> {

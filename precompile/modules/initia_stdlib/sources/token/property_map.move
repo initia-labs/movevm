@@ -439,10 +439,7 @@ module initia_std::property_map {
             6
         );
         assert!(
-            read_bytes(
-                object,
-                &string::utf8(b"vector<u8>")
-            ) == vector[0x01],
+            read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x01],
             7
         );
         assert!(
@@ -455,37 +452,13 @@ module initia_std::property_map {
 
         assert!(length(object) == 9, 9);
 
-        update_typed<bool>(
-            &mutator,
-            &string::utf8(b"bool"),
-            false
-        );
+        update_typed<bool>(&mutator, &string::utf8(b"bool"), false);
         update_typed<u8>(&mutator, &string::utf8(b"u8"), 0x21);
-        update_typed<u16>(
-            &mutator,
-            &string::utf8(b"u16"),
-            0x22
-        );
-        update_typed<u32>(
-            &mutator,
-            &string::utf8(b"u32"),
-            0x23
-        );
-        update_typed<u64>(
-            &mutator,
-            &string::utf8(b"u64"),
-            0x24
-        );
-        update_typed<u128>(
-            &mutator,
-            &string::utf8(b"u128"),
-            0x25
-        );
-        update_typed<u256>(
-            &mutator,
-            &string::utf8(b"u256"),
-            0x26
-        );
+        update_typed<u16>(&mutator, &string::utf8(b"u16"), 0x22);
+        update_typed<u32>(&mutator, &string::utf8(b"u32"), 0x23);
+        update_typed<u64>(&mutator, &string::utf8(b"u64"), 0x24);
+        update_typed<u128>(&mutator, &string::utf8(b"u128"), 0x25);
+        update_typed<u256>(&mutator, &string::utf8(b"u256"), 0x26);
         update_typed<vector<u8>>(
             &mutator,
             &string::utf8(b"vector<u8>"),
@@ -526,10 +499,7 @@ module initia_std::property_map {
             16
         );
         assert!(
-            read_bytes(
-                object,
-                &string::utf8(b"vector<u8>")
-            ) == vector[0x02],
+            read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x02],
             17
         );
         assert!(
@@ -557,25 +527,13 @@ module initia_std::property_map {
 
         assert!(length(object) == 0, 20);
 
-        add_typed<bool>(
-            &mutator,
-            string::utf8(b"bool"),
-            false
-        );
+        add_typed<bool>(&mutator, string::utf8(b"bool"), false);
         add_typed<u8>(&mutator, string::utf8(b"u8"), 0x21);
         add_typed<u16>(&mutator, string::utf8(b"u16"), 0x22);
         add_typed<u32>(&mutator, string::utf8(b"u32"), 0x23);
         add_typed<u64>(&mutator, string::utf8(b"u64"), 0x24);
-        add_typed<u128>(
-            &mutator,
-            string::utf8(b"u128"),
-            0x25
-        );
-        add_typed<u256>(
-            &mutator,
-            string::utf8(b"u256"),
-            0x26
-        );
+        add_typed<u128>(&mutator, string::utf8(b"u128"), 0x25);
+        add_typed<u256>(&mutator, string::utf8(b"u256"), 0x26);
         add_typed<vector<u8>>(
             &mutator,
             string::utf8(b"vector<u8>"),
@@ -616,10 +574,7 @@ module initia_std::property_map {
             27
         );
         assert!(
-            read_bytes(
-                object,
-                &string::utf8(b"vector<u8>")
-            ) == vector[0x02],
+            read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x02],
             28
         );
         assert!(
@@ -732,10 +687,7 @@ module initia_std::property_map {
             38
         );
         assert!(
-            read_bytes(
-                object,
-                &string::utf8(b"vector<u8>")
-            ) == vector[0x01],
+            read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x01],
             39
         );
         assert!(
@@ -832,10 +784,7 @@ module initia_std::property_map {
             16
         );
         assert!(
-            read_bytes(
-                object,
-                &string::utf8(b"vector<u8>")
-            ) == vector[0x02],
+            read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x02],
             17
         );
         assert!(

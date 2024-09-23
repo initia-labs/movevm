@@ -137,10 +137,7 @@ module minitia_std::primary_fungible_store {
         // record owner store to table for cosmos side query
         if (exists<ModuleStore>(@minitia_std)) {
             let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-            if (!table::contains(
-                &module_store.user_stores,
-                owner_addr
-            )) {
+            if (!table::contains(&module_store.user_stores, owner_addr)) {
                 table::add(
                     &mut module_store.user_stores,
                     owner_addr,
@@ -148,12 +145,10 @@ module minitia_std::primary_fungible_store {
                 );
             };
 
-            let user_stores = table::borrow_mut(&mut module_store.user_stores, owner_addr);
-            table::add(
-                user_stores,
-                metadata_addr,
-                store_addr
+            let user_stores = table::borrow_mut(
+                &mut module_store.user_stores, owner_addr
             );
+            table::add(user_stores, metadata_addr, store_addr);
         };
 
         // emit store created event
@@ -219,12 +214,7 @@ module minitia_std::primary_fungible_store {
     ): (vector<Object<Metadata>>, vector<u64>) acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@minitia_std);
         let account_stores = table::borrow(&module_store.user_stores, account);
-        let iter = table::iter(
-            account_stores,
-            option::none(),
-            start_after,
-            2
-        );
+        let iter = table::iter(account_stores, option::none(), start_after, 2);
 
         let metadata_vec: vector<Object<Metadata>> = vector[];
         let balance_vec: vector<u64> = vector[];
@@ -273,12 +263,7 @@ module minitia_std::primary_fungible_store {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
-        fungible_asset::sudo_transfer(
-            sender,
-            sender_store,
-            recipient_store,
-            amount
-        );
+        fungible_asset::sudo_transfer(sender, sender_store, recipient_store, amount);
     }
 
     /// Withdraw `amount` of fungible asset from the given account's primary store.
@@ -393,11 +378,7 @@ module minitia_std::primary_fungible_store {
                 owner,
                 fungible_asset::transfer_ref_metadata(transfer_ref)
             );
-        fungible_asset::withdraw_with_ref(
-            transfer_ref,
-            from_primary_store,
-            amount
-        )
+        fungible_asset::withdraw_with_ref(transfer_ref, from_primary_store, amount)
     }
 
     /// Deposit from the primary store of `owner` ignoring frozen flag.

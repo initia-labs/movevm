@@ -72,11 +72,7 @@ module minitia_std::ed25519 {
     public fun verify(
         message: vector<u8>, public_key: &PublicKey, signature: &Signature
     ): bool {
-        verify_internal(
-            message,
-            public_key.bytes,
-            signature.bytes
-        )
+        verify_internal(message, public_key.bytes, signature.bytes)
     }
 
     /// Performs batch Ed25519 signature verification.

@@ -391,11 +391,7 @@ module initia_std::nft {
         create_nft_helper(owner, creator, collection_name, token_id);
 
         let creator_address = signer::address_of(creator);
-        let nft_addr = create_nft_address(
-            creator_address,
-            &collection_name,
-            &token_id
-        );
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(object::owner(nft) == owner_address, 1);
     }
@@ -409,18 +405,10 @@ module initia_std::nft {
         create_nft_helper(creator, creator, collection_name, token_id);
 
         let creator_address = signer::address_of(creator);
-        let nft_addr = create_nft_address(
-            creator_address,
-            &collection_name,
-            &token_id
-        );
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(object::owner(nft) == creator_address, 1);
-        object::transfer(
-            creator,
-            nft,
-            signer::address_of(trader)
-        );
+        object::transfer(creator, nft, signer::address_of(trader));
         assert!(
             object::owner(nft) == signer::address_of(trader),
             1
@@ -466,11 +454,7 @@ module initia_std::nft {
             string::utf8(b"nft uri")
         );
 
-        let nft_addr = create_nft_address(
-            creator_address,
-            &collection_name,
-            &token_id
-        );
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(
             option::some(expected_royalty) == royalty(nft),
@@ -501,11 +485,7 @@ module initia_std::nft {
         );
 
         let creator_address = signer::address_of(creator);
-        let nft_addr = create_nft_address(
-            creator_address,
-            &collection_name,
-            &token_id
-        );
+        let nft_addr = create_nft_address(creator_address, &collection_name, &token_id);
         let nft = object::address_to_object<Nft>(nft_addr);
         assert!(option::none() == royalty(nft), 0);
     }
@@ -548,7 +528,9 @@ module initia_std::nft {
         let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, token_id);
+        let mutator_ref = create_nft_with_mutation_ref(
+            creator, collection_name, token_id
+        );
         let nft =
             object::address_to_object<Nft>(
                 create_nft_address(
@@ -570,7 +552,9 @@ module initia_std::nft {
         let token_id = string::utf8(b"nft token_id");
 
         create_collection_helper(creator, collection_name, 1);
-        let mutator_ref = create_nft_with_mutation_ref(creator, collection_name, token_id);
+        let mutator_ref = create_nft_with_mutation_ref(
+            creator, collection_name, token_id
+        );
         let nft =
             object::address_to_object<Nft>(
                 create_nft_address(

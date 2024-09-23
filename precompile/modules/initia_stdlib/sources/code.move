@@ -115,9 +115,7 @@ module initia_std::code {
         )
     }
 
-    fun assert_no_duplication(
-        module_ids: &vector<String>
-    ) {
+    fun assert_no_duplication(module_ids: &vector<String>) {
         let module_ids_set = simple_map::create<String, bool>();
         vector::for_each_ref(
             module_ids,
@@ -126,11 +124,7 @@ module initia_std::code {
                     !simple_map::contains_key(&module_ids_set, module_id),
                     error::invalid_argument(EDUPLICATE_MODULE_ID)
                 );
-                simple_map::add(
-                    &mut module_ids_set,
-                    *module_id,
-                    true
-                );
+                simple_map::add(&mut module_ids_set, *module_id, true);
             }
         );
     }
@@ -193,7 +187,10 @@ module initia_std::code {
 
         let registry = borrow_global_mut<MetadataStore>(code_object_addr);
         let iter = table::iter_mut(
-            &mut registry.metadata, option::none(), option::none(), 1
+            &mut registry.metadata,
+            option::none(),
+            option::none(),
+            1
         );
         loop {
             if (!table::prepare_mut(iter)) { break };
@@ -230,10 +227,7 @@ module initia_std::code {
         assert_allowed(&module_store.allowed_publishers, addr);
 
         if (!exists<MetadataStore>(addr)) {
-            move_to<MetadataStore>(
-                owner,
-                MetadataStore { metadata: table::new() }
-            );
+            move_to<MetadataStore>(owner, MetadataStore { metadata: table::new() });
         };
 
         // Check upgradability
@@ -253,8 +247,7 @@ module initia_std::code {
                     );
                     assert!(
                         can_change_upgrade_policy_to(
-                            metadata.upgrade_policy,
-                            upgrade_policy
+                            metadata.upgrade_policy, upgrade_policy
                         ),
                         error::invalid_argument(EUPGRADE_WEAKER_POLICY)
                     );

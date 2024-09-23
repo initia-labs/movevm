@@ -1172,8 +1172,7 @@ Define the derived supply dispatch with the provided function.
             // Verify that caller type matches callee type so wrongly typed function cannot be registered.
             <b>assert</b>!(
                 <a href="function_info.md#0x1_function_info_check_dispatch_type_compatibility">function_info::check_dispatch_type_compatibility</a>(
-                    &<a href="function_info.md#0x1_function_info">function_info</a>,
-                    supply_function
+                    &<a href="function_info.md#0x1_function_info">function_info</a>, supply_function
                 ),
                 <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_argument">error::invalid_argument</a>(
                     <a href="fungible_asset.md#0x1_fungible_asset_EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH">EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH</a>
@@ -1419,7 +1418,13 @@ Get the symbol of the fungible asset from the <code>metadata</code> object.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fungible_asset.md#0x1_fungible_asset_symbol">symbol</a>&lt;T: key&gt;(metadata: Object&lt;T&gt;): String <b>acquires</b> <a href="fungible_asset.md#0x1_fungible_asset_Metadata">Metadata</a> {
-    <a href="fungible_asset.md#0x1_fungible_asset_borrow_fungible_metadata">borrow_fungible_metadata</a>(&metadata).symbol
+    <b>let</b> md = <a href="fungible_asset.md#0x1_fungible_asset_borrow_fungible_metadata">borrow_fungible_metadata</a>(&metadata);
+    <b>if</b> (<a href="object.md#0x1_object_is_owner">object::is_owner</a>(metadata, @initia_std)
+        && md.symbol == <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"uinit")) {
+        <b>return</b> <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"INIT")
+    };
+
+    md.symbol
 }
 </code></pre>
 
@@ -1511,7 +1516,13 @@ Get the decimals from the <code>metadata</code> object.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fungible_asset.md#0x1_fungible_asset_decimals">decimals</a>&lt;T: key&gt;(metadata: Object&lt;T&gt;): u8 <b>acquires</b> <a href="fungible_asset.md#0x1_fungible_asset_Metadata">Metadata</a> {
-    <a href="fungible_asset.md#0x1_fungible_asset_borrow_fungible_metadata">borrow_fungible_metadata</a>(&metadata).decimals
+    <b>let</b> md = <a href="fungible_asset.md#0x1_fungible_asset_borrow_fungible_metadata">borrow_fungible_metadata</a>(&metadata);
+    <b>if</b> (<a href="object.md#0x1_object_is_owner">object::is_owner</a>(metadata, @initia_std)
+        && md.symbol == <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_utf8">string::utf8</a>(b"uinit")) {
+        <b>return</b> 6
+    };
+
+    md.decimals
 }
 </code></pre>
 

@@ -258,16 +258,10 @@ module initia_std::debug {
         assert_equal(&v_u64, b"[\n  [ 64, 65 ],\n  [ 66, 67 ]\n]");
 
         let v_u128 = vector[vector[128u128, 129u128], vector[130u128, 131u128]];
-        assert_equal(
-            &v_u128,
-            b"[\n  [ 128, 129 ],\n  [ 130, 131 ]\n]"
-        );
+        assert_equal(&v_u128, b"[\n  [ 128, 129 ],\n  [ 130, 131 ]\n]");
 
         let v_u256 = vector[vector[256u256, 257u256], vector[258u256, 259u256]];
-        assert_equal(
-            &v_u256,
-            b"[\n  [ 256, 257 ],\n  [ 258, 259 ]\n]"
-        );
+        assert_equal(&v_u256, b"[\n  [ 256, 257 ],\n  [ 258, 259 ]\n]");
 
         let v_bool = vector[vector[true, false], vector[false, true]];
         assert_equal(

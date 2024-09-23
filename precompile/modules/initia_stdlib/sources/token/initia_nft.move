@@ -172,11 +172,7 @@ module initia_std::initia_nft {
                 can_burn
             );
         if (option::is_some(&to)) {
-            object::transfer(
-                creator,
-                nft_object,
-                option::extract(&mut to)
-            );
+            object::transfer(creator, nft_object, option::extract(&mut to));
         }
     }
 
@@ -598,11 +594,7 @@ module initia_std::initia_nft {
     fun test_set_immutable_collection_description(creator: &signer) acquires InitiaNftCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, false);
-        set_collection_description(
-            creator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_description(creator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123, noncreator = @0x456)]
@@ -612,11 +604,7 @@ module initia_std::initia_nft {
     ) acquires InitiaNftCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
-        set_collection_description(
-            noncreator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_description(noncreator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123)]
@@ -634,11 +622,7 @@ module initia_std::initia_nft {
     fun test_set_immutable_collection_uri(creator: &signer) acquires InitiaNftCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, false);
-        set_collection_uri(
-            creator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_uri(creator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123, noncreator = @0x456)]
@@ -648,11 +632,7 @@ module initia_std::initia_nft {
     ) acquires InitiaNftCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
-        set_collection_uri(
-            noncreator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_uri(noncreator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123)]

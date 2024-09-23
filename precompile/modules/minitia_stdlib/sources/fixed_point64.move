@@ -223,7 +223,10 @@ module minitia_std::fixed_point64 {
         let scaled_numerator = (numerator as u256) << 64;
         assert!(denominator != 0, EDENOMINATOR);
         let quotient = scaled_numerator / (denominator as u256);
-        assert!(quotient != 0 || numerator == 0, ERATIO_OUT_OF_RANGE);
+        assert!(
+            quotient != 0 || numerator == 0,
+            ERATIO_OUT_OF_RANGE
+        );
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.
         assert!(quotient <= MAX_U128, ERATIO_OUT_OF_RANGE);

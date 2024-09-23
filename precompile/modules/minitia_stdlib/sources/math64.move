@@ -138,10 +138,7 @@ module minitia_std::math64 {
 
         // No overflow
         assert!(
-            ceil_div(
-                (((1u128 << 64) - 9) as u64),
-                11
-            ) == 1676976733973595601,
+            ceil_div((((1u128 << 64) - 9) as u64), 11) == 1676976733973595601,
             0
         );
     }
