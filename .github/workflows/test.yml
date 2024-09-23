@@ -48,15 +48,10 @@ jobs:
         with:
           toolchain: 1.77.1
       - name: Build Rust
-        run: make build-rust
+        run: make build-rust-debug
       - uses: actions/setup-go@v4
         with:
           go-version: "1.22"
       - name: Test
         run: |
-          # TODO - If we do not run "make build-linux", golang succeeds to find the shared libraries.
-          # However, if we run "make build-linux", golang fails to find the shared libraries because
-          # it tries to find libmovevm.so and libcompiler.so which is not present.
-          cp api/libmovevm.x86_64.so api/libmovevm.so
-          cp api/libcompiler.x86_64.so api/libcompiler.so
-          make test
+          make precompile && make test-go
