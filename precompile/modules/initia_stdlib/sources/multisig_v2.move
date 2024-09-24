@@ -160,6 +160,8 @@ module initia_std::multisig_v2 {
     }
 
     // view functions
+
+    #[view]
     public fun is_exist(creator_addr: address, name: &String): bool {
         let seed = create_multisig_seed(name);
         let multisig_addr = object::create_object_address(&creator_addr, seed);
