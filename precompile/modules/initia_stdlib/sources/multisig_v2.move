@@ -328,28 +328,7 @@ module initia_std::multisig_v2 {
             }
         );
 
-        let members = vector::map(
-            members,
-            |member| {
-                let (_, index) = vector::index_of(&members, &member);
-                let tier_name = *vector::borrow(&member_tiers, index);
-
-                // find tier with tier_name in tiers
-                let (found, tier_index) = vector::find(
-                    &tiers,
-                    |t| {
-                        let tt: &Tier = t;
-                        tt.name == tier_name
-                    }
-                );
-
-                assert!(found, error::invalid_argument(EINVALID_MEMBER_TIERS));
-
-                let tier = *vector::borrow(&tiers, tier_index);
-
-                Member { address: member, tier: option::some(tier) }
-            }
-        );
+        let members = construct_members_with_tiers(members, member_tiers, tiers);
 
         move_to(
             &multisig_signer,
