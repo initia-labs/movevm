@@ -37,6 +37,8 @@ module initia_std::multisig_v2 {
 
     const EMULTISIG_NAME_TOO_LONG: u64 = 11;
 
+    const EINVALID_PROPOSAL_MESSAGE_LENGTH: u64 = 12;
+
     // constants
 
     const STATUS: vector<vector<u8>> = vector[b"voting", b"executed", b"expired"];
@@ -67,12 +69,16 @@ module initia_std::multisig_v2 {
         proposals: Table<u64, Proposal>
     }
 
-    struct Proposal has store {
+    struct ExecuteMessage has copy, drop, store {
         module_address: address,
         module_name: String,
         function_name: String,
         type_args: vector<String>,
         args: vector<vector<u8>>,
+        json_args: vector<String>
+    }
+
+    struct Proposal has store {
         proposer: Member,
         proposed_timestamp: u64,
         proposed_height: u64,
@@ -82,7 +88,7 @@ module initia_std::multisig_v2 {
         total_weight: u64,
         status: u8,
         is_json: bool,
-        json_args: vector<String>
+        execute_messages: vector<ExecuteMessage>
     }
 
     // events
@@ -101,11 +107,7 @@ module initia_std::multisig_v2 {
         multisig_addr: address,
         proposal_id: u64,
         proposer: Member,
-        module_address: address,
-        module_name: String,
-        function_name: String,
-        type_args: vector<String>,
-        args: vector<vector<u8>>
+        execute_messages: vector<ExecuteMessage>
     }
 
     #[event]
@@ -136,11 +138,6 @@ module initia_std::multisig_v2 {
     struct ProposalResponse has drop {
         multisig_addr: address,
         proposal_id: u64,
-        module_address: address,
-        module_name: String,
-        function_name: String,
-        type_args: vector<String>,
-        args: vector<vector<u8>>,
         votes: SimpleMap<Member, bool>,
         proposer: Member,
         proposed_height: u64,
@@ -151,7 +148,7 @@ module initia_std::multisig_v2 {
         yes_vote_score: u64,
         status: String,
         is_json: bool,
-        json_args: vector<String>
+        execute_messages: vector<ExecuteMessage>
     }
 
     struct MultisigResponse has drop {
@@ -160,6 +157,13 @@ module initia_std::multisig_v2 {
         members: vector<Member>,
         threshold: u64,
         tiers: Option<vector<Tier>>
+    }
+
+    // view functions
+    public fun is_exist(creator_addr: address, name: &String): bool {
+        let seed = create_multisig_seed(name);
+        let multisig_addr = object::create_object_address(&creator_addr, seed);
+        object::object_exists<MultisigWallet>(multisig_addr)
     }
 
     #[view]
@@ -175,7 +179,6 @@ module initia_std::multisig_v2 {
         }
     }
 
-    // view functions
     #[view]
     public fun get_proposal(
         multisig_addr: address, proposal_id: u64
@@ -188,18 +191,6 @@ module initia_std::multisig_v2 {
             proposal_id,
             proposal
         )
-    }
-
-    public fun create_multisig_seed(name: &String): vector<u8> {
-        assert!(
-            string::length(name) <= MAX_MULTISIG_NAME_LENGTH,
-            error::out_of_range(EMULTISIG_NAME_TOO_LONG)
-        );
-
-        let type_name = type_info::type_name<MultisigWallet>();
-        let seed = *string::bytes(&type_name);
-        vector::append(&mut seed, *string::bytes(name));
-        seed
     }
 
     #[view]
@@ -403,23 +394,41 @@ module initia_std::multisig_v2 {
     public entry fun create_proposal(
         account: &signer,
         multisig_addr: address,
-        module_address: address,
-        module_name: String,
-        function_name: String,
-        type_args: vector<String>,
-        args: vector<vector<u8>>,
+        module_address_list: vector<address>,
+        module_name_list: vector<String>,
+        function_name_list: vector<String>,
+        type_args_list: vector<vector<String>>,
+        args_list: vector<vector<vector<u8>>>,
         expiry_duration: Option<u64>
     ) acquires MultisigWallet {
+        assert!(
+            vector::length(&module_address_list) == vector::length(&module_name_list)
+                && vector::length(&module_name_list) == vector::length(&function_name_list)
+                && vector::length(&function_name_list) == vector::length(&type_args_list)
+                && vector::length(&type_args_list) == vector::length(&args_list),
+            error::invalid_argument(EINVALID_PROPOSAL_MESSAGE_LENGTH)
+        );
+        
+        let execute_messages = vector::map<address, ExecuteMessage>(
+            module_address_list,
+            |module_address| {
+                let (_, index) = vector::index_of(&module_address_list, &module_address);
+                ExecuteMessage {
+                    module_address,
+                    module_name: *vector::borrow(&module_name_list, index),
+                    function_name: *vector::borrow(&function_name_list, index),
+                    type_args: *vector::borrow(&type_args_list, index),
+                    args: *vector::borrow(&args_list, index),
+                    json_args: vector[]
+                }
+            }
+        );
+
         create_proposal_internal(
             account,
             multisig_addr,
-            module_address,
-            module_name,
-            function_name,
-            type_args,
-            args,
             false,
-            vector[],
+            execute_messages,
             expiry_duration
         )
     }
@@ -428,23 +437,41 @@ module initia_std::multisig_v2 {
     public entry fun create_proposal_with_json(
         account: &signer,
         multisig_addr: address,
-        module_address: address,
-        module_name: String,
-        function_name: String,
-        type_args: vector<String>,
-        args: vector<String>,
+        module_address_list: vector<address>,
+        module_name_list: vector<String>,
+        function_name_list: vector<String>,
+        type_args_list: vector<vector<String>>,
+        args_list: vector<vector<String>>,
         expiry_duration: Option<u64>
     ) acquires MultisigWallet {
+        assert!(
+            vector::length(&module_address_list) == vector::length(&module_name_list)
+                && vector::length(&module_name_list) == vector::length(&function_name_list)
+                && vector::length(&function_name_list) == vector::length(&type_args_list)
+                && vector::length(&type_args_list) == vector::length(&args_list),
+            error::invalid_argument(EINVALID_PROPOSAL_MESSAGE_LENGTH)
+        );
+
+        let execute_messages = vector::map<address, ExecuteMessage>(
+            module_address_list,
+            |module_address| {
+                let (_, index) = vector::index_of(&module_address_list, &module_address);
+                ExecuteMessage {
+                    module_address,
+                    module_name: *vector::borrow(&module_name_list, index),
+                    function_name: *vector::borrow(&function_name_list, index),
+                    type_args: *vector::borrow(&type_args_list, index),
+                    args: vector[],
+                    json_args: *vector::borrow(&args_list, index)
+                }
+            }
+        );
+
         create_proposal_internal(
             account,
             multisig_addr,
-            module_address,
-            module_name,
-            function_name,
-            type_args,
-            vector[],
             true,
-            args,
+            execute_messages,
             expiry_duration
         )
     }
@@ -506,22 +533,34 @@ module initia_std::multisig_v2 {
         proposal.status = 1; // change the status first in case of updating config
 
         if (!proposal.is_json) {
-            move_execute(
-                multisig_signer,
-                proposal.module_address,
-                proposal.module_name,
-                proposal.function_name,
-                proposal.type_args,
-                proposal.args
+            vector::for_each(
+                proposal.execute_messages,
+                |execute_message| {
+                    let m: ExecuteMessage = execute_message;
+                    move_execute(
+                        multisig_signer,
+                        m.module_address,
+                        m.module_name,
+                        m.function_name,
+                        m.type_args,
+                        m.args
+                    )
+                }
             )
         } else {
-            move_execute_with_json(
-                multisig_signer,
-                proposal.module_address,
-                proposal.module_name,
-                proposal.function_name,
-                proposal.type_args,
-                proposal.json_args
+            vector::for_each(
+                proposal.execute_messages,
+                |execute_message| {
+                    let m: ExecuteMessage = execute_message;
+                    move_execute_with_json(
+                        multisig_signer,
+                        m.module_address,
+                        m.module_name,
+                        m.function_name,
+                        m.type_args,
+                        m.json_args
+                    )
+                }
             )
         };
 
@@ -649,6 +688,20 @@ module initia_std::multisig_v2 {
         )
     }
 
+    // public functions
+
+    public fun create_multisig_seed(name: &String): vector<u8> {
+        assert!(
+            string::length(name) <= MAX_MULTISIG_NAME_LENGTH,
+            error::out_of_range(EMULTISIG_NAME_TOO_LONG)
+        );
+
+        let type_name = type_info::type_name<MultisigWallet>();
+        let seed = *string::bytes(&type_name);
+        vector::append(&mut seed, *string::bytes(name));
+        seed
+    }
+
     // private functions
 
     fun construct_members_with_tiers(
@@ -695,13 +748,8 @@ module initia_std::multisig_v2 {
     fun create_proposal_internal(
         account: &signer,
         multisig_addr: address,
-        module_address: address,
-        module_name: String,
-        function_name: String,
-        type_args: vector<String>,
-        args: vector<vector<u8>>,
         is_json: bool,
-        json_args: vector<String>,
+        execute_messages: vector<ExecuteMessage>,
         expiry_duration: Option<u64>
     ) acquires MultisigWallet {
         let addr = signer::address_of(account);
@@ -724,11 +772,6 @@ module initia_std::multisig_v2 {
         simple_map::add(&mut votes, proposer, true);
 
         let proposal = Proposal {
-            module_address,
-            module_name,
-            function_name,
-            type_args,
-            args,
             proposer,
             proposed_height: height,
             proposed_timestamp: timestamp,
@@ -738,7 +781,7 @@ module initia_std::multisig_v2 {
             votes,
             status: 0, // in voting period
             is_json,
-            json_args
+            execute_messages
         };
 
         let proposal_id = table::length(&multisig_wallet.proposals) + 1;
@@ -753,11 +796,7 @@ module initia_std::multisig_v2 {
                 multisig_addr,
                 proposal_id,
                 proposer,
-                module_address,
-                module_name,
-                function_name,
-                type_args,
-                args
+                execute_messages
             }
         )
     }
@@ -824,11 +863,6 @@ module initia_std::multisig_v2 {
         ProposalResponse {
             multisig_addr,
             proposal_id,
-            module_address: proposal.module_address,
-            module_name: proposal.module_name,
-            function_name: proposal.function_name,
-            type_args: proposal.type_args,
-            args: proposal.args,
             proposer: proposal.proposer,
             proposed_height: proposal.proposed_height,
             proposed_timestamp: proposal.proposed_timestamp,
@@ -839,7 +873,7 @@ module initia_std::multisig_v2 {
             yes_vote_score,
             status: string::utf8(*vector::borrow(&STATUS, (status_index as u64))),
             is_json: proposal.is_json,
-            json_args: proposal.json_args
+            execute_messages: proposal.execute_messages
         }
     }
 
@@ -937,6 +971,28 @@ module initia_std::multisig_v2 {
         );
 
         votes_map
+    }
+
+    // view functions tests
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun is_exist_test(account1: signer, account2: signer, account3: signer) {
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+
+        let name = string::utf8(b"multisig wallet");
+
+        assert!(!is_exist(addr1, &name), 1);
+
+        create_non_weighted_multisig_account(
+            &account1,
+            name,
+            vector[addr1, addr2, addr3],
+            2
+        );
+
+        assert!(is_exist(addr1, &name), 1)
     }
 
     #[test(
@@ -1329,16 +1385,59 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account4,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
+            option::none()
+        );
+    }
+
+    #[test(
+        account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
+    )]
+    #[expected_failure(abort_code = 0x1000c, location = Self)]
+    fun invalid_list_create_proposal(
+        account1: signer,
+        account2: signer,
+        account3: signer,
+        account4: signer
+    ) acquires MultisigWallet {
+        // create multisig wallet
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+        let addr4 = signer::address_of(&account4);
+
+        create_non_weighted_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2
+        );
+        let multisig_addr = get_multisig_address(
+            &addr1, &string::utf8(b"multisig wallet")
+        );
+
+        create_proposal(
+            &account4,
+            multisig_addr,
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2"), string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
+                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                std::bcs::to_bytes(&3u64),
+                std::bcs::to_bytes(&option::none<u64>()),
+                std::bcs::to_bytes(&option::none<u64>())
+            ]],
             option::none()
         );
     }
@@ -1373,16 +1472,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1409,9 +1508,11 @@ module initia_std::multisig_v2 {
         );
         assert!(proposal.status == 0, 1);
         assert!(proposal.is_json == false, 1);
-        assert!(vector::length(&proposal.json_args) == 0, 1);
+        
+        let execute_message = vector::borrow(&proposal.execute_messages, 0);
+        assert!(vector::length(&execute_message.json_args) == 0, 1);
         assert!(
-            &proposal.args
+            &execute_message.args
                 == &vector[
                     std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                     std::bcs::to_bytes(&3u64),
@@ -1421,14 +1522,14 @@ module initia_std::multisig_v2 {
             1
         );
 
-        assert!(vector::length(&proposal.type_args) == 0, 1);
-        assert!(proposal.module_address == @initia_std, 1);
+        assert!(vector::length(&execute_message.type_args) == 0, 1);
+        assert!(execute_message.module_address == @initia_std, 1);
         assert!(
-            proposal.module_name == string::utf8(b"multisig_v2"),
+            execute_message.module_name == string::utf8(b"multisig_v2"),
             1
         );
         assert!(
-            proposal.function_name == string::utf8(b"update_config"),
+            execute_message.function_name == string::utf8(b"update_config"),
             1
         );
         assert!(
@@ -1480,16 +1581,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1502,16 +1603,6 @@ module initia_std::multisig_v2 {
         let expected_proposal_response = ProposalResponse {
             multisig_addr,
             proposal_id: 1,
-            module_address: @initia_std,
-            module_name: string::utf8(b"multisig_v2"),
-            function_name: string::utf8(b"update_config"),
-            type_args: vector[],
-            args: vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ],
             proposer: get_member_by_address(multisig_wallet.members, addr1),
             proposed_height: 100,
             proposed_timestamp: 100,
@@ -1522,13 +1613,88 @@ module initia_std::multisig_v2 {
             yes_vote_score: 2,
             status: string::utf8(b"voting"),
             is_json: false,
-            json_args: vector[]
+            execute_messages: vector[
+                ExecuteMessage {
+                    module_address: @initia_std,
+                    module_name: string::utf8(b"multisig_v2"),
+                    function_name: string::utf8(b"update_config"),
+                    type_args: vector[],
+                    args: vector[
+                        std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                        std::bcs::to_bytes(&3u64),
+                        std::bcs::to_bytes(&option::none<u64>()),
+                        std::bcs::to_bytes(&option::none<u64>())
+                    ],
+                    json_args: vector[]
+                }
+            ]
         };
 
         assert!(
             proposal_response == expected_proposal_response,
             1
         );
+    }
+
+        #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun proposal_with_json(
+        account1: signer, account2: signer, account3: signer
+    ) acquires MultisigWallet {
+        // create multisig wallet
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+
+        create_non_weighted_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2
+        );
+        let multisig_addr = get_multisig_address(
+            &addr1, &string::utf8(b"multisig wallet")
+        );
+
+        create_proposal_with_json(
+            &account1,
+            multisig_addr,
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
+                string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
+                string::utf8(b"\"3\""),
+                string::utf8(b""),
+                string::utf8(b"")
+            ]],
+            option::some(99)
+        );
+
+        let proposal = get_proposal(multisig_addr, 1);
+        let execute_message = vector::borrow(&proposal.execute_messages, 0);
+
+        assert!(execute_message.module_address == @initia_std, 0);
+        assert!(
+            execute_message.module_name == string::utf8(b"multisig_v2"),
+            1
+        );
+        assert!(
+            execute_message.function_name == string::utf8(b"update_config"),
+            2
+        );
+        assert!(execute_message.type_args == vector[], 3);
+        assert!(
+            execute_message.json_args
+                == vector[
+                    string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
+                    string::utf8(b"\"3\""),
+                    string::utf8(b""),
+                    string::utf8(b"")
+                ],
+            4
+        );
+        assert!(execute_message.args == vector[], 5);
     }
 
     #[test(
@@ -1562,16 +1728,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1608,16 +1774,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1654,16 +1820,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1725,16 +1891,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1789,16 +1955,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1838,16 +2004,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1883,16 +2049,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1940,16 +2106,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -1996,16 +2162,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"mltisig"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -2014,65 +2180,6 @@ module initia_std::multisig_v2 {
         vote_proposal(&account3, multisig_addr, 1, true);
 
         execute_proposal(&account1, multisig_addr, 1);
-    }
-
-    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
-    fun proposal_with_json(
-        account1: signer, account2: signer, account3: signer
-    ) acquires MultisigWallet {
-        // create multisig wallet
-        let addr1 = signer::address_of(&account1);
-        let addr2 = signer::address_of(&account2);
-        let addr3 = signer::address_of(&account3);
-
-        create_non_weighted_multisig_account(
-            &account1,
-            string::utf8(b"multisig wallet"),
-            vector[addr1, addr2, addr3],
-            2
-        );
-        let multisig_addr = get_multisig_address(
-            &addr1, &string::utf8(b"multisig wallet")
-        );
-
-        create_proposal_with_json(
-            &account1,
-            multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
-                string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
-                string::utf8(b"\"3\""),
-                string::utf8(b""),
-                string::utf8(b"")
-            ],
-            option::some(99)
-        );
-
-        let proposal = get_proposal(multisig_addr, 1);
-        assert!(proposal.module_address == @initia_std, 0);
-        assert!(
-            proposal.module_name == string::utf8(b"multisig_v2"),
-            1
-        );
-        assert!(
-            proposal.function_name == string::utf8(b"update_config"),
-            2
-        );
-        assert!(proposal.type_args == vector[], 3);
-        assert!(
-            proposal.json_args
-                == vector[
-                    string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
-                    string::utf8(b"\"3\""),
-                    string::utf8(b""),
-                    string::utf8(b"")
-                ],
-            4
-        );
-        assert!(proposal.args == vector[], 5);
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
@@ -2167,16 +2274,17 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
+                std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
@@ -2189,16 +2297,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(1)
         );
 
@@ -2214,16 +2322,16 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            @initia_std,
-            string::utf8(b"multisig_v2"),
-            string::utf8(b"update_config"),
-            vector[],
-            vector[
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[vector[
                 std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
                 std::bcs::to_bytes(&3u64),
                 std::bcs::to_bytes(&option::none<u64>()),
                 std::bcs::to_bytes(&option::none<u64>())
-            ],
+            ]],
             option::some(99)
         );
 
