@@ -162,8 +162,8 @@ module initia_std::multisig_v2 {
     // view functions
 
     #[view]
-    public fun is_exist(creator_addr: address, name: &String): bool {
-        let seed = create_multisig_seed(name);
+    public fun is_exist(creator_addr: address, name: String): bool {
+        let seed = create_multisig_seed(&name);
         let multisig_addr = object::create_object_address(&creator_addr, seed);
         object::object_exists<MultisigWallet>(multisig_addr)
     }
@@ -964,7 +964,7 @@ module initia_std::multisig_v2 {
 
         let name = string::utf8(b"multisig wallet");
 
-        assert!(!is_exist(addr1, &name), 1);
+        assert!(!is_exist(addr1, name), 1);
 
         create_non_weighted_multisig_account(
             &account1,
@@ -973,7 +973,7 @@ module initia_std::multisig_v2 {
             2
         );
 
-        assert!(is_exist(addr1, &name), 1)
+        assert!(is_exist(addr1, name), 1)
     }
 
     #[test(
