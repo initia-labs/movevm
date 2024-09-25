@@ -600,6 +600,7 @@ module minitia_std::multisig_v2 {
                 &new_members,
                 new_member_tiers
             );
+            assert_uniqueness(new_tiers);
 
             // check threshold computed from each member weights
             let total_weight = vector::fold(
@@ -705,11 +706,12 @@ module minitia_std::multisig_v2 {
     fun construct_members_with_tiers(
         members: vector<address>, member_tiers: vector<String>, tiers: vector<Tier>
     ): vector<Member> {
+        let index = 0;
         vector::map(
             members,
             |member| {
-                let (_, index) = vector::index_of(&members, &member);
                 let tier_name = *vector::borrow(&member_tiers, index);
+                index = index + 1;
 
                 // find tier with tier_name in tiers
                 let (found, tier_index) = vector::find(
@@ -951,14 +953,17 @@ module minitia_std::multisig_v2 {
     fun create_votes_map(members: vector<Member>, votes: vector<bool>):
         SimpleMap<Member, bool> {
         let votes_map = simple_map::create<Member, bool>();
+        let index = 0;
         vector::for_each(
             members,
             |member| {
-                let (_, index) = vector::index_of(&members, &member);
+                let vote = *vector::borrow(&votes, index);
+                index = index + 1;
+
                 simple_map::add(
                     &mut votes_map,
                     member,
-                    *vector::borrow(&votes, index)
+                    vote
                 )
             }
         );
@@ -1285,14 +1290,17 @@ module minitia_std::multisig_v2 {
         );
 
         // assert each member tier is correct
+        let index = 0;
         vector::for_each_ref(
             &multisig_wallet.members,
             |member| {
-                let (_, index) = vector::index_of(&multisig_wallet.members, member);
+                let tier_name = *vector::borrow(&member_tiers, index);
+                index = index + 1;
+
                 let m: &Member = member;
                 let tier = option::borrow(&m.tier);
                 assert!(
-                    *vector::borrow(&member_tiers, index) == tier.name,
+                    tier_name == tier.name,
                     1
                 )
             }
