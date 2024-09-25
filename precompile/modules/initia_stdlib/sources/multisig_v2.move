@@ -384,12 +384,14 @@ module initia_std::multisig_v2 {
     ) acquires MultisigWallet {
         assert!(
             vector::length(&module_address_list) == vector::length(&module_name_list)
-                && vector::length(&module_name_list) == vector::length(&function_name_list)
-                && vector::length(&function_name_list) == vector::length(&type_args_list)
+                && vector::length(&module_name_list)
+                    == vector::length(&function_name_list)
+                && vector::length(&function_name_list)
+                    == vector::length(&type_args_list)
                 && vector::length(&type_args_list) == vector::length(&args_list),
             error::invalid_argument(EINVALID_PROPOSAL_MESSAGE_LENGTH)
         );
-        
+
         let execute_messages = vector::map<address, ExecuteMessage>(
             module_address_list,
             |module_address| {
@@ -427,8 +429,10 @@ module initia_std::multisig_v2 {
     ) acquires MultisigWallet {
         assert!(
             vector::length(&module_address_list) == vector::length(&module_name_list)
-                && vector::length(&module_name_list) == vector::length(&function_name_list)
-                && vector::length(&function_name_list) == vector::length(&type_args_list)
+                && vector::length(&module_name_list)
+                    == vector::length(&function_name_list)
+                && vector::length(&function_name_list)
+                    == vector::length(&type_args_list)
                 && vector::length(&type_args_list) == vector::length(&args_list),
             error::invalid_argument(EINVALID_PROPOSAL_MESSAGE_LENGTH)
         );
@@ -773,12 +777,7 @@ module initia_std::multisig_v2 {
         );
 
         event::emit<CreateProposalEvent>(
-            CreateProposalEvent {
-                multisig_addr,
-                proposal_id,
-                proposer,
-                execute_messages
-            }
+            CreateProposalEvent { multisig_addr, proposal_id, proposer, execute_messages }
         )
     }
 
@@ -957,7 +956,9 @@ module initia_std::multisig_v2 {
     // view functions tests
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
-    fun is_exist_test(account1: signer, account2: signer, account3: signer) {
+    fun is_exist_test(
+        account1: signer, account2: signer, account3: signer
+    ) {
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
         let addr3 = signer::address_of(&account3);
@@ -967,10 +968,7 @@ module initia_std::multisig_v2 {
         assert!(!is_exist(addr1, name), 1);
 
         create_non_weighted_multisig_account(
-            &account1,
-            name,
-            vector[addr1, addr2, addr3],
-            2
+            &account1, name, vector[addr1, addr2, addr3], 2
         );
 
         assert!(is_exist(addr1, name), 1)
@@ -1370,12 +1368,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::none()
         );
     }
@@ -1413,12 +1413,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2"), string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::none()
         );
     }
@@ -1457,12 +1459,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1489,7 +1493,7 @@ module initia_std::multisig_v2 {
         );
         assert!(proposal.status == 0, 1);
         assert!(proposal.is_json == false, 1);
-        
+
         let execute_message = vector::borrow(&proposal.execute_messages, 0);
         assert!(vector::length(&execute_message.json_args) == 0, 1);
         assert!(
@@ -1566,12 +1570,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1617,7 +1623,7 @@ module initia_std::multisig_v2 {
         );
     }
 
-        #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
     fun proposal_with_json(
         account1: signer, account2: signer, account3: signer
     ) acquires MultisigWallet {
@@ -1643,12 +1649,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
-                string::utf8(b"\"3\""),
-                string::utf8(b""),
-                string::utf8(b"")
-            ]],
+            vector[
+                vector[
+                    string::utf8(b"[\"0x101\", \"0x102\", \"0x104\"]"),
+                    string::utf8(b"\"3\""),
+                    string::utf8(b""),
+                    string::utf8(b"")
+                ]
+            ],
             option::some(99)
         );
 
@@ -1713,12 +1721,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1759,12 +1769,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1805,12 +1817,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1876,12 +1890,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1940,12 +1956,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -1989,12 +2007,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -2034,12 +2054,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -2091,12 +2113,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -2147,12 +2171,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -2259,13 +2285,15 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr3]), std::bcs::to_bytes(
+                        &3u64
+                    ), std::bcs::to_bytes(&option::none<u64>()), std::bcs::to_bytes(
+                        &option::none<u64>()
+                    ), std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
@@ -2282,12 +2310,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(1)
         );
 
@@ -2307,12 +2337,14 @@ module initia_std::multisig_v2 {
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
-            vector[vector[
-                std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
-                std::bcs::to_bytes(&3u64),
-                std::bcs::to_bytes(&option::none<u64>()),
-                std::bcs::to_bytes(&option::none<u64>())
-            ]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
             option::some(99)
         );
 
