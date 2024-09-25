@@ -297,6 +297,7 @@ module initia_std::multisig_v2 {
         assert_member(&members, &signer::address_of(account));
         assert_uniqueness(members);
         assert_tier_config(tiers, tier_weights, &members, member_tiers);
+        assert_uniqueness(tiers);
 
         // check threshold computed from each member weights
         let total_weight = vector::fold(
@@ -392,16 +393,22 @@ module initia_std::multisig_v2 {
             error::invalid_argument(EINVALID_PROPOSAL_MESSAGE_LENGTH)
         );
 
+        let index = 0;
         let execute_messages = vector::map<address, ExecuteMessage>(
             module_address_list,
             |module_address| {
-                let (_, index) = vector::index_of(&module_address_list, &module_address);
+                let module_name = *vector::borrow(&module_name_list, index);
+                let function_name = *vector::borrow(&function_name_list, index);
+                let type_args = *vector::borrow(&type_args_list, index);
+                let args = *vector::borrow(&args_list, index);
+                index = index + 1;
+
                 ExecuteMessage {
                     module_address,
-                    module_name: *vector::borrow(&module_name_list, index),
-                    function_name: *vector::borrow(&function_name_list, index),
-                    type_args: *vector::borrow(&type_args_list, index),
-                    args: *vector::borrow(&args_list, index),
+                    module_name,
+                    function_name,
+                    type_args,
+                    args,
                     json_args: vector[]
                 }
             }
@@ -437,17 +444,23 @@ module initia_std::multisig_v2 {
             error::invalid_argument(EINVALID_PROPOSAL_MESSAGE_LENGTH)
         );
 
+        let index = 0;
         let execute_messages = vector::map<address, ExecuteMessage>(
             module_address_list,
             |module_address| {
-                let (_, index) = vector::index_of(&module_address_list, &module_address);
+                let module_name = *vector::borrow(&module_name_list, index);
+                let function_name = *vector::borrow(&function_name_list, index);
+                let type_args = *vector::borrow(&type_args_list, index);
+                let json_args = *vector::borrow(&args_list, index);
+                index = index + 1;
+
                 ExecuteMessage {
                     module_address,
-                    module_name: *vector::borrow(&module_name_list, index),
-                    function_name: *vector::borrow(&function_name_list, index),
-                    type_args: *vector::borrow(&type_args_list, index),
+                    module_name,
+                    function_name,
+                    type_args,
                     args: vector[],
-                    json_args: *vector::borrow(&args_list, index)
+                    json_args
                 }
             }
         );
@@ -916,7 +929,7 @@ module initia_std::multisig_v2 {
                 vector::contains(&tiers, &tier),
                 error::invalid_argument(EINVALID_MEMBER_TIERS)
             )
-        )
+        );
     }
 
     #[test_only]
