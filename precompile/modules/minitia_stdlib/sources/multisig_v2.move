@@ -1,4 +1,4 @@
-module initia_std::multisig_v2 {
+module minitia_std::multisig_v2 {
     use std::error;
     use std::option::{Self, Option};
     use std::signer;
@@ -6,12 +6,12 @@ module initia_std::multisig_v2 {
     use std::vector;
     use std::event;
 
-    use initia_std::block::get_block_info;
-    use initia_std::cosmos::{move_execute, move_execute_with_json};
-    use initia_std::object::{Self, ExtendRef};
-    use initia_std::simple_map::{Self, SimpleMap};
-    use initia_std::table::{Self, Table};
-    use initia_std::type_info;
+    use minitia_std::block::get_block_info;
+    use minitia_std::cosmos::{move_execute, move_execute_with_json};
+    use minitia_std::object::{Self, ExtendRef};
+    use minitia_std::simple_map::{Self, SimpleMap};
+    use minitia_std::table::{Self, Table};
+    use minitia_std::type_info;
 
     // errors
 
@@ -935,13 +935,13 @@ module initia_std::multisig_v2 {
     }
 
     #[test_only]
-    use initia_std::address;
+    use minitia_std::address;
     #[test_only]
-    use initia_std::block::set_block_info;
+    use minitia_std::block::set_block_info;
 
     #[test_only]
     fun get_multisig_address(creator: &address, name: &String): address {
-        let seed = address::to_string(@initia_std);
+        let seed = address::to_string(@minitia_std);
         string::append(&mut seed, string::utf8(b"::multisig_v2::MultisigWallet"));
         string::append(&mut seed, *name);
 
@@ -1385,7 +1385,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account4,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1430,7 +1430,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account4,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2"), string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1476,7 +1476,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1529,7 +1529,7 @@ module initia_std::multisig_v2 {
         );
 
         assert!(vector::length(&execute_message.type_args) == 0, 1);
-        assert!(execute_message.module_address == @initia_std, 1);
+        assert!(execute_message.module_address == @minitia_std, 1);
         assert!(
             execute_message.module_name == string::utf8(b"multisig_v2"),
             1
@@ -1587,7 +1587,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1623,7 +1623,7 @@ module initia_std::multisig_v2 {
             is_json: false,
             execute_messages: vector[
                 ExecuteMessage {
-                    module_address: @initia_std,
+                    module_address: @minitia_std,
                     module_name: string::utf8(b"multisig_v2"),
                     function_name: string::utf8(b"update_config"),
                     type_args: vector[],
@@ -1666,7 +1666,7 @@ module initia_std::multisig_v2 {
         create_proposal_with_json(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1684,7 +1684,7 @@ module initia_std::multisig_v2 {
         let proposal = get_proposal(multisig_addr, 1);
         let execute_message = vector::borrow(&proposal.execute_messages, 0);
 
-        assert!(execute_message.module_address == @initia_std, 0);
+        assert!(execute_message.module_address == @minitia_std, 0);
         assert!(
             execute_message.module_name == string::utf8(b"multisig_v2"),
             1
@@ -1738,7 +1738,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1786,7 +1786,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1834,7 +1834,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1907,7 +1907,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -1973,7 +1973,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2024,7 +2024,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2071,7 +2071,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2130,7 +2130,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2188,7 +2188,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2302,7 +2302,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2327,7 +2327,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
@@ -2354,7 +2354,7 @@ module initia_std::multisig_v2 {
         create_proposal(
             &account1,
             multisig_addr,
-            vector[@initia_std],
+            vector[@minitia_std],
             vector[string::utf8(b"multisig_v2")],
             vector[string::utf8(b"update_config")],
             vector[vector[]],
