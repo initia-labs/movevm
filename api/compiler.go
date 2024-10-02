@@ -168,7 +168,7 @@ func Docgen(args types.CompilerArguments, options types.CompilerDocgenOptions) (
 	return copyAndDestroyUnmanagedVector(res), err
 }
 
-func CreateContractPackage(args types.CompilerArguments, name string) ([]byte, error) {
+func CreateContractPackage(args types.CompilerArguments, name string, movevmVersion string, useMinlib bool) ([]byte, error) {
 	var err error
 
 	errmsg := uninitializedUnmanagedVector()
@@ -181,8 +181,10 @@ func CreateContractPackage(args types.CompilerArguments, name string) ([]byte, e
 	defer runtime.KeepAlive(argsBytesView)
 	nameView := makeView([]byte(name))
 	defer runtime.KeepAlive(nameView)
+	movevmVersionView := makeView([]byte(movevmVersion))
+	defer runtime.KeepAlive(movevmVersionView)
 
-	res, err := C.create_new_move_package(&errmsg, argsBytesView, nameView)
+	res, err := C.create_new_move_package(&errmsg, argsBytesView, nameView, movevmVersionView, cbool(useMinlib))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)

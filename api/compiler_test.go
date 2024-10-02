@@ -45,7 +45,7 @@ func Test_CleanContract(t *testing.T) {
 
 	// new
 	initia_arg := compiler.NewCompilerArgument(tmpPath, false, buildtypes.DefaultCompilerBuildConfig())
-	res, err := CreateContractPackage(initia_arg, "novum_initium")
+	res, err := CreateContractPackage(initia_arg, "novum_initium", "main", false)
 	require.NoError(t, err)
 	require.Equal(t, string(res), "ok")
 
@@ -110,7 +110,7 @@ func Test_CreateNewContract(t *testing.T) {
 	defer os.RemoveAll(tmpPath)
 
 	initia_arg := compiler.NewCompilerArgument(tmpPath, false, buildtypes.DefaultCompilerBuildConfig())
-	res, err := CreateContractPackage(initia_arg, "novum_initium")
+	res, err := CreateContractPackage(initia_arg, "novum_initium", "main", false)
 	require.NoError(t, err)
 	require.Equal(t, string(res), "ok")
 }
