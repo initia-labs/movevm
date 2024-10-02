@@ -49,19 +49,21 @@ module initia_std::cosmos {
     }
 
     /// Stargate message with options
-    /// 
+    ///
     /// Options:
     /// - allow_failure()
     /// - disallow_failure()
     /// - allow_failure_with_callback(id: u64, fid: String)
     /// - disallow_failure_with_callback(id: u64, fid: String)
-    /// 
+    ///
     /// The callback function should be defined with the following signature:
     /// ```rust
     /// public fun callback(id: u64, success: bool);
     /// ```
-    /// 
-    public fun stargate_with_options(sender: &signer, data: vector<u8>, options: Options) {
+    ///
+    public fun stargate_with_options(
+        sender: &signer, data: vector<u8>, options: Options
+    ) {
         stargate_internal(signer::address_of(sender), data, options)
     }
 
@@ -235,7 +237,9 @@ module initia_std::cosmos {
         )
     }
 
-    native fun stargate_internal(sender: address, data: vector<u8>, option: Options);
+    native fun stargate_internal(
+        sender: address, data: vector<u8>, option: Options
+    );
 
     native fun move_execute_internal(
         sender: address,
@@ -309,7 +313,7 @@ module initia_std::cosmos {
     /// Options for stargate message
     struct Options has copy, drop {
         allow_failure: bool,
-        
+
         /// callback_id is the unique identifier for this message execution.
         callback_id: u64,
         /// function identifier which will be called after the message execution.
@@ -320,14 +324,14 @@ module initia_std::cosmos {
         ///
         /// Ex) 0xaddr::test_module::callback
         /// where callback is the function name defined in the test_module of the 0xaddr address.
-        callback_fid: vector<u8>,
+        callback_fid: vector<u8>
     }
 
     public fun allow_failure(): Options {
         Options {
             allow_failure: true,
             callback_id: 0,
-            callback_fid: vector::empty(),
+            callback_fid: vector::empty()
         }
     }
 
@@ -335,7 +339,7 @@ module initia_std::cosmos {
         Options {
             allow_failure: false,
             callback_id: 0,
-            callback_fid: vector::empty(),
+            callback_fid: vector::empty()
         }
     }
 
@@ -343,12 +347,14 @@ module initia_std::cosmos {
     /// where callback is the function name defined in the test_module of the 0xaddr address.
     public fun allow_failure_with_callback(id: u64, fid: String): Options {
         assert!(id > 0, error::invalid_argument(EINVALID_CALLBACK_ID));
-        assert!(!string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID));
+        assert!(
+            !string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID)
+        );
 
         Options {
             allow_failure: true,
             callback_id: id,
-            callback_fid: *string::bytes(&fid),
+            callback_fid: *string::bytes(&fid)
         }
     }
 
@@ -356,12 +362,14 @@ module initia_std::cosmos {
     /// where callback is the function name defined in the test_module of the 0xaddr address.
     public fun disallow_failure_with_callback(id: u64, fid: String): Options {
         assert!(id > 0, error::invalid_argument(EINVALID_CALLBACK_ID));
-        assert!(!string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID));
+        assert!(
+            !string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID)
+        );
 
         Options {
             allow_failure: false,
             callback_id: id,
-            callback_fid: *string::bytes(&fid),
+            callback_fid: *string::bytes(&fid)
         }
     }
 }
