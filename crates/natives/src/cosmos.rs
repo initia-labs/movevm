@@ -1,7 +1,8 @@
 use better_any::{Tid, TidAble};
 use initia_move_gas::NumArgs;
 use initia_move_types::cosmos::{
-    CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, StakingMessage, StargateCallback, StargateMessage
+    CosmosCoin, CosmosMessage, CosmosMessages, DistributionMessage, IBCFee, IBCHeight, IBCMessage,
+    MoveMessage, StakingMessage, StargateMessage,
 };
 use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
@@ -58,10 +59,13 @@ fn native_stargate(
     let (allow_failure, callback) = get_stargate_options(safely_pop_arg!(arguments, Struct))?;
     if callback.is_some() {
         let callback = callback.as_ref().unwrap();
-        context
-            .charge(gas_params.cosmos_stargate_per_byte * NumBytes::new(callback.2.len() as u64))?;
-        context
-            .charge(gas_params.cosmos_stargate_per_byte * NumBytes::new(callback.3.len() as u64))?;
+        context.charge(
+            gas_params.cosmos_stargate_per_byte * NumBytes::new(callback.module_name.len() as u64),
+        )?;
+        context.charge(
+            gas_params.cosmos_stargate_per_byte
+                * NumBytes::new(callback.function_name.len() as u64),
+        )?;
     }
 
     let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
@@ -71,12 +75,7 @@ fn native_stargate(
     let message = CosmosMessage::Stargate(StargateMessage {
         sender,
         data,
-        callback: callback.map(|(a, b, c, d)| StargateCallback {
-            id: a,
-            module_address: b,
-            module_name: c,
-            function_name: d,
-        }),
+        callback,
         allow_failure,
     });
 
