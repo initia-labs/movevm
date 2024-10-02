@@ -16,10 +16,10 @@ use move_cli::base::test::Test;
 #[no_mangle]
 pub extern "C" fn build_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
 
     let cmd = Command::Build(Build);
     let res = catch_unwind(AssertUnwindSafe(move || {
@@ -34,11 +34,11 @@ pub extern "C" fn build_move_package(
 #[no_mangle]
 pub extern "C" fn test_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     test_opt_payload: ByteSliceView,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
     let test_opt: CompilerTestOptions = bcs::from_bytes(test_opt_payload.read().unwrap()).unwrap();
 
     let mut test_opt: Test = test_opt.into();
@@ -59,11 +59,11 @@ pub extern "C" fn test_move_package(
 #[no_mangle]
 pub extern "C" fn coverage_summary_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     coverage_opt_payload: ByteSliceView,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
     let coverage_opt: CompilerCoverageSummaryOptions =
         bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
 
@@ -80,11 +80,11 @@ pub extern "C" fn coverage_summary_move_package(
 #[no_mangle]
 pub extern "C" fn coverage_source_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     coverage_opt_payload: ByteSliceView,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
     let coverage_opt: CompilerCoverageSourceOptions =
         bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
 
@@ -101,11 +101,11 @@ pub extern "C" fn coverage_source_move_package(
 #[no_mangle]
 pub extern "C" fn coverage_bytecode_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     coverage_opt_payload: ByteSliceView,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
     let coverage_opt: CompilerCoverageBytecodeOptions =
         bcs::from_bytes(coverage_opt_payload.read().unwrap()).unwrap();
 
@@ -122,11 +122,11 @@ pub extern "C" fn coverage_bytecode_move_package(
 #[no_mangle]
 pub extern "C" fn docgen_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     docgen_opt_payload: ByteSliceView,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
     let docgen_opt: CompilerDocgenOptions =
         bcs::from_bytes(docgen_opt_payload.read().unwrap()).unwrap();
 
@@ -143,15 +143,21 @@ pub extern "C" fn docgen_move_package(
 #[no_mangle]
 pub extern "C" fn create_new_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     name_view: ByteSliceView,
+    movevm_version_view: ByteSliceView,
+    use_minlib: bool,
 ) -> UnmanagedVector {
     let name: Option<String> = name_view.into();
+    let movevm_version: Option<String> = movevm_version_view.into();
+
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
 
     let cmd = Command::New(New {
         name: name.unwrap_or_default(),
+        movevm_version: movevm_version.unwrap_or("main".to_string()),
+        use_minlib,
     });
     let res = catch_unwind(AssertUnwindSafe(move || {
         compiler::execute(compiler_args.into(), cmd)
@@ -165,13 +171,13 @@ pub extern "C" fn create_new_move_package(
 #[no_mangle]
 pub extern "C" fn clean_move_package(
     errmsg: Option<&mut UnmanagedVector>,
-    compiler_args_paylod: ByteSliceView,
+    compiler_args_payload: ByteSliceView,
     clean_cache: bool,
     clean_byproduct: bool,
     force: bool,
 ) -> UnmanagedVector {
     let compiler_args: CompilerArguments =
-        bcs::from_bytes(compiler_args_paylod.read().unwrap()).unwrap();
+        bcs::from_bytes(compiler_args_payload.read().unwrap()).unwrap();
 
     let cmd = Command::Clean(initia_move_compiler::Clean {
         clean_cache,
