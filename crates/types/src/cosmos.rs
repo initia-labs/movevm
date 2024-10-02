@@ -31,6 +31,16 @@ pub enum CosmosMessage {
 pub struct StargateMessage {
     pub sender: AccountAddress,
     pub data: Vec<u8>,
+    pub allow_failure: bool,
+    pub callback: Option<StargateCallback>,
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StargateCallback {
+    pub id: u64,
+    pub module_address: AccountAddress,
+    pub module_name: String,
+    pub function_name: String,
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
