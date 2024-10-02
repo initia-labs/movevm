@@ -332,8 +332,8 @@ module initia_std::coin {
         let symbol = symbol(metadata);
 
         // we need to revert the conversion in fungible_asset::metadata()
-        if (*string::bytes(&symbol) == b"INIT") {
-            symbol = string::utf8(b"uinit")       
+        if (object::is_owner(metadata, @initia_std) && symbol == string::utf8(b"INIT")) {
+            symbol = string::utf8(b"uinit")
         };
 
         let std_metadata_addr = metadata_address(@initia_std, symbol);

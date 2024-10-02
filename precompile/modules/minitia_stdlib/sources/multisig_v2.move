@@ -960,11 +960,7 @@ module minitia_std::multisig_v2 {
                 let vote = *vector::borrow(&votes, index);
                 index = index + 1;
 
-                simple_map::add(
-                    &mut votes_map,
-                    member,
-                    vote
-                )
+                simple_map::add(&mut votes_map, member, vote)
             }
         );
 
@@ -1299,10 +1295,7 @@ module minitia_std::multisig_v2 {
 
                 let m: &Member = member;
                 let tier = option::borrow(&m.tier);
-                assert!(
-                    tier_name == tier.name,
-                    1
-                )
+                assert!(tier_name == tier.name, 1)
             }
         );
 
