@@ -59,6 +59,7 @@ module minitia_std::cosmos {
     /// The callback function should be defined with the following signature:
     /// ```rust
     /// public fun callback(id: u64, success: bool);
+    /// public fun callback(sender: &signer, id: u64, success: bool);
     /// ```
     ///
     public fun stargate_with_options(
@@ -320,6 +321,7 @@ module minitia_std::cosmos {
         /// The function should be defined with the following signature:
         /// ```rust
         /// public fun callback(id: u64, success: bool);
+        /// public fun callback(sender: &signer, id: u64, success: bool);
         /// ```
         ///
         /// Ex) 0xaddr::test_module::callback
