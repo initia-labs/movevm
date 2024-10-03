@@ -8,13 +8,13 @@ use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    values::{StructRef, Value, Vector},
+    values::{Struct, StructRef, Value, Vector},
 };
 use smallvec::{smallvec, SmallVec};
 use std::{cell::RefCell, collections::VecDeque};
 
 use crate::{
-    helpers::{get_metadata_address, partial_extension_error},
+    helpers::{get_metadata_address, get_stargate_options, partial_extension_error},
     interface::{
         RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
     },
@@ -54,13 +54,30 @@ fn native_stargate(
     context.charge(gas_params.cosmos_stargate_base)?;
 
     debug_assert!(ty_args.is_empty());
-    debug_assert!(arguments.len() == 2);
+    debug_assert!(arguments.len() == 3);
+
+    let (allow_failure, callback) = get_stargate_options(safely_pop_arg!(arguments, Struct))?;
+    if callback.is_some() {
+        let callback = callback.as_ref().unwrap();
+        context.charge(
+            gas_params.cosmos_stargate_per_byte * NumBytes::new(callback.module_name.len() as u64),
+        )?;
+        context.charge(
+            gas_params.cosmos_stargate_per_byte
+                * NumBytes::new(callback.function_name.len() as u64),
+        )?;
+    }
 
     let data = safely_pop_arg!(arguments, Vector).to_vec_u8()?;
     context.charge(gas_params.cosmos_stargate_per_byte * NumBytes::new(data.len() as u64))?;
 
     let sender: AccountAddress = safely_pop_arg!(arguments, AccountAddress);
-    let message = CosmosMessage::Stargate(StargateMessage { sender, data });
+    let message = CosmosMessage::Stargate(StargateMessage {
+        sender,
+        data,
+        callback,
+        allow_failure,
+    });
 
     // build cosmos message
     let cosmos_context = context.extensions().get::<NativeCosmosContext>();

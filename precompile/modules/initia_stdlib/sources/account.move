@@ -380,6 +380,7 @@ module initia_std::account {
 
     #[test_only]
     public fun create_account_for_test(new_address: address): signer {
+        create_account(new_address);
         create_signer_for_test(new_address)
     }
 }
