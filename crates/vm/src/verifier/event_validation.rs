@@ -14,7 +14,7 @@ use move_binary_format::{
 use move_core_types::{
     account_address::AccountAddress, language_storage::ModuleId, vm_status::StatusCode,
 };
-use move_vm_runtime::session::Session;
+use move_vm_runtime::ModuleStorage;
 use std::collections::HashSet;
 
 use super::metadata::get_metadata_from_compiled_module;
@@ -36,7 +36,7 @@ fn metadata_validation_error(msg: &str) -> VMError {
 /// * Extract the event metadata
 /// * Verify all changes are compatible upgrades (existing event attributes cannot be removed)
 pub(crate) fn validate_module_events(
-    session: &Session,
+    module_storage: &impl ModuleStorage,
     modules: &[CompiledModule],
 ) -> VMResult<()> {
     for module in modules {
@@ -51,7 +51,7 @@ pub(crate) fn validate_module_events(
         validate_emit_calls(&new_event_structs, module)?;
 
         let original_event_structs =
-            extract_event_metadata_from_module(session, &module.self_id())?;
+            extract_event_metadata_from_module(module_storage, &module.self_id())?;
 
         for member in original_event_structs {
             // Fail if we see a removal of an event attribute.
@@ -119,18 +119,14 @@ pub(crate) fn validate_emit_calls(
 
 /// Given a module id extract all event metadata
 pub(crate) fn extract_event_metadata_from_module(
-    session: &Session,
+    module_storage: &impl ModuleStorage,
     module_id: &ModuleId,
 ) -> VMResult<HashSet<String>> {
-    let metadata = session.load_module(module_id).map(|module| {
-        CompiledModule::deserialize_with_config(
-            &module,
-            &session.get_vm_config().deserializer_config,
-        )
-        .map(|module| get_metadata_from_compiled_module(&module))
-    });
+    let metadata = module_storage
+        .fetch_deserialized_module(module_id.address(), module_id.name())?
+        .map(|module| get_metadata_from_compiled_module(module.as_ref()));
 
-    if let Ok(Ok(Some(metadata))) = metadata {
+    if let Some(Some(metadata)) = metadata {
         extract_event_metadata(&metadata)
     } else {
         Ok(HashSet::new())

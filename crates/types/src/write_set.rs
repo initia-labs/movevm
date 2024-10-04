@@ -11,7 +11,11 @@ pub type WriteOp = Op<Vec<u8>>;
 pub struct WriteSet(BTreeMap<AccessPath, WriteOp>);
 
 impl WriteSet {
-    pub fn new(change_set: ChangeSet, table_change_set: TableChangeSet) -> anyhow::Result<Self> {
+    pub fn new_with_write_set(write_set: BTreeMap<AccessPath, WriteOp>) -> Self {
+        Self(write_set)
+    }
+
+    pub fn new_with_change_set(change_set: ChangeSet, table_change_set: TableChangeSet) -> anyhow::Result<Self> {
         let mut write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
         for (addr, account_changeset) in change_set.into_inner() {
             let (modules, resources) = account_changeset.into_inner();
@@ -46,6 +50,12 @@ impl WriteSet {
         }
 
         Ok(Self(write_set))
+    }
+}
+
+impl Extend<(AccessPath, WriteOp)> for WriteSet {
+    fn extend<I: IntoIterator<Item = (AccessPath, WriteOp)>>(&mut self, iter: I) {
+        self.0.extend(iter)
     }
 }
 

@@ -1,11 +1,11 @@
 use crate::{session::SessionExt, verifier::transaction_arg_validation};
+use initia_move_storage::{code_storage::InitiaCodeStorage, state_view::StateView};
 use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_core_types::{
     identifier::IdentStr,
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::LoadedFunction;
-use move_vm_types::resolver::MoveResolver;
 
 use super::transaction_arg_validation::ALLOWED_STRUCTS;
 
@@ -27,9 +27,9 @@ pub fn determine_is_view(
 
 /// Validate view function call. This checks whether the function is marked as a view
 /// function, and validates the arguments.
-pub(crate) fn validate_view_function<M: MoveResolver>(
+pub(crate) fn validate_view_function_and_construct<S: StateView>(
     session: &mut SessionExt,
-    move_resolver: &M,
+    code_storage: &InitiaCodeStorage<S>,
     args: Vec<Vec<u8>>,
     fun_name: &IdentStr,
     func: &LoadedFunction,
@@ -56,7 +56,7 @@ pub(crate) fn validate_view_function<M: MoveResolver>(
     let allowed_structs = &ALLOWED_STRUCTS;
     let args = transaction_arg_validation::construct_args(
         session,
-        move_resolver,
+        code_storage,
         func.param_tys(),
         args,
         func.ty_args(),

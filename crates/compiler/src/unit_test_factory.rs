@@ -27,7 +27,7 @@ impl InitiaUnitTestFactory {
         let table_change_set = table_context
             .into_change_set()
             .map_err(|e| e.finish(Location::Undefined))?;
-        let write_set = WriteSet::new(changes.clone(), table_change_set).map_err(|e| {
+        let write_set = WriteSet::new_with_change_set(changes.clone(), table_change_set).map_err(|e| {
             PartialVMError::new(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES)
                 .with_message(e.to_string())
                 .finish(Location::Undefined)

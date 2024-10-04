@@ -6,6 +6,7 @@ use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
 
+use bytes::Bytes;
 use move_core_types::vm_status::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -63,6 +64,13 @@ impl ModuleBundle {
 
     pub fn into_inner(self) -> Vec<Vec<u8>> {
         self.codes.into_iter().map(Module::into_inner).collect()
+    }
+
+    pub fn into_bytes(self) -> Vec<Bytes> {
+        self.codes
+            .into_iter()
+            .map(|m| m.into_inner().into())
+            .collect()
     }
 
     pub fn res(&mut self) -> Vec<Vec<u8>> {
