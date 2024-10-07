@@ -2,14 +2,14 @@ use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
     deserializer::DeserializerConfig,
-    errors::{Location, PartialVMError, VMResult},
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::CompiledScript,
     CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::ModuleId,
-    value::MoveValue,
+    value::{MoveTypeLayout, MoveValue},
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
@@ -301,10 +301,21 @@ impl InitiaVM {
             &code_storage,
         )?;
 
+        // load fully annotated type layouts for return value serialization
+        // after the execution of the function
+        let ret_ty_layouts = function
+            .return_tys()
+            .iter()
+            .map(|ty| {
+                let mut count = 0;
+                session.type_to_fully_annotated_layout(ty, &code_storage, &mut count, 10)
+            })
+            .collect::<PartialVMResult<Vec<_>>>().map_err(|e| e.finish(Location::Undefined))?;
+
         let session_output = session.finish(&code_storage)?;
         let (events, _, _, _, _) = session_output;
         let json_events = JsonEvents::new(events.into_iter().map(|e| e.into_inner()).collect());
-        let ret = serialize_response_to_json(res)?.expect("view function must return value");
+        let ret = serialize_response_to_json(&ret_ty_layouts, res)?.expect("view function must return value");
 
         Ok(ViewOutput::new(ret, json_events.into_inner()))
     }
@@ -671,7 +682,10 @@ impl InitiaVM {
     }
 }
 
-fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Option<String>> {
+fn serialize_response_to_json(
+    ty_layouts: &[MoveTypeLayout],
+    response: SerializedReturnValues,
+) -> VMResult<Option<String>> {
     if Vec::len(&response.mutable_reference_outputs) != 0 {
         return Err(
             PartialVMError::new(StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR)
@@ -681,11 +695,10 @@ fn serialize_response_to_json(response: SerializedReturnValues) -> VMResult<Opti
     }
 
     let mut serde_vals = vec![];
-    for (blob, ty_layout) in response.return_values.into_iter() {
-        let move_val =
-            MoveValue::simple_deserialize(blob.as_slice(), &ty_layout).map_err(|_| {
-                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
-            })?;
+    for ((blob, _), ty_layout) in response.return_values.iter().zip(ty_layouts) {
+        let move_val = MoveValue::simple_deserialize(blob, ty_layout).map_err(|_| {
+            PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined)
+        })?;
         let serde_value = serialize_move_value_to_json_value(&move_val)?;
         serde_vals.push(serde_value);
     }

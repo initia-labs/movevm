@@ -11,7 +11,7 @@ use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     ident_str,
-    language_storage::StructTag,
+    language_storage::{StructTag, TypeTag},
     metadata::Metadata,
     u256::U256,
     value::{MoveTypeLayout, MoveValue},
@@ -34,11 +34,11 @@ pub trait StructResolver {
         index: StructNameIndex,
         module_storage: &impl ModuleStorage,
     ) -> Option<Arc<StructType>>;
-    fn type_to_struct_tag(
+    fn type_to_type_tag(
         &self,
         ty: &Type,
         module_storage: &impl ModuleStorage,
-    ) -> VMResult<StructTag>;
+    ) -> PartialVMResult<TypeTag>;
 }
 
 // deserialize json argument to JSONValue and convert to MoveValue,
@@ -297,11 +297,17 @@ fn verify_object<S: StateView>(
 
     // verify a object hold inner type
     let inner_type_tag = struct_resolver
-        .type_to_struct_tag(inner_type, code_storage)
+        .type_to_type_tag(inner_type, code_storage)
         .map_err(deserialization_error_with_msg)?;
 
+    let inner_type_st = if let TypeTag::Struct(inner_type_st) = inner_type_tag {
+        inner_type_st
+    } else {
+        return Err(deserialization_error_with_msg("invalid object inner type"));
+    };
+    
     if resource_resolver
-        .get_resource_bytes_with_metadata_and_layout(&addr, &inner_type_tag, &[], None)
+        .get_resource_bytes_with_metadata_and_layout(&addr, &inner_type_st, &[], None)
         .map_err(deserialization_error_with_msg)?
         .0
         .is_none()
@@ -339,7 +345,7 @@ mod json_arg_testing {
     use initia_move_storage::state_view::StateView;
     use initia_move_types::access_path::{AccessPath, DataPath};
     use move_binary_format::{
-        errors::{Location, PartialVMError},
+        errors::PartialVMError,
         file_format::{Ability, AbilitySet},
     };
     use move_core_types::{
@@ -376,27 +382,26 @@ mod json_arg_testing {
         ) -> Option<Arc<StructType>> {
             self.structs.get(&index).cloned()
         }
-        fn type_to_struct_tag(
+        fn type_to_type_tag(
             &self,
             ty: &Type,
             module_storage: &impl ModuleStorage,
-        ) -> VMResult<StructTag> {
+        ) -> PartialVMResult<TypeTag>{
             match ty {
                 Struct { idx, .. } => {
                     let struct_ty =
                         self.get_struct_type(*idx, module_storage).ok_or_else(|| {
                             PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .finish(Location::Undefined)
                         })?;
-                    Ok(StructTag {
+                    Ok(TypeTag::Struct(Box::new(StructTag{
                         address: struct_ty.module.address,
                         module: struct_ty.module.name.clone(),
                         name: struct_ty.name.clone(),
                         type_args: vec![],
-                    })
+                    })))
                 }
                 _ => {
-                    Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).finish(Location::Undefined))
+                    Err(PartialVMError::new(StatusCode::TYPE_MISMATCH))
                 }
             }
         }
