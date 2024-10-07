@@ -28,3 +28,21 @@ jobs:
           destination-branch: 'main'
           email: 'infra@initia.xyz'
           commit-msg: 'bump movevm on release ${{ github.event.release.tag_name }}'
+      - name: push shared dynamic libraries to builder.js
+        uses: initia-labs/actions/push-to-repo@main
+        env:
+          TOKEN_GITHUB: ${{ secrets.TOKEN_GITHUB }}
+        with:
+          sources: |
+            api/libmovevm.dylib
+            api/licompiler.dylib
+            api/libmovevm.x86_64.so
+            api/libmovevm.aarch64.so
+            api/libcompiler.x86_64.so
+            api/libcompiler.aarch64.so
+          destination-username: 'initia-labs'
+          destination-repo: 'builder.js'
+          destination-branch: 'main'
+          destination-dir: 'library'
+          email: 'infra@initia.xyz'
+          commit-msg: 'bump movevm on release ${{ github.event.release.tag_name }}'
