@@ -24,7 +24,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::{
-    account_address::AccountAddress, effects::Op, ident_str, identifier::{IdentStr, Identifier}, language_storage::{ModuleId, StructTag, TypeTag}, value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue}, vm_status::StatusCode
+    account_address::AccountAddress, effects::Op, ident_str, identifier::Identifier, language_storage::{ModuleId, StructTag, TypeTag}, value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue}, vm_status::StatusCode
 };
 use move_vm_runtime::{
     module_traversal::TraversalContext, session::Session, ModuleStorage, StagingModuleStorage,
@@ -88,13 +88,15 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             modules,
         )?;
 
-        let write_set = Self::convert_modules_into_write_set(
+        let mut output = self.finish(&staging_module_storage)?;
+        let module_write_set = Self::convert_modules_into_write_set(
             code_storage,
             staging_module_storage.release_verified_module_bundle().into_iter(),
         )
         .map_err(|e| e.finish(Location::Undefined))?;
 
-        Ok(self.finish_with_module_write_set(&staging_module_storage, write_set)?)
+        output.1.extend(module_write_set);
+        Ok(output)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -134,33 +136,33 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             allowed_publishers,
         )?;
 
-        let write_set = Self::convert_modules_into_write_set(
+        let mut output = self.finish(&staging_module_storage)?;
+        let module_write_set = Self::convert_modules_into_write_set(
             code_storage,
-            staging_module_storage.release_verified_module_bundle(),
+            staging_module_storage.release_verified_module_bundle().into_iter(),
         )
         .map_err(|e| e.finish(Location::Undefined))?;
 
-        Ok(self.finish_with_module_write_set(&staging_module_storage, write_set)?)
+        output.1.extend(module_write_set);
+        Ok(output)
     }
 
     /// Converts module bytes and their compiled representation extracted from publish request into
     /// write ops. Only used by V2 loader implementation.
     pub fn convert_modules_into_write_set<'a>(
         module_storage: &impl ModuleStorage,
-        staged_modules: impl Iterator<Item = (&'a AccountAddress, &'a IdentStr, Bytes)>,
+        staged_modules: impl Iterator<Item = (ModuleId, Bytes)>,
     ) -> PartialVMResult<WriteSet> {
         let mut module_write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
-        for (addr, name, bytes) in staged_modules {
+        for (module_id, bytes) in staged_modules {
             let module_exists = module_storage
-                .check_module_exists(addr, name)
+                .check_module_exists(&module_id.address, &module_id.name)
                 .map_err(|e| e.to_partial())?;
             let op = if module_exists {
                 Op::Modify(bytes)
             } else {
                 Op::New(bytes)
             };
-
-            let module_id = ModuleId::new(*addr, name.to_owned());
             let ap = AccessPath::from(&module_id);
             module_write_set.insert(ap, op.map(|v| v.into()));
         }
@@ -287,17 +289,6 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             cosmos_messages,
             new_accounts,
         ))
-    }
-
-    pub fn finish_with_module_write_set(
-        self, 
-        module_storage: &impl ModuleStorage,
-        module_write_set: WriteSet,
-    ) -> VMResult<SessionOutput> {
-        self.finish(module_storage).map(|(events, mut write_set, staking_change_set, cosmos_messages, new_accounts)| {
-            write_set.extend(module_write_set);
-            (events, write_set, staking_change_set, cosmos_messages, new_accounts)
-        })
     }
 
     pub fn extract_publish_request(&mut self) -> Option<PublishRequest> {
