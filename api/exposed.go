@@ -15,28 +15,6 @@ import (
 	"github.com/initia-labs/movevm/types"
 )
 
-// ConvertModuleName change module name from the precompiled module bytes
-func ConvertModuleName(
-	precompiled []byte,
-	moduleName string,
-) ([]byte, error) {
-	precompiledView := makeView(precompiled)
-	defer runtime.KeepAlive(precompiledView)
-
-	moduleNameView := makeView([]byte(moduleName))
-	defer runtime.KeepAlive(moduleNameView)
-
-	errmsg := uninitializedUnmanagedVector()
-
-	res, err := C.convert_module_name(&errmsg, precompiledView, moduleNameView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
-}
-
 // ModuleInfoResponse response from vmapi
 type ModuleInfoResponse struct {
 	Address types.AccountAddress `json:"address"`

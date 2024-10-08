@@ -222,10 +222,6 @@ typedef struct {
 
 vm_t *allocate_vm(ByteSliceView config_payload);
 
-UnmanagedVector convert_module_name(UnmanagedVector *errmsg,
-                                    ByteSliceView precompiled,
-                                    ByteSliceView module_name);
-
 UnmanagedVector decode_module_bytes(UnmanagedVector *errmsg, ByteSliceView module_bytes);
 
 UnmanagedVector decode_move_resource(Db db,
