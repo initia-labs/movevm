@@ -5,9 +5,7 @@ use crate::{error::Error, Db, GoStorage};
 
 use move_binary_format::access::ModuleAccess;
 use move_binary_format::deserializer::DeserializerConfig;
-use move_binary_format::internals::ModuleIndex;
 use move_binary_format::CompiledModule;
-use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::parser::parse_struct_tag;
 use serde::Serialize;
