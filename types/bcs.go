@@ -1323,11 +1323,13 @@ func BcsDeserializeIdentifier(input []byte) (Identifier, error) {
 
 type InitiaVMConfig struct {
 	AllowUnstable bool
+	CacheCapacity uint64
 }
 
 func (obj *InitiaVMConfig) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := serializer.SerializeBool(obj.AllowUnstable); err != nil { return err }
+	if err := serializer.SerializeU64(obj.CacheCapacity); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -1345,6 +1347,7 @@ func DeserializeInitiaVMConfig(deserializer serde.Deserializer) (InitiaVMConfig,
 	var obj InitiaVMConfig
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.AllowUnstable = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.CacheCapacity = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

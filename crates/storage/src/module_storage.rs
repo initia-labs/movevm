@@ -93,7 +93,9 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaModuleStorage<'a, S> f
 
 impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
     fn new_clru_cache(cache_capacity: usize) -> CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale> {
-        CLruCache::with_config(CLruCacheConfig::new(NonZeroUsize::new(cache_capacity).unwrap()).with_scale(ModuleCacheEntryScale))
+        CLruCache::with_config(CLruCacheConfig::new(NonZeroUsize::new(
+            cache_capacity * 1024 * 1024
+        ).unwrap()).with_scale(ModuleCacheEntryScale))
     }
 
     /// Private constructor from borrowed byte storage. Creates empty module storage cache.
@@ -267,7 +269,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
     }
 }
 
-impl<'e, B: ModuleBytesStorage> WithRuntimeEnvironment for InitiaModuleStorage<'e, B> {
+impl<'e, B: ModuleBytesStorage + ChecksumStorage> WithRuntimeEnvironment for InitiaModuleStorage<'e, B> {
     fn runtime_environment(&self) -> &RuntimeEnvironment {
         self.runtime_environment
     }
@@ -425,7 +427,7 @@ pub(crate) mod test {
     };
     use move_core_types::{ident_str, vm_status::StatusCode};
 
-    const TEST_CACHE_CAPACITY: usize = 10000;
+    pub const TEST_CACHE_CAPACITY: usize = 100;
 
     fn module<'a>(
         module_name: &'a str,

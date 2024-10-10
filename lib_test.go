@@ -57,6 +57,7 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 
 	vm, err := vm.NewVM(types.InitiaVMConfig{
 		AllowUnstable: true,
+		CacheCapacity: 1000,
 	})
 	require.NoError(t, err)
 	_, err = vm.Initialize(

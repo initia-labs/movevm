@@ -1,4 +1,4 @@
-use initia_move_storage::code_storage::InitiaCodeStorage;
+use initia_move_storage::initia_storage::InitiaStorage;
 use initia_move_storage::state_view::StateView;
 use move_binary_format::errors::{Location, PartialVMError};
 use move_binary_format::file_format::FunctionDefinitionIndex;
@@ -115,7 +115,7 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
 /// after validation, add senders and non-signer arguments to generate the final args
 pub fn validate_combine_signer_and_txn_args<S: StateView>(
     session: &mut SessionExt,
-    code_storage: &InitiaCodeStorage<S>,
+    code_storage: &InitiaStorage<S>,
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
     func: &LoadedFunction,
@@ -231,7 +231,7 @@ pub(crate) fn is_valid_txn_arg(
 // TODO: This needs a more solid story and a tighter integration with the VM.
 pub(crate) fn construct_args<S: StateView>(
     session: &mut SessionExt,
-    code_storage: &InitiaCodeStorage<S>,
+    code_storage: &InitiaStorage<S>,
     types: &[Type],
     args: Vec<Vec<u8>>,
     ty_args: &[Type],
@@ -272,7 +272,7 @@ fn invalid_signature() -> VMStatus {
 #[allow(clippy::too_many_arguments)]
 fn construct_arg<S: StateView>(
     session: &mut SessionExt,
-    code_storage: &InitiaCodeStorage<S>,
+    code_storage: &InitiaStorage<S>,
     ty: &Type,
     allowed_structs: &ConstructorMap,
     arg: Vec<u8>,

@@ -18,7 +18,8 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     native_extensions::NativeContextExtensions,
     session::SerializedReturnValues,
-    ModuleStorage, RuntimeEnvironment,
+    ModuleStorage,
+    RuntimeEnvironment,
 };
 use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
 
@@ -44,7 +45,7 @@ use initia_move_natives::{
     block::NativeBlockContext, staking::StakingAPI, table::NativeTableContext,
 };
 use initia_move_storage::{
-    code_storage::InitiaCodeStorage, state_view::StateView, table_resolver::TableResolver,
+    initia_storage::InitiaStorage, state_view::StateView, table_resolver::TableResolver,
 };
 use initia_move_types::{
     account::Accounts,
@@ -82,9 +83,7 @@ pub struct InitiaVM {
 
 impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new(InitiaVMConfig {
-            allow_unstable: true,
-        })
+        Self::new(InitiaVMConfig::default())
     }
 }
 
@@ -183,7 +182,7 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        let code_storage = InitiaCodeStorage::new(storage, self.runtime_environment());
+        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), self.initia_vm_config.cache_capacity);
         let move_resolver = code_storage.state_view_impl();
 
         let gas_limit = Gas::new(u64::MAX);
@@ -232,7 +231,7 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let code_storage = InitiaCodeStorage::new(storage, self.runtime_environment());
+        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), self.initia_vm_config.cache_capacity);
 
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((msg.size() as u64).into())?;
@@ -264,7 +263,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        let code_storage = InitiaCodeStorage::new(storage, self.runtime_environment());
+        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), self.initia_vm_config.cache_capacity);
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver);
         let traversal_storage = TraversalStorage::new();
@@ -329,7 +328,7 @@ impl InitiaVM {
         &self,
         api: &A,
         env: &Env,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         table_resolver: &mut T,
         senders: Vec<AccountAddress>,
         payload: &MessagePayload,
@@ -471,7 +470,7 @@ impl InitiaVM {
     fn finish_with_module_publishing<S: StateView>(
         &self,
         mut session: SessionExt,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
         traversal_context: &mut TraversalContext,
@@ -511,7 +510,7 @@ impl InitiaVM {
     fn finish_with_module_publishing_and_genesis<S: StateView>(
         &self,
         mut session: SessionExt,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
         traversal_context: &mut TraversalContext,
@@ -553,7 +552,7 @@ impl InitiaVM {
     fn check_publish_request<'a, S: StateView>(
         &self,
         session: &mut SessionExt,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         module_bundle: &ModuleBundle,
         expected_modules: Option<Vec<String>>,

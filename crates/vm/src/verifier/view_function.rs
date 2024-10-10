@@ -1,5 +1,5 @@
 use crate::{session::SessionExt, verifier::transaction_arg_validation};
-use initia_move_storage::{code_storage::InitiaCodeStorage, state_view::StateView};
+use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::metadata::RuntimeModuleMetadataV0;
 use move_core_types::{
     identifier::IdentStr,
@@ -29,7 +29,7 @@ pub fn determine_is_view(
 /// function, and validates the arguments.
 pub(crate) fn validate_view_function_and_construct<S: StateView>(
     session: &mut SessionExt,
-    code_storage: &InitiaCodeStorage<S>,
+    code_storage: &InitiaStorage<S>,
     args: Vec<Vec<u8>>,
     fun_name: &IdentStr,
     func: &LoadedFunction,

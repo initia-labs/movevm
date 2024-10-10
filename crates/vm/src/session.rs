@@ -13,7 +13,7 @@ use initia_move_natives::{
     staking::NativeStakingContext,
     table::NativeTableContext,
 };
-use initia_move_storage::{code_storage::InitiaCodeStorage, state_view::StateView};
+use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
     access_path::AccessPath, account::Accounts, cosmos::CosmosMessages, event::ContractEvent, metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME}, module::ModuleBundle, staking_change_set::StakingChangeSet, write_set::{WriteOp, WriteSet}
 };
@@ -62,7 +62,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     #[allow(clippy::too_many_arguments)]
     pub fn module_publishing_and_initialization<S: StateView>(
         mut self,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         traversal_context: &mut TraversalContext,
         destination: AccountAddress,
@@ -102,7 +102,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     #[allow(clippy::too_many_arguments)]
     pub fn module_publishing_and_initialization_and_genesis<S: StateView>(
         mut self,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         traversal_context: &mut TraversalContext,
         destination: AccountAddress,
@@ -177,7 +177,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
 
     fn initialize_module<S: StateView, M: ModuleStorage>(
         &mut self,
-        code_storage: &InitiaCodeStorage<S>,
+        code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         traversal_context: &mut TraversalContext,
         staging_module_storage: &StagingModuleStorage<M>,
