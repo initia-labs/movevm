@@ -27,7 +27,7 @@ use move_core_types::{
     account_address::AccountAddress, effects::Op, ident_str, identifier::Identifier, language_storage::{ModuleId, StructTag, TypeTag}, value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue}, vm_status::StatusCode
 };
 use move_vm_runtime::{
-    module_traversal::TraversalContext, session::Session, ModuleStorage, StagingModuleStorage,
+    compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage, StagingModuleStorage
 };
 use move_vm_types::loaded_data::runtime_types::{
         StructLayout, StructNameIndex, StructType, Type
@@ -163,8 +163,14 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             } else {
                 Op::New(bytes)
             };
-            let ap = AccessPath::from(&module_id);
-            module_write_set.insert(ap, op.map(|v| v.into()));
+            let ap = AccessPath::code_access_path(module_id.address, module_id.name.to_owned());
+            module_write_set.insert(ap, op.clone().map(|v| v.into()));
+
+            let ap = AccessPath::checksum_access_path(module_id.address, module_id.name.to_owned());
+            module_write_set.insert(ap, op.map(|v| {
+                let checksum = compute_code_hash(&v);
+                checksum.into()
+            }));
         }
         Ok(WriteSet::new_with_write_set(module_write_set))
     }

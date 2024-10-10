@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 
-use super::state_view::StateView;
+use crate::state_view::{Checksum, ChecksumStorage, StateView};
 
 use bytes::Bytes;
 use move_binary_format::deserializer::DeserializerConfig;
-use move_binary_format::errors::{PartialVMError, PartialVMResult, VMResult};
+use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_binary_format::CompiledModule;
 use move_bytecode_utils::compiled_module_viewer::CompiledModuleView;
 use move_core_types::account_address::AccountAddress;
@@ -51,6 +51,31 @@ impl<'s, S: StateView> StateViewImpl<'s, S> {
     }
 }
 
+impl<'s, S: StateView> ChecksumStorage for StateViewImpl<'s, S> {
+    fn fetch_checksum(
+        &self, 
+        address: &AccountAddress,
+        module_name: &IdentStr,
+    ) -> VMResult<Option<Checksum>>{
+        let ap = AccessPath::checksum_access_path(*address, module_name.to_owned());
+        match self.get(&ap).map_err(|e| {
+            e.finish(Location::Module(ModuleId::new(*address, module_name.to_owned())))
+        })? {
+            Some(b) => {
+                if b.len() != 32 {
+                    return Err(PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(
+                        format!("Checksum has an invalid length: {}", b.len()),
+                    ).finish(Location::Module(ModuleId::new(*address, module_name.to_owned()))));
+                }
+                let mut checksum: Checksum = [0u8; 32];
+                checksum.copy_from_slice(&b);
+                Ok(Some(checksum))
+            },
+            None => return Ok(None),
+        }
+    }
+}
+
 impl<'s, S: StateView> ModuleBytesStorage for StateViewImpl<'s, S> {
     fn fetch_module_bytes(
         &self,
@@ -83,8 +108,7 @@ impl<'s, S: StateView> ModuleResolver for StateViewImpl<'s, S> {
     }
 
     fn get_module(&self, module_id: &ModuleId) -> PartialVMResult<Option<Bytes>> {
-        let ap = AccessPath::from(module_id);
-
+        let ap = AccessPath::code_access_path(module_id.address, module_id.name.to_owned());
         self.get(&ap)
     }
 }

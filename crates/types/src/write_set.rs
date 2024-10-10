@@ -1,7 +1,6 @@
 use crate::{access_path::AccessPath, table::TableChangeSet};
 use move_core_types::{
     effects::{ChangeSet, Op},
-    language_storage::ModuleId,
 };
 use std::collections::{btree_map, BTreeMap};
 
@@ -26,8 +25,7 @@ impl WriteSet {
 
             for (name, blob_opt) in modules.into_iter() {
                 // write module bytes changes
-                let module_id = ModuleId::new(addr, name);
-                let ap = AccessPath::from(&module_id);
+                let ap = AccessPath::code_access_path(addr, name);
                 write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
         }
