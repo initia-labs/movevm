@@ -317,10 +317,7 @@ module initia_std::multisig {
         assert_member(&multisig_wallet.members, &voter);
 
         assert!(
-            table::contains(
-                &multisig_wallet.proposals,
-                proposal_id
-            ),
+            table::contains(&multisig_wallet.proposals, proposal_id),
             error::invalid_argument(EPROPOSAL_NOT_FOUND)
         );
         let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
@@ -344,10 +341,7 @@ module initia_std::multisig {
         assert_member(&multisig_wallet.members, &executor);
 
         assert!(
-            table::contains(
-                &multisig_wallet.proposals,
-                proposal_id
-            ),
+            table::contains(&multisig_wallet.proposals, proposal_id),
             error::invalid_argument(EPROPOSAL_NOT_FOUND)
         );
         let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
@@ -357,10 +351,8 @@ module initia_std::multisig {
 
         // check passed
         assert!(
-            yes_vote_count(
-                &proposal.votes,
-                &multisig_wallet.members
-            ) >= multisig_wallet.threshold,
+            yes_vote_count(&proposal.votes, &multisig_wallet.members)
+                >= multisig_wallet.threshold,
             error::invalid_state(ENOT_PASS)
         );
 

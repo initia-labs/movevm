@@ -2,7 +2,7 @@ use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
 use initia_move_types::cosmos::{
     CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage,
-    StakingMessage, StargateMessage,
+    StakingMessage, StargateCallback, StargateMessage,
 };
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
@@ -55,9 +55,15 @@ type TestInput<'a> = (
 );
 
 fn run_tests(tests: Vec<TestInput>) {
+    let acc = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let path = "src/tests/cosmos.data/stargate";
     let mut h = MoveHarness::new();
 
     h.initialize();
+
+    // publish package
+    let output = h.publish_package(&acc, path).expect("should success");
+    h.commit(output, true);
 
     for (sender, entry, ty_args, args, exp_output) in tests {
         let vm_output = h.run_entry_function(
@@ -595,6 +601,37 @@ fn test_cosmos_stargate() {
             Some(vec![CosmosMessage::Stargate(StargateMessage {
                 sender,
                 data: data.as_bytes().to_vec(),
+                allow_failure: false,
+                callback: None,
+            })]),
+        ),
+    );
+    tests.push(test_stargate);
+
+    let test_stargate = (
+        sender,
+        "0xcafe::test::stargate",
+        vec![],
+        vec![
+            bcs::to_bytes(data.as_bytes()).unwrap(),
+            bcs::to_bytes(&false).unwrap(),
+            bcs::to_bytes(&123u64).unwrap(),
+            bcs::to_bytes("0xcafe::test::callback").unwrap(),
+        ],
+        ExpectedOutput::new(
+            VMStatus::Executed,
+            None,
+            None,
+            Some(vec![CosmosMessage::Stargate(StargateMessage {
+                sender,
+                data: data.as_bytes().to_vec(),
+                allow_failure: false,
+                callback: Some(StargateCallback {
+                    id: 123,
+                    module_address: AccountAddress::from_hex_literal("0xcafe").unwrap(),
+                    module_name: "test".to_string(),
+                    function_name: "callback".to_string(),
+                }),
             })]),
         ),
     );

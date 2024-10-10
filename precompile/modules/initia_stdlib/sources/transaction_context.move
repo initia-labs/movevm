@@ -33,10 +33,7 @@ module initia_std::transaction_context {
         let count: u64 = 50;
         while (i < count) {
             i = i + 1;
-            vector::push_back(
-                &mut addrs,
-                generate_unique_address()
-            );
+            vector::push_back(&mut addrs, generate_unique_address());
         };
 
         i = 0;

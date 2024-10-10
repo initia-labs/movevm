@@ -202,18 +202,8 @@ module initia_std::managed_coin {
         let metadata = test_metadata();
         assert!(coin::is_coin(object::object_address(&metadata)), 0);
 
-        mint_to(
-            &mod_account,
-            source_addr,
-            metadata,
-            50
-        );
-        mint_to(
-            &mod_account,
-            destination_addr,
-            metadata,
-            10
-        );
+        mint_to(&mod_account, source_addr, metadata, 50);
+        mint_to(&mod_account, destination_addr, metadata, 10);
         assert!(coin::balance(source_addr, metadata) == 50, 1);
         assert!(
             coin::balance(destination_addr, metadata) == 10,
@@ -223,12 +213,7 @@ module initia_std::managed_coin {
         let supply = coin::supply(metadata);
         assert!(supply == option::some(60), 2);
 
-        coin::transfer(
-            &source,
-            destination_addr,
-            metadata,
-            10
-        );
+        coin::transfer(&source, destination_addr, metadata, 10);
         assert!(coin::balance(source_addr, metadata) == 40, 3);
         assert!(
             coin::balance(destination_addr, metadata) == 20,
@@ -269,12 +254,7 @@ module initia_std::managed_coin {
         );
 
         let metadata = test_metadata();
-        mint_to(
-            &destination,
-            source_addr,
-            metadata,
-            100
-        );
+        mint_to(&destination, source_addr, metadata, 100);
     }
 
     #[test(source = @0xa11ce, destination = @0xb0b, mod_account = @0x1)]
@@ -297,12 +277,7 @@ module initia_std::managed_coin {
         );
 
         let metadata = test_metadata();
-        mint_to(
-            &mod_account,
-            source_addr,
-            metadata,
-            100
-        );
+        mint_to(&mod_account, source_addr, metadata, 100);
         burn(&destination, metadata, 10);
     }
 }

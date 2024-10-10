@@ -136,6 +136,8 @@ fn test_move_new() {
         move_args,
         Command::New(New {
             name: String::from("test_move_package"),
+            movevm_version: String::from("0.1.0"),
+            use_minlib: false,
         }),
     )
     .expect("compiler err");

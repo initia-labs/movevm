@@ -208,24 +208,6 @@ pub extern "C" fn execute_view_function(
 }
 
 #[no_mangle]
-pub extern "C" fn convert_module_name(
-    errmsg: Option<&mut UnmanagedVector>,
-    precompiled: ByteSliceView,
-    module_name: ByteSliceView,
-) -> UnmanagedVector {
-    let precompiled = precompiled.read().unwrap();
-    let module_name = module_name.read().unwrap();
-
-    let res = catch_unwind(AssertUnwindSafe(move || {
-        api_handler::convert_module_name(precompiled, module_name)
-    }))
-    .unwrap_or_else(|_| Err(Error::panic()));
-
-    let ret = handle_c_error_binary(res, errmsg);
-    UnmanagedVector::new(Some(ret))
-}
-
-#[no_mangle]
 pub extern "C" fn read_module_info(
     errmsg: Option<&mut UnmanagedVector>,
     compiled: ByteSliceView,

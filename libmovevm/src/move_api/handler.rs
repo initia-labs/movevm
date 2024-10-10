@@ -5,31 +5,10 @@ use crate::{error::Error, Db, GoStorage};
 
 use move_binary_format::access::ModuleAccess;
 use move_binary_format::deserializer::DeserializerConfig;
-use move_binary_format::internals::ModuleIndex;
 use move_binary_format::CompiledModule;
-use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::parser::parse_struct_tag;
 use serde::Serialize;
-
-pub(crate) fn convert_module_name(
-    precompiled: &[u8],
-    module_name: &[u8],
-) -> Result<Vec<u8>, Error> {
-    let mut m =
-        CompiledModule::deserialize_with_config(precompiled, &DeserializerConfig::default())
-            .map_err(|e| Error::backend_failure(e.to_string()))?;
-
-    // convert module name
-    let module_name_index = m.self_handle().name.into_index();
-    let module_name_identifier: &mut Identifier = m.identifiers.get_mut(module_name_index).unwrap();
-    *module_name_identifier = Identifier::from_utf8(module_name.to_vec())
-        .map_err(|e| Error::invalid_utf8(e.to_string()))?;
-
-    let mut bz = Vec::new();
-    CompiledModule::serialize(&m, &mut bz).map_err(|e| Error::backend_failure(e.to_string()))?;
-    Ok(bz)
-}
 
 #[derive(Serialize)]
 struct ModuleInfoResponse {

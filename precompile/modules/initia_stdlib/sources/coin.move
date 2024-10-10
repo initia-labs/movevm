@@ -121,10 +121,7 @@ module initia_std::coin {
     ): (MintCapability, BurnCapability, FreezeCapability, ExtendRef) {
         // create object for fungible asset metadata
         let constructor_ref =
-            &object::create_named_object(
-                creator,
-                *string::bytes(&symbol)
-            );
+            &object::create_named_object(creator, *string::bytes(&symbol));
 
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
             constructor_ref,
@@ -238,11 +235,7 @@ module initia_std::coin {
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
-        primary_fungible_store::set_frozen_flag(
-            &refs.transfer_ref,
-            account_addr,
-            true
-        )
+        primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, true)
     }
 
     /// Unfreeze the primary store of an account.
@@ -258,11 +251,7 @@ module initia_std::coin {
         );
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
-        primary_fungible_store::set_frozen_flag(
-            &refs.transfer_ref,
-            account_addr,
-            false
-        )
+        primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, false)
     }
 
     //
@@ -341,6 +330,12 @@ module initia_std::coin {
     public fun metadata_to_denom(metadata: Object<Metadata>): String {
         let metadata_addr = object::object_address(&metadata);
         let symbol = symbol(metadata);
+
+        // we need to revert the conversion in fungible_asset::metadata()
+        if (object::is_owner(metadata, @initia_std) && symbol == string::utf8(b"INIT")) {
+            symbol = string::utf8(b"uinit")
+        };
+
         let std_metadata_addr = metadata_address(@initia_std, symbol);
 
         if (std_metadata_addr == metadata_addr) {

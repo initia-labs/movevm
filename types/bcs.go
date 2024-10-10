@@ -1884,15 +1884,69 @@ func load_StakingMessage__Delegate(deserializer serde.Deserializer) (StakingMess
 	return obj, nil
 }
 
+type StargateCallback struct {
+	Id uint64
+	ModuleAddress AccountAddress
+	ModuleName string
+	FunctionName string
+}
+
+func (obj *StargateCallback) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeU64(obj.Id); err != nil { return err }
+	if err := obj.ModuleAddress.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeStr(obj.ModuleName); err != nil { return err }
+	if err := serializer.SerializeStr(obj.FunctionName); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *StargateCallback) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeStargateCallback(deserializer serde.Deserializer) (StargateCallback, error) {
+	var obj StargateCallback
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.Id = val } else { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.ModuleAddress = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.ModuleName = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.FunctionName = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeStargateCallback(input []byte) (StargateCallback, error) {
+	if input == nil {
+		var obj StargateCallback
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeStargateCallback(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type StargateMessage struct {
 	Sender AccountAddress
 	Data []uint8
+	AllowFailure bool
+	Callback *StargateCallback
 }
 
 func (obj *StargateMessage) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := obj.Sender.Serialize(serializer); err != nil { return err }
 	if err := serialize_vector_u8(obj.Data, serializer); err != nil { return err }
+	if err := serializer.SerializeBool(obj.AllowFailure); err != nil { return err }
+	if err := serialize_option_StargateCallback(obj.Callback, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -1911,6 +1965,8 @@ func DeserializeStargateMessage(deserializer serde.Deserializer) (StargateMessag
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.Sender = val } else { return obj, err }
 	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Data = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.AllowFailure = val } else { return obj, err }
+	if val, err := deserialize_option_StargateCallback(deserializer); err == nil { obj.Callback = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -2551,6 +2607,28 @@ func deserialize_array32_u8_array(deserializer serde.Deserializer) ([32]uint8, e
 		if val, err := deserializer.DeserializeU8(); err == nil { obj[i] = val } else { return obj, err }
 	}
 	return obj, nil
+}
+
+func serialize_option_StargateCallback(value *StargateCallback, serializer serde.Serializer) error {
+	if value != nil {
+		if err := serializer.SerializeOptionTag(true); err != nil { return err }
+		if err := (*value).Serialize(serializer); err != nil { return err }
+	} else {
+		if err := serializer.SerializeOptionTag(false); err != nil { return err }
+	}
+	return nil
+}
+
+func deserialize_option_StargateCallback(deserializer serde.Deserializer) (*StargateCallback, error) {
+	tag, err := deserializer.DeserializeOptionTag()
+	if err != nil { return nil, err }
+	if tag {
+		value := new(StargateCallback)
+		if val, err := DeserializeStargateCallback(deserializer); err == nil { *value = val } else { return nil, err }
+	        return value, nil
+	} else {
+		return nil, nil
+	}
 }
 
 func serialize_option_str(value *string, serializer serde.Serializer) error {

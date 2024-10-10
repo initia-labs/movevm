@@ -108,10 +108,7 @@ module minitia_std::string_utils {
 
     #[test]
     fun test_format() {
-        assert!(
-            to_string(&1u64) == std::string::utf8(b"1"),
-            1
-        );
+        assert!(to_string(&1u64) == std::string::utf8(b"1"), 1);
         assert!(
             to_string(&false) == std::string::utf8(b"false"),
             2
@@ -156,7 +153,13 @@ module minitia_std::string_utils {
     #[test]
     #[expected_failure(abort_code = EARGS_MISMATCH)]
     fun test_format_list_to_many_vals() {
-        format4(&b"a = {} b = {} c = {}", 1, 2, 3, 4);
+        format4(
+            &b"a = {} b = {} c = {}",
+            1,
+            2,
+            3,
+            4
+        );
     }
 
     #[test]
@@ -188,27 +191,44 @@ module minitia_std::string_utils {
     #[test]
     #[expected_failure(abort_code = EINVALID_FORMAT)]
     fun test_format_unclosed_braces() {
-        format3(&b"a = {} b = {} c = {", 1, 2, 3);
+        format3(
+            &b"a = {} b = {} c = {",
+            1,
+            2,
+            3
+        );
     }
 
     #[test]
     #[expected_failure(abort_code = EINVALID_FORMAT)]
     fun test_format_unclosed_braces_2() {
-        format3(&b"a = {} b = { c = {}", 1, 2, 3);
+        format3(
+            &b"a = {} b = { c = {}",
+            1,
+            2,
+            3
+        );
     }
 
     #[test]
     #[expected_failure(abort_code = EINVALID_FORMAT)]
     fun test_format_unopened_braces() {
-        format3(&b"a = } b = {} c = {}", 1, 2, 3);
+        format3(
+            &b"a = } b = {} c = {}",
+            1,
+            2,
+            3
+        );
     }
 
     #[test]
     fun test_format_escape_braces_works() {
-        let s = format3(&b"{{a = {} b = {} c = {}}}", 1, 2, 3);
-        assert!(
-            s == std::string::utf8(b"{a = 1 b = 2 c = 3}"),
-            1
+        let s = format3(
+            &b"{{a = {} b = {} c = {}}}",
+            1,
+            2,
+            3
         );
+        assert!(s == std::string::utf8(b"{a = 1 b = 2 c = 3}"), 1);
     }
 }

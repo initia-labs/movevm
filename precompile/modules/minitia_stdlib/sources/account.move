@@ -49,11 +49,7 @@ module minitia_std::account {
             error::already_exists(EACCOUNT_ALREADY_EXISTS)
         );
 
-        request_create_account(
-            addr,
-            account_number,
-            ACCOUNT_TYPE_TABLE
-        )
+        request_create_account(addr, account_number, ACCOUNT_TYPE_TABLE)
     }
 
     /// ObjectAccount is similar to CosmosSDK's ModuleAccount in concept,
@@ -63,11 +59,7 @@ module minitia_std::account {
 
         // base account with sequence 0 is considered as not created.
         if (!found || (account_type == ACCOUNT_TYPE_BASE && sequence == 0)) {
-            request_create_account(
-                addr,
-                account_number,
-                ACCOUNT_TYPE_OBJECT
-            )
+            request_create_account(addr, account_number, ACCOUNT_TYPE_OBJECT)
         } else {
             // When an Object is deleted, the ObjectAccount in CosmosSDK is designed
             // not to be deleted in order to prevent unexpected issues. Therefore,
@@ -315,13 +307,7 @@ module minitia_std::account {
         assert!(exists_at(new_address), 2);
 
         // set base account with 0 sequence
-        set_account_info(
-            new_address2,
-            100,
-            0,
-            ACCOUNT_TYPE_BASE,
-            false
-        );
+        set_account_info(new_address2, 100, 0, ACCOUNT_TYPE_BASE, false);
         let table_account_num = create_table_account(new_address2);
         assert!(
             table_account_num == get_account_number(new_address2),
@@ -341,13 +327,7 @@ module minitia_std::account {
         assert!(exists_at(new_address3), 5);
 
         // set base account with 0 sequence
-        set_account_info(
-            new_address4,
-            200,
-            0,
-            ACCOUNT_TYPE_BASE,
-            false
-        );
+        set_account_info(new_address4, 200, 0, ACCOUNT_TYPE_BASE, false);
         let object_account_num = create_object_account(new_address4);
         assert!(
             object_account_num == get_account_number(new_address4),
@@ -363,22 +343,10 @@ module minitia_std::account {
     public fun test_blocked_address(
         new_address: address, new_address2: address
     ) {
-        set_account_info(
-            new_address,
-            200,
-            0,
-            ACCOUNT_TYPE_BASE,
-            true
-        );
+        set_account_info(new_address, 200, 0, ACCOUNT_TYPE_BASE, true);
         assert!(is_blocked(new_address), 1);
 
-        set_account_info(
-            new_address2,
-            100,
-            0,
-            ACCOUNT_TYPE_BASE,
-            false
-        );
+        set_account_info(new_address2, 100, 0, ACCOUNT_TYPE_BASE, false);
         assert!(!is_blocked(new_address2), 2);
     }
 
@@ -411,6 +379,7 @@ module minitia_std::account {
 
     #[test_only]
     public fun create_account_for_test(new_address: address): signer {
+        create_account(new_address);
         create_signer_for_test(new_address)
     }
 }

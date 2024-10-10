@@ -102,11 +102,7 @@ module minitia_std::secp256k1 {
             std::error::invalid_argument(E_DESERIALIZE)
         );
 
-        return verify_internal(
-            message,
-            public_key.bytes,
-            signature.bytes
-        )
+        return verify_internal(message, public_key.bytes, signature.bytes)
     }
 
     /// Recovers the signer's raw (64-byte) public key from a secp256k1 ECDSA `signature` given the `recovery_id` and the signed
@@ -124,12 +120,7 @@ module minitia_std::secp256k1 {
         );
 
         let (pk, success) =
-            recover_public_key_internal(
-                recovery_id,
-                message,
-                signature.bytes,
-                false
-            );
+            recover_public_key_internal(recovery_id, message, signature.bytes, false);
         if (success) {
             std::option::some(ecdsa_raw_public_key_from_bytes(pk))
         } else {
@@ -152,12 +143,7 @@ module minitia_std::secp256k1 {
         );
 
         let (pk, success) =
-            recover_public_key_internal(
-                recovery_id,
-                message,
-                signature.bytes,
-                true
-            );
+            recover_public_key_internal(recovery_id, message, signature.bytes, true);
         if (success) {
             std::option::some(ecdsa_compressed_public_key_from_bytes(pk))
         } else {
@@ -176,9 +162,7 @@ module minitia_std::secp256k1 {
     /// - `public_key`: A compressed public key in bytes.
     /// - `signature`: A 64-byte ECDSA signature.
     native fun verify_internal(
-        message: vector<u8>,
-        public_key: vector<u8>,
-        signature: vector<u8>
+        message: vector<u8>, public_key: vector<u8>, signature: vector<u8>
     ): bool;
 
     /// Returns `(public_key, true)` if `signature` verifies on `message` under the recovered `public_key`

@@ -7,8 +7,13 @@ module initia_std::cosmos {
     use std::object::Object;
     use std::fungible_asset::Metadata;
     use std::collection::{Collection};
+    use std::error;
 
     use initia_std::json;
+
+    // Error codes
+    const EINVALID_CALLBACK_ID: u64 = 1;
+    const EINVALID_CALLBACK_FID: u64 = 2;
 
     struct VoteRequest has copy, drop {
         _type_: String,
@@ -40,7 +45,27 @@ module initia_std::cosmos {
     }
 
     public entry fun stargate(sender: &signer, data: vector<u8>) {
-        stargate_internal(signer::address_of(sender), data)
+        stargate_internal(signer::address_of(sender), data, disallow_failure())
+    }
+
+    /// Stargate message with options
+    ///
+    /// Options:
+    /// - allow_failure()
+    /// - disallow_failure()
+    /// - allow_failure_with_callback(id: u64, fid: String)
+    /// - disallow_failure_with_callback(id: u64, fid: String)
+    ///
+    /// The callback function should be defined with the following signature:
+    /// ```rust
+    /// public fun callback(id: u64, success: bool);
+    /// public fun callback(sender: &signer, id: u64, success: bool);
+    /// ```
+    ///
+    public fun stargate_with_options(
+        sender: &signer, data: vector<u8>, options: Options
+    ) {
+        stargate_internal(signer::address_of(sender), data, options)
     }
 
     public entry fun move_execute(
@@ -128,11 +153,7 @@ module initia_std::cosmos {
     public entry fun fund_community_pool(
         sender: &signer, metadata: Object<Metadata>, amount: u64
     ) {
-        fund_community_pool_internal(
-            signer::address_of(sender),
-            &metadata,
-            amount
-        )
+        fund_community_pool_internal(signer::address_of(sender), &metadata, amount)
     }
 
     /// ICS20 ibc transfer
@@ -217,7 +238,9 @@ module initia_std::cosmos {
         )
     }
 
-    native fun stargate_internal(sender: address, data: vector<u8>);
+    native fun stargate_internal(
+        sender: address, data: vector<u8>, option: Options
+    );
 
     native fun move_execute_internal(
         sender: address,
@@ -285,4 +308,70 @@ module initia_std::cosmos {
         timeout_fee_metadata: &Object<Metadata>,
         timeout_fee_amount: u64
     );
+
+    // ================================================== Options =================================================
+
+    /// Options for stargate message
+    struct Options has copy, drop {
+        allow_failure: bool,
+
+        /// callback_id is the unique identifier for this message execution.
+        callback_id: u64,
+        /// function identifier which will be called after the message execution.
+        /// The function should be defined with the following signature:
+        /// ```rust
+        /// public fun callback(id: u64, success: bool);
+        /// public fun callback(sender: &signer, id: u64, success: bool);
+        /// ```
+        ///
+        /// Ex) 0xaddr::test_module::callback
+        /// where callback is the function name defined in the test_module of the 0xaddr address.
+        callback_fid: vector<u8>
+    }
+
+    public fun allow_failure(): Options {
+        Options {
+            allow_failure: true,
+            callback_id: 0,
+            callback_fid: vector::empty()
+        }
+    }
+
+    public fun disallow_failure(): Options {
+        Options {
+            allow_failure: false,
+            callback_id: 0,
+            callback_fid: vector::empty()
+        }
+    }
+
+    /// Ex) fid: 0xaddr::test_module::callback
+    /// where callback is the function name defined in the test_module of the 0xaddr address.
+    public fun allow_failure_with_callback(id: u64, fid: String): Options {
+        assert!(id > 0, error::invalid_argument(EINVALID_CALLBACK_ID));
+        assert!(
+            !string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID)
+        );
+
+        Options {
+            allow_failure: true,
+            callback_id: id,
+            callback_fid: *string::bytes(&fid)
+        }
+    }
+
+    /// Ex) fid: 0xaddr::test_module::callback
+    /// where callback is the function name defined in the test_module of the 0xaddr address.
+    public fun disallow_failure_with_callback(id: u64, fid: String): Options {
+        assert!(id > 0, error::invalid_argument(EINVALID_CALLBACK_ID));
+        assert!(
+            !string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID)
+        );
+
+        Options {
+            allow_failure: false,
+            callback_id: id,
+            callback_fid: *string::bytes(&fid)
+        }
+    }
 }

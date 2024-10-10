@@ -369,8 +369,7 @@ module initia_std::fungible_asset {
                 // Verify that caller type matches callee type so wrongly typed function cannot be registered.
                 assert!(
                     function_info::check_dispatch_type_compatibility(
-                        &function_info,
-                        supply_function
+                        &function_info, supply_function
                     ),
                     error::invalid_argument(
                         EDERIVED_SUPPLY_FUNCTION_SIGNATURE_MISMATCH
@@ -482,13 +481,7 @@ module initia_std::fungible_asset {
     #[view]
     /// Get the symbol of the fungible asset from the `metadata` object.
     public fun symbol<T: key>(metadata: Object<T>): String acquires Metadata {
-        let md = borrow_fungible_metadata(&metadata);
-        if (object::is_owner(metadata, @initia_std)
-            && md.symbol == string::utf8(b"uinit")) {
-            return string::utf8(b"INIT")
-        };
-
-        md.symbol
+        metadata(metadata).symbol
     }
 
     #[view]
@@ -506,19 +499,20 @@ module initia_std::fungible_asset {
     #[view]
     /// Get the metadata struct from the `metadata` object.
     public fun metadata<T: key>(metadata: Object<T>): Metadata acquires Metadata {
-        *borrow_fungible_metadata(&metadata)
+        let md = *borrow_fungible_metadata(&metadata);
+        if (object::is_owner(metadata, @initia_std)
+            && md.symbol == string::utf8(b"uinit")) {
+            md.symbol = string::utf8(b"INIT");
+            md.decimals = 6;
+        };
+
+        md
     }
 
     #[view]
     /// Get the decimals from the `metadata` object.
     public fun decimals<T: key>(metadata: Object<T>): u8 acquires Metadata {
-        let md = borrow_fungible_metadata(&metadata);
-        if (object::is_owner(metadata, @initia_std)
-            && md.symbol == string::utf8(b"uinit")) {
-            return 6
-        };
-
-        md.decimals
+        metadata(metadata).decimals
     }
 
     #[view]
@@ -1131,9 +1125,7 @@ module initia_std::fungible_asset {
             string::utf8(b"TEST"),
             string::utf8(b"@@"),
             0,
-            string::utf8(
-                b"http://www.example.com/favicon.ico"
-            ),
+            string::utf8(b"http://www.example.com/favicon.ico"),
             string::utf8(b"http://www.example.com")
         );
         let mint_ref = generate_mint_ref(constructor_ref);
@@ -1220,12 +1212,7 @@ module initia_std::fungible_asset {
         burn_from(&burn_ref, aaron_store, 30);
         assert!(supply(test_token) == option::some(70), 4);
         // Transfer
-        transfer(
-            creator,
-            creator_store,
-            aaron_store,
-            10
-        );
+        transfer(creator, creator_store, aaron_store, 10);
         assert!(balance(creator_store) == 10, 5);
         assert!(balance(aaron_store) == 60, 6);
 
@@ -1248,7 +1235,10 @@ module initia_std::fungible_asset {
             icon_uri(metadata) == string::utf8(b"http://www.example.com/favicon.ico"),
             11
         );
-        assert!(project_uri(metadata) == string::utf8(b"http://www.example.com"), 12);
+        assert!(
+            project_uri(metadata) == string::utf8(b"http://www.example.com"),
+            12
+        );
     }
 
     #[test(creator = @0xcafe)]
@@ -1275,12 +1265,7 @@ module initia_std::fungible_asset {
         set_frozen_flag(&transfer_ref, creator_store, true);
         set_frozen_flag(&transfer_ref, aaron_store, true);
         deposit_with_ref(&transfer_ref, creator_store, fa);
-        transfer_with_ref(
-            &transfer_ref,
-            creator_store,
-            aaron_store,
-            80
-        );
+        transfer_with_ref(&transfer_ref, creator_store, aaron_store, 80);
         assert!(balance(creator_store) == 20, 1);
         assert!(balance(aaron_store) == 80, 2);
         assert!(!!is_frozen(creator_store), 3);
@@ -1332,19 +1317,9 @@ module initia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(
-            signer::address_of(module_acc),
-            10,
-            0,
-            3,
-            false
-        );
+        account::set_account_info(signer::address_of(module_acc), 10, 0, 3, false);
 
-        set_frozen_flag(
-            &transfer_ref,
-            module_acc_store,
-            true
-        );
+        set_frozen_flag(&transfer_ref, module_acc_store, true);
     }
 
     #[test(creator = @0xcafe, module_acc = @0x123)]
@@ -1357,13 +1332,7 @@ module initia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(
-            signer::address_of(module_acc),
-            10,
-            0,
-            3,
-            false
-        );
+        account::set_account_info(signer::address_of(module_acc), 10, 0, 3, false);
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);
@@ -1380,13 +1349,7 @@ module initia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
-        account::set_account_info(
-            signer::address_of(module_acc),
-            10,
-            0,
-            3,
-            false
-        );
+        account::set_account_info(signer::address_of(module_acc), 10, 0, 3, false);
 
         let fa = mint(&mint_ref, 100);
         deposit(module_acc_store, fa);
@@ -1404,13 +1367,7 @@ module initia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);
-        account::set_account_info(
-            signer::address_of(blocked_acc),
-            10,
-            0,
-            3,
-            true
-        );
+        account::set_account_info(signer::address_of(blocked_acc), 10, 0, 3, true);
 
         let fa = mint(&mint_ref, 100);
         deposit(blocked_acc_store, fa);
@@ -1426,13 +1383,7 @@ module initia_std::fungible_asset {
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);
-        account::set_account_info(
-            signer::address_of(blocked_acc),
-            10,
-            0,
-            3,
-            true
-        );
+        account::set_account_info(signer::address_of(blocked_acc), 10, 0, 3, true);
 
         let fa = mint(&mint_ref, 100);
         deposit_with_ref(&transfer_ref, blocked_acc_store, fa);

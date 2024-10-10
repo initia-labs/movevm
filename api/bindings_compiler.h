@@ -81,40 +81,42 @@ typedef struct {
   size_t len;
 } ByteSliceView;
 
-UnmanagedVector build_move_package(UnmanagedVector *errmsg, ByteSliceView compiler_args_paylod);
+UnmanagedVector build_move_package(UnmanagedVector *errmsg, ByteSliceView compiler_args_payload);
 
 UnmanagedVector clean_move_package(UnmanagedVector *errmsg,
-                                   ByteSliceView compiler_args_paylod,
+                                   ByteSliceView compiler_args_payload,
                                    bool clean_cache,
                                    bool clean_byproduct,
                                    bool force);
 
 UnmanagedVector coverage_bytecode_move_package(UnmanagedVector *errmsg,
-                                               ByteSliceView compiler_args_paylod,
+                                               ByteSliceView compiler_args_payload,
                                                ByteSliceView coverage_opt_payload);
 
 UnmanagedVector coverage_source_move_package(UnmanagedVector *errmsg,
-                                             ByteSliceView compiler_args_paylod,
+                                             ByteSliceView compiler_args_payload,
                                              ByteSliceView coverage_opt_payload);
 
 UnmanagedVector coverage_summary_move_package(UnmanagedVector *errmsg,
-                                              ByteSliceView compiler_args_paylod,
+                                              ByteSliceView compiler_args_payload,
                                               ByteSliceView coverage_opt_payload);
 
 UnmanagedVector create_new_move_package(UnmanagedVector *errmsg,
-                                        ByteSliceView compiler_args_paylod,
-                                        ByteSliceView name_view);
+                                        ByteSliceView compiler_args_payload,
+                                        ByteSliceView name_view,
+                                        ByteSliceView movevm_version_view,
+                                        bool use_minlib);
 
 void destroy_unmanaged_vector(UnmanagedVector v);
 
 UnmanagedVector docgen_move_package(UnmanagedVector *errmsg,
-                                    ByteSliceView compiler_args_paylod,
+                                    ByteSliceView compiler_args_payload,
                                     ByteSliceView docgen_opt_payload);
 
 UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, size_t length);
 
 UnmanagedVector test_move_package(UnmanagedVector *errmsg,
-                                  ByteSliceView compiler_args_paylod,
+                                  ByteSliceView compiler_args_payload,
                                   ByteSliceView test_opt_payload);
 
 #endif /* __LIBCOMPILER__ */

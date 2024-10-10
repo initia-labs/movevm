@@ -1010,12 +1010,7 @@ Get all delegation info of an addr
 
     <b>let</b> delegation_store = <b>borrow_global</b>&lt;<a href="staking.md#0x1_staking_DelegationStore">DelegationStore</a>&gt;(addr);
     <b>let</b> delegations = <a href="table.md#0x1_table_borrow">table::borrow</a>(&delegation_store.delegations, metadata);
-    <b>let</b> delegations_iter = <a href="table.md#0x1_table_iter">table::iter</a>(
-        delegations,
-        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
-        start_after,
-        2
-    );
+    <b>let</b> delegations_iter = <a href="table.md#0x1_table_iter">table::iter</a>(delegations, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), start_after, 2);
 
     <b>let</b> prepare = <a href="table.md#0x1_table_prepare">table::prepare</a>(delegations_iter);
     <b>let</b> res: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_DelegationResponse">DelegationResponse</a>&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
@@ -1143,12 +1138,7 @@ Get all unbondings of (addr, validator)
             <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>()
         };
 
-    <b>let</b> unbondings_iter = <a href="table.md#0x1_table_iter">table::iter</a>(
-        unbondings,
-        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
-        start_after,
-        2
-    );
+    <b>let</b> unbondings_iter = <a href="table.md#0x1_table_iter">table::iter</a>(unbondings, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), start_after, 2);
 
     <b>let</b> res: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;<a href="staking.md#0x1_staking_UnbondingResponse">UnbondingResponse</a>&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
     <b>while</b> (<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector_length">vector::length</a>(&res) &lt; (limit <b>as</b> u64)
@@ -1387,10 +1377,7 @@ Initialize, Make staking store
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
 
     <b>assert</b>!(
-        !<a href="table.md#0x1_table_contains">table::contains</a>(
-            &module_store.staking_states,
-            metadata
-        ),
+        !<a href="table.md#0x1_table_contains">table::contains</a>(&module_store.staking_states, metadata),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_already_exists">error::already_exists</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_ALREADY_EXISTS">ESTAKING_STATE_ALREADY_EXISTS</a>)
     );
     <a href="table.md#0x1_table_add">table::add</a>(
@@ -1439,9 +1426,7 @@ Slash unbonding coin
 
     <b>if</b> (slash_amount &gt; 0) {
         <b>let</b> unbonding_coin_store_signer =
-            &<a href="object.md#0x1_object_generate_signer_for_extending">object::generate_signer_for_extending</a>(
-                &state.unbonding_coin_store_ref
-            );
+            &<a href="object.md#0x1_object_generate_signer_for_extending">object::generate_signer_for_extending</a>(&state.unbonding_coin_store_ref);
         <b>let</b> slash_coin =
             <a href="fungible_asset.md#0x1_fungible_asset_withdraw">fungible_asset::withdraw</a>(
                 unbonding_coin_store_signer,
@@ -1455,11 +1440,7 @@ Slash unbonding coin
         <b>let</b> staking_module = create_signer(@relayer);
 
         // fund <b>to</b> community pool
-        <a href="cosmos.md#0x1_cosmos_fund_community_pool">cosmos::fund_community_pool</a>(
-            &staking_module,
-            metadata,
-            slash_amount
-        );
+        <a href="cosmos.md#0x1_cosmos_fund_community_pool">cosmos::fund_community_pool</a>(&staking_module, metadata, slash_amount);
     }
 }
 </code></pre>
@@ -1514,7 +1495,9 @@ Deposit unbonding coin to global store
             <b>if</b> (total_unbonding_amount == 0) {
                 <a href="bigdecimal.md#0x1_bigdecimal_one">bigdecimal::one</a>()
             } <b>else</b> {
-                <a href="bigdecimal.md#0x1_bigdecimal_div_by_u64">bigdecimal::div_by_u64</a>(state.unbonding_share, total_unbonding_amount)
+                <a href="bigdecimal.md#0x1_bigdecimal_div_by_u64">bigdecimal::div_by_u64</a>(
+                    state.unbonding_share, total_unbonding_amount
+                )
             };
 
         <b>let</b> share_diff =
@@ -1524,10 +1507,7 @@ Deposit unbonding coin to global store
         state.unbonding_share = <a href="bigdecimal.md#0x1_bigdecimal_add">bigdecimal::add</a>(state.unbonding_share, share_diff);
 
         <b>let</b> unbonding_coin = <a href="coin.md#0x1_coin_withdraw">coin::withdraw</a>(&staking_module, metadata, amount);
-        <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(
-            state.unbonding_coin_store,
-            unbonding_coin
-        );
+        <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(state.unbonding_coin_store, unbonding_coin);
 
         index = index + 1;
     }
@@ -1585,7 +1565,9 @@ Deposit staking reward, and update <code>reward_index</code>
             );
         state.reward_index = <a href="bigdecimal.md#0x1_bigdecimal_add">bigdecimal::add</a>(
             state.reward_index,
-            <a href="bigdecimal.md#0x1_bigdecimal_rev">bigdecimal::rev</a>(<a href="bigdecimal.md#0x1_bigdecimal_div_by_u64">bigdecimal::div_by_u64</a>(state.total_share, reward_amount))
+            <a href="bigdecimal.md#0x1_bigdecimal_rev">bigdecimal::rev</a>(
+                <a href="bigdecimal.md#0x1_bigdecimal_div_by_u64">bigdecimal::div_by_u64</a>(state.total_share, reward_amount)
+            )
         );
 
         <a href="fungible_asset.md#0x1_fungible_asset_deposit">fungible_asset::deposit</a>(state.reward_coin_store, reward);
@@ -1717,10 +1699,7 @@ Delegate a fa to a validator.
     <b>let</b> metadata = <a href="fungible_asset.md#0x1_fungible_asset_asset_metadata">fungible_asset::asset_metadata</a>(&fa);
 
     <b>assert</b>!(
-        <a href="table.md#0x1_table_contains">table::contains</a>(
-            &module_store.staking_states,
-            metadata
-        ),
+        <a href="table.md#0x1_table_contains">table::contains</a>(&module_store.staking_states, metadata),
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_ESTAKING_STATE_NOT_EXISTS">ESTAKING_STATE_NOT_EXISTS</a>)
     );
     <b>let</b> states = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(&<b>mut</b> module_store.staking_states, metadata);
@@ -1733,16 +1712,14 @@ Delegate a fa to a validator.
             <a href="object.md#0x1_object_address_from_constructor_ref">object::address_from_constructor_ref</a>(reward_coin_store_ref);
         <b>let</b> reward_coin_store =
             <a href="primary_fungible_store.md#0x1_primary_fungible_store_create_primary_store">primary_fungible_store::create_primary_store</a>(
-                reward_coin_store_address,
-                <a href="staking.md#0x1_staking_reward_metadata">reward_metadata</a>()
+                reward_coin_store_address, <a href="staking.md#0x1_staking_reward_metadata">reward_metadata</a>()
             );
 
         <b>let</b> unbonding_coin_store_address =
             <a href="object.md#0x1_object_address_from_constructor_ref">object::address_from_constructor_ref</a>(unbonding_coin_store_ref);
         <b>let</b> unbonding_coin_store =
             <a href="primary_fungible_store.md#0x1_primary_fungible_store_create_primary_store">primary_fungible_store::create_primary_store</a>(
-                unbonding_coin_store_address,
-                metadata
+                unbonding_coin_store_address, metadata
             );
 
         <a href="table.md#0x1_table_add">table::add</a>(
@@ -1825,11 +1802,7 @@ unbonding amount can be slightly different with input amount due to round error.
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_not_found">error::not_found</a>(<a href="staking.md#0x1_staking_EDELEGATION_STORE_NOT_EXISTS">EDELEGATION_STORE_NOT_EXISTS</a>)
     );
 
-    <b>let</b> share = <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(
-        *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator),
-        &metadata,
-        amount
-    );
+    <b>let</b> share = <a href="staking.md#0x1_staking_amount_to_share">amount_to_share</a>(*<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator), &metadata, amount);
 
     <b>let</b> delegation = <a href="staking.md#0x1_staking_withdraw_delegation">withdraw_delegation</a>(<a href="account.md#0x1_account">account</a>, metadata, validator, share);
     <b>let</b> (reward, unbonding) = <a href="staking.md#0x1_staking_undelegate">undelegate</a>(delegation);
@@ -1869,11 +1842,7 @@ unbonding amount can be slightly different with input amount due to round error.
     <b>let</b> metadata = delegation.metadata;
 
     <b>let</b> (unbonding_amount, release_time) =
-        <a href="staking.md#0x1_staking_undelegate_internal">undelegate_internal</a>(
-            *<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator),
-            &metadata,
-            &share
-        );
+        <a href="staking.md#0x1_staking_undelegate_internal">undelegate_internal</a>(*<a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_bytes">string::bytes</a>(&validator), &metadata, &share);
     <b>let</b> reward = <a href="staking.md#0x1_staking_destroy_delegation_and_extract_reward">destroy_delegation_and_extract_reward</a>(delegation);
 
     <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="staking.md#0x1_staking_ModuleStore">ModuleStore</a>&gt;(@initia_std);
@@ -1891,11 +1860,7 @@ unbonding amount can be slightly different with input amount due to round error.
     state.total_share = <a href="bigdecimal.md#0x1_bigdecimal_sub">bigdecimal::sub</a>(state.total_share, share);
 
     <b>let</b> unbonding_share =
-        <a href="staking.md#0x1_staking_unbonding_share_from_amount">unbonding_share_from_amount</a>(
-            metadata,
-            validator,
-            unbonding_amount
-        );
+        <a href="staking.md#0x1_staking_unbonding_share_from_amount">unbonding_share_from_amount</a>(metadata, validator, unbonding_amount);
     <b>let</b> unbonding = <a href="staking.md#0x1_staking_Unbonding">Unbonding</a> { metadata, validator, unbonding_share, release_time };
 
     (reward, unbonding)
@@ -2214,10 +2179,7 @@ Deposit the delegation into recipient's account.
         <a href="table.md#0x1_table_add">table::add</a>(
             delegations,
             validator,
-            <a href="staking.md#0x1_staking_empty_delegation">empty_delegation</a>(
-                delegation.metadata,
-                delegation.validator
-            )
+            <a href="staking.md#0x1_staking_empty_delegation">empty_delegation</a>(delegation.metadata, delegation.validator)
         );
     };
 
@@ -2286,10 +2248,7 @@ Withdraw specified <code>share</code> from delegation.
     // If withdraw all, remove delegation
     <b>if</b> (delegation.share == share) {
         <b>let</b> delegations =
-            <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(
-                &<b>mut</b> delegation_store.delegations,
-                metadata
-            );
+            <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(&<b>mut</b> delegation_store.delegations, metadata);
         <a href="table.md#0x1_table_remove">table::remove</a>(delegations, validator)
         // Else extract
     } <b>else</b> {
@@ -2665,8 +2624,7 @@ Withdraw specifed <code>amount</code> of unbonding_amount from the unbonding.
     <b>if</b> (unbonding.unbonding_share == share) {
         // If withdraw all, remove unbonding
         <b>let</b> unbondings = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(
-            &<b>mut</b> delegation_store.unbondings,
-            metadata
+            &<b>mut</b> delegation_store.unbondings, metadata
         );
 
         <a href="table.md#0x1_table_remove">table::remove</a>(

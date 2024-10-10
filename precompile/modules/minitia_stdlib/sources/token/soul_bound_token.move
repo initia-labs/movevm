@@ -567,12 +567,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         let description = string::utf8(b"not");
         assert!(nft::description(nft) != description, 0);
@@ -589,12 +584,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, false);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         set_description(creator, nft, string::utf8(b""));
     }
@@ -608,12 +598,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         let description = string::utf8(b"not");
         set_description(noncreator, nft, description);
@@ -625,12 +610,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         let uri = string::utf8(b"not");
         assert!(nft::uri(nft) != uri, 0);
@@ -645,12 +625,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, false);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         set_uri(creator, nft, string::utf8(b""));
     }
@@ -664,12 +639,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         let uri = string::utf8(b"not");
         set_uri(noncreator, nft, uri);
@@ -698,11 +668,7 @@ module minitia_std::soul_bound_token {
     ) acquires SoulBoundTokenCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, false);
-        set_collection_description(
-            creator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_description(creator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123, noncreator = @0x456)]
@@ -712,11 +678,7 @@ module minitia_std::soul_bound_token {
     ) acquires SoulBoundTokenCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
-        set_collection_description(
-            noncreator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_description(noncreator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123)]
@@ -734,11 +696,7 @@ module minitia_std::soul_bound_token {
     fun test_set_immutable_collection_uri(creator: &signer) acquires SoulBoundTokenCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, false);
-        set_collection_uri(
-            creator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_uri(creator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123, noncreator = @0x456)]
@@ -748,11 +706,7 @@ module minitia_std::soul_bound_token {
     ) acquires SoulBoundTokenCollection {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
-        set_collection_uri(
-            noncreator,
-            collection,
-            string::utf8(b"")
-        );
+        set_collection_uri(noncreator, collection, string::utf8(b""));
     }
 
     #[test(creator = @0x123)]
@@ -763,12 +717,7 @@ module minitia_std::soul_bound_token {
         let property_type = string::utf8(b"u8");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
         add_property(
             creator,
             nft,
@@ -790,12 +739,7 @@ module minitia_std::soul_bound_token {
         let property_name = string::utf8(b"u8");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
         add_typed_property<SoulBoundToken, u8>(creator, nft, property_name, 0x8);
 
         assert!(
@@ -812,12 +756,7 @@ module minitia_std::soul_bound_token {
         let property_type = string::utf8(b"bool");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
         update_property(
             creator,
             nft,
@@ -841,12 +780,7 @@ module minitia_std::soul_bound_token {
         let property_name = string::utf8(b"bool");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
         update_typed_property<SoulBoundToken, bool>(creator, nft, property_name, false);
 
         assert!(
@@ -862,12 +796,7 @@ module minitia_std::soul_bound_token {
         let property_name = string::utf8(b"bool");
 
         create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
         remove_property(creator, nft, property_name);
     }
 
@@ -877,12 +806,7 @@ module minitia_std::soul_bound_token {
         let nft_name = string::utf8(b"nft name");
 
         let collection = create_collection_helper(creator, collection_name, true);
-        let nft = mint_helper(
-            creator,
-            collection_name,
-            nft_name,
-            @0x123
-        );
+        let nft = mint_helper(creator, collection_name, nft_name, @0x123);
 
         let royalty_before = option::extract(&mut nft::royalty(nft));
         set_collection_royalties_call(

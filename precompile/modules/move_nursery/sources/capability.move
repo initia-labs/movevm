@@ -184,10 +184,7 @@ module std::capability {
     ) acquires CapState {
         let addr = signer::address_of(to);
         if (exists<CapDelegateState<Feature>>(addr)) return;
-        move_to(
-            to,
-            CapDelegateState<Feature> { root: cap.root }
-        );
+        move_to(to, CapDelegateState<Feature> { root: cap.root });
         add_element(
             &mut borrow_global_mut<CapState<Feature>>(cap.root).delegates,
             addr

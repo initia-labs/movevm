@@ -77,7 +77,8 @@ module minitia_std::bigdecimal {
 
     public fun from_ratio(numerator: BigUint, denominator: BigUint): BigDecimal {
         assert!(
-            !biguint::is_zero(denominator), error::invalid_argument(EDIVISION_BY_ZERO)
+            !biguint::is_zero(denominator),
+            error::invalid_argument(EDIVISION_BY_ZERO)
         );
 
         let numerator = biguint::mul(numerator, f());
@@ -259,7 +260,8 @@ module minitia_std::bigdecimal {
 
     public fun div(num1: BigDecimal, num2: BigDecimal): BigDecimal {
         assert!(
-            !biguint::is_zero(num2.scaled), error::invalid_argument(EDIVISION_BY_ZERO)
+            !biguint::is_zero(num2.scaled),
+            error::invalid_argument(EDIVISION_BY_ZERO)
         );
 
         BigDecimal {
@@ -349,7 +351,10 @@ module minitia_std::bigdecimal {
 
         let num4 = add(num1, num3);
         assert!(
-            eq(num4, from_ratio(biguint::from_u64(5), biguint::from_u64(6))),
+            eq(
+                num4,
+                from_ratio(biguint::from_u64(5), biguint::from_u64(6))
+            ),
             4
         );
 
@@ -370,13 +375,19 @@ module minitia_std::bigdecimal {
 
         let num10 = add_by_u64(num1, 1);
         assert!(
-            eq(num10, from_ratio(biguint::from_u64(3), biguint::from_u64(2))),
+            eq(
+                num10,
+                from_ratio(biguint::from_u64(3), biguint::from_u64(2))
+            ),
             10
         );
 
         let num11 = sub_by_u64(num10, 1);
         assert!(
-            eq(num11, from_ratio(biguint::from_u64(1), biguint::from_u64(2))),
+            eq(
+                num11,
+                from_ratio(biguint::from_u64(1), biguint::from_u64(2))
+            ),
             11
         );
 
@@ -385,7 +396,10 @@ module minitia_std::bigdecimal {
 
         let num13 = div_by_u64(num1, 2);
         assert!(
-            eq(num13, from_ratio(biguint::from_u64(1), biguint::from_u64(4))),
+            eq(
+                num13,
+                from_ratio(biguint::from_u64(1), biguint::from_u64(4))
+            ),
             13
         );
     }

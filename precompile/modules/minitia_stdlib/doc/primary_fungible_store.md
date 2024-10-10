@@ -274,10 +274,7 @@ Create a primary store object to hold fungible asset for the given address.
     // record owner store <b>to</b> <a href="table.md#0x1_table">table</a> for <a href="cosmos.md#0x1_cosmos">cosmos</a> side <a href="query.md#0x1_query">query</a>
     <b>if</b> (<b>exists</b>&lt;<a href="primary_fungible_store.md#0x1_primary_fungible_store_ModuleStore">ModuleStore</a>&gt;(@minitia_std)) {
         <b>let</b> module_store = <b>borrow_global_mut</b>&lt;<a href="primary_fungible_store.md#0x1_primary_fungible_store_ModuleStore">ModuleStore</a>&gt;(@minitia_std);
-        <b>if</b> (!<a href="table.md#0x1_table_contains">table::contains</a>(
-            &module_store.user_stores,
-            owner_addr
-        )) {
+        <b>if</b> (!<a href="table.md#0x1_table_contains">table::contains</a>(&module_store.user_stores, owner_addr)) {
             <a href="table.md#0x1_table_add">table::add</a>(
                 &<b>mut</b> module_store.user_stores,
                 owner_addr,
@@ -285,12 +282,10 @@ Create a primary store object to hold fungible asset for the given address.
             );
         };
 
-        <b>let</b> user_stores = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(&<b>mut</b> module_store.user_stores, owner_addr);
-        <a href="table.md#0x1_table_add">table::add</a>(
-            user_stores,
-            metadata_addr,
-            store_addr
+        <b>let</b> user_stores = <a href="table.md#0x1_table_borrow_mut">table::borrow_mut</a>(
+            &<b>mut</b> module_store.user_stores, owner_addr
         );
+        <a href="table.md#0x1_table_add">table::add</a>(user_stores, metadata_addr, store_addr);
     };
 
     // emit store created <a href="event.md#0x1_event">event</a>
@@ -475,12 +470,7 @@ Get the balances of <code><a href="account.md#0x1_account">account</a></code>'s 
 ): (<a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;Object&lt;Metadata&gt;&gt;, <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt;) <b>acquires</b> <a href="primary_fungible_store.md#0x1_primary_fungible_store_ModuleStore">ModuleStore</a> {
     <b>let</b> module_store = <b>borrow_global</b>&lt;<a href="primary_fungible_store.md#0x1_primary_fungible_store_ModuleStore">ModuleStore</a>&gt;(@minitia_std);
     <b>let</b> account_stores = <a href="table.md#0x1_table_borrow">table::borrow</a>(&module_store.user_stores, <a href="account.md#0x1_account">account</a>);
-    <b>let</b> iter = <a href="table.md#0x1_table_iter">table::iter</a>(
-        account_stores,
-        <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(),
-        start_after,
-        2
-    );
+    <b>let</b> iter = <a href="table.md#0x1_table_iter">table::iter</a>(account_stores, <a href="../../move_nursery/../move_stdlib/doc/option.md#0x1_option_none">option::none</a>(), start_after, 2);
 
     <b>let</b> metadata_vec: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;Object&lt;Metadata&gt;&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
     <b>let</b> balance_vec: <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>&lt;u64&gt; = <a href="../../move_nursery/../move_stdlib/doc/vector.md#0x1_vector">vector</a>[];
@@ -563,12 +553,7 @@ This function is only callable by the chain.
     <b>let</b> sender_store =
         <a href="primary_fungible_store.md#0x1_primary_fungible_store_ensure_primary_store_exists">ensure_primary_store_exists</a>(<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(sender), metadata);
     <b>let</b> recipient_store = <a href="primary_fungible_store.md#0x1_primary_fungible_store_ensure_primary_store_exists">ensure_primary_store_exists</a>(recipient, metadata);
-    <a href="fungible_asset.md#0x1_fungible_asset_sudo_transfer">fungible_asset::sudo_transfer</a>(
-        sender,
-        sender_store,
-        recipient_store,
-        amount
-    );
+    <a href="fungible_asset.md#0x1_fungible_asset_sudo_transfer">fungible_asset::sudo_transfer</a>(sender, sender_store, recipient_store, amount);
 }
 </code></pre>
 
@@ -819,11 +804,7 @@ Withdraw from the primary store of <code>owner</code> ignoring frozen flag.
             owner,
             <a href="fungible_asset.md#0x1_fungible_asset_transfer_ref_metadata">fungible_asset::transfer_ref_metadata</a>(transfer_ref)
         );
-    <a href="fungible_asset.md#0x1_fungible_asset_withdraw_with_ref">fungible_asset::withdraw_with_ref</a>(
-        transfer_ref,
-        from_primary_store,
-        amount
-    )
+    <a href="fungible_asset.md#0x1_fungible_asset_withdraw_with_ref">fungible_asset::withdraw_with_ref</a>(transfer_ref, from_primary_store, amount)
 }
 </code></pre>
 

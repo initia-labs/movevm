@@ -117,10 +117,7 @@ module minitia_std::royalty {
             generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
         let update_royalty = create(bigdecimal::from_ratio_u64(2, 5), @0x456);
         update(&mutator_ref, update_royalty);
-        assert!(
-            option::some(update_royalty) == get(object),
-            3
-        );
+        assert!(option::some(update_royalty) == get(object), 3);
         assert!(
             royalty(&update_royalty) == bigdecimal::from_ratio_u64(2, 5),
             4
@@ -139,10 +136,7 @@ module minitia_std::royalty {
             generate_mutator_ref(object::generate_extend_ref(&constructor_ref));
         let update_royalty = create(bigdecimal::from_ratio_u64(1, 5), @0x123);
         update(&mutator_ref, update_royalty);
-        assert!(
-            option::some(update_royalty) == get(object),
-            1
-        );
+        assert!(option::some(update_royalty) == get(object), 1);
     }
 
     #[test]

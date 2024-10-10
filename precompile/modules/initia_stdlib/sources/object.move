@@ -261,11 +261,7 @@ module initia_std::object {
     ): ConstructorRef acquires Tombstone {
         let obj_addr =
             create_user_derived_object_address(creator_address, derive_ref.self);
-        create_object_internal(
-            creator_address,
-            obj_addr,
-            can_delete
-        )
+        create_object_internal(creator_address, obj_addr, can_delete)
     }
 
     /// Create a new object by generating a random unique address based on transaction hash.
@@ -274,11 +270,7 @@ module initia_std::object {
         owner_address: address, can_delete: bool
     ): ConstructorRef acquires Tombstone {
         let unique_address = transaction_context::generate_unique_address();
-        create_object_internal(
-            owner_address,
-            unique_address,
-            can_delete
-        )
+        create_object_internal(owner_address, unique_address, can_delete)
     }
 
     fun create_object_internal(
@@ -663,11 +655,7 @@ module initia_std::object {
     public fun hero_unequip(
         owner: &signer, hero: Object<Hero>, weapon: Object<Weapon>
     ) acquires Hero, ObjectCore {
-        transfer(
-            owner,
-            weapon,
-            signer::address_of(owner)
-        );
+        transfer(owner, weapon, signer::address_of(owner));
         let hero = borrow_global_mut<Hero>(object_address(&hero));
         option::extract(&mut hero.weapon);
         event::emit(HeroEquipEvent { weapon_id: option::none() });
