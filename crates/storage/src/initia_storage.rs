@@ -1,4 +1,4 @@
-use crate::{code_storage::{AsInitiaCodeStorage, InitiaCodeStorage}, module_storage::InitiaModuleStorage, state_view::StateView, state_view_impl::StateViewImpl};
+use crate::{code_storage::{AsInitiaCodeStorage, InitiaCodeStorage}, module_cache::InitiaModuleCache, module_storage::InitiaModuleStorage, state_view::StateView, state_view_impl::StateViewImpl};
 use ambassador::Delegate;
 use bytes::Bytes;
 use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
@@ -9,7 +9,7 @@ use move_vm_runtime::{
     ModuleStorage, RuntimeEnvironment, Script,
     WithRuntimeEnvironment,
 };
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 
 #[derive(Delegate)]
 #[delegate(WithRuntimeEnvironment)]
@@ -20,9 +20,9 @@ pub struct InitiaStorage<'s, S> {
 }
 
 impl<'s, S: StateView> InitiaStorage<'s, S> {
-    pub fn new(state_view: &'s S, runtime_environment: &'s RuntimeEnvironment, cache_capacity: usize) -> Self {
+    pub fn new(state_view: &'s S, runtime_environment: &'s RuntimeEnvironment, module_cache: &'s RefCell<InitiaModuleCache>) -> Self {
         let state_view_impl = StateViewImpl::new(state_view);
-        let storage = state_view_impl.into_initia_code_storage(runtime_environment, cache_capacity);
+        let storage = state_view_impl.into_initia_code_storage(runtime_environment, module_cache);
         Self { storage }
     }
 

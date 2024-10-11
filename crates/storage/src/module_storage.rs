@@ -1,11 +1,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_view::{Checksum, ChecksumStorage};
+use crate::{module_cache::{InitiaModuleCache, ModuleCacheEntry}, state_view::{Checksum, ChecksumStorage}};
 use bytes::Bytes;
 #[cfg(test)]
 use claims::assert_some;
-use clru::{CLruCache, CLruCacheConfig, WeightScale};
 use move_binary_format::{errors::{Location, PartialVMError, VMResult}, CompiledModule};
 use move_core_types::{
     account_address::AccountAddress,
@@ -18,51 +17,15 @@ use move_vm_types::{
     code_storage::ModuleBytesStorage, module_cyclic_dependency_error, module_linker_error,
 };
 use std::{
-    borrow::Borrow, cell::RefCell, collections::BTreeSet, hash::RandomState, num::NonZeroUsize, ops::Deref, sync::Arc
+    borrow::Borrow, cell::RefCell, collections::BTreeSet, ops::Deref, sync::Arc
 };
-
-/// An entry in [UnsyncModuleStorage]. As modules are accessed, entries can be "promoted", e.g., a
-/// deserialized representation can be converted into the verified one.
-#[derive(Debug, Clone)]
-pub(crate) enum ModuleCacheEntry {
-    Deserialized {
-        module: Arc<CompiledModule>,
-        module_size: usize,
-    },
-    Verified {
-        module: Arc<Module>,
-        // this is used to calculate the weight of the entry
-        module_size: usize,
-    },
-}
-
-impl ModuleCacheEntry {
-    /// Returns the verified module if the entry is verified, and [None] otherwise.
-    fn into_verified(self) -> Option<Arc<Module>> {
-        match self {
-            Self::Deserialized { .. } => None,
-            Self::Verified { module, ..  } => Some(module),
-        }
-    }
-}
-
-struct ModuleCacheEntryScale;
-
-impl WeightScale<Checksum, ModuleCacheEntry> for ModuleCacheEntryScale {
-    fn weight(&self, _key: &Checksum, value: &ModuleCacheEntry) -> usize {
-        match value {
-            ModuleCacheEntry::Deserialized { module_size, .. } => *module_size,
-            ModuleCacheEntry::Verified { module_size , ..} => *module_size,
-        }
-    }
-}
 
 /// Implementation of (not thread-safe) module storage used for Move unit tests, and externally.
 pub struct InitiaModuleStorage<'a, S> {
     /// Environment where this module storage is defined in.
     runtime_environment: &'a RuntimeEnvironment,
     /// Storage with deserialized modules, i.e., module cache.
-    module_cache: RefCell<CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale>>,
+    module_cache: &'a RefCell<InitiaModuleCache>,
     /// Immutable baseline storage from which one can fetch raw module bytes and checksums.
     base_storage: BorrowedOrOwned<'a, S>,
 }
@@ -71,48 +34,42 @@ pub trait AsInitiaModuleStorage<'a, S> {
     fn as_initia_module_storage(
         &'a self,
         env: &'a RuntimeEnvironment,
-        cache_capacity: usize,
+        module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaModuleStorage<'a, S>;
 
-    fn into_initia_module_storage(self, env: &'a RuntimeEnvironment,cache_capacity: usize) -> InitiaModuleStorage<'a, S>;
+    fn into_initia_module_storage(self, env: &'a RuntimeEnvironment,module_cache: &'a RefCell<InitiaModuleCache>) -> InitiaModuleStorage<'a, S>;
 }
 
 impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaModuleStorage<'a, S> for S {
     fn as_initia_module_storage(
         &'a self,
         env: &'a RuntimeEnvironment,
-        cache_capacity: usize,
+        module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaModuleStorage<'a, S> {
-        InitiaModuleStorage::from_borrowed(env, self, cache_capacity)
+        InitiaModuleStorage::from_borrowed(env, self, module_cache)
     }
 
-    fn into_initia_module_storage(self, env: &'a RuntimeEnvironment, cache_capacity: usize) -> InitiaModuleStorage<'a, S> {
-        InitiaModuleStorage::from_owned(env, self, cache_capacity)
+    fn into_initia_module_storage(self, env: &'a RuntimeEnvironment, module_cache: &'a RefCell<InitiaModuleCache>) -> InitiaModuleStorage<'a, S> {
+        InitiaModuleStorage::from_owned(env, self, module_cache)
     }
 }
 
 impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
-    fn new_clru_cache(cache_capacity: usize) -> CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale> {
-        CLruCache::with_config(CLruCacheConfig::new(NonZeroUsize::new(
-            cache_capacity * 1024 * 1024
-        ).unwrap()).with_scale(ModuleCacheEntryScale))
-    }
-
     /// Private constructor from borrowed byte storage. Creates empty module storage cache.
-    fn from_borrowed(runtime_environment: &'a RuntimeEnvironment, storage: &'a S, cache_capacity: usize) -> Self {
+    fn from_borrowed(runtime_environment: &'a RuntimeEnvironment, storage: &'a S, module_cache: &'a RefCell<InitiaModuleCache>) -> Self {
         Self {
             runtime_environment,
-            module_cache: RefCell::new(Self::new_clru_cache(cache_capacity)),
+            module_cache,
             base_storage: BorrowedOrOwned::Borrowed(storage),
         }
     }
 
     /// Private constructor that captures provided byte storage by value. Creates empty module
     /// storage cache.
-    fn from_owned(runtime_environment: &'a RuntimeEnvironment, storage: S, cache_capacity: usize) -> Self {
+    fn from_owned(runtime_environment: &'a RuntimeEnvironment, storage: S, module_cache: &'a RefCell<InitiaModuleCache>) -> Self {
         Self {
             runtime_environment,
-            module_cache: RefCell::new(Self::new_clru_cache(cache_capacity)),
+            module_cache,
             base_storage: BorrowedOrOwned::Owned(storage),
         }
     }
@@ -366,7 +323,7 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
 
 fn get_module_entry_or_panic<'a>(
     // to record cache hits, we need to borrow the cache mutably
-    module_cache: &'a mut CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale>,
+    module_cache: &'a mut InitiaModuleCache,
     checksum: &Checksum,
 ) -> &'a ModuleCacheEntry {
     module_cache
@@ -417,7 +374,7 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'e, B> {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::memory_module_storage::InMemoryStorage;
+    use crate::{memory_module_storage::InMemoryStorage, module_cache::new_initia_module_cache};
 
     use super::*;
     use claims::{assert_err, assert_none, assert_ok};
@@ -457,8 +414,8 @@ pub(crate) mod test {
     #[test]
     fn test_module_does_not_exist() {
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage =
-            InMemoryStorage::new().into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = InMemoryStorage::new().into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.check_module_exists(&AccountAddress::ZERO, ident_str!("a"));
         assert!(!assert_ok!(result));
@@ -484,7 +441,8 @@ pub(crate) mod test {
         let checksum = add_module_bytes(&mut module_bytes_storage, "a", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.check_module_exists(&AccountAddress::ZERO, ident_str!("a"));
         assert!(assert_ok!(result));
@@ -503,7 +461,8 @@ pub(crate) mod test {
         add_module_bytes(&mut module_bytes_storage, "e", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.fetch_module_metadata(&AccountAddress::ZERO, ident_str!("a"));
         assert_eq!(
@@ -537,7 +496,8 @@ pub(crate) mod test {
         let checksum_e = add_module_bytes(&mut module_bytes_storage, "e", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("c"));
         assert_ok!(result);
@@ -568,7 +528,8 @@ pub(crate) mod test {
         let checksum_g = add_module_bytes(&mut module_bytes_storage, "g", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         assert_ok!(module_storage.fetch_deserialized_module(&AccountAddress::ZERO, ident_str!("a")));
         assert_ok!(module_storage.fetch_deserialized_module(&AccountAddress::ZERO, ident_str!("c")));
@@ -601,7 +562,8 @@ pub(crate) mod test {
         add_module_bytes(&mut module_bytes_storage, "c", vec!["a"], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("c"));
         assert_eq!(
@@ -620,7 +582,8 @@ pub(crate) mod test {
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec![], vec!["a"]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("c"));
         assert_ok!(result);
@@ -641,7 +604,8 @@ pub(crate) mod test {
         add_module_bytes(&mut module_bytes_storage, "d", vec![], vec!["c"]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, &module_cache);
 
         let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("a"));
         assert_ok!(result);

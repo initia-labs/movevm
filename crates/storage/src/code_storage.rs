@@ -18,7 +18,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{module_storage::{AsInitiaModuleStorage, InitiaModuleStorage}, state_view::ChecksumStorage};
+use crate::{module_cache::InitiaModuleCache, module_storage::{AsInitiaModuleStorage, InitiaModuleStorage}, state_view::ChecksumStorage};
 
 /// Represents an entry in script cache, either deserialized or verified.
 #[derive(Debug)]
@@ -44,13 +44,13 @@ pub trait AsInitiaCodeStorage<'a, S> {
     fn as_initia_code_storage(
         &'a self,
         env: &'a RuntimeEnvironment,
-        cache_capacity: usize,
+        module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
 
     fn into_initia_code_storage(
         self,
         env: &'a RuntimeEnvironment,
-        cache_capacity: usize,
+        module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
 }
 
@@ -58,17 +58,17 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for
     fn as_initia_code_storage(
         &'a self,
         env: &'a RuntimeEnvironment,
-        cache_capacity: usize,
+        module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>> {
-        InitiaCodeStorage::new(self.as_initia_module_storage(env, cache_capacity))
+        InitiaCodeStorage::new(self.as_initia_module_storage(env, module_cache))
     }
 
     fn into_initia_code_storage(
         self,
         env: &'a RuntimeEnvironment,
-        cache_capacity: usize,
+        module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>> {
-        InitiaCodeStorage::new(self.into_initia_module_storage(env, cache_capacity))
+        InitiaCodeStorage::new(self.into_initia_module_storage(env, module_cache))
     }
 }
 
@@ -199,7 +199,7 @@ impl<M: ModuleStorage> InitiaCodeStorage<M> {
 
 #[cfg(test)]
 mod test {
-    use crate::{memory_module_storage::InMemoryStorage, module_storage::{test::{add_module_bytes, TEST_CACHE_CAPACITY}, ModuleCacheEntry}};
+    use crate::{memory_module_storage::InMemoryStorage, module_cache::{new_initia_module_cache, ModuleCacheEntry}, module_storage::test::{add_module_bytes, TEST_CACHE_CAPACITY}};
 
     use super::*;
     use claims::assert_ok;
@@ -226,7 +226,8 @@ mod test {
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, &module_cache);
 
         let serialized_script = script(vec!["a"]);
         let hash_1 = compute_code_hash(&serialized_script);
@@ -257,7 +258,8 @@ mod test {
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, &module_cache);
 
         let serialized_script = script(vec!["a"]);
         let hash = compute_code_hash(&serialized_script);

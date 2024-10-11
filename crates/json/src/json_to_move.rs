@@ -342,7 +342,7 @@ mod json_arg_testing {
 
     use bigdecimal::FromPrimitive;
     use bytes::Bytes;
-    use initia_move_storage::state_view::StateView;
+    use initia_move_storage::{module_cache::new_initia_module_cache, state_view::StateView};
     use initia_move_types::access_path::{AccessPath, DataPath};
     use move_binary_format::{
         errors::PartialVMError,
@@ -420,7 +420,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_u8() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::U8;
         let arg = b"123";
@@ -441,7 +442,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_u16() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::U16;
         let arg = b"123";
@@ -462,7 +464,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_u32() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::U32;
         let arg = b"123";
@@ -482,7 +485,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_u64() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::U64;
         let arg = b"\"123\"";
@@ -502,7 +506,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_u128() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::U128;
         let arg = b"\"123\"";
@@ -522,7 +527,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_u256() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::U256;
         let arg = b"\"123\"";
@@ -542,7 +548,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_bool() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::Bool;
         let arg = b"true";
@@ -554,7 +561,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_address() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::Address;
         let arg = b"\"0x1\"";
@@ -569,7 +577,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_vec_u8() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::Vector(triomphe::Arc::new(Type::U8));
         let arg = b"[0, 1, 2, 3]";
@@ -586,7 +595,8 @@ mod json_arg_testing {
     fn test_deserialize_json_args_vec_address() {
         let mock_state = mock_state();
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let ty = Type::Vector(triomphe::Arc::new(Type::Address));
         let arg = b"[\"0x1\", \"0x2\"]";
@@ -633,7 +643,8 @@ mod json_arg_testing {
         };
         let arg = b"\"hello\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
         assert_eq!(result, bcs::to_bytes("hello").unwrap());
@@ -701,7 +712,8 @@ mod json_arg_testing {
         let arg = hex_addr.as_bytes();
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         // valid object address
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg);
@@ -743,7 +755,8 @@ mod json_arg_testing {
         let arg = b"\"0x1\"";
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
         assert_eq!(
@@ -771,7 +784,8 @@ mod json_arg_testing {
         let arg = b"null";
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
         assert_eq!(
@@ -794,7 +808,8 @@ mod json_arg_testing {
         };
         let arg = b"\"123.4567\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
 
@@ -823,7 +838,8 @@ mod json_arg_testing {
         let arg = b"\"123.4567\"";
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
 
@@ -850,7 +866,8 @@ mod json_arg_testing {
         };
         let arg = b"\"1234567\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
 
@@ -878,7 +895,8 @@ mod json_arg_testing {
         };
         let arg = b"\"123.4567\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, TEST_CACHE_CAPACITY);
+        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
+        let code_storage = InitiaStorage::new(&mock_state, &runtime_environment, &module_cache);
 
         let result = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap();
 
