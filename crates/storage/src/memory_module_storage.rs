@@ -35,6 +35,12 @@ use crate::state_view::{Checksum, ChecksumStorage};
 #[derive(Debug, Clone)]
 pub struct BlankStorage;
 
+impl Default for BlankStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BlankStorage {
     pub fn new() -> Self {
         Self
@@ -105,7 +111,7 @@ impl CompiledModuleView for InMemoryStorage {
             Some(bytes) => {
                 let config = DeserializerConfig::new(VERSION_MAX, IDENTIFIER_SIZE_MAX);
                 Some(CompiledModule::deserialize_with_config(&bytes, &config)?)
-            },
+            }
             None => None,
         })
     }
@@ -130,16 +136,16 @@ where
                         entry.key()
                     )),
                 )
-            },
+            }
             (Occupied(entry), Delete) => {
                 entry.remove();
-            },
+            }
             (Occupied(entry), Modify(val)) => {
                 *entry.into_mut() = val;
-            },
+            }
             (Vacant(entry), New(val)) => {
                 entry.insert(val);
-            },
+            }
             (Vacant(entry), Delete | Modify(_)) => {
                 return Err(
                     PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(format!(
@@ -147,7 +153,7 @@ where
                         entry.key()
                     )),
                 )
-            },
+            }
         }
     }
     Ok(())
@@ -170,20 +176,30 @@ impl InMemoryAccountStorage {
     fn apply(&mut self, account_changeset: AccountChangeSet) -> PartialVMResult<()> {
         let (modules, resources) = account_changeset.into_inner();
         apply_changes(&mut self.modules, modules.clone())?;
-        apply_changes(&mut self.checksums, Self::modules_to_checksum_changes(modules))?;
+        apply_changes(
+            &mut self.checksums,
+            Self::modules_to_checksum_changes(modules),
+        )?;
         apply_changes(&mut self.resources, resources)?;
         Ok(())
     }
 
-    fn modules_to_checksum_changes(modules: BTreeMap<Identifier, Op<Bytes>>)
-        -> BTreeMap<Identifier, Op<Checksum>> {
-        modules.into_iter().map(|(k, v)| {
-            (k, match v {
-                Op::New(bytes) => Op::New(compute_code_hash(&bytes)),
-                Op::Modify(bytes) => Op::Modify(compute_code_hash(&bytes)),
-                Op::Delete => Op::Delete,
+    fn modules_to_checksum_changes(
+        modules: BTreeMap<Identifier, Op<Bytes>>,
+    ) -> BTreeMap<Identifier, Op<Checksum>> {
+        modules
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k,
+                    match v {
+                        Op::New(bytes) => Op::New(compute_code_hash(&bytes)),
+                        Op::Modify(bytes) => Op::Modify(compute_code_hash(&bytes)),
+                        Op::Delete => Op::Delete,
+                    },
+                )
             })
-        }).collect()
+            .collect()
     }
 
     fn new() -> Self {
@@ -195,21 +211,24 @@ impl InMemoryAccountStorage {
     }
 }
 
+impl Default for InMemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryStorage {
-    pub fn apply_extended(
-        &mut self,
-        changeset: ChangeSet,
-    ) -> PartialVMResult<()> {
+    pub fn apply_extended(&mut self, changeset: ChangeSet) -> PartialVMResult<()> {
         for (addr, account_changeset) in changeset.into_inner() {
             match self.accounts.entry(addr) {
                 btree_map::Entry::Occupied(entry) => {
                     entry.into_mut().apply(account_changeset)?;
-                },
+                }
                 btree_map::Entry::Vacant(entry) => {
                     let mut account_storage = InMemoryAccountStorage::new();
                     account_storage.apply(account_changeset)?;
                     entry.insert(account_storage);
-                },
+                }
             }
         }
 
@@ -217,9 +236,7 @@ impl InMemoryStorage {
     }
 
     pub fn apply(&mut self, changeset: ChangeSet) -> PartialVMResult<()> {
-        self.apply_extended(
-            changeset,
-        )
+        self.apply_extended(changeset)
     }
 
     pub fn new() -> Self {
@@ -235,7 +252,7 @@ impl InMemoryStorage {
         module_name: &IdentStr,
         bytes: Bytes,
     ) -> Checksum {
-        let checksum= compute_code_hash(&bytes);
+        let checksum = compute_code_hash(&bytes);
 
         let account = get_or_insert(&mut self.accounts, *address, || {
             InMemoryAccountStorage::new()
@@ -276,13 +293,14 @@ impl ChecksumStorage for InMemoryStorage {
         module_name: &IdentStr,
     ) -> VMResult<Option<Checksum>> {
         if let Some(account_storage) = self.accounts.get(address) {
-            let module_bytes = if let Some(module_bytes) = account_storage.modules.get(module_name).cloned() {
-                module_bytes
-            } else {
-                return Ok(None);
-            };
+            let module_bytes =
+                if let Some(module_bytes) = account_storage.modules.get(module_name).cloned() {
+                    module_bytes
+                } else {
+                    return Ok(None);
+                };
 
-            let checksum= compute_code_hash(&module_bytes);
+            let checksum = compute_code_hash(&module_bytes);
             return Ok(Some(checksum));
         }
         Ok(None)

@@ -26,7 +26,7 @@ impl ModuleCacheEntry {
     pub fn into_verified(self) -> Option<Arc<Module>> {
         match self {
             Self::Deserialized { .. } => None,
-            Self::Verified { module, ..  } => Some(module),
+            Self::Verified { module, .. } => Some(module),
         }
     }
 }
@@ -37,15 +37,17 @@ impl WeightScale<Checksum, ModuleCacheEntry> for ModuleCacheEntryScale {
     fn weight(&self, _key: &Checksum, value: &ModuleCacheEntry) -> usize {
         match value {
             ModuleCacheEntry::Deserialized { module_size, .. } => *module_size,
-            ModuleCacheEntry::Verified { module_size , ..} => *module_size,
+            ModuleCacheEntry::Verified { module_size, .. } => *module_size,
         }
     }
 }
 
-pub type InitiaModuleCache = CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale>;
+pub type InitiaModuleCache =
+    CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale>;
 
 pub fn new_initia_module_cache(cache_capacity: usize) -> RefCell<InitiaModuleCache> {
-    RefCell::new(CLruCache::with_config(CLruCacheConfig::new(NonZeroUsize::new(
-        cache_capacity * 1024 * 1024
-    ).unwrap()).with_scale(ModuleCacheEntryScale)))
+    RefCell::new(CLruCache::with_config(
+        CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
+            .with_scale(ModuleCacheEntryScale),
+    ))
 }

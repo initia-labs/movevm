@@ -1,7 +1,5 @@
 use crate::{access_path::AccessPath, table::TableChangeSet};
-use move_core_types::{
-    effects::{ChangeSet, Op},
-};
+use move_core_types::effects::{ChangeSet, Op};
 use std::collections::{btree_map, BTreeMap};
 
 pub type WriteOp = Op<Vec<u8>>;
@@ -14,7 +12,10 @@ impl WriteSet {
         Self(write_set)
     }
 
-    pub fn new_with_change_set(change_set: ChangeSet, table_change_set: TableChangeSet) -> anyhow::Result<Self> {
+    pub fn new_with_change_set(
+        change_set: ChangeSet,
+        table_change_set: TableChangeSet,
+    ) -> anyhow::Result<Self> {
         let mut write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
         for (addr, account_changeset) in change_set.into_inner() {
             let (modules, resources) = account_changeset.into_inner();

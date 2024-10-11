@@ -53,25 +53,31 @@ impl<'s, S: StateView> StateViewImpl<'s, S> {
 
 impl<'s, S: StateView> ChecksumStorage for StateViewImpl<'s, S> {
     fn fetch_checksum(
-        &self, 
+        &self,
         address: &AccountAddress,
         module_name: &IdentStr,
-    ) -> VMResult<Option<Checksum>>{
+    ) -> VMResult<Option<Checksum>> {
         let ap = AccessPath::checksum_access_path(*address, module_name.to_owned());
         match self.get(&ap).map_err(|e| {
-            e.finish(Location::Module(ModuleId::new(*address, module_name.to_owned())))
+            e.finish(Location::Module(ModuleId::new(
+                *address,
+                module_name.to_owned(),
+            )))
         })? {
             Some(b) => {
                 if b.len() != 32 {
-                    return Err(PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(
-                        format!("Checksum has an invalid length: {}", b.len()),
-                    ).finish(Location::Module(ModuleId::new(*address, module_name.to_owned()))));
+                    return Err(PartialVMError::new(StatusCode::STORAGE_ERROR)
+                        .with_message(format!("Checksum has an invalid length: {}", b.len()))
+                        .finish(Location::Module(ModuleId::new(
+                            *address,
+                            module_name.to_owned(),
+                        ))));
                 }
                 let mut checksum: Checksum = [0u8; 32];
                 checksum.copy_from_slice(&b);
                 Ok(Some(checksum))
-            },
-            None => return Ok(None),
+            }
+            None => Ok(None),
         }
     }
 }

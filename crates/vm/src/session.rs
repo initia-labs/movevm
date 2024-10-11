@@ -1,5 +1,7 @@
 use std::{
-    collections::BTreeMap, ops::{Deref, DerefMut}, sync::Arc
+    collections::BTreeMap,
+    ops::{Deref, DerefMut},
+    sync::Arc,
 };
 
 use bytes::Bytes;
@@ -15,7 +17,14 @@ use initia_move_natives::{
 };
 use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
-    access_path::AccessPath, account::Accounts, cosmos::CosmosMessages, event::ContractEvent, metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME}, module::ModuleBundle, staking_change_set::StakingChangeSet, write_set::{WriteOp, WriteSet}
+    access_path::AccessPath,
+    account::Accounts,
+    cosmos::CosmosMessages,
+    event::ContractEvent,
+    metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME},
+    module::ModuleBundle,
+    staking_change_set::StakingChangeSet,
+    write_set::{WriteOp, WriteSet},
 };
 
 use move_binary_format::{
@@ -24,14 +33,19 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::{
-    account_address::AccountAddress, effects::Op, ident_str, identifier::Identifier, language_storage::{ModuleId, StructTag, TypeTag}, value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue}, vm_status::StatusCode
+    account_address::AccountAddress,
+    effects::Op,
+    ident_str,
+    identifier::Identifier,
+    language_storage::{ModuleId, StructTag, TypeTag},
+    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue},
+    vm_status::StatusCode,
 };
 use move_vm_runtime::{
-    compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage, StagingModuleStorage
+    compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage,
+    StagingModuleStorage,
 };
-use move_vm_types::loaded_data::runtime_types::{
-        StructLayout, StructNameIndex, StructType, Type
-    };
+use move_vm_types::loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type};
 
 use crate::verifier::module_init::verify_module_init_function;
 
@@ -69,7 +83,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         bundle: ModuleBundle,
         modules: &[CompiledModule],
         compatability_checks: Compatibility,
-    ) ->VMResult<SessionOutput<'r>> {
+    ) -> VMResult<SessionOutput<'r>> {
         // Stage module bundle on top of module storage. In case modules cannot be added (for
         // example, fail compatibility checks, create cycles, etc.), we return an error here.
         let staging_module_storage = StagingModuleStorage::create_with_compat_config(
@@ -91,7 +105,9 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         let mut output = self.finish(&staging_module_storage)?;
         let module_write_set = Self::convert_modules_into_write_set(
             code_storage,
-            staging_module_storage.release_verified_module_bundle().into_iter(),
+            staging_module_storage
+                .release_verified_module_bundle()
+                .into_iter(),
         )
         .map_err(|e| e.finish(Location::Undefined))?;
 
@@ -110,7 +126,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         modules: &[CompiledModule],
         compatability_checks: Compatibility,
         allowed_publishers: Vec<AccountAddress>,
-    ) ->VMResult<SessionOutput<'r>> {
+    ) -> VMResult<SessionOutput<'r>> {
         // Stage module bundle on top of module storage. In case modules cannot be added (for
         // example, fail compatibility checks, create cycles, etc.), we return an error here.
         let staging_module_storage = StagingModuleStorage::create_with_compat_config(
@@ -139,7 +155,9 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         let mut output = self.finish(&staging_module_storage)?;
         let module_write_set = Self::convert_modules_into_write_set(
             code_storage,
-            staging_module_storage.release_verified_module_bundle().into_iter(),
+            staging_module_storage
+                .release_verified_module_bundle()
+                .into_iter(),
         )
         .map_err(|e| e.finish(Location::Undefined))?;
 
@@ -167,10 +185,13 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             module_write_set.insert(ap, op.clone().map(|v| v.into()));
 
             let ap = AccessPath::checksum_access_path(module_id.address, module_id.name.to_owned());
-            module_write_set.insert(ap, op.map(|v| {
-                let checksum = compute_code_hash(&v);
-                checksum.into()
-            }));
+            module_write_set.insert(
+                ap,
+                op.map(|v| {
+                    let checksum = compute_code_hash(&v);
+                    checksum.into()
+                }),
+            );
         }
         Ok(WriteSet::new_with_write_set(module_write_set))
     }
@@ -257,10 +278,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Ok(())
     }
 
-    pub fn finish(
-        self,
-        module_storage: &impl ModuleStorage,
-    ) -> VMResult<SessionOutput> {
+    pub fn finish(self, module_storage: &impl ModuleStorage) -> VMResult<SessionOutput> {
         let Self { inner } = self;
 
         let (change_set, mut extensions) = inner.finish_with_extensions(module_storage)?;
@@ -282,11 +300,12 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         let new_accounts = account_context.into_accounts();
 
         // build output change set from the changes
-        let write_set = WriteSet::new_with_change_set(change_set, table_change_set).map_err(|e| {
-            PartialVMError::new(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES)
-                .with_message(e.to_string())
-                .finish(Location::Undefined)
-        })?;
+        let write_set =
+            WriteSet::new_with_change_set(change_set, table_change_set).map_err(|e| {
+                PartialVMError::new(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES)
+                    .with_message(e.to_string())
+                    .finish(Location::Undefined)
+            })?;
 
         Ok((
             events,
@@ -316,7 +335,7 @@ impl StructResolver for SessionExt<'_, '_> {
         &self,
         ty: &Type,
         module_storage: &impl ModuleStorage,
-    ) -> PartialVMResult<TypeTag>{
+    ) -> PartialVMResult<TypeTag> {
         Ok(match ty {
             Type::Bool => TypeTag::Bool,
             Type::U8 => TypeTag::U8,
@@ -330,7 +349,7 @@ impl StructResolver for SessionExt<'_, '_> {
             Type::Vector(ty) => {
                 let el_ty_tag = self.type_to_type_tag(ty, module_storage)?;
                 TypeTag::Vector(Box::new(el_ty_tag))
-            },
+            }
             Type::Struct { idx, .. } => TypeTag::Struct(Box::new(self.struct_name_to_type_tag(
                 *idx,
                 &[],
@@ -344,7 +363,7 @@ impl StructResolver for SessionExt<'_, '_> {
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("No type tag for {:?}", ty)),
                 );
-            },
+            }
         })
     }
 }
@@ -362,10 +381,13 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             .map(|ty| self.type_to_type_tag(ty, module_storage))
             .collect::<PartialVMResult<Vec<_>>>()?;
 
-        let struct_type = self.inner.fetch_struct_ty_by_idx(struct_name_idx, module_storage).ok_or_else(|| {
-            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-            .with_message(format!("No struct type for idx {:?}", struct_name_idx))
-        })?;
+        let struct_type = self
+            .inner
+            .fetch_struct_ty_by_idx(struct_name_idx, module_storage)
+            .ok_or_else(|| {
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("No struct type for idx {:?}", struct_name_idx))
+            })?;
 
         Ok(StructTag {
             address: struct_type.module.address,
@@ -408,14 +430,9 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             Type::U256 => MoveTypeLayout::U256,
             Type::Address => MoveTypeLayout::Address,
             Type::Signer => MoveTypeLayout::Signer,
-            Type::Vector(ty) => {
-                MoveTypeLayout::Vector(Box::new(self.type_to_fully_annotated_layout(
-                    ty,
-                    module_storage,
-                    count,
-                    depth + 1,
-                )?))
-            },
+            Type::Vector(ty) => MoveTypeLayout::Vector(Box::new(
+                self.type_to_fully_annotated_layout(ty, module_storage, count, depth + 1)?,
+            )),
             Type::Struct { idx, .. } => self.struct_name_to_fully_annotated_layout(
                 *idx,
                 module_storage,
@@ -436,7 +453,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("No type layout for {:?}", ty)),
                 );
-            },
+            }
         })
     }
 
@@ -448,42 +465,34 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         count: &mut u64,
         depth: u64,
     ) -> PartialVMResult<MoveTypeLayout> {
-        let struct_type =
-            self.inner.fetch_struct_ty_by_idx(struct_name_idx, module_storage).ok_or_else(|| {
+        let struct_type = self
+            .inner
+            .fetch_struct_ty_by_idx(struct_name_idx, module_storage)
+            .ok_or_else(|| {
                 PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message(format!("No struct type for idx {:?}", struct_name_idx))
+                    .with_message(format!("No struct type for idx {:?}", struct_name_idx))
             })?;
-            
+
         // TODO(#13806): have annotated layouts for variants. Currently, we just return the raw
         //   layout for them.
         if matches!(struct_type.layout, StructLayout::Variants(_)) {
-            return self
-                .struct_name_to_type_layout(
-                    struct_name_idx,
-                    module_storage,
-                    ty_args,
-                    count,
-                    depth,
-                );
+            return self.struct_name_to_type_layout(
+                struct_name_idx,
+                module_storage,
+                ty_args,
+                count,
+                depth,
+            );
         }
 
-        let struct_tag = self.struct_name_to_type_tag(
-            struct_name_idx,
-            ty_args,
-            module_storage,
-        )?;
+        let struct_tag = self.struct_name_to_type_tag(struct_name_idx, ty_args, module_storage)?;
         let fields = struct_type.fields(None)?;
 
         let field_layouts = fields
             .iter()
             .map(|(n, ty)| {
                 let ty = self.get_ty_builder().create_ty_with_subst(ty, ty_args)?;
-                let l = self.type_to_fully_annotated_layout(
-                    &ty,
-                    module_storage,
-                    count,
-                    depth,
-                )?;
+                let l = self.type_to_fully_annotated_layout(&ty, module_storage, count, depth)?;
                 Ok(MoveFieldLayout::new(n.clone(), l))
             })
             .collect::<PartialVMResult<Vec<_>>>()?;
@@ -500,31 +509,29 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         count: &mut u64,
         depth: u64,
     ) -> PartialVMResult<MoveTypeLayout> {
-        let struct_type =
-            self.fetch_struct_ty_by_idx(struct_name_idx, module_storage).ok_or_else(|| {
+        let struct_type = self
+            .fetch_struct_ty_by_idx(struct_name_idx, module_storage)
+            .ok_or_else(|| {
                 PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message(format!("No struct type for idx {:?}", struct_name_idx))
+                    .with_message(format!("No struct type for idx {:?}", struct_name_idx))
             })?;
 
         let layout = match &struct_type.layout {
             StructLayout::Single(fields) => {
                 let field_tys = fields
                     .iter()
-                    .map(|(_, ty)| self.inner.get_ty_builder().create_ty_with_subst(ty, ty_args))
+                    .map(|(_, ty)| {
+                        self.inner
+                            .get_ty_builder()
+                            .create_ty_with_subst(ty, ty_args)
+                    })
                     .collect::<PartialVMResult<Vec<_>>>()?;
                 let field_layouts: Vec<MoveTypeLayout> = field_tys
                     .iter()
-                    .map(|ty| {
-                        self.type_to_type_layout(
-                            ty,
-                            module_storage,
-                            count,
-                            depth,
-                        )
-                    })
+                    .map(|ty| self.type_to_type_layout(ty, module_storage, count, depth))
                     .collect::<PartialVMResult<Vec<_>>>()?;
                 MoveTypeLayout::Struct(MoveStructLayout::new(field_layouts))
-            },
+            }
             StructLayout::Variants(variants) => {
                 // We do not support variants to have direct identifier mappings,
                 // but their inner types may.
@@ -535,20 +542,19 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                             .1
                             .iter()
                             .map(|(_, ty)| {
-                                let ty = self.inner.get_ty_builder().create_ty_with_subst(ty, ty_args)?;
-                                let ty = self.type_to_type_layout(
-                                    &ty,
-                                    module_storage,
-                                    count,
-                                    depth,
-                                )?;
+                                let ty = self
+                                    .inner
+                                    .get_ty_builder()
+                                    .create_ty_with_subst(ty, ty_args)?;
+                                let ty =
+                                    self.type_to_type_layout(&ty, module_storage, count, depth)?;
                                 Ok(ty)
                             })
                             .collect::<PartialVMResult<Vec<_>>>()
                     })
                     .collect::<PartialVMResult<Vec<_>>>()?;
                 MoveTypeLayout::Struct(MoveStructLayout::RuntimeVariants(variant_layouts))
-            },
+            }
         };
         Ok(layout)
     }
@@ -580,75 +586,58 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             Type::Bool => {
                 *count += 1;
                 MoveTypeLayout::Bool
-            },
+            }
             Type::U8 => {
                 *count += 1;
                 MoveTypeLayout::U8
-            },
+            }
             Type::U16 => {
                 *count += 1;
                 MoveTypeLayout::U16
-            },
+            }
             Type::U32 => {
                 *count += 1;
                 MoveTypeLayout::U32
-            },
+            }
             Type::U64 => {
                 *count += 1;
                 MoveTypeLayout::U64
-            },
+            }
             Type::U128 => {
                 *count += 1;
                 MoveTypeLayout::U128
-            },
+            }
             Type::U256 => {
                 *count += 1;
                 MoveTypeLayout::U256
-            },
+            }
             Type::Address => {
                 *count += 1;
                 MoveTypeLayout::Address
-            },
+            }
             Type::Signer => {
                 *count += 1;
                 MoveTypeLayout::Signer
-            },
+            }
             Type::Vector(ty) => {
                 *count += 1;
-                let layout = self.type_to_type_layout(
-                    ty,
-                    module_storage,
-                    count,
-                    depth + 1,
-                )?;
+                let layout = self.type_to_type_layout(ty, module_storage, count, depth + 1)?;
                 MoveTypeLayout::Vector(Box::new(layout))
-            },
+            }
             Type::Struct { idx, .. } => {
                 *count += 1;
-                self.struct_name_to_type_layout(
-                    *idx,
-                    module_storage,
-                    &[],
-                    count,
-                    depth + 1,
-                )?
-            },
+                self.struct_name_to_type_layout(*idx, module_storage, &[], count, depth + 1)?
+            }
             Type::StructInstantiation { idx, ty_args, .. } => {
                 *count += 1;
-                self.struct_name_to_type_layout(
-                    *idx,
-                    module_storage,
-                    ty_args,
-                    count,
-                    depth + 1,
-                )?
-            },
+                self.struct_name_to_type_layout(*idx, module_storage, ty_args, count, depth + 1)?
+            }
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("No type layout for {:?}", ty)),
                 );
-            },
+            }
         })
     }
 }

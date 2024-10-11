@@ -18,8 +18,7 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     native_extensions::NativeContextExtensions,
     session::SerializedReturnValues,
-    ModuleStorage,
-    RuntimeEnvironment,
+    ModuleStorage, RuntimeEnvironment,
 };
 use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
 
@@ -45,7 +44,11 @@ use initia_move_natives::{
     block::NativeBlockContext, staking::StakingAPI, table::NativeTableContext,
 };
 use initia_move_storage::{
-    initia_storage::InitiaStorage, module_cache::{new_initia_module_cache, InitiaModuleCache}, script_cache::{new_initia_script_cache, InitiaScriptCache}, state_view::StateView, table_resolver::TableResolver
+    initia_storage::InitiaStorage,
+    module_cache::{new_initia_module_cache, InitiaModuleCache},
+    script_cache::{new_initia_script_cache, InitiaScriptCache},
+    state_view::StateView,
+    table_resolver::TableResolver,
 };
 use initia_move_types::{
     account::Accounts,
@@ -65,8 +68,8 @@ use crate::{
     session::{SessionExt, SessionOutput},
     verifier::{
         config::verifier_config, errors::metadata_validation_error,
-        event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata, module_metadata::validate_publish_request,
-        script::reject_unstable_bytecode_for_script,
+        event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata,
+        module_metadata::validate_publish_request, script::reject_unstable_bytecode_for_script,
         transaction_arg_validation::validate_combine_signer_and_txn_args,
         view_function::validate_view_function_and_construct,
     },
@@ -187,7 +190,12 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.script_cache, &self.module_cache);
+        let code_storage = InitiaStorage::new(
+            storage,
+            self.runtime_environment(),
+            &self.script_cache,
+            &self.module_cache,
+        );
         let move_resolver = code_storage.state_view_impl();
 
         let gas_limit = Gas::new(u64::MAX);
@@ -236,7 +244,12 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.script_cache, &self.module_cache);
+        let code_storage = InitiaStorage::new(
+            storage,
+            self.runtime_environment(),
+            &self.script_cache,
+            &self.module_cache,
+        );
 
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((msg.size() as u64).into())?;
@@ -268,7 +281,12 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.script_cache, &self.module_cache);
+        let code_storage = InitiaStorage::new(
+            storage,
+            self.runtime_environment(),
+            &self.script_cache,
+            &self.module_cache,
+        );
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver);
         let traversal_storage = TraversalStorage::new();
@@ -314,12 +332,14 @@ impl InitiaVM {
                 let mut count = 0;
                 session.type_to_fully_annotated_layout(ty, &code_storage, &mut count, 10)
             })
-            .collect::<PartialVMResult<Vec<_>>>().map_err(|e| e.finish(Location::Undefined))?;
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|e| e.finish(Location::Undefined))?;
 
         let session_output = session.finish(&code_storage)?;
         let (events, _, _, _, _) = session_output;
         let json_events = JsonEvents::new(events.into_iter().map(|e| e.into_inner()).collect());
-        let ret = serialize_response_to_json(&ret_ty_layouts, res)?.expect("view function must return value");
+        let ret = serialize_response_to_json(&ret_ty_layouts, res)?
+            .expect("view function must return value");
 
         Ok(ViewOutput::new(ret, json_events.into_inner()))
     }
@@ -451,18 +471,17 @@ impl InitiaVM {
             }
         }?;
 
-        let session_output =
-            if let Some(publish_request) = session.extract_publish_request() {
-                self.finish_with_module_publishing(
-                    session,
-                    code_storage,
-                    gas_meter,
-                    publish_request,
-                    traversal_context,
-                )?
-            } else {
-                session.finish(code_storage)?
-            };
+        let session_output = if let Some(publish_request) = session.extract_publish_request() {
+            self.finish_with_module_publishing(
+                session,
+                code_storage,
+                gas_meter,
+                publish_request,
+                traversal_context,
+            )?
+        } else {
+            session.finish(code_storage)?
+        };
 
         // Charge for gas cost for write set ops
         gas_meter.charge_write_set_gas(&session_output.1)?;

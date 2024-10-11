@@ -4,21 +4,31 @@
 use ambassador::Delegate;
 use bytes::Bytes;
 use move_binary_format::{
-    access::ScriptAccess, errors::{Location, PartialVMError, VMResult}, file_format::CompiledScript, CompiledModule,
+    access::ScriptAccess,
+    errors::{Location, PartialVMError, VMResult},
+    file_format::CompiledScript,
+    CompiledModule,
 };
-use move_core_types::{account_address::AccountAddress, identifier::IdentStr, metadata::Metadata, vm_status::StatusCode};
-use move_vm_runtime::{compute_code_hash, logging::expect_no_verification_errors, ambassador_impl_ModuleStorage,
-    ambassador_impl_WithRuntimeEnvironment, CodeStorage, ModuleStorage, RuntimeEnvironment, Module, Script, WithRuntimeEnvironment};
+use move_core_types::{
+    account_address::AccountAddress, identifier::IdentStr, metadata::Metadata,
+    vm_status::StatusCode,
+};
+use move_vm_runtime::{
+    ambassador_impl_ModuleStorage, ambassador_impl_WithRuntimeEnvironment, compute_code_hash,
+    logging::expect_no_verification_errors, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
+    Script, WithRuntimeEnvironment,
+};
 use move_vm_types::{code_storage::ModuleBytesStorage, module_linker_error};
 #[cfg(test)]
 use std::collections::BTreeSet;
-use std::{
-    cell::RefCell,
-    sync::Arc,
+use std::{cell::RefCell, sync::Arc};
+
+use crate::{
+    module_cache::InitiaModuleCache,
+    module_storage::{AsInitiaModuleStorage, InitiaModuleStorage},
+    script_cache::{InitiaScriptCache, ScriptCacheEntry},
+    state_view::ChecksumStorage,
 };
-
-use crate::{module_cache::InitiaModuleCache, module_storage::{AsInitiaModuleStorage, InitiaModuleStorage}, script_cache::{InitiaScriptCache, ScriptCacheEntry}, state_view::ChecksumStorage};
-
 
 /// Code storage that stores both modules and scripts (not thread-safe).
 #[derive(Delegate)]
@@ -52,7 +62,10 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for
         script_cache: &'a RefCell<InitiaScriptCache>,
         module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>> {
-        InitiaCodeStorage::new(script_cache, self.as_initia_module_storage(env, module_cache))
+        InitiaCodeStorage::new(
+            script_cache,
+            self.as_initia_module_storage(env, module_cache),
+        )
     }
 
     fn into_initia_code_storage(
@@ -61,7 +74,10 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for
         script_cache: &'a RefCell<InitiaScriptCache>,
         module_cache: &'a RefCell<InitiaModuleCache>,
     ) -> InitiaCodeStorage<'a, InitiaModuleStorage<'a, S>> {
-        InitiaCodeStorage::new(script_cache, self.into_initia_module_storage(env, module_cache))
+        InitiaCodeStorage::new(
+            script_cache,
+            self.into_initia_module_storage(env, module_cache),
+        )
     }
 }
 
@@ -133,23 +149,29 @@ impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
         let mut script_cache = self.script_cache.borrow_mut();
 
         let (script, entry) = match script_cache.get(&hash) {
-            Some(Deserialized{script, ..}) => (script.clone(), None),
-            Some(Verified{script, ..}) => (script.as_compiled_script(), None),
-            None => { /* continue */
+            Some(Deserialized { script, .. }) => (script.clone(), None),
+            Some(Verified { script, .. }) => (script.as_compiled_script(), None),
+            None => {
+                /* continue */
                 let compiled_script = self.deserialize_script(serialized_script)?;
-                
-                (compiled_script.clone(), Some(Deserialized {
-                    script: compiled_script,
-                    script_size: serialized_script.len(),
-                }))
+
+                (
+                    compiled_script.clone(),
+                    Some(Deserialized {
+                        script: compiled_script,
+                        script_size: serialized_script.len(),
+                    }),
+                )
             }
         };
         if entry.is_some() {
-            script_cache.put_with_weight(hash, entry.unwrap()).map_err(|_| {
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                    "Script storage cache eviction error".to_string()
-                ).finish(Location::Script)
-            })?;
+            script_cache
+                .put_with_weight(hash, entry.unwrap())
+                .map_err(|_| {
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("Script storage cache eviction error".to_string())
+                        .finish(Location::Script)
+                })?;
         }
         Ok(script)
     }
@@ -161,30 +183,42 @@ impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
         let mut script_cache = self.script_cache.borrow_mut();
 
         let (script, entry) = match script_cache.get(&hash) {
-            Some(Deserialized{script, script_size}) => {
+            Some(Deserialized {
+                script,
+                script_size,
+            }) => {
                 let script = self.verify_deserialized_script(script.clone())?;
-                (script.clone(), Some(Verified {
-                    script: script,
-                    script_size: *script_size,
-                }))
-            },
-            Some(Verified{script, ..}) => (script.clone(), None),
-            None => { /* continue */
+                (
+                    script.clone(),
+                    Some(Verified {
+                        script,
+                        script_size: *script_size,
+                    }),
+                )
+            }
+            Some(Verified { script, .. }) => (script.clone(), None),
+            None => {
+                /* continue */
                 let compiled_script = self.deserialize_script(serialized_script)?;
                 let script = self.verify_deserialized_script(compiled_script)?;
-                (script.clone(), Some(Verified {
-                    script,
-                    script_size: serialized_script.len(),
-                }))
+                (
+                    script.clone(),
+                    Some(Verified {
+                        script,
+                        script_size: serialized_script.len(),
+                    }),
+                )
             }
         };
 
         if entry.is_some() {
-            script_cache.put_with_weight(hash, entry.unwrap()).map_err(|_| {
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                    "Script storage cache eviction error".to_string()
-                ).finish(Location::Script)
-            })?;
+            script_cache
+                .put_with_weight(hash, entry.unwrap())
+                .map_err(|_| {
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("Script storage cache eviction error".to_string())
+                        .finish(Location::Script)
+                })?;
         }
         Ok(script)
     }
@@ -210,7 +244,12 @@ impl<'a, M: ModuleStorage> InitiaCodeStorage<'a, M> {
 
 #[cfg(test)]
 mod test {
-    use crate::{memory_module_storage::InMemoryStorage, module_cache::{new_initia_module_cache, ModuleCacheEntry}, module_storage::test::{add_module_bytes, TEST_CACHE_CAPACITY}, script_cache::new_initia_script_cache};
+    use crate::{
+        memory_module_storage::InMemoryStorage,
+        module_cache::{new_initia_module_cache, ModuleCacheEntry},
+        module_storage::test::{add_module_bytes, TEST_CACHE_CAPACITY},
+        script_cache::new_initia_script_cache,
+    };
 
     use super::*;
     use claims::assert_ok;
@@ -239,24 +278,34 @@ mod test {
         let runtime_environment = RuntimeEnvironment::new(vec![]);
         let script_cache = new_initia_script_cache(TEST_CACHE_CAPACITY);
         let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, &script_cache, &module_cache);
+        let code_storage = module_bytes_storage.into_initia_code_storage(
+            &runtime_environment,
+            &script_cache,
+            &module_cache,
+        );
 
         let serialized_script = script(vec!["a"]);
         let hash_1 = compute_code_hash(&serialized_script);
 
         assert_ok!(code_storage.deserialize_and_cache_script(&serialized_script));
-        assert!(code_storage.matches(vec![hash_1], |e| matches!(e, Deserialized{..})));
-        assert!(code_storage.matches(vec![], |e| matches!(e, Verified{..})));
+        assert!(code_storage.matches(vec![hash_1], |e| matches!(e, Deserialized { .. })));
+        assert!(code_storage.matches(vec![], |e| matches!(e, Verified { .. })));
 
         let serialized_script = script(vec!["b"]);
         let hash_2 = compute_code_hash(&serialized_script);
 
         assert_ok!(code_storage.deserialize_and_cache_script(&serialized_script));
-        assert!(code_storage.module_storage().does_not_have_cached_modules(&checksum_a));
-        assert!(code_storage.module_storage().does_not_have_cached_modules(&checksum_b));
-        assert!(code_storage.module_storage().does_not_have_cached_modules(&checksum_c));
-        assert!(code_storage.matches(vec![hash_1, hash_2], |e| matches!(e, Deserialized{..})));
-        assert!(code_storage.matches(vec![], |e| matches!(e, Verified{..})));
+        assert!(code_storage
+            .module_storage()
+            .does_not_have_cached_modules(&checksum_a));
+        assert!(code_storage
+            .module_storage()
+            .does_not_have_cached_modules(&checksum_b));
+        assert!(code_storage
+            .module_storage()
+            .does_not_have_cached_modules(&checksum_c));
+        assert!(code_storage.matches(vec![hash_1, hash_2], |e| matches!(e, Deserialized { .. })));
+        assert!(code_storage.matches(vec![], |e| matches!(e, Verified { .. })));
     }
 
     #[test]
@@ -272,26 +321,37 @@ mod test {
         let runtime_environment = RuntimeEnvironment::new(vec![]);
         let script_cache = new_initia_script_cache(TEST_CACHE_CAPACITY);
         let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, &script_cache, &module_cache);
+        let code_storage = module_bytes_storage.into_initia_code_storage(
+            &runtime_environment,
+            &script_cache,
+            &module_cache,
+        );
 
         let serialized_script = script(vec!["a"]);
         let hash = compute_code_hash(&serialized_script);
         assert_ok!(code_storage.deserialize_and_cache_script(&serialized_script));
-        assert!(code_storage.module_storage().does_not_have_cached_modules(&checksum_a));
-        assert!(code_storage.module_storage().does_not_have_cached_modules(&checksum_b));
-        assert!(code_storage.module_storage().does_not_have_cached_modules(&checksum_c));
-        assert!(code_storage.matches(vec![hash], |e| matches!(e, S::Deserialized{..})));
-        assert!(code_storage.matches(vec![], |e| matches!(e, S::Verified{..})));
+        assert!(code_storage
+            .module_storage()
+            .does_not_have_cached_modules(&checksum_a));
+        assert!(code_storage
+            .module_storage()
+            .does_not_have_cached_modules(&checksum_b));
+        assert!(code_storage
+            .module_storage()
+            .does_not_have_cached_modules(&checksum_c));
+        assert!(code_storage.matches(vec![hash], |e| matches!(e, S::Deserialized { .. })));
+        assert!(code_storage.matches(vec![], |e| matches!(e, S::Verified { .. })));
 
         assert_ok!(code_storage.verify_and_cache_script(&serialized_script));
 
-        assert!(code_storage.matches(vec![], |e| matches!(e, S::Deserialized{..})));
-        assert!(code_storage.matches(vec![hash], |e| matches!(e, S::Verified{..})));
+        assert!(code_storage.matches(vec![], |e| matches!(e, S::Deserialized { .. })));
+        assert!(code_storage.matches(vec![hash], |e| matches!(e, S::Verified { .. })));
         assert!(code_storage
             .module_storage()
             .matches(vec![], |e| matches!(e, M::Deserialized { .. })));
-        assert!(code_storage
-            .module_storage()
-            .matches(vec![&checksum_a, &checksum_b, &checksum_c], |e| matches!(e, M::Verified { .. })));
+        assert!(code_storage.module_storage().matches(
+            vec![&checksum_a, &checksum_b, &checksum_c],
+            |e| matches!(e, M::Verified { .. })
+        ));
     }
 }
