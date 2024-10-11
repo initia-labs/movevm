@@ -1,4 +1,4 @@
-use crate::{code_storage::{AsInitiaCodeStorage, InitiaCodeStorage}, module_cache::InitiaModuleCache, module_storage::InitiaModuleStorage, state_view::StateView, state_view_impl::StateViewImpl};
+use crate::{code_storage::{AsInitiaCodeStorage, InitiaCodeStorage}, module_cache::InitiaModuleCache, module_storage::InitiaModuleStorage, script_cache::InitiaScriptCache, state_view::StateView, state_view_impl::StateViewImpl};
 use ambassador::Delegate;
 use bytes::Bytes;
 use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
@@ -16,13 +16,18 @@ use std::{cell::RefCell, sync::Arc};
 #[delegate(ModuleStorage)]
 #[delegate(CodeStorage)]
 pub struct InitiaStorage<'s, S> {
-    storage: InitiaCodeStorage<InitiaModuleStorage<'s, StateViewImpl<'s, S>>>,
+    storage: InitiaCodeStorage<'s, InitiaModuleStorage<'s, StateViewImpl<'s, S>>>,
 }
 
 impl<'s, S: StateView> InitiaStorage<'s, S> {
-    pub fn new(state_view: &'s S, runtime_environment: &'s RuntimeEnvironment, module_cache: &'s RefCell<InitiaModuleCache>) -> Self {
+    pub fn new(
+        state_view: &'s S, 
+        runtime_environment: &'s RuntimeEnvironment, 
+        script_cache: &'s RefCell<InitiaScriptCache>,
+        module_cache: &'s RefCell<InitiaModuleCache>,
+    ) -> Self {
         let state_view_impl = StateViewImpl::new(state_view);
-        let storage = state_view_impl.into_initia_code_storage(runtime_environment, module_cache);
+        let storage = state_view_impl.into_initia_code_storage(runtime_environment, script_cache, module_cache);
         Self { storage }
     }
 

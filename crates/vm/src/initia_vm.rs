@@ -45,7 +45,7 @@ use initia_move_natives::{
     block::NativeBlockContext, staking::StakingAPI, table::NativeTableContext,
 };
 use initia_move_storage::{
-    initia_storage::InitiaStorage, module_cache::{new_initia_module_cache, InitiaModuleCache}, state_view::StateView, table_resolver::TableResolver
+    initia_storage::InitiaStorage, module_cache::{new_initia_module_cache, InitiaModuleCache}, script_cache::{new_initia_script_cache, InitiaScriptCache}, state_view::StateView, table_resolver::TableResolver
 };
 use initia_move_types::{
     account::Accounts,
@@ -78,6 +78,7 @@ pub struct InitiaVM {
     gas_params: InitiaGasParameters,
     initia_vm_config: InitiaVMConfig,
     runtime_environment: RuntimeEnvironment,
+    script_cache: RefCell<InitiaScriptCache>,
     module_cache: RefCell<InitiaModuleCache>,
 }
 
@@ -98,13 +99,15 @@ impl InitiaVM {
         let runtime_environment =
             RuntimeEnvironment::new_with_config(all_natives(gas_params, misc_params), vm_config);
         let move_vm = MoveVM::new_with_runtime_environment(&runtime_environment);
-        let module_cache = new_initia_module_cache(initia_vm_config.cache_capacity);
+        let script_cache = new_initia_script_cache(initia_vm_config.script_cache_capacity);
+        let module_cache = new_initia_module_cache(initia_vm_config.module_cache_capacity);
 
         Self {
             move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
             initia_vm_config,
             runtime_environment,
+            script_cache,
             module_cache,
         }
     }
@@ -184,7 +187,7 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.module_cache);
+        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.script_cache, &self.module_cache);
         let move_resolver = code_storage.state_view_impl();
 
         let gas_limit = Gas::new(u64::MAX);
@@ -233,7 +236,7 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.module_cache);
+        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.script_cache, &self.module_cache);
 
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((msg.size() as u64).into())?;
@@ -265,7 +268,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.module_cache);
+        let code_storage = InitiaStorage::new(storage, self.runtime_environment(), &self.script_cache, &self.module_cache);
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver);
         let traversal_storage = TraversalStorage::new();

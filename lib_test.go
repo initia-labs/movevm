@@ -56,8 +56,9 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	blockTime := uint64(time.Now().Unix())
 
 	vm, err := vm.NewVM(types.InitiaVMConfig{
-		AllowUnstable: true,
-		CacheCapacity: 1000,
+		AllowUnstable:       true,
+		ScriptCacheCapacity: 100,
+		ModuleCacheCapacity: 500,
 	})
 	require.NoError(t, err)
 	_, err = vm.Initialize(
