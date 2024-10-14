@@ -130,8 +130,10 @@ impl InitiaVM {
     }
 
     #[inline(always)]
-    pub fn runtime_environment(&self) -> &RuntimeEnvironment {
-        &self.runtime_environment
+    /// Returns the clone of runtime environment to use same struct name index map 
+    /// across multiple thread but use fresh type cache for each thread.
+    pub fn runtime_environment(&self) -> RuntimeEnvironment {
+        self.runtime_environment.clone()
     }
 
     fn create_session<
@@ -190,9 +192,10 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
+        let runtime_environment = self.runtime_environment();
         let code_storage = InitiaStorage::new(
             storage,
-            self.runtime_environment(),
+            &runtime_environment,
             &self.script_cache,
             &self.module_cache,
         );
@@ -240,17 +243,14 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
-        // Clear the info cache before each execution to avoid using type cache,
-        // which is not belong to module storage cache logic.
-        self.runtime_environment().flush_info_cache();
-
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
+        let runtime_environment = self.runtime_environment();
         let code_storage = InitiaStorage::new(
             storage,
-            self.runtime_environment(),
+            &runtime_environment,
             &self.script_cache,
             &self.module_cache,
         );
@@ -285,13 +285,10 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        // Clear the info cache before each execution to avoid using type cache,
-        // which is not belong to module storage cache logic.
-        self.runtime_environment().flush_info_cache();
-
+        let runtime_environment = self.runtime_environment();
         let code_storage = InitiaStorage::new(
             storage,
-            self.runtime_environment(),
+            &runtime_environment,
             &self.script_cache,
             &self.module_cache,
         );
