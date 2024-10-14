@@ -31,6 +31,7 @@ use crate::{
 };
 
 /// Code storage that stores both modules and scripts (not thread-safe).
+#[allow(clippy::duplicated_attributes)]
 #[derive(Delegate)]
 #[delegate(WithRuntimeEnvironment, target = "module_storage")]
 #[delegate(ModuleStorage, target = "module_storage")]
@@ -112,6 +113,7 @@ impl<'a, M: ModuleStorage> InitiaCodeStorage<'a, M> {
     ///      this code storage, and up to the module storage it uses. In any case, loading returns
     ///      a vector of verified dependencies.
     ///   3. Verify the script correctly imports its dependencies.
+    /// 
     /// If any of this steps fail, an error is returned.
     fn verify_deserialized_script(
         &self,

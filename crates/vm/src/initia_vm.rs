@@ -240,6 +240,10 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
+        // Clear the info cache before each execution to avoid using type cache,
+        // which is not belong to module storage cache logic.
+        self.runtime_environment().flush_info_cache();
+
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
@@ -281,6 +285,10 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
+        // Clear the info cache before each execution to avoid using type cache,
+        // which is not belong to module storage cache logic.
+        self.runtime_environment().flush_info_cache();
+
         let code_storage = InitiaStorage::new(
             storage,
             self.runtime_environment(),
@@ -328,10 +336,7 @@ impl InitiaVM {
         let ret_ty_layouts = function
             .return_tys()
             .iter()
-            .map(|ty| {
-                let mut count = 0;
-                session.type_to_fully_annotated_layout(ty, &code_storage, &mut count, 10)
-            })
+            .map(|ty| session.type_to_fully_annotated_layout(ty, &code_storage))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|e| e.finish(Location::Undefined))?;
 
@@ -530,7 +535,7 @@ impl InitiaVM {
         )
     }
 
-    /// Resolve a pending code publish request registered via the NativeCodeContext and initialize modulegenesis.
+    /// Resolve a pending code publish request registered via the NativeCodeContext and initialize moduleg enesis.
     fn finish_with_module_publishing_and_genesis<S: StateView>(
         &self,
         mut session: SessionExt,
