@@ -150,7 +150,7 @@ impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
 
         let (script, entry) = match script_cache.get(&hash) {
             Some(Deserialized { script, .. }) => (script.clone(), None),
-            Some(Verified { script, .. }) => (script.as_compiled_script(), None),
+            Some(Verified { script, .. }) => (script.compiled_script().clone(), None),
             None => {
                 /* continue */
                 let compiled_script = self.deserialize_script(serialized_script)?;

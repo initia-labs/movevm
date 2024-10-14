@@ -348,7 +348,7 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
 
         Ok(Some(match entry {
             Deserialized { module, .. } => module.clone(),
-            Verified { module, .. } => module.as_compiled_module(),
+            Verified { module, .. } => module.compiled_module().clone(),
         }))
     }
 
