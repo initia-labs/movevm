@@ -15,22 +15,22 @@ use move_vm_runtime::{
     ambassador_impl_WithRuntimeEnvironment, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
     Script, WithRuntimeEnvironment,
 };
-use std::{cell::RefCell, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Delegate)]
 #[delegate(WithRuntimeEnvironment)]
 #[delegate(ModuleStorage)]
 #[delegate(CodeStorage)]
 pub struct InitiaStorage<'s, S> {
-    storage: InitiaCodeStorage<'s, InitiaModuleStorage<'s, StateViewImpl<'s, S>>>,
+    storage: InitiaCodeStorage<InitiaModuleStorage<'s, StateViewImpl<'s, S>>>,
 }
 
 impl<'s, S: StateView> InitiaStorage<'s, S> {
     pub fn new(
         state_view: &'s S,
         runtime_environment: &'s RuntimeEnvironment,
-        script_cache: &'s RefCell<InitiaScriptCache>,
-        module_cache: &'s RefCell<InitiaModuleCache>,
+        script_cache: Arc<InitiaScriptCache>,
+        module_cache: Arc<InitiaModuleCache>,
     ) -> Self {
         let state_view_impl = StateViewImpl::new(state_view);
         let storage = state_view_impl.into_initia_code_storage(

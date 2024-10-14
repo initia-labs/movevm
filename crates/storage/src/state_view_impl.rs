@@ -20,7 +20,7 @@ use move_vm_types::resolver::{resource_size, ModuleResolver, ResourceResolver};
 use initia_move_types::access_path::AccessPath;
 
 pub struct StateViewImpl<'s, S> {
-    pub state_view: &'s S,
+    state_view: &'s S,
     deserialize_config: DeserializerConfig,
 }
 

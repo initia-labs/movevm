@@ -22,7 +22,7 @@ use move_vm_runtime::{
 };
 use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
 
-use std::{cell::RefCell, collections::BTreeSet, sync::Arc};
+use std::{collections::BTreeSet, sync::Arc};
 
 use initia_move_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
@@ -81,8 +81,8 @@ pub struct InitiaVM {
     gas_params: InitiaGasParameters,
     initia_vm_config: InitiaVMConfig,
     runtime_environment: RuntimeEnvironment,
-    script_cache: RefCell<InitiaScriptCache>,
-    module_cache: RefCell<InitiaModuleCache>,
+    script_cache: Arc<InitiaScriptCache>,
+    module_cache: Arc<InitiaModuleCache>,
 }
 
 impl Default for InitiaVM {
@@ -130,8 +130,8 @@ impl InitiaVM {
     }
 
     #[inline(always)]
-    /// Returns the clone of runtime environment to use same struct name index map 
-    /// across multiple thread but use fresh type cache for each thread.
+    /// Returns the clone of runtime environment to use same (vm_config, natives, struct_name_index_map)
+    /// across multiple thread but use fresh type_cache for each thread.
     pub fn runtime_environment(&self) -> RuntimeEnvironment {
         self.runtime_environment.clone()
     }
@@ -196,8 +196,8 @@ impl InitiaVM {
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
-            &self.script_cache,
-            &self.module_cache,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
         );
         let move_resolver = code_storage.state_view_impl();
 
@@ -215,13 +215,13 @@ impl InitiaVM {
             module_bundle,
         };
 
-        let session_output = self.finish_with_module_publishing_and_genesis(
+        let session_output = self.finish_with_module_publishing(
             session,
             &code_storage,
             &mut gas_meter,
             publish_request,
             &mut traversal_context,
-            allowed_publishers,
+            Some(allowed_publishers),
         )?;
 
         // session cleanup
@@ -251,8 +251,8 @@ impl InitiaVM {
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
-            &self.script_cache,
-            &self.module_cache,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
         );
 
         // Charge for msg byte size
@@ -289,8 +289,8 @@ impl InitiaVM {
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
-            &self.script_cache,
-            &self.module_cache,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
         );
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver);
@@ -480,6 +480,7 @@ impl InitiaVM {
                 gas_meter,
                 publish_request,
                 traversal_context,
+                None,
             )?
         } else {
             session.finish(code_storage)?
@@ -492,7 +493,7 @@ impl InitiaVM {
         Ok(output)
     }
 
-    /// Resolve a pending code publish request registered via the NativeCodeContext.
+    /// Resolve a pending code publish request registered via the NativeCodeContext and initialize moduleg enesis.
     fn finish_with_module_publishing<S: StateView>(
         &self,
         mut session: SessionExt,
@@ -500,6 +501,8 @@ impl InitiaVM {
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
         traversal_context: &mut TraversalContext,
+        // `init_genesis` will not be executed if `allowed_publishers` is `None`.
+        allowed_publishers: Option<Vec<AccountAddress>>,
     ) -> VMResult<SessionOutput> {
         let PublishRequest {
             destination,
@@ -520,7 +523,7 @@ impl InitiaVM {
             modules,
             traversal_context,
         )?;
-        let compatability_checks = Compatibility::new(true, false);
+
         session.module_publishing_and_initialization(
             code_storage,
             gas_meter,
@@ -528,48 +531,7 @@ impl InitiaVM {
             destination,
             module_bundle,
             modules,
-            compatability_checks,
-        )
-    }
-
-    /// Resolve a pending code publish request registered via the NativeCodeContext and initialize moduleg enesis.
-    fn finish_with_module_publishing_and_genesis<S: StateView>(
-        &self,
-        mut session: SessionExt,
-        code_storage: &InitiaStorage<S>,
-        gas_meter: &mut InitiaGasMeter,
-        publish_request: PublishRequest,
-        traversal_context: &mut TraversalContext,
-        allowed_publishers: Vec<AccountAddress>,
-    ) -> VMResult<SessionOutput> {
-        let PublishRequest {
-            destination,
-            module_bundle,
-            expected_modules,
-        } = publish_request;
-
-        let modules = self.deserialize_module_bundle(&module_bundle)?;
-        let modules: &Vec<CompiledModule> =
-            traversal_context.referenced_module_bundles.alloc(modules);
-
-        self.check_publish_request(
-            &mut session,
-            code_storage,
-            gas_meter,
-            &module_bundle,
-            expected_modules,
-            modules,
-            traversal_context,
-        )?;
-        let compatability_checks = Compatibility::new(true, false);
-        session.module_publishing_and_initialization_and_genesis(
-            code_storage,
-            gas_meter,
-            traversal_context,
-            destination,
-            module_bundle,
-            modules,
-            compatability_checks,
+            Compatibility::new(true, false),
             allowed_publishers,
         )
     }

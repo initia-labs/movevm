@@ -21,7 +21,7 @@ use move_vm_runtime::{
 use move_vm_types::{code_storage::ModuleBytesStorage, module_linker_error};
 #[cfg(test)]
 use std::collections::BTreeSet;
-use std::{cell::RefCell, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     module_cache::InitiaModuleCache,
@@ -35,8 +35,8 @@ use crate::{
 #[derive(Delegate)]
 #[delegate(WithRuntimeEnvironment, target = "module_storage")]
 #[delegate(ModuleStorage, target = "module_storage")]
-pub struct InitiaCodeStorage<'a, M> {
-    script_cache: &'a RefCell<InitiaScriptCache>,
+pub struct InitiaCodeStorage<M> {
+    script_cache: Arc<InitiaScriptCache>,
     module_storage: M,
 }
 
@@ -44,24 +44,24 @@ pub trait AsInitiaCodeStorage<'a, S> {
     fn as_initia_code_storage(
         &'a self,
         env: &'a RuntimeEnvironment,
-        script_cache: &'a RefCell<InitiaScriptCache>,
-        module_cache: &'a RefCell<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
+        script_cache: Arc<InitiaScriptCache>,
+        module_cache: Arc<InitiaModuleCache>,
+    ) -> InitiaCodeStorage<InitiaModuleStorage<S>>;
 
     fn into_initia_code_storage(
         self,
         env: &'a RuntimeEnvironment,
-        script_cache: &'a RefCell<InitiaScriptCache>,
-        module_cache: &'a RefCell<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<'a, InitiaModuleStorage<'a, S>>;
+        script_cache: Arc<InitiaScriptCache>,
+        module_cache: Arc<InitiaModuleCache>,
+    ) -> InitiaCodeStorage<InitiaModuleStorage<S>>;
 }
 
 impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for S {
     fn as_initia_code_storage(
         &'a self,
         env: &'a RuntimeEnvironment,
-        script_cache: &'a RefCell<InitiaScriptCache>,
-        module_cache: &'a RefCell<InitiaModuleCache>,
+        script_cache: Arc<InitiaScriptCache>,
+        module_cache: Arc<InitiaModuleCache>,
     ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>> {
         InitiaCodeStorage::new(
             script_cache,
@@ -72,9 +72,9 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for
     fn into_initia_code_storage(
         self,
         env: &'a RuntimeEnvironment,
-        script_cache: &'a RefCell<InitiaScriptCache>,
-        module_cache: &'a RefCell<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<'a, InitiaModuleStorage<'a, S>> {
+        script_cache: Arc<InitiaScriptCache>,
+        module_cache: Arc<InitiaModuleCache>,
+    ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>> {
         InitiaCodeStorage::new(
             script_cache,
             self.into_initia_module_storage(env, module_cache),
@@ -82,10 +82,10 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for
     }
 }
 
-impl<'a, M: ModuleStorage> InitiaCodeStorage<'a, M> {
+impl<M: ModuleStorage> InitiaCodeStorage<M> {
     /// Creates a new storage with no scripts. There are no constraints on which modules exist in
     /// module storage.
-    fn new(script_cache: &'a RefCell<InitiaScriptCache>, module_storage: M) -> Self {
+    fn new(script_cache: Arc<InitiaScriptCache>, module_storage: M) -> Self {
         Self {
             script_cache,
             module_storage,
@@ -113,7 +113,7 @@ impl<'a, M: ModuleStorage> InitiaCodeStorage<'a, M> {
     ///      this code storage, and up to the module storage it uses. In any case, loading returns
     ///      a vector of verified dependencies.
     ///   3. Verify the script correctly imports its dependencies.
-    /// 
+    ///
     /// If any of this steps fail, an error is returned.
     fn verify_deserialized_script(
         &self,
@@ -140,7 +140,7 @@ impl<'a, M: ModuleStorage> InitiaCodeStorage<'a, M> {
     }
 }
 
-impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
+impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
     fn deserialize_and_cache_script(
         &self,
         serialized_script: &[u8],
@@ -148,7 +148,7 @@ impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
         use ScriptCacheEntry::*;
 
         let hash = compute_code_hash(serialized_script);
-        let mut script_cache = self.script_cache.borrow_mut();
+        let mut script_cache = self.script_cache.lock();
 
         let (script, entry) = match script_cache.get(&hash) {
             Some(Deserialized { script, .. }) => (script.clone(), None),
@@ -182,7 +182,7 @@ impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
         use ScriptCacheEntry::*;
 
         let hash = compute_code_hash(serialized_script);
-        let mut script_cache = self.script_cache.borrow_mut();
+        let mut script_cache = self.script_cache.lock();
 
         let (script, entry) = match script_cache.get(&hash) {
             Some(Deserialized {
@@ -227,13 +227,13 @@ impl<'a, M: ModuleStorage> CodeStorage for InitiaCodeStorage<'a, M> {
 }
 
 #[cfg(test)]
-impl<'a, M: ModuleStorage> InitiaCodeStorage<'a, M> {
+impl<M: ModuleStorage> InitiaCodeStorage<M> {
     fn matches<P: Fn(&ScriptCacheEntry) -> bool>(
         &self,
         script_hashes: impl IntoIterator<Item = [u8; 32]>,
         predicate: P,
     ) -> bool {
-        let script_cache = self.script_cache.borrow();
+        let script_cache = self.script_cache.lock();
         let script_hashes_in_cache = script_cache
             .iter()
             .filter_map(|(hash, entry)| predicate(entry).then_some(*hash))
@@ -282,8 +282,8 @@ mod test {
         let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
         let code_storage = module_bytes_storage.into_initia_code_storage(
             &runtime_environment,
-            &script_cache,
-            &module_cache,
+            script_cache,
+            module_cache,
         );
 
         let serialized_script = script(vec!["a"]);
@@ -325,8 +325,8 @@ mod test {
         let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
         let code_storage = module_bytes_storage.into_initia_code_storage(
             &runtime_environment,
-            &script_cache,
-            &module_cache,
+            script_cache,
+            module_cache,
         );
 
         let serialized_script = script(vec!["a"]);
