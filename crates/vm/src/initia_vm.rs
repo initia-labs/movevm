@@ -132,8 +132,10 @@ impl InitiaVM {
     #[inline(always)]
     /// Returns the clone of runtime environment to use same (vm_config, natives, struct_name_index_map)
     /// across multiple thread but use fresh type_cache for each thread.
-    pub fn runtime_environment(&self) -> RuntimeEnvironment {
-        self.runtime_environment.clone()
+    pub fn runtime_environment_with_clean_ty_cache(&self) -> RuntimeEnvironment {
+        let runtime_environment = self.runtime_environment.clone();
+        runtime_environment.flush_struct_info_cache();
+        runtime_environment
     }
 
     fn create_session<
@@ -192,7 +194,7 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment();
+        let runtime_environment = self.runtime_environment_with_clean_ty_cache();
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
@@ -243,11 +245,12 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
+        let runtime_environment = self.runtime_environment_with_clean_ty_cache();
+        
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let runtime_environment = self.runtime_environment();
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
@@ -285,7 +288,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment();
+        let runtime_environment = self.runtime_environment_with_clean_ty_cache();
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
@@ -333,7 +336,7 @@ impl InitiaVM {
         let ret_ty_layouts = function
             .return_tys()
             .iter()
-            .map(|ty| session.type_to_fully_annotated_layout(ty, &code_storage))
+            .map(|ty| session.type_to_fully_annotated_layout(ty, &code_storage, &mut 0, 0))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|e| e.finish(Location::Undefined))?;
 

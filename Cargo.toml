@@ -114,28 +114,28 @@ tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES
 
-move-binary-format = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-bytecode-verifier = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-bytecode-utils = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-cli = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-command-line-common = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-compiler = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-coverage = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-core-types = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-docgen = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-model = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-package = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-prover = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-prover-boogie-backend = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-prover-bytecode-pipeline = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-resource-viewer = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-stackless-bytecode = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-stdlib = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-symbol-pool = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-unit-test = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-vm-runtime = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-vm-test-utils = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
-move-vm-types = { git = "https://github.com/initia-labs/move.git", rev = "b897373ba3fa988baf6024d6130fdea91a56b4e6" }
+move-binary-format = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-bytecode-verifier = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-bytecode-utils = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-coverage = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-docgen = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-model = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-package = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-prover = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-prover-boogie-backend = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-prover-bytecode-pipeline = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-resource-viewer = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-stackless-bytecode = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-stdlib = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-unit-test = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-vm-runtime = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-vm-test-utils = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
+move-vm-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "22259127b69b8512e431ebaa2eb08749c63afdbe" }
 
 # END MOVE DEPENDENCIES
 

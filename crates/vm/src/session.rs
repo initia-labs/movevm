@@ -37,17 +37,24 @@ use move_core_types::{
     effects::Op,
     ident_str,
     identifier::Identifier,
-    language_storage::{ModuleId, TypeTag},
-    value::{MoveTypeLayout, MoveValue},
+    language_storage::{ModuleId, StructTag, TypeTag},
+    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue},
     vm_status::StatusCode,
 };
 use move_vm_runtime::{
     compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage,
     StagingModuleStorage,
 };
-use move_vm_types::loaded_data::runtime_types::{StructNameIndex, StructType, Type};
+use move_vm_types::loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type};
 
 use crate::verifier::module_init::verify_module_init_function;
+
+/// Maximal depth of a value in terms of type depth.
+pub const VALUE_DEPTH_MAX: u64 = 128;
+
+/// Maximal nodes which are allowed when converting to layout. This includes the types of
+/// fields for struct types.
+const MAX_TYPE_TO_LAYOUT_NODES: u64 = 256;
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
@@ -294,18 +301,309 @@ impl StructResolver for SessionExt<'_, '_> {
         ty: &Type,
         module_storage: &impl ModuleStorage,
     ) -> PartialVMResult<TypeTag> {
-        self.inner.type_to_type_tag(ty, module_storage)
+        Ok(match ty {
+            Type::Bool => TypeTag::Bool,
+            Type::U8 => TypeTag::U8,
+            Type::U16 => TypeTag::U16,
+            Type::U32 => TypeTag::U32,
+            Type::U64 => TypeTag::U64,
+            Type::U128 => TypeTag::U128,
+            Type::U256 => TypeTag::U256,
+            Type::Address => TypeTag::Address,
+            Type::Signer => TypeTag::Signer,
+            Type::Vector(ty) => {
+                let el_ty_tag = self.type_to_type_tag(ty, module_storage)?;
+                TypeTag::Vector(Box::new(el_ty_tag))
+            }
+            Type::Struct { idx, .. } => TypeTag::Struct(Box::new(self.struct_name_to_type_tag(
+                *idx,
+                &[],
+                module_storage,
+            )?)),
+            Type::StructInstantiation { idx, ty_args, .. } => TypeTag::Struct(Box::new(
+                self.struct_name_to_type_tag(*idx, ty_args, module_storage)?,
+            )),
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("No type tag for {:?}", ty)),
+                );
+            }
+        })
     }
 }
 
 impl<'r, 'l> SessionExt<'r, 'l> {
+    // from move_vm_runtime::loader
+    fn struct_name_to_type_tag(
+        &self,
+        struct_name_idx: StructNameIndex,
+        ty_args: &[Type],
+        module_storage: &impl ModuleStorage,
+    ) -> PartialVMResult<StructTag> {
+        let type_args = ty_args
+            .iter()
+            .map(|ty| self.type_to_type_tag(ty, module_storage))
+            .collect::<PartialVMResult<Vec<_>>>()?;
+
+        let struct_type = self
+            .inner
+            .fetch_struct_ty_by_idx(struct_name_idx, module_storage)
+            .ok_or_else(|| {
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("No struct type for idx {:?}", struct_name_idx))
+            })?;
+
+        Ok(StructTag {
+            address: struct_type.module.address,
+            module: struct_type.module.name.clone(),
+            name: struct_type.name.clone(),
+            type_args,
+        })
+    }
+
     pub fn type_to_fully_annotated_layout(
         &self,
         ty: &Type,
         module_storage: &impl ModuleStorage,
+        count: &mut u64,
+        depth: u64,
     ) -> PartialVMResult<MoveTypeLayout> {
-        self.inner
-            .get_fully_annotated_type_layout_by_type(ty, module_storage)
+        if *count > MAX_TYPE_TO_LAYOUT_NODES {
+            return Err(
+                PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES).with_message(format!(
+                    "Number of type nodes when constructing type layout exceeded the maximum of {}",
+                    MAX_TYPE_TO_LAYOUT_NODES
+                )),
+            );
+        }
+        if depth > VALUE_DEPTH_MAX {
+            return Err(
+                PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED).with_message(format!(
+                    "Depth of a layout exceeded the maximum of {} during construction",
+                    VALUE_DEPTH_MAX
+                )),
+            );
+        }
+        Ok(match ty {
+            Type::Bool => MoveTypeLayout::Bool,
+            Type::U8 => MoveTypeLayout::U8,
+            Type::U16 => MoveTypeLayout::U16,
+            Type::U32 => MoveTypeLayout::U32,
+            Type::U64 => MoveTypeLayout::U64,
+            Type::U128 => MoveTypeLayout::U128,
+            Type::U256 => MoveTypeLayout::U256,
+            Type::Address => MoveTypeLayout::Address,
+            Type::Signer => MoveTypeLayout::Signer,
+            Type::Vector(ty) => MoveTypeLayout::Vector(Box::new(
+                self.type_to_fully_annotated_layout(ty, module_storage, count, depth + 1)?,
+            )),
+            Type::Struct { idx, .. } => self.struct_name_to_fully_annotated_layout(
+                *idx,
+                module_storage,
+                &[],
+                count,
+                depth + 1,
+            )?,
+            Type::StructInstantiation { idx, ty_args, .. } => self
+                .struct_name_to_fully_annotated_layout(
+                    *idx,
+                    module_storage,
+                    ty_args,
+                    count,
+                    depth + 1,
+                )?,
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("No type layout for {:?}", ty)),
+                );
+            }
+        })
+    }
+
+    fn struct_name_to_fully_annotated_layout(
+        &self,
+        struct_name_idx: StructNameIndex,
+        module_storage: &impl ModuleStorage,
+        ty_args: &[Type],
+        count: &mut u64,
+        depth: u64,
+    ) -> PartialVMResult<MoveTypeLayout> {
+        let struct_type = self
+            .inner
+            .fetch_struct_ty_by_idx(struct_name_idx, module_storage)
+            .ok_or_else(|| {
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("No struct type for idx {:?}", struct_name_idx))
+            })?;
+
+        // TODO(#13806): have annotated layouts for variants. Currently, we just return the raw
+        //   layout for them.
+        if matches!(struct_type.layout, StructLayout::Variants(_)) {
+            return self.struct_name_to_type_layout(
+                struct_name_idx,
+                module_storage,
+                ty_args,
+                count,
+                depth,
+            );
+        }
+
+        let struct_tag = self.struct_name_to_type_tag(struct_name_idx, ty_args, module_storage)?;
+        let fields = struct_type.fields(None)?;
+
+        let field_layouts = fields
+            .iter()
+            .map(|(n, ty)| {
+                let ty = self.get_ty_builder().create_ty_with_subst(ty, ty_args)?;
+                let l = self.type_to_fully_annotated_layout(&ty, module_storage, count, depth)?;
+                Ok(MoveFieldLayout::new(n.clone(), l))
+            })
+            .collect::<PartialVMResult<Vec<_>>>()?;
+        let struct_layout =
+            MoveTypeLayout::Struct(MoveStructLayout::with_types(struct_tag, field_layouts));
+        Ok(struct_layout)
+    }
+
+    fn struct_name_to_type_layout(
+        &self,
+        struct_name_idx: StructNameIndex,
+        module_storage: &impl ModuleStorage,
+        ty_args: &[Type],
+        count: &mut u64,
+        depth: u64,
+    ) -> PartialVMResult<MoveTypeLayout> {
+        let struct_type = self
+            .fetch_struct_ty_by_idx(struct_name_idx, module_storage)
+            .ok_or_else(|| {
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("No struct type for idx {:?}", struct_name_idx))
+            })?;
+
+        let layout = match &struct_type.layout {
+            StructLayout::Single(fields) => {
+                let field_tys = fields
+                    .iter()
+                    .map(|(_, ty)| {
+                        self.inner
+                            .get_ty_builder()
+                            .create_ty_with_subst(ty, ty_args)
+                    })
+                    .collect::<PartialVMResult<Vec<_>>>()?;
+                let field_layouts: Vec<MoveTypeLayout> = field_tys
+                    .iter()
+                    .map(|ty| self.type_to_type_layout(ty, module_storage, count, depth))
+                    .collect::<PartialVMResult<Vec<_>>>()?;
+                MoveTypeLayout::Struct(MoveStructLayout::new(field_layouts))
+            }
+            StructLayout::Variants(variants) => {
+                // We do not support variants to have direct identifier mappings,
+                // but their inner types may.
+                let variant_layouts = variants
+                    .iter()
+                    .map(|variant| {
+                        variant
+                            .1
+                            .iter()
+                            .map(|(_, ty)| {
+                                let ty = self
+                                    .inner
+                                    .get_ty_builder()
+                                    .create_ty_with_subst(ty, ty_args)?;
+                                let ty =
+                                    self.type_to_type_layout(&ty, module_storage, count, depth)?;
+                                Ok(ty)
+                            })
+                            .collect::<PartialVMResult<Vec<_>>>()
+                    })
+                    .collect::<PartialVMResult<Vec<_>>>()?;
+                MoveTypeLayout::Struct(MoveStructLayout::RuntimeVariants(variant_layouts))
+            }
+        };
+        Ok(layout)
+    }
+
+    fn type_to_type_layout(
+        &self,
+        ty: &Type,
+        module_storage: &impl ModuleStorage,
+        count: &mut u64,
+        depth: u64,
+    ) -> PartialVMResult<MoveTypeLayout> {
+        if *count > MAX_TYPE_TO_LAYOUT_NODES {
+            return Err(
+                PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES).with_message(format!(
+                    "Number of type nodes when constructing type layout exceeded the maximum of {}",
+                    MAX_TYPE_TO_LAYOUT_NODES
+                )),
+            );
+        }
+        if depth > VALUE_DEPTH_MAX {
+            return Err(
+                PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED).with_message(format!(
+                    "Depth of a layout exceeded the maximum of {} during construction",
+                    VALUE_DEPTH_MAX
+                )),
+            );
+        }
+        Ok(match ty {
+            Type::Bool => {
+                *count += 1;
+                MoveTypeLayout::Bool
+            }
+            Type::U8 => {
+                *count += 1;
+                MoveTypeLayout::U8
+            }
+            Type::U16 => {
+                *count += 1;
+                MoveTypeLayout::U16
+            }
+            Type::U32 => {
+                *count += 1;
+                MoveTypeLayout::U32
+            }
+            Type::U64 => {
+                *count += 1;
+                MoveTypeLayout::U64
+            }
+            Type::U128 => {
+                *count += 1;
+                MoveTypeLayout::U128
+            }
+            Type::U256 => {
+                *count += 1;
+                MoveTypeLayout::U256
+            }
+            Type::Address => {
+                *count += 1;
+                MoveTypeLayout::Address
+            }
+            Type::Signer => {
+                *count += 1;
+                MoveTypeLayout::Signer
+            }
+            Type::Vector(ty) => {
+                *count += 1;
+                let layout = self.type_to_type_layout(ty, module_storage, count, depth + 1)?;
+                MoveTypeLayout::Vector(Box::new(layout))
+            }
+            Type::Struct { idx, .. } => {
+                *count += 1;
+                self.struct_name_to_type_layout(*idx, module_storage, &[], count, depth + 1)?
+            }
+            Type::StructInstantiation { idx, ty_args, .. } => {
+                *count += 1;
+                self.struct_name_to_type_layout(*idx, module_storage, ty_args, count, depth + 1)?
+            }
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("No type layout for {:?}", ty)),
+                );
+            }
+        })
     }
 }
 
