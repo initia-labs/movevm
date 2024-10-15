@@ -82,7 +82,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         destination: AccountAddress,
         bundle: ModuleBundle,
         modules: &[CompiledModule],
-        compatability_checks: Compatibility,
+        compatibility_checks: Compatibility,
         // `init_genesis` will not be executed if `allowed_publishers` is `None`.
         allowed_publishers: Option<Vec<AccountAddress>>,
     ) -> VMResult<SessionOutput<'r>> {
@@ -90,7 +90,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         // example, fail compatibility checks, create cycles, etc.), we return an error here.
         let staging_module_storage = StagingModuleStorage::create_with_compat_config(
             &destination,
-            compatability_checks,
+            compatibility_checks,
             code_storage,
             bundle.into_bytes(),
         )?;

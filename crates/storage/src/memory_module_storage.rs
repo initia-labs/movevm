@@ -220,16 +220,10 @@ impl Default for InMemoryStorage {
 impl InMemoryStorage {
     pub fn apply_extended(&mut self, changeset: ChangeSet) -> PartialVMResult<()> {
         for (addr, account_changeset) in changeset.into_inner() {
-            match self.accounts.entry(addr) {
-                btree_map::Entry::Occupied(entry) => {
-                    entry.into_mut().apply(account_changeset)?;
-                }
-                btree_map::Entry::Vacant(entry) => {
-                    let mut account_storage = InMemoryAccountStorage::new();
-                    account_storage.apply(account_changeset)?;
-                    entry.insert(account_storage);
-                }
-            }
+            self.accounts
+                .entry(addr)
+                .or_insert_with(InMemoryAccountStorage::new)
+                .apply(account_changeset)?;
         }
 
         Ok(())
@@ -295,7 +289,8 @@ impl ChecksumStorage for InMemoryStorage {
         Ok(self
             .accounts
             .get(address)
-            .and_then(|account_storage| account_storage.checksums.get(module_name).cloned()))
+            .and_then(|account_storage| account_storage.checksums.get(module_name))
+            .cloned())
     }
 }
 
