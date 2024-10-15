@@ -9,11 +9,12 @@ module initia_std::dex {
     use initia_std::block::get_block_info;
     use initia_std::fungible_asset::{Self, Metadata, FungibleAsset, FungibleStore};
     use initia_std::primary_fungible_store;
-    use initia_std::string::{Self, String};
+    use initia_std::string::{Self, String, utf8};
     use initia_std::table::{Self, Table};
     use initia_std::coin;
     use initia_std::bigdecimal::{Self, BigDecimal};
     use initia_std::biguint;
+    use initia_std::cosmos;
 
     /// Pool configuration
     struct Config has key {
@@ -25,6 +26,15 @@ module initia_std::dex {
     struct Pool has key {
         coin_a_store: Object<FungibleStore>,
         coin_b_store: Object<FungibleStore>
+    }
+
+    struct FlashSwap has key {
+        coin_a_borrow_amount: u64,
+        coin_b_borrow_amount: u64
+    }
+
+    struct FlashSwapBorrower has key {
+        pair_addr: address
     }
 
     struct Weights has copy, drop, store {
@@ -214,12 +224,25 @@ module initia_std::dex {
     /// Weights sum must be 1.0
     const EINVALID_WEIGHTS: u64 = 21;
 
+    /// Recursive flash swap is not allowed
+    const ERECURSIVE_FLASH_SWAP: u64 = 22;
+
+    /// Flash swap not found
+    const EFLASH_SWAP_NOT_FOUND: u64 = 23;
+
     // Constants
+
     const MAX_LIMIT: u8 = 30;
 
     // TODO - find the resonable percision
     /// Result Precision of `pow` and `ln` function
     const PRECISION: u64 = 100000;
+
+    // Callback IDs
+    const CALLBACK_ID_FLASH_SWAP: u64 = 1001;
+
+    // Callback Function IDs
+    const CALLBACK_FID_FLASK_SWAP: vector<u8> = b"0x1::dex::repay_flash_swap";
 
     #[view]
     public fun get_pair_metadata(pair: Object<Config>): PairMetadataResponse acquires Pool {
@@ -245,7 +268,7 @@ module initia_std::dex {
     /// https://balancer.fi/whitepaper.pdf (2)
     public fun get_spot_price(
         pair: Object<Config>, base_coin: Object<Metadata>
-    ): BigDecimal acquires Config, Pool {
+    ): BigDecimal acquires Config, Pool, FlashSwap {
         let (coin_a_pool, coin_b_pool, coin_a_weight, coin_b_weight, _) =
             pool_info(pair, false);
 
@@ -272,7 +295,7 @@ module initia_std::dex {
     #[view]
     public fun get_spot_price_by_denom(
         pair_denom: String, base_coin: String
-    ): BigDecimal acquires Config, Pool {
+    ): BigDecimal acquires Config, Pool, FlashSwap {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let base_metadata = coin::denom_to_metadata(base_coin);
         get_spot_price(object::convert(pair_metadata), base_metadata)
@@ -282,7 +305,7 @@ module initia_std::dex {
     /// Return swap simulation result
     public fun get_swap_simulation(
         pair: Object<Config>, offer_metadata: Object<Metadata>, offer_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwap {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
         assert!(
@@ -313,7 +336,7 @@ module initia_std::dex {
     #[view]
     public fun get_swap_simulation_by_denom(
         pair_denom: String, offer_denom: String, offer_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwap {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         get_swap_simulation(
@@ -327,7 +350,7 @@ module initia_std::dex {
     /// Return swap simulation result
     public fun get_swap_simulation_given_out(
         pair: Object<Config>, offer_metadata: Object<Metadata>, return_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwap {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
         assert!(
@@ -358,7 +381,7 @@ module initia_std::dex {
     #[view]
     public fun get_swap_simulation_given_out_by_denom(
         pair_denom: String, offer_denom: String, return_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwap {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         get_swap_simulation_given_out(
@@ -383,7 +406,7 @@ module initia_std::dex {
     #[view]
     public fun get_single_asset_provide_simulation(
         pair: Object<Config>, offer_asset_metadata: Object<Metadata>, amount_in: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwap {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
 
@@ -397,19 +420,20 @@ module initia_std::dex {
 
     #[view]
     /// get pool info
-    public fun get_pool_info(pair: Object<Config>): PoolInfoResponse acquires Pool {
+    public fun get_pool_info(pair: Object<Config>): PoolInfoResponse acquires Pool, FlashSwap {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
+        let (pool_coin_a, pool_coin_b) = pool_amounts(pool, pair_addr);
         PoolInfoResponse {
-            coin_a_amount: fungible_asset::balance(pool.coin_a_store),
-            coin_b_amount: fungible_asset::balance(pool.coin_b_store),
+            coin_a_amount: pool_coin_a,
+            coin_b_amount: pool_coin_b,
             total_share: option::extract(&mut fungible_asset::supply(pair))
         }
     }
 
     #[view]
     /// get pool info
-    public fun get_pool_info_by_denom(pair_denom: String): PoolInfoResponse acquires Pool {
+    public fun get_pool_info_by_denom(pair_denom: String): PoolInfoResponse acquires Pool, FlashSwap {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         get_pool_info(object::convert(pair_metadata))
     }
@@ -854,7 +878,7 @@ module initia_std::dex {
         coin_a_amount_in: u64,
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
-    ) acquires CoinCapabilities, Config, Pool {
+    ) acquires CoinCapabilities, Config, Pool, FlashSwap {
         provide_liquidity_from_coin_store(
             account,
             pair,
@@ -871,11 +895,10 @@ module initia_std::dex {
         coin_a_amount_in: u64,
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
-    ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool {
+    ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool, FlashSwap {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global_mut<Pool>(pair_addr);
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
         // calculate the best coin amount
@@ -937,7 +960,7 @@ module initia_std::dex {
         liquidity: u64,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>
-    ) acquires CoinCapabilities, Config, Pool {
+    ) acquires CoinCapabilities, Config, Pool, FlashSwap {
         assert!(
             liquidity != 0,
             error::invalid_argument(EZERO_LIQUIDITY)
@@ -968,7 +991,7 @@ module initia_std::dex {
         offer_coin: Object<Metadata>,
         offer_coin_amount: u64,
         min_return: Option<u64>
-    ) acquires Config, Pool {
+    ) acquires Config, Pool, FlashSwap {
         let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
         let return_coin = swap(pair, offer_coin);
 
@@ -981,6 +1004,110 @@ module initia_std::dex {
         coin::deposit(signer::address_of(account), return_coin);
     }
 
+    /// Flash swap is a special swap that allows the user to use return coin first and repay the offer coin later.
+    /// `data` is stargate message data that will be executed with swap return coin.
+    public entry fun flash_swap(
+        account: &signer,
+        pair: Object<Config>,
+        offer_coin: Object<Metadata>,
+        offer_amount: u64,
+        min_return: Option<u64>,
+        data: vector<u8>
+    ) acquires Config, Pool, FlashSwap {
+        let return_amount = get_swap_simulation(pair, offer_coin, offer_amount);
+        assert!(
+            option::is_none(&min_return)
+                || *option::borrow(&min_return) <= return_amount,
+            error::invalid_state(EMIN_RETURN)
+        );
+
+        let pair_addr = object::object_address(&pair);
+        let pool = borrow_global<Pool>(pair_addr);
+        let pool_config = borrow_global<Config>(pair_addr);
+        let pair_signer = &object::generate_signer_for_extending(&pool_config.extend_ref);
+        let pair_addr = signer::address_of(pair_signer);
+
+        assert!(
+            !exists<FlashSwap>(pair_addr),
+            error::invalid_state(ERECURSIVE_FLASH_SWAP)
+        );
+
+        let borrower = signer::address_of(account);
+        let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
+
+        // withdraw the return coin
+        let (return_coin, coin_a_borrow_amount, coin_b_borrow_amount) =
+            if (object::object_address(&offer_coin)
+                == object::object_address(&coin_a_metadata)) {
+                (
+                    fungible_asset::withdraw(
+                        pair_signer, pool.coin_b_store, return_amount
+                    ),
+                    offer_amount,
+                    0
+                )
+            } else {
+                (
+                    fungible_asset::withdraw(
+                        pair_signer, pool.coin_a_store, return_amount
+                    ),
+                    0,
+                    offer_amount
+                )
+            };
+
+        // deposit return_coin to the caller
+        coin::deposit(borrower, return_coin);
+
+        // store flash swap to check recursive flash swap and repay the offer coin
+        move_to(pair_signer, FlashSwap { coin_a_borrow_amount, coin_b_borrow_amount });
+        move_to(account, FlashSwapBorrower { pair_addr });
+
+        // execute a move function with callback execution
+        cosmos::stargate_with_options(
+            account,
+            data,
+            cosmos::disallow_failure_with_callback(
+                CALLBACK_ID_FLASH_SWAP, utf8(CALLBACK_FID_FLASK_SWAP)
+            )
+        );
+    }
+
+    public entry fun repay_flash_swap(
+        account: &signer,
+        id: u64,
+        _success: bool // unused here because we call this function with `disallow_failure_with_callback`
+    ) acquires Pool, FlashSwap, FlashSwapBorrower {
+        assert!(id == CALLBACK_ID_FLASH_SWAP, error::invalid_argument(EUNAUTHORIZED));
+
+        let borrower = signer::address_of(account);
+        assert!(
+            exists<FlashSwapBorrower>(borrower),
+            error::invalid_state(EFLASH_SWAP_NOT_FOUND)
+        );
+        let FlashSwapBorrower { pair_addr } = move_from(borrower);
+        let FlashSwap { coin_a_borrow_amount, coin_b_borrow_amount } =
+            move_from(pair_addr);
+
+        let pool = borrow_global_mut<Pool>(pair_addr);
+
+        if (coin_a_borrow_amount > 0) {
+            let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
+            let repay_coin = coin::withdraw(
+                account, coin_a_metadata, coin_a_borrow_amount
+            );
+            fungible_asset::deposit(pool.coin_a_store, repay_coin);
+        };
+
+        if (coin_b_borrow_amount > 0) {
+            let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
+            let repay_coin = coin::withdraw(
+                account, coin_b_metadata, coin_b_borrow_amount
+            );
+            fungible_asset::deposit(pool.coin_b_store, repay_coin);
+        };
+    }
+
     /// Single asset provide liquidity with token in the token store
     public entry fun single_asset_provide_liquidity_script(
         account: &signer,
@@ -988,7 +1115,7 @@ module initia_std::dex {
         provide_coin: Object<Metadata>,
         amount_in: u64,
         min_liquidity: Option<u64>
-    ) acquires Config, CoinCapabilities, Pool {
+    ) acquires Config, CoinCapabilities, Pool, FlashSwap {
         let addr = signer::address_of(account);
         let provide_coin = coin::withdraw(account, provide_coin, amount_in);
         let liquidity_token =
@@ -1003,7 +1130,7 @@ module initia_std::dex {
         lp_token: FungibleAsset,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>
-    ): (FungibleAsset, FungibleAsset) acquires CoinCapabilities, Config, Pool {
+    ): (FungibleAsset, FungibleAsset) acquires CoinCapabilities, Config, Pool, FlashSwap {
         let pair_addr = coin_address(&lp_token);
         let pool = borrow_global_mut<Pool>(pair_addr);
         let config = borrow_global_mut<Config>(pair_addr);
@@ -1013,9 +1140,8 @@ module initia_std::dex {
                     fungible_asset::metadata_from_asset(&lp_token)
                 )
             );
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let given_token_amount = fungible_asset::amount(&lp_token);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
         let given_share_ratio =
             bigdecimal::from_ratio_u128((given_token_amount as u128), total_share);
         let coin_a_amount_out =
@@ -1079,7 +1205,7 @@ module initia_std::dex {
         pair: Object<Config>,
         provide_coin: FungibleAsset,
         min_liquidity_amount: Option<u64>
-    ): FungibleAsset acquires Config, CoinCapabilities, Pool {
+    ): FungibleAsset acquires Config, CoinCapabilities, Pool, FlashSwap {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global_mut<Pool>(pair_addr);
 
@@ -1131,7 +1257,7 @@ module initia_std::dex {
     /// Swap directly
     public fun swap(
         pair: Object<Config>, offer_coin: FungibleAsset
-    ): FungibleAsset acquires Config, Pool {
+    ): FungibleAsset acquires Config, Pool, FlashSwap {
         let offer_amount = fungible_asset::amount(&offer_coin);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_address = object::object_address(&offer_metadata);
@@ -1252,18 +1378,18 @@ module initia_std::dex {
         );
 
         let pair_signer = &object::generate_signer_for_extending(&extend_ref);
-        let pair_address = signer::address_of(pair_signer);
+        let pair_addr = signer::address_of(pair_signer);
         // transfer pair object's ownership to initia_std
-        object::transfer_raw(creator, pair_address, @initia_std);
+        object::transfer_raw(creator, pair_addr, @initia_std);
 
         let coin_a_store =
             primary_fungible_store::create_primary_store(
-                pair_address,
+                pair_addr,
                 fungible_asset::asset_metadata(&coin_a)
             );
         let coin_b_store =
             primary_fungible_store::create_primary_store(
-                pair_address,
+                pair_addr,
                 fungible_asset::asset_metadata(&coin_b)
             );
         let coin_a_addr = coin_address(&coin_a);
@@ -1299,14 +1425,14 @@ module initia_std::dex {
 
         let liquidity_token =
             provide_liquidity(
-                object::address_to_object<Config>(pair_address),
+                object::address_to_object<Config>(pair_addr),
                 coin_a,
                 coin_b,
                 option::none()
             );
 
         // update weights
-        let config = borrow_global_mut<Config>(pair_address);
+        let config = borrow_global_mut<Config>(pair_addr);
         config.weights = weights;
 
         // update module store
@@ -1319,7 +1445,7 @@ module initia_std::dex {
         let pair_key = PairKey {
             coin_a: coin_a_addr,
             coin_b: coin_b_addr,
-            liquidity_token: pair_address
+            liquidity_token: pair_addr
         };
 
         // add pair to table for queries
@@ -1329,7 +1455,7 @@ module initia_std::dex {
             PairResponse {
                 coin_a: coin_a_addr,
                 coin_b: coin_b_addr,
-                liquidity_token: pair_address,
+                liquidity_token: pair_addr,
                 weights,
                 swap_fee_rate
             }
@@ -1340,7 +1466,7 @@ module initia_std::dex {
             CreatePairEvent {
                 coin_a: coin_a_addr,
                 coin_b: coin_b_addr,
-                liquidity_token: pair_address,
+                liquidity_token: pair_addr,
                 weights,
                 swap_fee_rate
             }
@@ -1509,7 +1635,7 @@ module initia_std::dex {
         pair: Object<Config>,
         provide_metadata: Object<Metadata>,
         amount_in: u64
-    ): (u64, u64, bool) acquires Config {
+    ): (u64, u64, bool) acquires Config, FlashSwap {
         let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         check_lbp_ended(&config.weights);
@@ -1532,6 +1658,7 @@ module initia_std::dex {
 
         // load values for fee and increased liquidity amount calculation
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
+        let (pool_amount_a, pool_amount_b) = pool_amounts(pool, pair_addr);
         let (normalized_weight, pool_amount_in) =
             if (is_provide_a) {
                 let normalized_weight =
@@ -1539,8 +1666,8 @@ module initia_std::dex {
                         coin_a_weight,
                         bigdecimal::add(coin_a_weight, coin_b_weight)
                     );
-                let pool_amount_in = fungible_asset::balance(pool.coin_a_store);
-                (normalized_weight, pool_amount_in)
+
+                (normalized_weight, pool_amount_a)
             } else {
                 let normalized_weight =
                     bigdecimal::div(
@@ -1548,9 +1675,7 @@ module initia_std::dex {
                         bigdecimal::add(coin_a_weight, coin_b_weight)
                     );
 
-                let pool_amount_in = fungible_asset::balance(pool.coin_b_store);
-
-                (normalized_weight, pool_amount_in)
+                (normalized_weight, pool_amount_b)
             };
 
         // CONTRACT: cannot provide more than the pool amount to prevent huge price impact
@@ -1585,7 +1710,7 @@ module initia_std::dex {
     /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
     public fun pool_info(
         pair: Object<Config>, lbp_assertion: bool
-    ): (u64, u64, BigDecimal, BigDecimal, BigDecimal) acquires Config, Pool {
+    ): (u64, u64, BigDecimal, BigDecimal, BigDecimal) acquires Config, Pool, FlashSwap {
         let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         if (lbp_assertion) {
@@ -1598,11 +1723,12 @@ module initia_std::dex {
         };
 
         let pool = borrow_global<Pool>(pair_addr);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
 
         (
-            fungible_asset::balance(pool.coin_a_store),
-            fungible_asset::balance(pool.coin_b_store),
+            coin_a_amount,
+            coin_b_amount,
             coin_a_weight,
             coin_b_weight,
             config.swap_fee_rate
@@ -1690,6 +1816,21 @@ module initia_std::dex {
             fungible_asset::store_metadata(pool.coin_a_store),
             fungible_asset::store_metadata(pool.coin_b_store)
         )
+    }
+
+    public fun pool_amounts(pool: &Pool, pair_addr: address): (u64, u64) acquires FlashSwap {
+        let amount_a = fungible_asset::balance(pool.coin_a_store);
+        let amount_b = fungible_asset::balance(pool.coin_b_store);
+
+        if (exists<FlashSwap>(pair_addr)) {
+            let flash_swap = borrow_global<FlashSwap>(pair_addr);
+            (
+                amount_a + flash_swap.coin_a_borrow_amount,
+                amount_b + flash_swap.coin_b_borrow_amount
+            )
+        } else {
+            (amount_a, amount_b)
+        }
     }
 
     /// a^x = 1 + sigma[(k^n)/n!]
@@ -1806,7 +1947,7 @@ module initia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool {
+    fun end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwap {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -1953,7 +2094,7 @@ module initia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun lbp_end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool {
+    fun lbp_end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwap {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2383,5 +2524,170 @@ module initia_std::dex {
                 ],
             3
         );
+    }
+
+    #[test_only]
+    fun test_setup(chain: &signer) acquires ModuleStore, Pool, CoinCapabilities, Config {
+        init_module(chain);
+        initia_std::primary_fungible_store::init_module_for_test();
+
+        let chain_addr = signer::address_of(chain);
+
+        let (initia_burn_cap, initia_freeze_cap, initia_mint_cap) =
+            initialized_coin(chain, string::utf8(b"INIT"));
+        let (usdc_burn_cap, usdc_freeze_cap, usdc_mint_cap) =
+            initialized_coin(chain, string::utf8(b"USDC"));
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
+        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
+
+        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
+
+        // spot price is 1
+        create_pair_script(
+            chain,
+            std::string::utf8(b"name"),
+            std::string::utf8(b"SYMBOL"),
+            bigdecimal::from_ratio_u64(3, 1000),
+            bigdecimal::from_ratio_u64(8, 10),
+            bigdecimal::from_ratio_u64(2, 10),
+            coin::metadata(chain_addr, string::utf8(b"INIT")),
+            coin::metadata(chain_addr, string::utf8(b"USDC")),
+            80000000,
+            20000000
+        );
+
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000,
+            0
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000,
+            1
+        );
+
+        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
+        assert!(
+            coin::balance(chain_addr, lp_metadata) == 80000000,
+            2
+        );
+
+        move_to(
+            chain,
+            CoinCapsInit {
+                burn_cap: initia_burn_cap,
+                freeze_cap: initia_freeze_cap,
+                mint_cap: initia_mint_cap
+            }
+        );
+
+        move_to(
+            chain,
+            CoinCapsUsdc {
+                burn_cap: usdc_burn_cap,
+                freeze_cap: usdc_freeze_cap,
+                mint_cap: usdc_mint_cap
+            }
+        );
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    fun test_dex_flash_swap(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap, FlashSwapBorrower, CoinCapsInit {
+        test_setup(chain);
+        let chain_addr = signer::address_of(chain);
+        let borrower_addr = signer::address_of(borrower);
+
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
+        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
+        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        let pair_addr = object::object_address(&pair);
+
+        // flash_swap init to usdc
+        flash_swap(
+            borrower,
+            pair,
+            init_metadata,
+            1000,
+            option::none(),
+            b"testdata"
+        );
+        assert!(
+            coin::balance(borrower_addr, init_metadata) == 0,
+            3
+        );
+        assert!(
+            coin::balance(borrower_addr, usdc_metadata) == 996,
+            4
+        );
+        assert!(
+            exists<FlashSwap>(pair_addr) && exists<FlashSwapBorrower>(borrower_addr),
+            5
+        );
+
+        // repay INIT
+        coin::mint_to(
+            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 1000
+        );
+        repay_flash_swap(borrower, CALLBACK_ID_FLASH_SWAP, true);
+
+        assert!(
+            coin::balance(borrower_addr, init_metadata) == 0,
+            6
+        );
+        assert!(
+            coin::balance(borrower_addr, usdc_metadata) == 996,
+            7
+        );
+        assert!(
+            !exists<FlashSwap>(pair_addr) && !exists<FlashSwapBorrower>(borrower_addr),
+            8
+        );
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x10004, location = fungible_asset)]
+    fun test_dex_flash_swap_not_enough_repayment(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap, FlashSwapBorrower, CoinCapsInit {
+        test_setup(chain);
+        let chain_addr = signer::address_of(chain);
+        let borrower_addr = signer::address_of(borrower);
+
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
+        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
+        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        let pair_addr = object::object_address(&pair);
+
+        // flash_swap init to usdc
+        flash_swap(
+            borrower,
+            pair,
+            init_metadata,
+            1000,
+            option::none(),
+            b"testdata"
+        );
+        assert!(
+            coin::balance(borrower_addr, init_metadata) == 0,
+            3
+        );
+        assert!(
+            coin::balance(borrower_addr, usdc_metadata) == 996,
+            4
+        );
+        assert!(
+            exists<FlashSwap>(pair_addr) && exists<FlashSwapBorrower>(borrower_addr),
+            5
+        );
+
+        // repay INIT
+        coin::mint_to(
+            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 999
+        );
+        repay_flash_swap(borrower, CALLBACK_ID_FLASH_SWAP, true);
     }
 }
