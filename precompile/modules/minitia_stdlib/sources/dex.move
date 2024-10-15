@@ -394,7 +394,7 @@ module minitia_std::dex {
     #[view]
     public fun get_provide_simulation(
         pair: Object<Config>, coin_a_amount_in: u64, coin_b_amount_in: u64
-    ): u64 acquires Pool {
+    ): u64 acquires Pool, FlashSwap {
         let pool_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pool_addr);
 
@@ -755,7 +755,7 @@ module minitia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, Pool, ModuleStore {
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwap {
         let (_, timestamp) = get_block_info();
         let weights = Weights {
             weights_before: Weight { coin_a_weight, coin_b_weight, timestamp },
@@ -796,7 +796,7 @@ module minitia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, ModuleStore, Pool {
+    ) acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwap {
         let (_, timestamp) = get_block_info();
         assert!(
             start_time > timestamp,
@@ -1353,7 +1353,7 @@ module minitia_std::dex {
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         weights: Weights
-    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool {
+    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwap {
         let (mint_cap, burn_cap, freeze_cap, extend_ref) =
             coin::initialize_and_generate_extend_ref(
                 creator,
@@ -1482,7 +1482,7 @@ module minitia_std::dex {
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         min_liquidity_amount: Option<u64>
-    ): FungibleAsset acquires Config, Pool, CoinCapabilities {
+    ): FungibleAsset acquires Config, Pool, CoinCapabilities, FlashSwap {
         let pool_addr = object::object_address(&pair);
         let config = borrow_global_mut<Config>(pool_addr);
         let pool = borrow_global_mut<Pool>(pool_addr);
@@ -1606,9 +1606,9 @@ module minitia_std::dex {
         pair: Object<Config>,
         coin_a_amount_in: u64,
         coin_b_amount_in: u64
-    ): u64 {
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
+    ): u64 acquires FlashSwap {
+        let pair_addr = object::object_address(&pair);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
         if (total_share == 0) {
@@ -2269,7 +2269,7 @@ module minitia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore {
+    fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwap {
         init_module(&chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
@@ -2527,7 +2527,7 @@ module minitia_std::dex {
     }
 
     #[test_only]
-    fun test_setup(chain: &signer) acquires ModuleStore, Pool, CoinCapabilities, Config {
+    fun test_setup(chain: &signer) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap {
         init_module(chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
