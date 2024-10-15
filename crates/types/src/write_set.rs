@@ -1,4 +1,5 @@
 use crate::{access_path::AccessPath, table::TableChangeSet};
+use anyhow::ensure;
 use move_core_types::effects::{ChangeSet, Op};
 use std::collections::{btree_map, BTreeMap};
 
@@ -24,11 +25,11 @@ impl WriteSet {
                 write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
 
-            for (name, blob_opt) in modules.into_iter() {
-                // write module bytes changes
-                let ap = AccessPath::code_access_path(addr, name);
-                write_set.insert(ap, blob_opt.map(|v| v.into()));
-            }
+            // unused in loader v2
+            ensure!(
+                modules.is_empty(),
+                "Modules should not be present in the account change set in Loader v2"
+            );
         }
 
         for (handle, changes) in table_change_set.changes.into_iter() {

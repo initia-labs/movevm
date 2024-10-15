@@ -292,18 +292,10 @@ impl ChecksumStorage for InMemoryStorage {
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Checksum>> {
-        if let Some(account_storage) = self.accounts.get(address) {
-            let module_bytes =
-                if let Some(module_bytes) = account_storage.modules.get(module_name).cloned() {
-                    module_bytes
-                } else {
-                    return Ok(None);
-                };
-
-            let checksum = compute_code_hash(&module_bytes);
-            return Ok(Some(checksum));
-        }
-        Ok(None)
+        Ok(self
+            .accounts
+            .get(address)
+            .and_then(|account_storage| account_storage.checksums.get(module_name).cloned()))
     }
 }
 
@@ -313,10 +305,10 @@ impl ModuleResolver for InMemoryStorage {
     }
 
     fn get_module(&self, module_id: &ModuleId) -> PartialVMResult<Option<Bytes>> {
-        if let Some(account_storage) = self.accounts.get(module_id.address()) {
-            return Ok(account_storage.modules.get(module_id.name()).cloned());
-        }
-        Ok(None)
+        Ok(self
+            .accounts
+            .get(module_id.address())
+            .and_then(|account_storage| account_storage.modules.get(module_id.name()).cloned()))
     }
 }
 

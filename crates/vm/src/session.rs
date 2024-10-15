@@ -76,6 +76,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         bundle: ModuleBundle,
         modules: &[CompiledModule],
         compatability_checks: Compatibility,
+        // `init_genesis` will not be executed if `allowed_publishers` is `None`.
+        allowed_publishers: Option<Vec<AccountAddress>>,
     ) -> VMResult<SessionOutput<'r>> {
         // Stage module bundle on top of module storage. In case modules cannot be added (for
         // example, fail compatibility checks, create cycles, etc.), we return an error here.
@@ -95,55 +97,15 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             modules,
         )?;
 
-        let mut output = self.finish(&staging_module_storage)?;
-        let module_write_set = Self::convert_modules_into_write_set(
-            code_storage,
-            staging_module_storage
-                .release_verified_module_bundle()
-                .into_iter(),
-        )
-        .map_err(|e| e.finish(Location::Undefined))?;
-
-        output.1.extend(module_write_set);
-        Ok(output)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn module_publishing_and_initialization_and_genesis<S: StateView>(
-        mut self,
-        code_storage: &InitiaStorage<S>,
-        gas_meter: &mut InitiaGasMeter,
-        traversal_context: &mut TraversalContext,
-        destination: AccountAddress,
-        bundle: ModuleBundle,
-        modules: &[CompiledModule],
-        compatability_checks: Compatibility,
-        allowed_publishers: Vec<AccountAddress>,
-    ) -> VMResult<SessionOutput<'r>> {
-        // Stage module bundle on top of module storage. In case modules cannot be added (for
-        // example, fail compatibility checks, create cycles, etc.), we return an error here.
-        let staging_module_storage = StagingModuleStorage::create_with_compat_config(
-            &destination,
-            compatability_checks,
-            code_storage,
-            bundle.into_bytes(),
-        )?;
-
-        self.initialize_module(
-            code_storage,
-            gas_meter,
-            traversal_context,
-            &staging_module_storage,
-            destination,
-            modules,
-        )?;
-        self.initialize_module_genesis(
-            gas_meter,
-            traversal_context,
-            &staging_module_storage,
-            modules,
-            allowed_publishers,
-        )?;
+        if let Some(allowed_publishers) = allowed_publishers {
+            self.initialize_genesis(
+                gas_meter,
+                traversal_context,
+                &staging_module_storage,
+                modules,
+                allowed_publishers,
+            )?;
+        }
 
         let mut output = self.finish(&staging_module_storage)?;
         let module_write_set = Self::convert_modules_into_write_set(
@@ -229,7 +191,10 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Ok(())
     }
 
-    fn initialize_module_genesis<M: ModuleStorage>(
+    /// Special function to initialize the genesis block. This function is only called once per
+    /// blockchain genesis. It is used to initialize the blockchain by setting genesis modules with
+    /// allowed publishers.
+    fn initialize_genesis<M: ModuleStorage>(
         &mut self,
         gas_meter: &mut InitiaGasMeter,
         traversal_context: &mut TraversalContext,
