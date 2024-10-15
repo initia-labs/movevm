@@ -1,8 +1,6 @@
 use crate::{access_path::AccessPath, table::TableChangeSet};
-use move_core_types::{
-    effects::{ChangeSet, Op},
-    language_storage::ModuleId,
-};
+use anyhow::ensure;
+use move_core_types::effects::{ChangeSet, Op};
 use std::collections::{btree_map, BTreeMap};
 
 pub type WriteOp = Op<Vec<u8>>;
@@ -11,7 +9,14 @@ pub type WriteOp = Op<Vec<u8>>;
 pub struct WriteSet(BTreeMap<AccessPath, WriteOp>);
 
 impl WriteSet {
-    pub fn new(change_set: ChangeSet, table_change_set: TableChangeSet) -> anyhow::Result<Self> {
+    pub fn new_with_write_set(write_set: BTreeMap<AccessPath, WriteOp>) -> Self {
+        Self(write_set)
+    }
+
+    pub fn new_with_change_set(
+        change_set: ChangeSet,
+        table_change_set: TableChangeSet,
+    ) -> anyhow::Result<Self> {
         let mut write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
         for (addr, account_changeset) in change_set.into_inner() {
             let (modules, resources) = account_changeset.into_inner();
@@ -20,12 +25,11 @@ impl WriteSet {
                 write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
 
-            for (name, blob_opt) in modules.into_iter() {
-                // write module bytes changes
-                let module_id = ModuleId::new(addr, name);
-                let ap = AccessPath::from(&module_id);
-                write_set.insert(ap, blob_opt.map(|v| v.into()));
-            }
+            // unused in loader v2
+            ensure!(
+                modules.is_empty(),
+                "Modules should not be present in the account change set in Loader v2"
+            );
         }
 
         for (handle, changes) in table_change_set.changes.into_iter() {
@@ -46,6 +50,12 @@ impl WriteSet {
         }
 
         Ok(Self(write_set))
+    }
+}
+
+impl Extend<(AccessPath, WriteOp)> for WriteSet {
+    fn extend<I: IntoIterator<Item = (AccessPath, WriteOp)>>(&mut self, iter: I) {
+        self.0.extend(iter)
     }
 }
 
