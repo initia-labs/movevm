@@ -242,7 +242,7 @@ module minitia_std::dex {
     const CALLBACK_ID_FLASH_SWAP: u64 = 1001;
 
     // Callback Function IDs
-    const CALLBACK_FID_FLASK_SWAP: vector<u8> = b"0x1::dex::repay_flash_swap";
+    const CALLBACK_FID_FLASH_SWAP: vector<u8> = b"0x1::dex::repay_flash_swap";
 
     #[view]
     public fun get_pair_metadata(pair: Object<Config>): PairMetadataResponse acquires Pool {
@@ -1068,7 +1068,7 @@ module minitia_std::dex {
             account,
             data,
             cosmos::disallow_failure_with_callback(
-                CALLBACK_ID_FLASH_SWAP, utf8(CALLBACK_FID_FLASK_SWAP)
+                CALLBACK_ID_FLASH_SWAP, utf8(CALLBACK_FID_FLASH_SWAP)
             )
         );
     }
