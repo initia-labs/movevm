@@ -725,7 +725,7 @@ module initia_std::dex {
     }
 
     /// Get borrow amounts from the FlashSwapLoan.
-    public fun borrow_amounts(loan: &FlashSwapLoan): (u64, u64) acquires FlashSwap {
+    public fun get_borrow_amounts(loan: &FlashSwapLoan): (u64, u64) acquires FlashSwap {
         let fs = borrow_global<FlashSwap>(loan.pair_addr);
         (fs.coin_a_borrow_amount, fs.coin_b_borrow_amount)
     }
