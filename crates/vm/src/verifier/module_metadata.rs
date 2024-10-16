@@ -13,8 +13,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::{
-    identifier::{IdentStr, Identifier},
-    vm_status::StatusCode,
+    identifier::{IdentStr, Identifier}, vm_status::StatusCode
 };
 use move_model::metadata::{CompilationMetadata, COMPILATION_METADATA_KEY};
 use move_vm_runtime::ModuleStorage;

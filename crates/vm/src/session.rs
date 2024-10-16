@@ -17,20 +17,11 @@ use initia_move_natives::{
 };
 use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
-    access_path::AccessPath,
-    account::Accounts,
-    cosmos::CosmosMessages,
-    event::ContractEvent,
-    metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME},
-    module::ModuleBundle,
-    staking_change_set::StakingChangeSet,
-    write_set::{WriteOp, WriteSet},
+    access_path::AccessPath, account::Accounts, cosmos::CosmosMessages, event::ContractEvent, metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME}, module::ModuleBundle, staking_change_set::StakingChangeSet, table::TableHandle, write_set::{WriteOp, WriteSet}
 };
 
 use move_binary_format::{
-    compatibility::Compatibility,
-    errors::{Location, PartialVMError, PartialVMResult, VMResult},
-    CompiledModule,
+    access::ModuleAccess, compatibility::Compatibility, errors::{Location, PartialVMError, PartialVMResult, VMResult}, CompiledModule
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -45,7 +36,7 @@ use move_vm_runtime::{
     compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage,
     StagingModuleStorage,
 };
-use move_vm_types::loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type};
+use move_vm_types::{loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type}, resolver::ResourceResolver, values::Value};
 
 use crate::verifier::module_init::verify_module_init_function;
 
@@ -55,6 +46,9 @@ pub const VALUE_DEPTH_MAX: u64 = 128;
 /// Maximal nodes which are allowed when converting to layout. This includes the types of
 /// fields for struct types.
 const MAX_TYPE_TO_LAYOUT_NODES: u64 = 256;
+
+const CODE_MODULESTORE_STRUCT_NAME: &str = "ModuleStore";
+const CODE_METADATA_STRUCT_NAME: &str = "Metadata";
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
@@ -73,6 +67,76 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Self { inner }
     }
 
+    fn verify_dependencies_upgrade_policy(
+        &mut self, 
+        module_storage: &impl ModuleStorage,
+        resource_resolver: &impl ResourceResolver,
+        modules: &[CompiledModule],
+    ) -> VMResult<()> {
+        let code_module_store_struct_tag = StructTag {
+            address: AccountAddress::ONE,
+            module: ident_str!(CODE_MODULE_NAME).into(),
+            name: ident_str!(CODE_MODULESTORE_STRUCT_NAME).into(),
+            type_args: vec![],
+        };
+
+        let code_module_metadata_type_layout = self.get_type_layout(&TypeTag::Struct(Box::new(StructTag {
+            address: AccountAddress::ONE,
+            module: ident_str!(CODE_MODULE_NAME).into(),
+            name: ident_str!(CODE_METADATA_STRUCT_NAME).into(),
+            type_args: vec![],
+        })), module_storage)?;
+    
+        let (table_handle_bytes, _) = resource_resolver.get_resource_bytes_with_metadata_and_layout(&AccountAddress::ONE, &code_module_store_struct_tag,
+            &[],
+            None
+        ).map_err(|e| e.finish(Location::Undefined))?;
+
+        let table_handle_bytes= table_handle_bytes
+            .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DATA).finish(Location::Undefined))?;
+        let table_handle = TableHandle(AccountAddress::from_bytes(table_handle_bytes).map_err(
+            |e| PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE).with_message(e.to_string()).finish(Location::Undefined)
+        )?);
+
+        for module in modules {
+            let my_policy = self.get_module_policy( &table_handle, &module.self_id(), &code_module_metadata_type_layout).map_err(|e| e.finish(Location::Undefined))?;
+
+            module.immediate_dependencies().iter().map(|dep| {
+                let dep_policy = self.get_module_policy(&table_handle, dep, &code_module_metadata_type_layout).map_err(|e| e.finish(Location::Undefined))?;
+                if my_policy > dep_policy {
+                    Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED).with_message(format!("invalid dependency upgrade policy; {} > {} ", module.self_id().short_str_lossless(), dep.short_str_lossless())).finish(Location::Undefined))
+                } else {
+                    Ok(())
+                }
+            }).collect::<VMResult<()>>()?;
+        }
+        Ok(())
+    }
+
+    fn get_module_policy(
+        &mut self,
+        table_handle: &TableHandle,
+        module_id: &ModuleId,
+        code_module_metadata_type_layout: &MoveTypeLayout,
+    ) -> PartialVMResult<u8> {
+        let table_context = self.get_native_extensions().get::<NativeTableContext>();
+        match table_context.resolve_table_entry(table_handle, module_id.short_str_lossless().as_bytes()) {
+            Ok(Some(x)) => {
+                Value::simple_deserialize(&x, &code_module_metadata_type_layout)
+                    .ok_or(PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE))?
+                    .value_as::<u8>()
+            },
+            Ok(None) => {
+                Err(PartialVMError::new(StatusCode::MISSING_DEPENDENCY).with_message(
+                    format!("upgrade policy of module {} is not registered", module_id.short_str_lossless())
+                ))
+            }
+            Err(e) => {
+                Err(PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(e.to_string()))
+            }
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn module_publishing_and_initialization<S: StateView>(
         mut self,
@@ -86,6 +150,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         // `init_genesis` will not be executed if `allowed_publishers` is `None`.
         allowed_publishers: Option<Vec<AccountAddress>>,
     ) -> VMResult<SessionOutput<'r>> {
+        self.verify_dependencies_upgrade_policy(code_storage, code_storage.state_view_impl(), modules)?;
+
         // Stage module bundle on top of module storage. In case modules cannot be added (for
         // example, fail compatibility checks, create cycles, etc.), we return an error here.
         let staging_module_storage = StagingModuleStorage::create_with_compat_config(

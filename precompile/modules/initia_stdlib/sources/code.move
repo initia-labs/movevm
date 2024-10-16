@@ -226,13 +226,10 @@ module initia_std::code {
         let addr = signer::address_of(owner);
         assert_allowed(&module_store.allowed_publishers, addr);
 
-        if (!exists<MetadataStore>(addr)) {
-            move_to<MetadataStore>(owner, MetadataStore { metadata: table::new() });
-        };
 
         // Check upgradability
         let new_modules = 0;
-        let metadata_table = &mut borrow_global_mut<MetadataStore>(addr).metadata;
+        let metadata_table = &mut borrow_global_mut<MetadataStore>(@initia_std).metadata;
         vector::for_each_ref(
             &module_ids,
             |module_id| {

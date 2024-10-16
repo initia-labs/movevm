@@ -169,6 +169,37 @@ impl<'a> NativeTableContext<'a> {
             changes,
         })
     }
+
+    pub fn resolve_table_entry(
+        &self,
+        handle: &TableHandle,
+        key: &[u8],
+    ) -> anyhow::Result<Option<Vec<u8>>> {
+        let table_data = self.table_data.borrow();
+        match table_data.tables.get(handle){
+            Some(table) => {
+                match table.content.get(key){
+                    Some(gv) => {
+                        match gv.borrow_global() {
+                            Ok(val) => {
+                                return Ok(Some(serialize(&table.value_layout, &val)?));
+                            }
+                            Err(e) => {
+                                if gv.is_mutated() {
+                                    // handle the case where the value is deleted
+                                    return Err(e.into());
+                                }
+                            },
+                        }
+                    },
+                    None => (),
+                };
+            },
+            None => (),
+        };
+
+        self.resolver.resolve_table_entry(handle, key)
+    }
 }
 
 impl TableData {

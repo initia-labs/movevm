@@ -607,7 +607,7 @@ impl InitiaVM {
         }
 
         // validate modules are properly compiled with metadata
-        validate_publish_request(code_storage, modules, module_bundle, self.allow_unstable())?;
+        validate_publish_request(code_storage, modules, module_bundle,self.allow_unstable())?;
 
         if let Some(expected_modules) = expected_modules {
             for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
