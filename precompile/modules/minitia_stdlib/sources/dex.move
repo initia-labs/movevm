@@ -2586,32 +2586,50 @@ module minitia_std::dex {
         );
     }
 
-    #[test(chain = @0x1, borrower = @0x1782)]
-    fun test_dex_flash_swap(
-        chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    struct TestMetadata has drop {
+        lp_metadata: Object<Metadata>,
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>
+    }
+
+    #[test_only]
+    fun test_setup_flash_swap(chain: &signer, borrower: &signer, borrow_amount: u64, mint_amount: u64): (TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
         test_setup(chain);
+
         let chain_addr = signer::address_of(chain);
         let borrower_addr = signer::address_of(borrower);
 
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
+        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
         let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
         let pair = object::convert<Metadata, Config>(lp_metadata);
-        let pair_addr = object::object_address(&pair);
 
+        coin::mint_to(
+            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, mint_amount
+        );
+        let offer_fa = coin::withdraw(borrower, init_metadata, mint_amount);
         // flash_swap init to usdc
-        let (return_fa, loan) = flash_swap(pair, init_metadata, 1000, option::none());
-        assert!(fungible_asset::amount(&return_fa) == 996, 3);
-        assert!(exists<FlashSwapLock>(pair_addr), 4);
+        let (return_fa, receipt) = flash_swap(pair, init_metadata, borrow_amount, option::none());
+
+        (
+            TestMetadata {
+                lp_metadata,
+                offer_metadata: init_metadata,
+                return_metadata: usdc_metadata,
+            }, offer_fa, return_fa, receipt,
+        )
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    fun test_dex_flash_swap(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, return_fa);
 
-        // repay INIT
-        coin::mint_to(
-            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 1000
-        );
-        let offer_fa = coin::withdraw(borrower, init_metadata, 1000);
-        repay_flash_swap(offer_fa, loan);
-        assert!(!exists<FlashSwapLock>(pair_addr), 5);
+        repay_flash_swap(offer_fa, receipt);
+        assert!(!exists<FlashSwapLock>(object::object_address(&test_metadata.lp_metadata)), 5);
     }
 
     #[test(chain = @0x1, borrower = @0x1782)]
@@ -2619,27 +2637,11 @@ module minitia_std::dex {
     fun test_dex_flash_swap_not_enough_repayment(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        test_setup(chain);
-        let chain_addr = signer::address_of(chain);
+        let (_, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 999);
         let borrower_addr = signer::address_of(borrower);
-
-        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
-        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
-        let pair = object::convert<Metadata, Config>(lp_metadata);
-        let pair_addr = object::object_address(&pair);
-
-        // flash_swap init to usdc
-        let (return_fa, loan) = flash_swap(pair, init_metadata, 1000, option::none());
-        assert!(fungible_asset::amount(&return_fa) == 996, 3);
-        assert!(exists<FlashSwapLock>(pair_addr), 4);
         coin::deposit(borrower_addr, return_fa);
 
-        // repay INIT
-        coin::mint_to(
-            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 999
-        );
-        let offer_fa = coin::withdraw(borrower, init_metadata, 999);
-        repay_flash_swap(offer_fa, loan);
+        repay_flash_swap(offer_fa, receipt);
     }
 
     #[test(chain = @0x1, borrower = @0x1782)]
@@ -2647,26 +2649,96 @@ module minitia_std::dex {
     fun test_dex_flash_swap_extra_repayment(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        test_setup(chain);
-        let chain_addr = signer::address_of(chain);
+        let (_, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1001);
         let borrower_addr = signer::address_of(borrower);
-
-        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
-        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
-        let pair = object::convert<Metadata, Config>(lp_metadata);
-        let pair_addr = object::object_address(&pair);
-
-        // flash_swap init to usdc
-        let (return_fa, loan) = flash_swap(pair, init_metadata, 1000, option::none());
-        assert!(fungible_asset::amount(&return_fa) == 996, 3);
-        assert!(exists<FlashSwapLock>(pair_addr), 4);
         coin::deposit(borrower_addr, return_fa);
 
-        // repay INIT
-        coin::mint_to(
-            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 1001
-        );
-        let offer_fa = coin::withdraw(borrower, init_metadata, 1001);
-        repay_flash_swap(offer_fa, loan);
+        repay_flash_swap(offer_fa, receipt);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_recursive(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, offer_fa);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // recursive flash_swap
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let (return_fa, receipt) = flash_swap(pair, test_metadata.offer_metadata, 1000, option::none());
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_swap(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute swap
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let return_fa = swap(pair, offer_fa);
+        coin::deposit(borrower_addr, return_fa);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_provide_liquidity(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute provide_liquidity
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let lp_fa = provide_liquidity(pair, offer_fa, return_fa, option::none());
+
+        coin::deposit(borrower_addr, lp_fa);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_single_asset_provide_liquidity(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute provide_liquidity
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let lp_fa = single_asset_provide_liquidity(pair, offer_fa, option::none());
+
+        coin::deposit(borrower_addr, lp_fa);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_withdraw_liquidity(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, offer_fa);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute provide_liquidity
+        let lp_fa = coin::withdraw(chain, test_metadata.lp_metadata, 1);
+        let (a_fa, b_fa) = withdraw_liquidity(lp_fa, option::none(), option::none());
+
+        coin::deposit(borrower_addr, a_fa);
+        coin::deposit(borrower_addr, b_fa);
     }
 }
