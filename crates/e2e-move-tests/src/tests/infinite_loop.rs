@@ -12,7 +12,7 @@ fn empty_while_loop() {
 
     h.initialize();
 
-    let output = h.publish_package(&acc, path).expect("should success");
+    let output = h.publish_package(&acc, path, 1).expect("should success");
     h.commit(output, true);
 
     let err = h
