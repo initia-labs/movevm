@@ -33,7 +33,7 @@ module initia_std::dex {
     }
 
     /// FlashSwapLoan is following the hot potato pattern, so the borrower
-    /// need to pass the created FlashSwapLoan objec to this contract to 
+    /// need to pass the created FlashSwapLoan object to this contract to 
     /// destruct it.
     ///
     /// https://move-book.com/programmability/hot-potato-pattern.html
@@ -722,6 +722,12 @@ module initia_std::dex {
         current_weight_response: &CurrentWeightResponse
     ): (BigDecimal, BigDecimal) {
         (current_weight_response.coin_a_weight, current_weight_response.coin_b_weight)
+    }
+
+    /// Get borrow amounts from the FlashSwapLoan.
+    public fun borrow_amounts(loan: &FlashSwapLoan): (u64, u64) acquires FlashSwap {
+        let fs = borrow_global<FlashSwap>(loan.pair_addr);
+        (fs.coin_a_borrow_amount, fs.coin_b_borrow_amount)
     }
 
     /// Check signer is chain
