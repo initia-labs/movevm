@@ -17,11 +17,22 @@ use initia_move_natives::{
 };
 use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
-    access_path::AccessPath, account::Accounts, cosmos::CosmosMessages, event::ContractEvent, metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME}, module::ModuleBundle, staking_change_set::StakingChangeSet, table::TableHandle, write_set::{WriteOp, WriteSet}
+    access_path::AccessPath,
+    account::Accounts,
+    cosmos::CosmosMessages,
+    event::ContractEvent,
+    metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME},
+    module::ModuleBundle,
+    staking_change_set::StakingChangeSet,
+    table::TableHandle,
+    write_set::{WriteOp, WriteSet},
 };
 
 use move_binary_format::{
-    access::ModuleAccess, compatibility::Compatibility, errors::{Location, PartialVMError, PartialVMResult, VMResult}, CompiledModule
+    access::ModuleAccess,
+    compatibility::Compatibility,
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
+    CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -36,7 +47,11 @@ use move_vm_runtime::{
     compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage,
     StagingModuleStorage,
 };
-use move_vm_types::{loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type}, resolver::ResourceResolver, values::{Struct, StructRef, Value}};
+use move_vm_types::{
+    loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type},
+    resolver::ResourceResolver,
+    values::{Struct, StructRef, Value},
+};
 
 use crate::verifier::module_init::verify_module_init_function;
 
@@ -70,7 +85,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     }
 
     fn verify_dependencies_upgrade_policy(
-        &mut self, 
+        &mut self,
         module_storage: &impl ModuleStorage,
         resource_resolver: &impl ResourceResolver,
         modules: &[CompiledModule],
@@ -82,51 +97,100 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             type_args: vec![],
         };
 
-        let code_metadata_store_type_layout = self.get_type_layout(&TypeTag::Struct(Box::new(code_metadata_store_struct_tag.clone())), module_storage)
-            .map_err(|e| PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(e.to_string()))?;
-    
-        let code_module_metadata_type_layout = self.get_type_layout(&TypeTag::Struct(Box::new(StructTag {
-            address: AccountAddress::ONE,
-            module: ident_str!(CODE_MODULE_NAME).into(),
-            name: ident_str!(CODE_MODULEMETADATA_STRUCT_NAME).into(),
-            type_args: vec![],
-        })), module_storage).map_err(|e| PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(e.to_string()))?;
-    
-        let (table_handle_bytes, _) = resource_resolver.get_resource_bytes_with_metadata_and_layout(&AccountAddress::ONE, &code_metadata_store_struct_tag,
-            &[],
-            None
-        )?;
+        let code_metadata_store_type_layout = self
+            .get_type_layout(
+                &TypeTag::Struct(Box::new(code_metadata_store_struct_tag.clone())),
+                module_storage,
+            )
+            .map_err(|e| {
+                PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(e.to_string())
+            })?;
 
-        let table_handle_bytes= table_handle_bytes
-            .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DATA))?;
+        let code_module_metadata_type_layout = self
+            .get_type_layout(
+                &TypeTag::Struct(Box::new(StructTag {
+                    address: AccountAddress::ONE,
+                    module: ident_str!(CODE_MODULE_NAME).into(),
+                    name: ident_str!(CODE_MODULEMETADATA_STRUCT_NAME).into(),
+                    type_args: vec![],
+                })),
+                module_storage,
+            )
+            .map_err(|e| {
+                PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(e.to_string())
+            })?;
 
-        let table_handle = Value::simple_deserialize(&table_handle_bytes, &code_metadata_store_type_layout)
-            .ok_or(PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE))?
-            // MetadataStore
-            .value_as::<Struct>()?.unpack()?.next().ok_or(PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE))?
-            // Table
-            .value_as::<Struct>()?.unpack()?.next().ok_or(PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE))?
-            // handle
-            .value_as::<AccountAddress>()?;
+        let (table_handle_bytes, _) = resource_resolver
+            .get_resource_bytes_with_metadata_and_layout(
+                &AccountAddress::ONE,
+                &code_metadata_store_struct_tag,
+                &[],
+                None,
+            )?;
+
+        let table_handle_bytes =
+            table_handle_bytes.ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DATA))?;
+
+        let table_handle =
+            Value::simple_deserialize(&table_handle_bytes, &code_metadata_store_type_layout)
+                .ok_or(PartialVMError::new(
+                    StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
+                ))?
+                // MetadataStore
+                .value_as::<Struct>()?
+                .unpack()?
+                .next()
+                .ok_or(PartialVMError::new(
+                    StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
+                ))?
+                // Table
+                .value_as::<Struct>()?
+                .unpack()?
+                .next()
+                .ok_or(PartialVMError::new(
+                    StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
+                ))?
+                // handle
+                .value_as::<AccountAddress>()?;
 
         let table_handle = TableHandle(table_handle);
 
         for module in modules {
-            let my_policy = self.get_module_policy( module_storage, &table_handle, &module.self_id(), &code_module_metadata_type_layout)?;
+            let my_policy = self.get_module_policy(
+                module_storage,
+                &table_handle,
+                &module.self_id(),
+                &code_module_metadata_type_layout,
+            )?;
 
-            module.immediate_dependencies().iter().map(|dep| {
-                // if the dependency is the stdlib, we don't need to check the policy
-                if dep.address == AccountAddress::ONE {
-                    return Ok(());
-                }
+            module
+                .immediate_dependencies()
+                .iter().try_for_each(|dep| {
+                    // if the dependency is the stdlib, we don't need to check the policy
+                    if dep.address == AccountAddress::ONE {
+                        return Ok(());
+                    }
 
-                let dep_policy = self.get_module_policy(module_storage, &table_handle, dep, &code_module_metadata_type_layout)?;
-                if my_policy > dep_policy {
-                    Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED).with_message(format!("invalid dependency upgrade policy; {} > {} ", module.self_id().short_str_lossless(), dep.short_str_lossless())))
-                } else {
-                    Ok(())
-                }
-            }).collect::<PartialVMResult<()>>()?;
+                    let dep_policy = self.get_module_policy(
+                        module_storage,
+                        &table_handle,
+                        dep,
+                        &code_module_metadata_type_layout,
+                    )?;
+                    if my_policy > dep_policy {
+                        Err(
+                            PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED).with_message(
+                                format!(
+                                    "invalid dependency upgrade policy; {} > {} ",
+                                    module.self_id().short_str_lossless(),
+                                    dep.short_str_lossless()
+                                ),
+                            ),
+                        )
+                    } else {
+                        Ok(())
+                    }
+                })?;
         }
         Ok(())
     }
@@ -138,20 +202,45 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         module_id: &ModuleId,
         code_module_metadata_type_layout: &MoveTypeLayout,
     ) -> PartialVMResult<u8> {
-        let module_id_bytes = self.serialize_string(module_storage, module_id.short_str_lossless().into_bytes())?;
+        let module_id_bytes =
+            self.serialize_string(module_storage, module_id.short_str_lossless().into_bytes())?;
         let table_context = self.get_native_extensions().get::<NativeTableContext>();
 
-        let value = match table_context.resolve_table_entry_from_change_set(table_handle, &module_id_bytes)? {
-            Some(val) => val.value_as::<StructRef>()?.read_ref()?.value_as::<Struct>()?.unpack()?.next().ok_or(PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE))?,
+        let value = match table_context
+            .resolve_table_entry_from_change_set(table_handle, &module_id_bytes)?
+        {
+            Some(val) => val
+                .value_as::<StructRef>()?
+                .read_ref()?
+                .value_as::<Struct>()?
+                .unpack()?
+                .next()
+                .ok_or(PartialVMError::new(
+                    StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
+                ))?,
             None => {
-                let val = table_context.resolve_table_entry_from_storage(table_handle, &module_id_bytes, &code_module_metadata_type_layout)?
-                    .ok_or(PartialVMError::new(StatusCode::MISSING_DEPENDENCY).with_message(
-                        format!("upgrade policy of module {} is not registered", module_id.short_str_lossless())
-                    ))?;
-                val
+                
+                table_context
+                    .resolve_table_entry_from_storage(
+                        table_handle,
+                        &module_id_bytes,
+                        code_module_metadata_type_layout,
+                    )?
+                    .ok_or(
+                        PartialVMError::new(StatusCode::MISSING_DEPENDENCY).with_message(format!(
+                            "upgrade policy of module {} is not registered",
+                            module_id.short_str_lossless()
+                        )),
+                    )?
             }
         };
-        value.value_as::<Struct>()?.unpack()?.next().ok_or(PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_RESOURCE))?
+        value
+            .value_as::<Struct>()?
+            .unpack()?
+            .next()
+            .ok_or(PartialVMError::new(
+                StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
+            ))?
             .value_as::<u8>()
     }
 
@@ -160,15 +249,24 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         module_storage: &impl ModuleStorage,
         value: Vec<u8>,
     ) -> PartialVMResult<Vec<u8>> {
-        let string_layout = self.get_type_layout(&TypeTag::Struct(Box::new(StructTag {
-            address: AccountAddress::ONE,
-            module: ident_str!(STRING_MODULE_NAME).into(),
-            name: ident_str!(STRING_STRUCT_NAME).into(),
-            type_args: vec![],
-        })), module_storage).map_err(|e| PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(e.to_string()))?;
+        let string_layout = self
+            .get_type_layout(
+                &TypeTag::Struct(Box::new(StructTag {
+                    address: AccountAddress::ONE,
+                    module: ident_str!(STRING_MODULE_NAME).into(),
+                    name: ident_str!(STRING_STRUCT_NAME).into(),
+                    type_args: vec![],
+                })),
+                module_storage,
+            )
+            .map_err(|e| {
+                PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(e.to_string())
+            })?;
 
         let string_value = Value::struct_(Struct::pack(vec![Value::vector_u8(value)]));
-        string_value.simple_serialize(&string_layout).ok_or(PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR))
+        string_value
+            .simple_serialize(&string_layout)
+            .ok_or(PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -186,7 +284,12 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     ) -> VMResult<SessionOutput<'r>> {
         // verify dependencies if it is not a genesis
         if allowed_publishers.is_none() {
-            self.verify_dependencies_upgrade_policy(code_storage, code_storage.state_view_impl(), modules).map_err(|e| e.finish(Location::Undefined))?;
+            self.verify_dependencies_upgrade_policy(
+                code_storage,
+                code_storage.state_view_impl(),
+                modules,
+            )
+            .map_err(|e| e.finish(Location::Undefined))?;
         }
 
         // Stage module bundle on top of module storage. In case modules cannot be added (for

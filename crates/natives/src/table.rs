@@ -176,11 +176,14 @@ impl<'a> NativeTableContext<'a> {
         key: &[u8],
         value_layout: &MoveTypeLayout,
     ) -> PartialVMResult<Option<Value>> {
-        let val = self.resolver.resolve_table_entry(handle, key).map_err(|e| PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(e.to_string()))?;
+        let val = self
+            .resolver
+            .resolve_table_entry(handle, key)
+            .map_err(|e| {
+                PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(e.to_string())
+            })?;
         match val {
-            Some(val_bytes) => {
-                Ok(Value::simple_deserialize(&val_bytes, value_layout))
-            }
+            Some(val_bytes) => Ok(Value::simple_deserialize(&val_bytes, value_layout)),
             None => Ok(None),
         }
     }
@@ -191,26 +194,26 @@ impl<'a> NativeTableContext<'a> {
         key: &[u8],
     ) -> PartialVMResult<Option<Value>> {
         let table_data = self.table_data.borrow();
-        match table_data.tables.get(handle){
+        match table_data.tables.get(handle) {
             Some(table) => {
-                match table.content.get(key){
+                match table.content.get(key) {
                     Some(gv) => {
                         match gv.borrow_global() {
                             Ok(val) => {
-                                return Ok(Some(val));
+                                Ok(Some(val))
                             }
                             Err(e) => {
                                 if gv.is_mutated() {
                                     // handle the case where the value is deleted
-                                    return Err(e.into());
+                                    return Err(e);
                                 }
                                 Ok(None)
-                            },
+                            }
                         }
-                    },
+                    }
                     None => Ok(None),
                 }
-            },
+            }
             None => Ok(None),
         }
     }

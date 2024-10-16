@@ -35,7 +35,7 @@ fn test_redeploy_should_update_module_cache() {
         AccountAddress::ONE,
         vec!["0x1::BasicCoin".to_string()],
         vec![code],
-        1
+        1,
     );
     let output = h.run_message(msg).expect("should success");
 

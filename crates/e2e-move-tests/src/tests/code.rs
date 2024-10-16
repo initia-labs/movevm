@@ -133,4 +133,3 @@ fn test_publish_compatible_refering_immutable() {
     let view_output = h.run_view_function(view_function).expect("should success");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
 }
-

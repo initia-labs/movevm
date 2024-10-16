@@ -237,7 +237,7 @@ impl InitiaVM {
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
         self.runtime_environment.flush_struct_info_cache();
-        
+
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
@@ -607,7 +607,7 @@ impl InitiaVM {
         }
 
         // validate modules are properly compiled with metadata
-        validate_publish_request(code_storage, modules, module_bundle,self.allow_unstable())?;
+        validate_publish_request(code_storage, modules, module_bundle, self.allow_unstable())?;
 
         if let Some(expected_modules) = expected_modules {
             for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
