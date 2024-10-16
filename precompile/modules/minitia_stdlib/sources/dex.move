@@ -431,7 +431,9 @@ module minitia_std::dex {
 
     #[view]
     /// get pool info
-    public fun get_pool_info_by_denom(pair_denom: String): PoolInfoResponse acquires Pool, FlashSwapLock {
+    public fun get_pool_info_by_denom(
+        pair_denom: String
+    ): PoolInfoResponse acquires Pool, FlashSwapLock {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         get_pool_info(object::convert(pair_metadata))
     }
@@ -1083,16 +1085,8 @@ module minitia_std::dex {
         // withdraw and return the coins
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         (
-            fungible_asset::withdraw(
-                pair_signer,
-                coin_a_store,
-                coin_a_amount_out
-            ),
-            fungible_asset::withdraw(
-                pair_signer,
-                coin_b_store,
-                coin_b_amount_out
-            )
+            fungible_asset::withdraw(pair_signer, coin_a_store, coin_a_amount_out),
+            fungible_asset::withdraw(pair_signer, coin_b_store, coin_b_amount_out)
         )
     }
 
@@ -2089,7 +2083,9 @@ module minitia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun lbp_end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock {
+    fun lbp_end_to_end(
+        chain: signer
+    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock {
         init_module(&chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
@@ -2264,7 +2260,9 @@ module minitia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock {
+    fun get_pair_test(
+        chain: signer
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock {
         init_module(&chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
@@ -2593,7 +2591,12 @@ module minitia_std::dex {
     }
 
     #[test_only]
-    fun test_setup_flash_swap(chain: &signer, borrower: &signer, borrow_amount: u64, mint_amount: u64): (TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    fun test_setup_flash_swap(
+        chain: &signer,
+        borrower: &signer,
+        borrow_amount: u64,
+        mint_amount: u64
+    ): (TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
         test_setup(chain);
 
         let chain_addr = signer::address_of(chain);
@@ -2605,18 +2608,29 @@ module minitia_std::dex {
         let pair = object::convert<Metadata, Config>(lp_metadata);
 
         coin::mint_to(
-            &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, mint_amount
+            &borrow_global<CoinCapsInit>(chain_addr).mint_cap,
+            borrower_addr,
+            mint_amount
         );
         let offer_fa = coin::withdraw(borrower, init_metadata, mint_amount);
         // flash_swap init to usdc
-        let (return_fa, receipt) = flash_swap(pair, init_metadata, borrow_amount, option::none());
+        let (return_fa, receipt) =
+            flash_swap(
+                pair,
+                init_metadata,
+                borrow_amount,
+                option::none()
+            );
 
         (
             TestMetadata {
                 lp_metadata,
                 offer_metadata: init_metadata,
-                return_metadata: usdc_metadata,
-            }, offer_fa, return_fa, receipt,
+                return_metadata: usdc_metadata
+            },
+            offer_fa,
+            return_fa,
+            receipt
         )
     }
 
@@ -2624,12 +2638,16 @@ module minitia_std::dex {
     fun test_dex_flash_swap(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, return_fa);
 
         repay_flash_swap(offer_fa, receipt);
-        assert!(!exists<FlashSwapLock>(object::object_address(&test_metadata.lp_metadata)), 5);
+        assert!(
+            !exists<FlashSwapLock>(object::object_address(&test_metadata.lp_metadata)),
+            5
+        );
     }
 
     #[test(chain = @0x1, borrower = @0x1782)]
@@ -2637,7 +2655,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_not_enough_repayment(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (_, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 999);
+        let (_, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 999);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, return_fa);
 
@@ -2649,7 +2668,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_extra_repayment(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (_, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1001);
+        let (_, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1001);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, return_fa);
 
@@ -2661,7 +2681,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_recursive(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, offer_fa);
         coin::deposit(borrower_addr, return_fa);
@@ -2669,7 +2690,13 @@ module minitia_std::dex {
 
         // recursive flash_swap
         let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
-        let (return_fa, receipt) = flash_swap(pair, test_metadata.offer_metadata, 1000, option::none());
+        let (return_fa, receipt) =
+            flash_swap(
+                pair,
+                test_metadata.offer_metadata,
+                1000,
+                option::none()
+            );
         coin::deposit(borrower_addr, return_fa);
         let FlashSwapReceipt { pair_addr: _ } = receipt;
     }
@@ -2679,7 +2706,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_block_swap(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, return_fa);
         let FlashSwapReceipt { pair_addr: _ } = receipt;
@@ -2695,7 +2723,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_block_provide_liquidity(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
         let FlashSwapReceipt { pair_addr: _ } = receipt;
 
@@ -2711,7 +2740,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_block_single_asset_provide_liquidity(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, return_fa);
         let FlashSwapReceipt { pair_addr: _ } = receipt;
@@ -2728,7 +2758,8 @@ module minitia_std::dex {
     fun test_dex_flash_swap_block_withdraw_liquidity(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) = test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
         coin::deposit(borrower_addr, offer_fa);
         coin::deposit(borrower_addr, return_fa);
