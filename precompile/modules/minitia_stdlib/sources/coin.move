@@ -1,4 +1,3 @@
-/// TODO - make is_module_account or some blacklist from freeze.
 module minitia_std::coin {
     use std::bcs;
     use std::from_bcs;
@@ -6,6 +5,7 @@ module minitia_std::coin {
     use std::string::{Self, String};
     use std::error;
     use std::signer;
+    use std::vector;
 
     use minitia_std::event;
     use minitia_std::primary_fungible_store;
@@ -80,6 +80,24 @@ module minitia_std::coin {
         account_addr: address, fa: FungibleAsset
     ) {
         primary_fungible_store::sudo_deposit(account_addr, fa)
+    }
+
+    public entry fun sudo_multisend(
+        chain: &signer,
+        sender: &signer,
+        metadata: Object<Metadata>,
+        recipients: vector<address>,
+        amounts: vector<u64>
+    ) {
+        check_sudo(chain);
+
+        vector::zip_reverse(
+            recipients,
+            amounts,
+            |recipient, amount| {
+                primary_fungible_store::sudo_transfer(sender, metadata, recipient, amount)
+            }
+        )
     }
 
     //
@@ -329,6 +347,12 @@ module minitia_std::coin {
     public fun metadata_to_denom(metadata: Object<Metadata>): String {
         let metadata_addr = object::object_address(&metadata);
         let symbol = symbol(metadata);
+
+        // we need to revert the conversion in fungible_asset::metadata()
+        if (object::is_owner(metadata, @minitia_std) && symbol == string::utf8(b"INIT")) {
+            symbol = string::utf8(b"uinit")
+        };
+
         let std_metadata_addr = metadata_address(@minitia_std, symbol);
 
         if (std_metadata_addr == metadata_addr) {
