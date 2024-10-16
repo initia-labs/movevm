@@ -115,6 +115,11 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             let my_policy = self.get_module_policy( module_storage, &table_handle, &module.self_id(), &code_module_metadata_type_layout)?;
 
             module.immediate_dependencies().iter().map(|dep| {
+                // if the dependency is the stdlib, we don't need to check the policy
+                if dep.address == AccountAddress::ONE {
+                    return Ok(());
+                }
+
                 let dep_policy = self.get_module_policy(module_storage, &table_handle, dep, &code_module_metadata_type_layout)?;
                 if my_policy > dep_policy {
                     Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED).with_message(format!("invalid dependency upgrade policy; {} > {} ", module.self_id().short_str_lossless(), dep.short_str_lossless())))
