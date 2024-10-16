@@ -1249,29 +1249,18 @@ module initia_std::dex {
         let pair_signer = &object::generate_signer_for_extending(&pool_config.extend_ref);
 
         let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
-
-        // withdraw the return coin
-        let (return_coin, coin_a_borrow_amount, coin_b_borrow_amount) =
+        let (return_coin_store, coin_a_borrow_amount, coin_b_borrow_amount) =
             if (offer_coin == coin_a_metadata) {
-                (
-                    fungible_asset::withdraw(
-                        pair_signer, pool.coin_b_store, return_amount
-                    ),
-                    offer_amount,
-                    0
-                )
+                (pool.coin_b_store, offer_amount, 0)
             } else {
-                (
-                    fungible_asset::withdraw(
-                        pair_signer, pool.coin_a_store, return_amount
-                    ),
-                    0,
-                    offer_amount
-                )
+                (pool.coin_a_store, 0, offer_amount)
             };
 
         // store flash swap to prevent recursive flash swap
         move_to(pair_signer, FlashSwapLock { coin_a_borrow_amount, coin_b_borrow_amount });
+
+        let return_coin =
+            fungible_asset::withdraw(pair_signer, return_coin_store, return_amount);
 
         (return_coin, FlashSwapReceipt { pair_addr })
     }
