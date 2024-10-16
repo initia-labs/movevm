@@ -170,11 +170,26 @@ impl<'a> NativeTableContext<'a> {
         })
     }
 
-    pub fn resolve_table_entry(
+    pub fn resolve_table_entry_from_storage(
         &self,
         handle: &TableHandle,
         key: &[u8],
-    ) -> anyhow::Result<Option<Vec<u8>>> {
+        value_layout: &MoveTypeLayout,
+    ) -> PartialVMResult<Option<Value>> {
+        let val = self.resolver.resolve_table_entry(handle, key).map_err(|e| PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(e.to_string()))?;
+        match val {
+            Some(val_bytes) => {
+                Ok(Value::simple_deserialize(&val_bytes, value_layout))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub fn resolve_table_entry_from_change_set(
+        &self,
+        handle: &TableHandle,
+        key: &[u8],
+    ) -> PartialVMResult<Option<Value>> {
         let table_data = self.table_data.borrow();
         match table_data.tables.get(handle){
             Some(table) => {
@@ -182,23 +197,22 @@ impl<'a> NativeTableContext<'a> {
                     Some(gv) => {
                         match gv.borrow_global() {
                             Ok(val) => {
-                                return Ok(Some(serialize(&table.value_layout, &val)?));
+                                return Ok(Some(val));
                             }
                             Err(e) => {
                                 if gv.is_mutated() {
                                     // handle the case where the value is deleted
                                     return Err(e.into());
                                 }
+                                Ok(None)
                             },
                         }
                     },
-                    None => (),
-                };
+                    None => Ok(None),
+                }
             },
-            None => (),
-        };
-
-        self.resolver.resolve_table_entry(handle, key)
+            None => Ok(None),
+        }
     }
 }
 
