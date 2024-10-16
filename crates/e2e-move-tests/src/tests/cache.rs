@@ -35,6 +35,7 @@ fn test_redeploy_should_update_module_cache() {
         AccountAddress::ONE,
         vec!["0x1::BasicCoin".to_string()],
         vec![code],
+        1
     );
     let output = h.run_message(msg).expect("should success");
 
@@ -53,7 +54,7 @@ fn test_redeploy_should_update_module_cache() {
 
     // upgrade module
     let output = h
-        .publish_package(&AccountAddress::ONE, path)
+        .publish_package(&AccountAddress::ONE, path, 1)
         .expect("should success");
 
     // have to use new module cache,

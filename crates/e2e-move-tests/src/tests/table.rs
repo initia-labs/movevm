@@ -22,7 +22,7 @@ fn run_tests(tests: Vec<TestInput>) {
     h.initialize();
 
     // publish table data
-    let output = h.publish_package(&test_addr, path).expect("should success");
+    let output = h.publish_package(&test_addr, path, 1).expect("should success");
     h.commit(output, true);
 
     for (senders, entry, ty_args, args, exp_output) in tests {

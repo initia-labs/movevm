@@ -108,9 +108,10 @@ impl MoveHarness {
         &mut self,
         acc: &AccountAddress,
         path: &str,
+        upgrade_policy: u8,
     ) -> Result<MessageOutput, VMStatus> {
         let (module_ids, code) = self.compile_package(path);
-        let msg = self.create_publish_message(*acc, module_ids, code);
+        let msg = self.create_publish_message(*acc, module_ids, code, upgrade_policy);
         self.run_message(msg)
     }
 
@@ -214,6 +215,7 @@ impl MoveHarness {
         sender: AccountAddress,
         module_ids: Vec<String>,
         modules: Vec<Vec<u8>>,
+        upgrade_policy: u8,
     ) -> Message {
         let ef = MoveHarness::create_entry_function_with_json(
             str::parse("0x1::code::publish").unwrap(),
@@ -222,7 +224,7 @@ impl MoveHarness {
                 serde_json::to_string(&module_ids).unwrap(),
                 serde_json::to_string(&modules.iter().map(hex::encode).collect::<Vec<String>>())
                     .unwrap(),
-                serde_json::to_string(&(1_u8)).unwrap(), // compatible upgrade policy
+                serde_json::to_string(&upgrade_policy).unwrap(), // compatible upgrade policy
             ],
         );
         Message::execute(vec![sender], ef)
