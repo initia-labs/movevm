@@ -9,12 +9,11 @@ module minitia_std::dex {
     use minitia_std::block::get_block_info;
     use minitia_std::fungible_asset::{Self, Metadata, FungibleAsset, FungibleStore};
     use minitia_std::primary_fungible_store;
-    use minitia_std::string::{Self, String, utf8};
+    use minitia_std::string::{Self, String};
     use minitia_std::table::{Self, Table};
     use minitia_std::coin;
     use minitia_std::bigdecimal::{Self, BigDecimal};
     use minitia_std::biguint;
-    use minitia_std::cosmos;
 
     /// Pool configuration
     struct Config has key {
@@ -33,7 +32,12 @@ module minitia_std::dex {
         coin_b_borrow_amount: u64
     }
 
-    struct FlashSwapBorrower has key {
+    /// FlashSwapLoan is following the hot potato pattern, so the borrower
+    /// need to pass the created FlashSwapLoan objec to this contract to 
+    /// destruct it.
+    ///
+    /// https://move-book.com/programmability/hot-potato-pattern.html
+    struct FlashSwapLoan {
         pair_addr: address
     }
 
@@ -227,8 +231,8 @@ module minitia_std::dex {
     /// Recursive flash swap is not allowed
     const ERECURSIVE_FLASH_SWAP: u64 = 22;
 
-    /// Flash swap not found
-    const EFLASH_SWAP_NOT_FOUND: u64 = 23;
+    /// Failed to repay flash swap due to incorrect repay amount
+    const EFAILED_TO_REPAY_FLASH_SWAP: u64 = 23;
 
     // Constants
 
@@ -237,12 +241,6 @@ module minitia_std::dex {
     // TODO - find the resonable percision
     /// Result Precision of `pow` and `ln` function
     const PRECISION: u64 = 100000;
-
-    // Callback IDs
-    const CALLBACK_ID_FLASH_SWAP: u64 = 1001;
-
-    // Callback Function IDs
-    const CALLBACK_FID_FLASH_SWAP: vector<u8> = b"0x1::dex::repay_flash_swap";
 
     #[view]
     public fun get_pair_metadata(pair: Object<Config>): PairMetadataResponse acquires Pool {
@@ -1004,16 +1002,17 @@ module minitia_std::dex {
         coin::deposit(signer::address_of(account), return_coin);
     }
 
-    /// Flash swap is a special swap that allows the user to use return coin first and repay the offer coin later.
-    /// `data` is stargate message data that will be executed with swap return coin.
-    public entry fun flash_swap(
-        account: &signer,
+    /// FlashSwap is a special swap that allows the user to use return coin first and repay the offer coin later.
+    /// The borrower should repay the offer coin by calling `repay_flash_swap` function with FlashSwapLoan object.
+    /// 
+    /// https://move-book.com/programmability/hot-potato-pattern.html
+    public fun flash_swap(
         pair: Object<Config>,
         offer_coin: Object<Metadata>,
         offer_amount: u64,
         min_return: Option<u64>,
-        data: vector<u8>
-    ) acquires Config, Pool, FlashSwap {
+    ): (FungibleAsset, FlashSwapLoan) acquires Config, Pool, FlashSwap {
+        // zero offer amount would be invalidated in swap_simulation
         let return_amount = get_swap_simulation(pair, offer_coin, offer_amount);
         assert!(
             option::is_none(&min_return)
@@ -1027,12 +1026,12 @@ module minitia_std::dex {
         let pair_signer = &object::generate_signer_for_extending(&pool_config.extend_ref);
         let pair_addr = signer::address_of(pair_signer);
 
+        // check recursive flash swap
         assert!(
             !exists<FlashSwap>(pair_addr),
             error::invalid_state(ERECURSIVE_FLASH_SWAP)
         );
 
-        let borrower = signer::address_of(account);
         let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
 
         // withdraw the return coin
@@ -1056,56 +1055,35 @@ module minitia_std::dex {
                 )
             };
 
-        // deposit return_coin to the caller
-        coin::deposit(borrower, return_coin);
-
-        // store flash swap to check recursive flash swap and repay the offer coin
+        // store flash swap to prevent recursive flash swap
         move_to(pair_signer, FlashSwap { coin_a_borrow_amount, coin_b_borrow_amount });
-        move_to(account, FlashSwapBorrower { pair_addr });
 
-        // execute a move function with callback execution
-        cosmos::stargate_with_options(
-            account,
-            data,
-            cosmos::disallow_failure_with_callback(
-                CALLBACK_ID_FLASH_SWAP, utf8(CALLBACK_FID_FLASH_SWAP)
-            )
-        );
+        (return_coin, FlashSwapLoan { pair_addr })
     }
 
-    public entry fun repay_flash_swap(
-        account: &signer,
-        id: u64,
-        _success: bool // unused here because we call this function with `disallow_failure_with_callback`
-    ) acquires Pool, FlashSwap, FlashSwapBorrower {
-        assert!(id == CALLBACK_ID_FLASH_SWAP, error::invalid_argument(EUNAUTHORIZED));
-
-        let borrower = signer::address_of(account);
-        assert!(
-            exists<FlashSwapBorrower>(borrower),
-            error::invalid_state(EFLASH_SWAP_NOT_FOUND)
-        );
-        let FlashSwapBorrower { pair_addr } = move_from(borrower);
+    public fun repay_flash_swap(
+        repay_fa: FungibleAsset,
+        loan: FlashSwapLoan,
+    ) acquires Pool, FlashSwap {
+        let FlashSwapLoan { pair_addr } = loan;
         let FlashSwap { coin_a_borrow_amount, coin_b_borrow_amount } =
             move_from(pair_addr);
 
         let pool = borrow_global_mut<Pool>(pair_addr);
-
-        if (coin_a_borrow_amount > 0) {
-            let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
-            let repay_coin = coin::withdraw(
-                account, coin_a_metadata, coin_a_borrow_amount
-            );
-            fungible_asset::deposit(pool.coin_a_store, repay_coin);
+        let (repay_amount, repay_store) = if (coin_a_borrow_amount > 0) {
+            (
+                coin_a_borrow_amount,
+                pool.coin_a_store
+            )
+        } else {
+            (
+                coin_b_borrow_amount,
+                pool.coin_b_store
+            )
         };
 
-        if (coin_b_borrow_amount > 0) {
-            let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
-            let repay_coin = coin::withdraw(
-                account, coin_b_metadata, coin_b_borrow_amount
-            );
-            fungible_asset::deposit(pool.coin_b_store, repay_coin);
-        };
+        assert!(fungible_asset::amount(&repay_fa) == repay_amount, error::invalid_argument(EFAILED_TO_REPAY_FLASH_SWAP));
+        fungible_asset::deposit(repay_store, repay_fa);
     }
 
     /// Single asset provide liquidity with token in the token store
@@ -2594,100 +2572,81 @@ module minitia_std::dex {
     #[test(chain = @0x1, borrower = @0x1782)]
     fun test_dex_flash_swap(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap, FlashSwapBorrower, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap, CoinCapsInit {
         test_setup(chain);
         let chain_addr = signer::address_of(chain);
         let borrower_addr = signer::address_of(borrower);
 
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
-        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
         let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
         let pair = object::convert<Metadata, Config>(lp_metadata);
         let pair_addr = object::object_address(&pair);
 
         // flash_swap init to usdc
-        flash_swap(
-            borrower,
+        let (return_fa, loan) = flash_swap(
             pair,
             init_metadata,
             1000,
             option::none(),
-            b"testdata"
         );
         assert!(
-            coin::balance(borrower_addr, init_metadata) == 0,
+            fungible_asset::amount(&return_fa) == 996,
             3
         );
         assert!(
-            coin::balance(borrower_addr, usdc_metadata) == 996,
+            exists<FlashSwap>(pair_addr),
             4
         );
-        assert!(
-            exists<FlashSwap>(pair_addr) && exists<FlashSwapBorrower>(borrower_addr),
-            5
-        );
+        coin::deposit(borrower_addr, return_fa);
 
         // repay INIT
         coin::mint_to(
             &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 1000
         );
-        repay_flash_swap(borrower, CALLBACK_ID_FLASH_SWAP, true);
-
+        let offer_fa = coin::withdraw(borrower, init_metadata, 1000);
+        repay_flash_swap(offer_fa, loan);
         assert!(
-            coin::balance(borrower_addr, init_metadata) == 0,
-            6
-        );
-        assert!(
-            coin::balance(borrower_addr, usdc_metadata) == 996,
-            7
-        );
-        assert!(
-            !exists<FlashSwap>(pair_addr) && !exists<FlashSwapBorrower>(borrower_addr),
-            8
+            !exists<FlashSwap>(pair_addr),
+            5
         );
     }
 
     #[test(chain = @0x1, borrower = @0x1782)]
-    #[expected_failure(abort_code = 0x10004, location = fungible_asset)]
+    #[expected_failure(abort_code = 0x10017, location = Self)]
     fun test_dex_flash_swap_not_enough_repayment(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap, FlashSwapBorrower, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwap, CoinCapsInit {
         test_setup(chain);
         let chain_addr = signer::address_of(chain);
         let borrower_addr = signer::address_of(borrower);
 
         let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
-        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
         let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
         let pair = object::convert<Metadata, Config>(lp_metadata);
         let pair_addr = object::object_address(&pair);
 
-        // flash_swap init to usdc
-        flash_swap(
-            borrower,
+         // flash_swap init to usdc
+        let (return_fa, loan) = flash_swap(
             pair,
             init_metadata,
             1000,
             option::none(),
-            b"testdata"
         );
         assert!(
-            coin::balance(borrower_addr, init_metadata) == 0,
+            fungible_asset::amount(&return_fa) == 996,
             3
         );
         assert!(
-            coin::balance(borrower_addr, usdc_metadata) == 996,
+            exists<FlashSwap>(pair_addr),
             4
         );
-        assert!(
-            exists<FlashSwap>(pair_addr) && exists<FlashSwapBorrower>(borrower_addr),
-            5
-        );
+        coin::deposit(borrower_addr, return_fa);
 
         // repay INIT
         coin::mint_to(
             &borrow_global<CoinCapsInit>(chain_addr).mint_cap, borrower_addr, 999
         );
-        repay_flash_swap(borrower, CALLBACK_ID_FLASH_SWAP, true);
+        let offer_fa = coin::withdraw(borrower, init_metadata, 999);
+        repay_flash_swap(offer_fa, loan);
     }
 }
