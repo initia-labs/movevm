@@ -126,6 +126,16 @@ module minitia_std::dex {
         liquidity: u64
     }
 
+    #[event]
+    struct FlashSwapEvent has drop, store {
+        offer_coin: address,
+        return_coin: address,
+        liquidity_token: address,
+        offer_amount: u64,
+        return_amount: u64,
+        fee_amount: u64
+    }
+
     struct PoolInfoResponse has drop {
         coin_a_amount: u64,
         coin_b_amount: u64,
@@ -304,6 +314,16 @@ module minitia_std::dex {
     public fun get_swap_simulation(
         pair: Object<Config>, offer_metadata: Object<Metadata>, offer_amount: u64
     ): u64 acquires Config, Pool, FlashSwapLock {
+        let (return_amount, _fee_amount) =
+            get_swap_simulation_with_fee(pair, offer_metadata, offer_amount);
+        return_amount
+    }
+
+    #[view]
+    /// Return swap simulation result
+    public fun get_swap_simulation_with_fee(
+        pair: Object<Config>, offer_metadata: Object<Metadata>, offer_amount: u64
+    ): (u64, u64) acquires Config, Pool, FlashSwapLock {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
         assert!(
@@ -318,17 +338,15 @@ module minitia_std::dex {
             } else {
                 (pool_b, pool_a, weight_b, weight_a)
             };
-        let (return_amount, _fee_amount) =
-            swap_simulation(
-                offer_pool,
-                return_pool,
-                offer_weight,
-                return_weight,
-                offer_amount,
-                swap_fee_rate
-            );
 
-        return_amount
+        swap_simulation(
+            offer_pool,
+            return_pool,
+            offer_weight,
+            return_weight,
+            offer_amount,
+            swap_fee_rate
+        )
     }
 
     #[view]
@@ -1237,7 +1255,8 @@ module minitia_std::dex {
         assert_pool_unlocked(pair_addr);
 
         // zero offer amount would be invalidated in swap_simulation
-        let return_amount = get_swap_simulation(pair, offer_coin, offer_amount);
+        let (return_amount, fee_amount) =
+            get_swap_simulation_with_fee(pair, offer_coin, offer_amount);
         assert!(
             option::is_none(&min_return)
                 || *option::borrow(&min_return) <= return_amount,
@@ -1261,6 +1280,18 @@ module minitia_std::dex {
 
         let return_coin =
             fungible_asset::withdraw(pair_signer, return_coin_store, return_amount);
+
+        // emit events
+        event::emit<FlashSwapEvent>(
+            FlashSwapEvent {
+                offer_coin: object::object_address(&offer_coin),
+                return_coin: coin_address(&return_coin),
+                liquidity_token: pair_addr,
+                offer_amount,
+                return_amount,
+                fee_amount
+            }
+        );
 
         (return_coin, FlashSwapReceipt { pair_addr })
     }
