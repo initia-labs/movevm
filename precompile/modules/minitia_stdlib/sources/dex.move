@@ -33,7 +33,7 @@ module minitia_std::dex {
     }
 
     /// FlashSwapLoan is following the hot potato pattern, so the borrower
-    /// need to pass the created FlashSwapLoan object to this contract to 
+    /// need to pass the created FlashSwapLoan object to this contract to
     /// destruct it.
     ///
     /// https://move-book.com/programmability/hot-potato-pattern.html
@@ -1010,13 +1010,13 @@ module minitia_std::dex {
 
     /// FlashSwap is a special swap that allows the user to use return coin first and repay the offer coin later.
     /// The borrower should repay the offer coin by calling `repay_flash_swap` function with FlashSwapLoan object.
-    /// 
+    ///
     /// https://move-book.com/programmability/hot-potato-pattern.html
     public fun flash_swap(
         pair: Object<Config>,
         offer_coin: Object<Metadata>,
         offer_amount: u64,
-        min_return: Option<u64>,
+        min_return: Option<u64>
     ): (FungibleAsset, FlashSwapLoan) acquires Config, Pool, FlashSwap {
         // zero offer amount would be invalidated in swap_simulation
         let return_amount = get_swap_simulation(pair, offer_coin, offer_amount);
@@ -1068,27 +1068,24 @@ module minitia_std::dex {
     }
 
     public fun repay_flash_swap(
-        repay_fa: FungibleAsset,
-        loan: FlashSwapLoan,
+        repay_fa: FungibleAsset, loan: FlashSwapLoan
     ) acquires Pool, FlashSwap {
         let FlashSwapLoan { pair_addr } = loan;
         let FlashSwap { coin_a_borrow_amount, coin_b_borrow_amount } =
             move_from(pair_addr);
 
         let pool = borrow_global_mut<Pool>(pair_addr);
-        let (repay_amount, repay_store) = if (coin_a_borrow_amount > 0) {
-            (
-                coin_a_borrow_amount,
-                pool.coin_a_store
-            )
-        } else {
-            (
-                coin_b_borrow_amount,
-                pool.coin_b_store
-            )
-        };
+        let (repay_amount, repay_store) =
+            if (coin_a_borrow_amount > 0) {
+                (coin_a_borrow_amount, pool.coin_a_store)
+            } else {
+                (coin_b_borrow_amount, pool.coin_b_store)
+            };
 
-        assert!(fungible_asset::amount(&repay_fa) == repay_amount, error::invalid_argument(EFAILED_TO_REPAY_FLASH_SWAP));
+        assert!(
+            fungible_asset::amount(&repay_fa) == repay_amount,
+            error::invalid_argument(EFAILED_TO_REPAY_FLASH_SWAP)
+        );
         fungible_asset::deposit(repay_store, repay_fa);
     }
 
@@ -2589,20 +2586,9 @@ module minitia_std::dex {
         let pair_addr = object::object_address(&pair);
 
         // flash_swap init to usdc
-        let (return_fa, loan) = flash_swap(
-            pair,
-            init_metadata,
-            1000,
-            option::none(),
-        );
-        assert!(
-            fungible_asset::amount(&return_fa) == 996,
-            3
-        );
-        assert!(
-            exists<FlashSwap>(pair_addr),
-            4
-        );
+        let (return_fa, loan) = flash_swap(pair, init_metadata, 1000, option::none());
+        assert!(fungible_asset::amount(&return_fa) == 996, 3);
+        assert!(exists<FlashSwap>(pair_addr), 4);
         coin::deposit(borrower_addr, return_fa);
 
         // repay INIT
@@ -2611,10 +2597,7 @@ module minitia_std::dex {
         );
         let offer_fa = coin::withdraw(borrower, init_metadata, 1000);
         repay_flash_swap(offer_fa, loan);
-        assert!(
-            !exists<FlashSwap>(pair_addr),
-            5
-        );
+        assert!(!exists<FlashSwap>(pair_addr), 5);
     }
 
     #[test(chain = @0x1, borrower = @0x1782)]
@@ -2631,21 +2614,10 @@ module minitia_std::dex {
         let pair = object::convert<Metadata, Config>(lp_metadata);
         let pair_addr = object::object_address(&pair);
 
-         // flash_swap init to usdc
-        let (return_fa, loan) = flash_swap(
-            pair,
-            init_metadata,
-            1000,
-            option::none(),
-        );
-        assert!(
-            fungible_asset::amount(&return_fa) == 996,
-            3
-        );
-        assert!(
-            exists<FlashSwap>(pair_addr),
-            4
-        );
+        // flash_swap init to usdc
+        let (return_fa, loan) = flash_swap(pair, init_metadata, 1000, option::none());
+        assert!(fungible_asset::amount(&return_fa) == 996, 3);
+        assert!(exists<FlashSwap>(pair_addr), 4);
         coin::deposit(borrower_addr, return_fa);
 
         // repay INIT
