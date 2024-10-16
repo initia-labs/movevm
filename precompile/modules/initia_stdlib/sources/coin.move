@@ -92,6 +92,9 @@ module initia_std::coin {
     ) {
         check_sudo(chain);
 
+        // error checkings
+        // - vector length equivalence would be checked in vector::zip_reverse
+        // - insufficient balance would be checked in primary_fungible_store::sudo_transfer
         vector::zip_reverse(
             recipients,
             amounts,
