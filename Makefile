@@ -47,6 +47,7 @@ test-filenames:
 test: precompile test-rust test-go
 
 test-go:
+	set -x
 	RUST_BACKTRACE=full go test -v -count=1 -parallel=1 ./...
 
 test-safety:
