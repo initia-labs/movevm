@@ -1,4 +1,3 @@
-/// TODO - make is_module_account or some blacklist from freeze.
 module initia_std::coin {
     use std::bcs;
     use std::from_bcs;
@@ -6,6 +5,7 @@ module initia_std::coin {
     use std::string::{Self, String};
     use std::error;
     use std::signer;
+    use std::vector;
 
     use initia_std::event;
     use initia_std::primary_fungible_store;
@@ -81,6 +81,27 @@ module initia_std::coin {
         account_addr: address, fa: FungibleAsset
     ) {
         primary_fungible_store::sudo_deposit(account_addr, fa)
+    }
+
+    public entry fun sudo_multisend(
+        chain: &signer,
+        sender: &signer,
+        metadata: Object<Metadata>,
+        recipients: vector<address>,
+        amounts: vector<u64>
+    ) {
+        check_sudo(chain);
+
+        // error checkings
+        // - vector length equivalence would be checked in vector::zip_reverse
+        // - insufficient balance would be checked in primary_fungible_store::sudo_transfer
+        vector::zip_reverse(
+            recipients,
+            amounts,
+            |recipient, amount| {
+                primary_fungible_store::sudo_transfer(sender, metadata, recipient, amount)
+            }
+        )
     }
 
     //
