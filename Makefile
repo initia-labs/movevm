@@ -46,7 +46,12 @@ test-filenames:
 
 test: precompile test-rust test-go
 
-test-go:
+check-libmovevm:
+	@if [ ! -f api/libmovevm.so ]; then \
+		cp api/libmovevm.x86_64.so api/libmovevm.so; \
+	fi
+
+test-go: check-libmovevm
 	RUST_BACKTRACE=full go test -v -count=1 -parallel=1 ./...
 
 test-safety:
