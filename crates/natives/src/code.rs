@@ -76,9 +76,10 @@ pub struct NativeCodeContext {
 /// Represents a request for code publishing made from a native call and to be processed
 /// by the Initia VM.
 pub struct PublishRequest {
-    pub destination: AccountAddress,
+    pub publisher: AccountAddress,
     pub module_bundle: ModuleBundle,
     pub expected_modules: Option<Vec<String>>,
+    pub upgrade_policy: u8,
 }
 
 /***************************************************************************************************
@@ -108,9 +109,11 @@ fn native_request_publish(
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let gas_params = &context.native_gas_params.initia_stdlib;
 
-    debug_assert!(arguments.len() == 3);
+    debug_assert!(arguments.len() == 4);
 
     context.charge(gas_params.code_request_publish_base_cost)?;
+
+    let upgrade_policy = safely_pop_arg!(arguments, u8);
 
     let mut code: Vec<Vec<u8>> = vec![];
     for module_code in safely_pop_vec_arg!(arguments, Vec<u8>) {
@@ -134,7 +137,7 @@ fn native_request_publish(
         })?);
     }
 
-    let destination = safely_pop_arg!(arguments, AccountAddress);
+    let publisher = safely_pop_arg!(arguments, AccountAddress);
 
     let code_context = context.extensions_mut().get_mut::<NativeCodeContext>();
     if code_context.requested_module_bundle.is_some() {
@@ -144,9 +147,10 @@ fn native_request_publish(
     }
 
     code_context.requested_module_bundle = Some(PublishRequest {
-        destination,
+        publisher,
         module_bundle: ModuleBundle::new(code),
         expected_modules: Some(expected_modules),
+        upgrade_policy,
     });
 
     Ok(smallvec![])

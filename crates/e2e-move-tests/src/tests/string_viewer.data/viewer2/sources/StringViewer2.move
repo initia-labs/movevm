@@ -1,6 +1,6 @@
-module 0x2::string_viewer2 {
+module publisher::string_viewer2 {
     use std::string;
-    use 0x2::string_viewer;
+    use publisher::string_viewer;
 
     #[view]
     public fun view_my_string(): string::String {

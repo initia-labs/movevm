@@ -4,7 +4,7 @@ use move_core_types::account_address::AccountAddress;
 #[test]
 fn test_simple_publish_compatible() {
     let mut h = MoveHarness::new();
-    let acc = AccountAddress::TWO;
+    let acc = AccountAddress::from_hex_literal("0x9999").unwrap();
 
     h.initialize();
 
@@ -14,7 +14,7 @@ fn test_simple_publish_compatible() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer::view_string").unwrap(),
+        str::parse("0x9999::string_viewer::view_string").unwrap(),
         vec![],
         vec![],
     );
@@ -28,7 +28,7 @@ fn test_simple_publish_compatible() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer2::view_my_string").unwrap(),
+        str::parse("0x9999::string_viewer2::view_my_string").unwrap(),
         vec![],
         vec![],
     );
@@ -40,7 +40,7 @@ fn test_simple_publish_compatible() {
 #[test]
 fn test_simple_publish_immutable() {
     let mut h = MoveHarness::new();
-    let acc = AccountAddress::TWO;
+    let acc = AccountAddress::from_hex_literal("0x9999").unwrap();
 
     h.initialize();
 
@@ -50,7 +50,7 @@ fn test_simple_publish_immutable() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer::view_string").unwrap(),
+        str::parse("0x9999::string_viewer::view_string").unwrap(),
         vec![],
         vec![],
     );
@@ -64,7 +64,7 @@ fn test_simple_publish_immutable() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer2::view_my_string").unwrap(),
+        str::parse("0x9999::string_viewer2::view_my_string").unwrap(),
         vec![],
         vec![],
     );
@@ -76,7 +76,7 @@ fn test_simple_publish_immutable() {
 #[test]
 fn test_publish_immutable_refering_compatible() {
     let mut h = MoveHarness::new();
-    let acc = AccountAddress::TWO;
+    let acc = AccountAddress::from_hex_literal("0x9999").unwrap();
 
     h.initialize();
 
@@ -86,7 +86,7 @@ fn test_publish_immutable_refering_compatible() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer::view_string").unwrap(),
+        str::parse("0x9999::string_viewer::view_string").unwrap(),
         vec![],
         vec![],
     );
@@ -101,7 +101,7 @@ fn test_publish_immutable_refering_compatible() {
 #[test]
 fn test_publish_compatible_refering_immutable() {
     let mut h = MoveHarness::new();
-    let acc = AccountAddress::TWO;
+    let acc = AccountAddress::from_hex_literal("0x9999").unwrap();
 
     h.initialize();
 
@@ -111,7 +111,7 @@ fn test_publish_compatible_refering_immutable() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer::view_string").unwrap(),
+        str::parse("0x9999::string_viewer::view_string").unwrap(),
         vec![],
         vec![],
     );
@@ -125,7 +125,7 @@ fn test_publish_compatible_refering_immutable() {
     h.commit(output, true);
 
     let view_function = h.create_view_function(
-        str::parse("0x2::string_viewer2::view_my_string").unwrap(),
+        str::parse("0x9999::string_viewer2::view_my_string").unwrap(),
         vec![],
         vec![],
     );

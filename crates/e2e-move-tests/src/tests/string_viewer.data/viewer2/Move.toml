@@ -8,3 +8,4 @@ StringViewer = { local = "../viewer" }
 
 [addresses]
 std =  "0x1"
+publisher = "0x9999"
