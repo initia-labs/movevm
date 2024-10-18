@@ -51,6 +51,10 @@ check-libmovevm:
 		cp api/libmovevm.x86_64.so api/libmovevm.so; \
 	fi
 
+	@if [ ! -f api/libcompiler.so]; then \
+		cp api/libcompiler.x86_64.so api/libcompiler.so; \
+	fi
+
 test-go: check-libmovevm
 	RUST_BACKTRACE=full go test -v -count=1 -parallel=1 ./...
 
