@@ -211,7 +211,7 @@ module minitia_std::code {
     fun verify_dependencies_upgrade_policy(
         vec_dependency_addresses: vector<vector<address>>,
         vec_dependency_ids: vector<vector<String>>,
-        upgrade_policy: u8,
+        upgrade_policy: u8
     ) acquires MetadataStore {
         while (vector::length(&vec_dependency_addresses) > 0) {
             let dependency_addresses = vector::pop_back(&mut vec_dependency_addresses);
@@ -220,20 +220,24 @@ module minitia_std::code {
             while (vector::length(&dependency_addresses) > 0) {
                 let dependency_addr = vector::pop_back(&mut dependency_addresses);
                 let dependency_id = vector::pop_back(&mut dependency_ids);
-                
+
                 assert!(
                     exists<MetadataStore>(dependency_addr),
                     error::not_found(EPACKAGE_DEP_MISSING)
                 );
-                let depenency_metadata_store = borrow_global<MetadataStore>(dependency_addr);
-                
+                let depenency_metadata_store =
+                    borrow_global<MetadataStore>(dependency_addr);
+
                 assert!(
-                    table::contains<String, ModuleMetadata>(&depenency_metadata_store.metadata, dependency_id),
+                    table::contains<String, ModuleMetadata>(
+                        &depenency_metadata_store.metadata, dependency_id
+                    ),
                     error::not_found(EPACKAGE_DEP_MISSING)
                 );
-                let dependency_upgrade_policy = table::borrow<String, ModuleMetadata>(
-                    &depenency_metadata_store.metadata, dependency_id
-                ).upgrade_policy;
+                let dependency_upgrade_policy =
+                    table::borrow<String, ModuleMetadata>(
+                        &depenency_metadata_store.metadata, dependency_id
+                    ).upgrade_policy;
 
                 assert!(
                     dependency_upgrade_policy >= upgrade_policy,
@@ -321,6 +325,9 @@ module minitia_std::code {
 
     /// Native function to initiate module loading
     native fun request_publish(
-        owner: address, expected_modules: vector<String>, code: vector<vector<u8>>, upgrade_policy: u8,
+        owner: address,
+        expected_modules: vector<String>,
+        code: vector<vector<u8>>,
+        upgrade_policy: u8
     );
 }

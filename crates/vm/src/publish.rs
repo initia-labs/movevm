@@ -32,6 +32,7 @@ use crate::{
 };
 
 impl<'r, 'l> SessionExt<'r, 'l> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn finish_with_module_publish<S: StateView>(
         mut self,
         deseirlizer_config: &DeserializerConfig,
@@ -295,11 +296,11 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Ok(())
     }
 
-    fn verify_dependencies_upgrade_policy<'a>(
+    fn verify_dependencies_upgrade_policy(
         &mut self,
         gas_meter: &mut InitiaGasMeter,
         module_storage: &impl ModuleStorage,
-        traversal_context: &mut TraversalContext<'a>,
+        traversal_context: &mut TraversalContext<'_>,
         modules: &[CompiledModule],
         upgrade_policy: u8,
     ) -> VMResult<()> {
