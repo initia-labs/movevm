@@ -64,6 +64,12 @@ module minitia_std::code {
     /// `code_object` does not exist.
     const ECODE_OBJECT_DOES_NOT_EXIST: u64 = 0x9;
 
+    /// Dependency could not be resolved to any published package.
+    const EPACKAGE_DEP_MISSING: u64 = 0xA;
+
+    /// A dependency cannot have a weaker upgrade policy.
+    const EDEP_WEAKER_POLICY: u64 = 0xB;
+
     /// Whether a compatibility check should be performed for upgrades. The check only passes if
     /// a new module has (a) the same public functions (b) for existing resources, no layout change.
     const UPGRADE_POLICY_COMPATIBLE: u8 = 1;
@@ -200,6 +206,43 @@ module minitia_std::code {
         }
     }
 
+    /// This function is used to verify the dependencies upgrade policy have higher policy than the module itself.
+    /// The function will be called at module publish verification step by session.
+    fun verify_dependencies_upgrade_policy(
+        vec_dependency_addresses: vector<vector<address>>,
+        vec_dependency_ids: vector<vector<String>>,
+        upgrade_policy: u8,
+    ) acquires MetadataStore {
+        while (vector::length(&vec_dependency_addresses) > 0) {
+            let dependency_addresses = vector::pop_back(&mut vec_dependency_addresses);
+            let dependency_ids = vector::pop_back(&mut vec_dependency_ids);
+
+            while (vector::length(&dependency_addresses) > 0) {
+                let dependency_addr = vector::pop_back(&mut dependency_addresses);
+                let dependency_id = vector::pop_back(&mut dependency_ids);
+                
+                assert!(
+                    exists<MetadataStore>(dependency_addr),
+                    error::not_found(EPACKAGE_DEP_MISSING)
+                );
+                let depenency_metadata_store = borrow_global<MetadataStore>(dependency_addr);
+                
+                assert!(
+                    table::contains<String, ModuleMetadata>(&depenency_metadata_store.metadata, dependency_id),
+                    error::not_found(EPACKAGE_DEP_MISSING)
+                );
+                let dependency_upgrade_policy = table::borrow<String, ModuleMetadata>(
+                    &depenency_metadata_store.metadata, dependency_id
+                ).upgrade_policy;
+
+                assert!(
+                    dependency_upgrade_policy >= upgrade_policy,
+                    error::invalid_argument(EUPGRADE_WEAKER_POLICY)
+                );
+            };
+        }
+    }
+
     /// Publishes a package at the given signer's address. The caller must provide package metadata describing the
     /// package.
     public entry fun publish(
@@ -273,11 +316,11 @@ module minitia_std::code {
         };
 
         // Request publish
-        request_publish(addr, module_ids, code)
+        request_publish(addr, module_ids, code, upgrade_policy)
     }
 
     /// Native function to initiate module loading
     native fun request_publish(
-        owner: address, expected_modules: vector<String>, code: vector<vector<u8>>
+        owner: address, expected_modules: vector<String>, code: vector<vector<u8>>, upgrade_policy: u8,
     );
 }

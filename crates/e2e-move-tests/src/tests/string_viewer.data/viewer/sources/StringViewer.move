@@ -1,4 +1,4 @@
-module 0x2::string_viewer {
+module publisher::string_viewer {
     use std::string;
 
     #[view]
