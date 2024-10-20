@@ -204,7 +204,6 @@ impl InitiaVM {
             &mut gas_meter,
             PublishRequest {
                 publisher: AccountAddress::ONE,
-                expected_modules: None,
                 module_bundle,
                 upgrade_policy: 1,
             },

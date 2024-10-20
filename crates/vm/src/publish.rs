@@ -6,7 +6,7 @@ use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
     metadata::{
         CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME,
-        VERIFY_DEPENDENCIES_UPGRADE_POLICY_FUNCTION_NAME,
+        VERIFY_PUBLISH_REQUEST,
     },
     module::ModuleBundle,
 };
@@ -28,7 +28,7 @@ use move_vm_types::gas::GasMeter;
 use crate::verifier::module_init::verify_module_init_function;
 use crate::{
     session::{SessionExt, SessionOutput},
-    verifier::{errors::metadata_validation_error, module_metadata::validate_publish_request},
+    verifier::module_metadata::validate_publish_request,
 };
 
 impl<'r, 'l> SessionExt<'r, 'l> {
@@ -46,7 +46,6 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         let PublishRequest {
             publisher,
             module_bundle,
-            expected_modules,
             upgrade_policy,
         } = publish_request;
 
@@ -57,8 +56,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         self.check_publish_request(
             code_storage,
             gas_meter,
+            publisher,
             &module_bundle,
-            expected_modules,
             modules,
             upgrade_policy,
             traversal_context,
@@ -160,28 +159,21 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             .map(|m| m.self_id().short_str_lossless())
             .collect();
 
-        let args: Vec<Vec<u8>> = vec![
-            MoveValue::Signer(AccountAddress::ONE)
-                .simple_serialize()
-                .unwrap(),
-            bcs::to_bytes(&published_module_ids).unwrap(),
-            bcs::to_bytes(&allowed_publishers).unwrap(),
-        ];
-
-        let function = self.inner.load_function(
-            staging_module_storage,
+        // ignore the output
+        self.inner.execute_function_bypass_visibility(
             &ModuleId::new(
                 AccountAddress::ONE,
                 Identifier::new(CODE_MODULE_NAME).unwrap(),
             ),
-            &Identifier::new(INIT_GENESIS_FUNCTION_NAME).unwrap(),
-            &[],
-        )?;
-
-        // ignore the output
-        self.inner.execute_entry_function(
-            function,
-            args,
+            ident_str!(INIT_GENESIS_FUNCTION_NAME),
+            vec![],
+            vec![
+                MoveValue::Signer(AccountAddress::ONE)
+                    .simple_serialize()
+                    .unwrap(),
+                bcs::to_bytes(&published_module_ids).unwrap(),
+                bcs::to_bytes(&allowed_publishers).unwrap(),
+            ],
             gas_meter,
             traversal_context,
             staging_module_storage,
@@ -194,8 +186,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         &mut self,
         code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
+        publisher: AccountAddress,
         module_bundle: &ModuleBundle,
-        expected_modules: Option<Vec<String>>,
         modules: &'a [CompiledModule],
         upgrade_policy: u8,
         traversal_context: &mut TraversalContext<'a>,
@@ -270,24 +262,13 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         // validate modules are properly compiled with metadata
         validate_publish_request(code_storage, modules, module_bundle, allow_unsafe)?;
 
-        if let Some(expected_modules) = expected_modules {
-            for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
-                if m.self_id().short_str_lossless().as_str() != expected_id {
-                    return Err(metadata_validation_error(&format!(
-                        "unexpected module: '{}', expected: '{}'",
-                        m.self_id().name(),
-                        expected_id
-                    )));
-                }
-            }
-        }
-
         // validate dependencies upgrade policy
         if !skip_dependencies_upgrade_policy_verification {
             self.verify_dependencies_upgrade_policy(
                 gas_meter,
                 code_storage,
                 traversal_context,
+                publisher,
                 modules,
                 upgrade_policy,
             )?;
@@ -301,9 +282,11 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         gas_meter: &mut InitiaGasMeter,
         module_storage: &impl ModuleStorage,
         traversal_context: &mut TraversalContext<'_>,
+        publisher: AccountAddress,
         modules: &[CompiledModule],
         upgrade_policy: u8,
     ) -> VMResult<()> {
+        let mut module_ids = vec![];
         let mut vec_deps_addresses = vec![];
         let mut vec_deps_module_ids = vec![];
         for module in modules {
@@ -320,15 +303,18 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                 deps_module_ids.push(dep.short_str_lossless());
             }
 
+            module_ids.push(module.self_id().short_str_lossless());
             vec_deps_addresses.push(deps_addresses);
             vec_deps_module_ids.push(deps_module_ids);
         }
 
         let _ = self.inner.execute_function_bypass_visibility(
             &ModuleId::new(AccountAddress::ONE, ident_str!(CODE_MODULE_NAME).into()),
-            ident_str!(VERIFY_DEPENDENCIES_UPGRADE_POLICY_FUNCTION_NAME),
+            ident_str!(VERIFY_PUBLISH_REQUEST),
             vec![],
             vec![
+                MoveValue::Signer(publisher).simple_serialize().unwrap(),
+                bcs::to_bytes(&module_ids).unwrap(),
                 bcs::to_bytes(&vec_deps_addresses).unwrap(),
                 bcs::to_bytes(&vec_deps_module_ids).unwrap(),
                 bcs::to_bytes(&upgrade_policy).unwrap(),

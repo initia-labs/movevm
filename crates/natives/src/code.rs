@@ -1,5 +1,4 @@
 use crate::{
-    helpers::get_string,
     interface::{
         RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
     },
@@ -9,10 +8,7 @@ use better_any::{Tid, TidAble};
 use initia_move_types::module::ModuleBundle;
 use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{
-    loaded_data::runtime_types::Type,
-    values::{Struct, Value},
-};
+use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
 use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
@@ -63,7 +59,6 @@ const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 
 // native errors always start from 100
 const EALREADY_REQUESTED: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
-const EUNABLE_TO_PARSE_STRING: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 101;
 
 /// The native code context.
 #[derive(Tid, Default)]
@@ -78,7 +73,6 @@ pub struct NativeCodeContext {
 pub struct PublishRequest {
     pub publisher: AccountAddress,
     pub module_bundle: ModuleBundle,
-    pub expected_modules: Option<Vec<String>>,
     pub upgrade_policy: u8,
 }
 
@@ -109,7 +103,7 @@ fn native_request_publish(
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let gas_params = &context.native_gas_params.initia_stdlib;
 
-    debug_assert!(arguments.len() == 4);
+    debug_assert!(arguments.len() == 3);
 
     context.charge(gas_params.code_request_publish_base_cost)?;
 
@@ -121,20 +115,6 @@ fn native_request_publish(
             gas_params.code_request_publish_per_byte * NumBytes::new(module_code.len() as u64),
         )?;
         code.push(module_code);
-    }
-
-    let mut expected_modules: Vec<String> = vec![];
-    for name in safely_pop_vec_arg!(arguments, Struct) {
-        let str_bytes = get_string(name)?;
-
-        context.charge(
-            gas_params.code_request_publish_per_byte * NumBytes::new(str_bytes.len() as u64),
-        )?;
-        expected_modules.push(String::from_utf8(str_bytes).map_err(|_| {
-            SafeNativeError::Abort {
-                abort_code: EUNABLE_TO_PARSE_STRING,
-            }
-        })?);
     }
 
     let publisher = safely_pop_arg!(arguments, AccountAddress);
@@ -149,7 +129,6 @@ fn native_request_publish(
     code_context.requested_module_bundle = Some(PublishRequest {
         publisher,
         module_bundle: ModuleBundle::new(code),
-        expected_modules: Some(expected_modules),
         upgrade_policy,
     });
 
