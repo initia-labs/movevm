@@ -237,6 +237,8 @@ pub fn convert_json_value_to_value(
 
                         // Enforce that the struct creation is in the same module
                         if !type_.module_id().eq(caller) {
+                            println!("caller: {:?}", caller);
+                            println!("type: {:?}", type_.module_id());
                             return Err(deserialization_error_with_msg(
                                 "struct creation only allowed in the same module",
                             ));
