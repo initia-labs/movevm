@@ -13,16 +13,26 @@ const (
 	MinlibPath = "binaries/minlib"
 )
 
-// ReadStdlib return stdlib module bytes
-func ReadStdlib() ([][]byte, error) {
-	entries, err := files.ReadDir(StdlibPath)
-	if err != nil {
-		return nil, err
+// ReadStdlib return stdlib module bytes.
+//
+// If filters is empty, return all modules.
+// Ex) filters: "code.move", "coin.move"
+func ReadStdlib(filters ...string) ([][]byte, error) {
+	if len(filters) == 0 {
+		entries, err := files.ReadDir(StdlibPath)
+		if err != nil {
+			return nil, err
+		}
+
+		filters = make([]string, len(entries))
+		for i, entry := range entries {
+			filters[i] = entry.Name()
+		}
 	}
 
-	modules := make([][]byte, len(entries))
-	for i, entry := range entries {
-		bz, err := files.ReadFile(path.Join(StdlibPath, entry.Name()))
+	modules := make([][]byte, len(filters))
+	for i, entry := range filters {
+		bz, err := files.ReadFile(path.Join(StdlibPath, entry))
 		if err != nil {
 			return nil, err
 		}
@@ -33,16 +43,26 @@ func ReadStdlib() ([][]byte, error) {
 	return modules, nil
 }
 
-// ReadMinlib return minlib module bytes
-func ReadMinlib() ([][]byte, error) {
-	entries, err := files.ReadDir(MinlibPath)
-	if err != nil {
-		return nil, err
+// ReadMinlib return minlib module bytes.
+//
+// If filters is empty, return all modules.
+// Ex) filters: "code.move", "coin.move"
+func ReadMinlib(filters ...string) ([][]byte, error) {
+	if len(filters) == 0 {
+		entries, err := files.ReadDir(MinlibPath)
+		if err != nil {
+			return nil, err
+		}
+
+		filters = make([]string, len(entries))
+		for i, entry := range entries {
+			filters[i] = entry.Name()
+		}
 	}
 
-	modules := make([][]byte, len(entries))
-	for i, entry := range entries {
-		bz, err := files.ReadFile(path.Join(MinlibPath, entry.Name()))
+	modules := make([][]byte, len(filters))
+	for i, entry := range filters {
+		bz, err := files.ReadFile(path.Join(MinlibPath, entry))
 		if err != nil {
 			return nil, err
 		}
