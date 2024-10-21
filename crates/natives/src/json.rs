@@ -118,7 +118,7 @@ fn native_unmarshal(
     let serde_bytes = safely_pop_arg!(arguments, Vec<u8>);
 
     // Extract caller from the stack to assert the struct creation module permission.
-    let calller = context
+    let caller = context
         .stack_frames(1)
         .stack_trace()
         .first()
@@ -128,7 +128,7 @@ fn native_unmarshal(
         .ok_or_else(invariant_violation)?;
 
     let value =
-        deserialize_json_to_value(&calller, &annotated_layout, &serde_bytes).map_err(|_| {
+        deserialize_json_to_value(&caller, &annotated_layout, &serde_bytes).map_err(|_| {
             SafeNativeError::Abort {
                 abort_code: EUNABLE_TO_UNMARSHAL_DESERIALIZATION_ERROR,
             }
