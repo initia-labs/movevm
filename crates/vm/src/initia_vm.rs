@@ -75,7 +75,7 @@ pub struct InitiaVM {
     move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
     initia_vm_config: InitiaVMConfig,
-    runtime_environment: RuntimeEnvironment,
+    runtime_environment: Arc<RuntimeEnvironment>,
     script_cache: Arc<InitiaScriptCache>,
     module_cache: Arc<InitiaModuleCache>,
 }
@@ -94,8 +94,10 @@ impl InitiaVM {
             verifier_config: verifier_config(),
             ..Default::default()
         };
-        let runtime_environment =
-            RuntimeEnvironment::new_with_config(all_natives(gas_params, misc_params), vm_config);
+        let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(
+            all_natives(gas_params, misc_params),
+            vm_config,
+        ));
         let move_vm = MoveVM::new_with_runtime_environment(&runtime_environment);
         let script_cache = new_initia_script_cache(initia_vm_config.script_cache_capacity);
         let module_cache = new_initia_module_cache(initia_vm_config.module_cache_capacity);

@@ -20,14 +20,20 @@ pub enum ScriptCacheEntry {
     },
 }
 
+impl ScriptCacheEntry {
+    fn script_size(&self) -> usize {
+        match self {
+            Self::Deserialized { script_size, .. } => *script_size,
+            Self::Verified { script_size, .. } => *script_size,
+        }
+    }
+}
+
 pub struct ScriptCacheEntryScale;
 
 impl WeightScale<Checksum, ScriptCacheEntry> for ScriptCacheEntryScale {
     fn weight(&self, _key: &Checksum, value: &ScriptCacheEntry) -> usize {
-        match value {
-            ScriptCacheEntry::Deserialized { script_size, .. } => *script_size,
-            ScriptCacheEntry::Verified { script_size, .. } => *script_size,
-        }
+        value.script_size()
     }
 }
 

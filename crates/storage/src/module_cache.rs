@@ -37,16 +37,20 @@ impl ModuleCacheEntry {
             ModuleCacheEntry::Verified { module, .. } => module.compiled_module().clone(),
         }
     }
+
+    fn module_size(&self) -> usize {
+        match self {
+            Self::Deserialized { module_size, .. } => *module_size,
+            Self::Verified { module_size, .. } => *module_size,
+        }
+    }
 }
 
 pub struct ModuleCacheEntryScale;
 
 impl WeightScale<Checksum, ModuleCacheEntry> for ModuleCacheEntryScale {
     fn weight(&self, _key: &Checksum, value: &ModuleCacheEntry) -> usize {
-        match value {
-            ModuleCacheEntry::Deserialized { module_size, .. } => *module_size,
-            ModuleCacheEntry::Verified { module_size, .. } => *module_size,
-        }
+        value.module_size()
     }
 }
 

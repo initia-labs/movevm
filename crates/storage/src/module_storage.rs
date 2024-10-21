@@ -100,7 +100,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
     /// If the module does not exist, returns true, and false otherwise. For modules that exist, if
     /// the module is not yet cached in module storage, fetches it from the baseline storage and
     /// caches as a deserialized entry.
-    fn module_does_not_exist(
+    fn ensure_module_cached(
         &self,
         checksum: &Checksum,
         address: &AccountAddress,
@@ -168,7 +168,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
             .fetch_checksum(address, module_name)?
             .ok_or(module_linker_error!(address, module_name))?;
 
-        if self.module_does_not_exist(&checksum, address, module_name)? {
+        if self.ensure_module_cached(&checksum, address, module_name)? {
             return Err(module_linker_error!(address, module_name));
         }
         // At this point module storage contains a deserialized entry, because the function
@@ -338,7 +338,7 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
                 return Ok(None);
             };
 
-        if self.module_does_not_exist(&checksum, address, module_name)? {
+        if self.ensure_module_cached(&checksum, address, module_name)? {
             return Ok(None);
         }
 
@@ -450,7 +450,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_module_does_not_exist() {
+    fn test_ensure_module_cached() {
         let runtime_environment = RuntimeEnvironment::new(vec![]);
         let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
         let module_storage =
