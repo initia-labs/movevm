@@ -18,7 +18,7 @@ fn test_view_output() {
 
     // publish std coin
     let output = h
-        .publish_package(&deployer_addr, path)
+        .publish_package(&deployer_addr, path, 1)
         .expect("should success");
     h.commit(output, true);
 

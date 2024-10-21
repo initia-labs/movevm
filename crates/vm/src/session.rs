@@ -5,7 +5,6 @@ use std::{
 };
 
 use bytes::Bytes;
-use initia_move_gas::InitiaGasMeter;
 use initia_move_json::StructResolver;
 use initia_move_natives::{
     account::NativeAccountContext,
@@ -15,39 +14,24 @@ use initia_move_natives::{
     staking::NativeStakingContext,
     table::NativeTableContext,
 };
-use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
     access_path::AccessPath,
     account::Accounts,
     cosmos::CosmosMessages,
     event::ContractEvent,
-    metadata::{CODE_MODULE_NAME, INIT_GENESIS_FUNCTION_NAME, INIT_MODULE_FUNCTION_NAME},
-    module::ModuleBundle,
     staking_change_set::StakingChangeSet,
     write_set::{WriteOp, WriteSet},
 };
 
-use move_binary_format::{
-    compatibility::Compatibility,
-    errors::{Location, PartialVMError, PartialVMResult, VMResult},
-    CompiledModule,
-};
+use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
-    account_address::AccountAddress,
     effects::Op,
-    ident_str,
-    identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
-    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MoveValue},
+    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{
-    compute_code_hash, module_traversal::TraversalContext, session::Session, ModuleStorage,
-    StagingModuleStorage,
-};
+use move_vm_runtime::{compute_code_hash, session::Session, ModuleStorage};
 use move_vm_types::loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type};
-
-use crate::verifier::module_init::verify_module_init_function;
 
 /// Maximal depth of a value in terms of type depth.
 pub const VALUE_DEPTH_MAX: u64 = 128;
@@ -65,182 +49,12 @@ pub type SessionOutput<'r> = (
 );
 
 pub struct SessionExt<'r, 'l> {
-    inner: Session<'r, 'l>,
+    pub(crate) inner: Session<'r, 'l>,
 }
 
 impl<'r, 'l> SessionExt<'r, 'l> {
     pub fn new(inner: Session<'r, 'l>) -> Self {
         Self { inner }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn module_publishing_and_initialization<S: StateView>(
-        mut self,
-        code_storage: &InitiaStorage<S>,
-        gas_meter: &mut InitiaGasMeter,
-        traversal_context: &mut TraversalContext,
-        destination: AccountAddress,
-        bundle: ModuleBundle,
-        modules: &[CompiledModule],
-        compatibility_checks: Compatibility,
-        // `init_genesis` will not be executed if `allowed_publishers` is `None`.
-        allowed_publishers: Option<Vec<AccountAddress>>,
-    ) -> VMResult<SessionOutput<'r>> {
-        // Stage module bundle on top of module storage. In case modules cannot be added (for
-        // example, fail compatibility checks, create cycles, etc.), we return an error here.
-        let staging_module_storage = StagingModuleStorage::create_with_compat_config(
-            &destination,
-            compatibility_checks,
-            code_storage,
-            bundle.into_bytes(),
-        )?;
-
-        self.initialize_module(
-            code_storage,
-            gas_meter,
-            traversal_context,
-            &staging_module_storage,
-            destination,
-            modules,
-        )?;
-
-        if let Some(allowed_publishers) = allowed_publishers {
-            self.initialize_genesis(
-                gas_meter,
-                traversal_context,
-                &staging_module_storage,
-                modules,
-                allowed_publishers,
-            )?;
-        }
-
-        let mut output = self.finish(&staging_module_storage)?;
-        let module_write_set = Self::convert_modules_into_write_set(
-            code_storage,
-            staging_module_storage
-                .release_verified_module_bundle()
-                .into_iter(),
-        )
-        .map_err(|e| e.finish(Location::Undefined))?;
-
-        output.1.extend(module_write_set);
-        Ok(output)
-    }
-
-    /// Converts module bytes and their compiled representation extracted from publish request into
-    /// write ops. Only used by V2 loader implementation.
-    pub fn convert_modules_into_write_set(
-        module_storage: &impl ModuleStorage,
-        staged_modules: impl Iterator<Item = (ModuleId, Bytes)>,
-    ) -> PartialVMResult<WriteSet> {
-        let mut module_write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
-        for (module_id, bytes) in staged_modules {
-            let module_exists = module_storage
-                .check_module_exists(&module_id.address, &module_id.name)
-                .map_err(|e| e.to_partial())?;
-            let op = if module_exists {
-                Op::Modify(bytes)
-            } else {
-                Op::New(bytes)
-            };
-            let ap = AccessPath::code_access_path(module_id.address, module_id.name.to_owned());
-            module_write_set.insert(ap, op.clone().map(|v| v.into()));
-
-            let ap = AccessPath::checksum_access_path(module_id.address, module_id.name.to_owned());
-            module_write_set.insert(
-                ap,
-                op.map(|v| {
-                    let checksum = compute_code_hash(&v);
-                    checksum.into()
-                }),
-            );
-        }
-        Ok(WriteSet::new_with_write_set(module_write_set))
-    }
-
-    fn initialize_module<S: StateView, M: ModuleStorage>(
-        &mut self,
-        code_storage: &InitiaStorage<S>,
-        gas_meter: &mut InitiaGasMeter,
-        traversal_context: &mut TraversalContext,
-        staging_module_storage: &StagingModuleStorage<M>,
-        destination: AccountAddress,
-        modules: &[CompiledModule],
-    ) -> VMResult<()> {
-        let init_func_name = ident_str!(INIT_MODULE_FUNCTION_NAME);
-        for module in modules {
-            // Check if module existed previously. If not, we do not run initialization.
-            if code_storage.check_module_exists(module.self_addr(), module.self_name())? {
-                continue;
-            }
-
-            let module_id = module.self_id();
-            let init_function_exists = self
-                .inner
-                .load_function(staging_module_storage, &module_id, init_func_name, &[])
-                .is_ok();
-
-            if init_function_exists {
-                // We need to check that init_module function we found is well-formed.
-                verify_module_init_function(module).map_err(|e| e.finish(Location::Undefined))?;
-
-                self.inner.execute_function_bypass_visibility(
-                    &module_id,
-                    init_func_name,
-                    vec![],
-                    vec![MoveValue::Signer(destination).simple_serialize().unwrap()],
-                    gas_meter,
-                    traversal_context,
-                    staging_module_storage,
-                )?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Special function to initialize the genesis block. This function is only called once per
-    /// blockchain genesis. It is used to initialize the blockchain by setting genesis modules with
-    /// allowed publishers.
-    fn initialize_genesis<M: ModuleStorage>(
-        &mut self,
-        gas_meter: &mut InitiaGasMeter,
-        traversal_context: &mut TraversalContext,
-        staging_module_storage: &StagingModuleStorage<M>,
-        modules: &[CompiledModule],
-        allowed_publishers: Vec<AccountAddress>,
-    ) -> VMResult<()> {
-        let published_module_ids: Vec<String> = modules
-            .iter()
-            .map(|m| m.self_id().short_str_lossless())
-            .collect();
-
-        let args: Vec<Vec<u8>> = vec![
-            MoveValue::Signer(AccountAddress::ONE)
-                .simple_serialize()
-                .unwrap(),
-            bcs::to_bytes(&published_module_ids).unwrap(),
-            bcs::to_bytes(&allowed_publishers).unwrap(),
-        ];
-
-        let function = self.inner.load_function(
-            staging_module_storage,
-            &ModuleId::new(
-                AccountAddress::ONE,
-                Identifier::new(CODE_MODULE_NAME).unwrap(),
-            ),
-            &Identifier::new(INIT_GENESIS_FUNCTION_NAME).unwrap(),
-            &[],
-        )?;
-
-        // ignore the output
-        self.inner.execute_entry_function(
-            function,
-            args,
-            gas_meter,
-            traversal_context,
-            staging_module_storage,
-        )?;
-        Ok(())
     }
 
     pub fn finish(self, module_storage: &impl ModuleStorage) -> VMResult<SessionOutput> {
@@ -284,6 +98,37 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     pub fn extract_publish_request(&mut self) -> Option<PublishRequest> {
         let ctx = self.get_native_extensions().get_mut::<NativeCodeContext>();
         ctx.requested_module_bundle.take()
+    }
+
+    /// Converts module bytes and their compiled representation extracted from publish request into
+    /// write ops. Only used by V2 loader implementation.
+    pub fn convert_modules_into_write_set(
+        module_storage: &impl ModuleStorage,
+        staged_modules: impl Iterator<Item = (ModuleId, Bytes)>,
+    ) -> PartialVMResult<WriteSet> {
+        let mut module_write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
+        for (module_id, bytes) in staged_modules {
+            let module_exists = module_storage
+                .check_module_exists(&module_id.address, &module_id.name)
+                .map_err(|e| e.to_partial())?;
+            let op = if module_exists {
+                Op::Modify(bytes)
+            } else {
+                Op::New(bytes)
+            };
+            let ap = AccessPath::code_access_path(module_id.address, module_id.name.to_owned());
+            module_write_set.insert(ap, op.clone().map(|v| v.into()));
+
+            let ap = AccessPath::checksum_access_path(module_id.address, module_id.name.to_owned());
+            module_write_set.insert(
+                ap,
+                op.map(|v| {
+                    let checksum = compute_code_hash(&v);
+                    checksum.into()
+                }),
+            );
+        }
+        Ok(WriteSet::new_with_write_set(module_write_set))
     }
 }
 

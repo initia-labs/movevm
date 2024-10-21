@@ -1,0 +1,11 @@
+[package]
+name = "StringViewer2"
+version = "0.0.0"
+
+[dependencies]
+InitiaStdlib = { local = "../../../../../../precompile/modules/initia_stdlib" }
+StringViewer = { local = "../viewer" }
+
+[addresses]
+std =  "0x1"
+publisher = "0x9999"

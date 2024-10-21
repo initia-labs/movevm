@@ -32,7 +32,7 @@ fn run_tests(tests: Vec<TestInput>) {
 
     // publish std coin
     let output = h
-        .publish_package(&minter_addr, path)
+        .publish_package(&minter_addr, path, 1)
         .expect("should success");
     h.commit(output, true);
 

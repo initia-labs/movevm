@@ -27,6 +27,20 @@ module minitia_std::dex {
         coin_b_store: Object<FungibleStore>
     }
 
+    struct FlashSwapLock has key {
+        coin_a_borrow_amount: u64,
+        coin_b_borrow_amount: u64
+    }
+
+    /// FlashSwapReceipt is following the hot potato pattern, so the borrower
+    /// need to pass the created FlashSwapReceipt object to this contract to
+    /// destruct it.
+    ///
+    /// https://move-book.com/programmability/hot-potato-pattern.html
+    struct FlashSwapReceipt {
+        pair_addr: address
+    }
+
     struct Weights has copy, drop, store {
         weights_before: Weight,
         weights_after: Weight
@@ -110,6 +124,16 @@ module minitia_std::dex {
         provide_amount: u64,
         fee_amount: u64,
         liquidity: u64
+    }
+
+    #[event]
+    struct FlashSwapEvent has drop, store {
+        offer_coin: address,
+        return_coin: address,
+        liquidity_token: address,
+        offer_amount: u64,
+        return_amount: u64,
+        fee_amount: u64
     }
 
     struct PoolInfoResponse has drop {
@@ -214,7 +238,14 @@ module minitia_std::dex {
     /// Weights sum must be 1.0
     const EINVALID_WEIGHTS: u64 = 21;
 
+    /// Pool is locked by flash swap
+    const EPOOL_LOCKED: u64 = 22;
+
+    /// Failed to repay flash swap due to incorrect repay amount
+    const EFAILED_TO_REPAY_FLASH_SWAP: u64 = 23;
+
     // Constants
+
     const MAX_LIMIT: u8 = 30;
 
     // TODO - find the resonable percision
@@ -223,7 +254,7 @@ module minitia_std::dex {
 
     #[view]
     public fun get_pair_metadata(pair: Object<Config>): PairMetadataResponse acquires Pool {
-        let pool = borrow_global_mut<Pool>(object::object_address(&pair));
+        let pool = borrow_global<Pool>(object::object_address(&pair));
         let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
         let coin_b_metadata = fungible_asset::store_metadata(pool.coin_b_store);
 
@@ -245,7 +276,7 @@ module minitia_std::dex {
     /// https://balancer.fi/whitepaper.pdf (2)
     public fun get_spot_price(
         pair: Object<Config>, base_coin: Object<Metadata>
-    ): BigDecimal acquires Config, Pool {
+    ): BigDecimal acquires Config, Pool, FlashSwapLock {
         let (coin_a_pool, coin_b_pool, coin_a_weight, coin_b_weight, _) =
             pool_info(pair, false);
 
@@ -272,7 +303,7 @@ module minitia_std::dex {
     #[view]
     public fun get_spot_price_by_denom(
         pair_denom: String, base_coin: String
-    ): BigDecimal acquires Config, Pool {
+    ): BigDecimal acquires Config, Pool, FlashSwapLock {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let base_metadata = coin::denom_to_metadata(base_coin);
         get_spot_price(object::convert(pair_metadata), base_metadata)
@@ -282,7 +313,17 @@ module minitia_std::dex {
     /// Return swap simulation result
     public fun get_swap_simulation(
         pair: Object<Config>, offer_metadata: Object<Metadata>, offer_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwapLock {
+        let (return_amount, _fee_amount) =
+            get_swap_simulation_with_fee(pair, offer_metadata, offer_amount);
+        return_amount
+    }
+
+    #[view]
+    /// Return swap simulation result
+    public fun get_swap_simulation_with_fee(
+        pair: Object<Config>, offer_metadata: Object<Metadata>, offer_amount: u64
+    ): (u64, u64) acquires Config, Pool, FlashSwapLock {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
         assert!(
@@ -297,23 +338,21 @@ module minitia_std::dex {
             } else {
                 (pool_b, pool_a, weight_b, weight_a)
             };
-        let (return_amount, _fee_amount) =
-            swap_simulation(
-                offer_pool,
-                return_pool,
-                offer_weight,
-                return_weight,
-                offer_amount,
-                swap_fee_rate
-            );
 
-        return_amount
+        swap_simulation(
+            offer_pool,
+            return_pool,
+            offer_weight,
+            return_weight,
+            offer_amount,
+            swap_fee_rate
+        )
     }
 
     #[view]
     public fun get_swap_simulation_by_denom(
         pair_denom: String, offer_denom: String, offer_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwapLock {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         get_swap_simulation(
@@ -327,7 +366,7 @@ module minitia_std::dex {
     /// Return swap simulation result
     public fun get_swap_simulation_given_out(
         pair: Object<Config>, offer_metadata: Object<Metadata>, return_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwapLock {
         let pair_key = generate_pair_key(pair);
         let offer_address = object::object_address(&offer_metadata);
         assert!(
@@ -358,7 +397,7 @@ module minitia_std::dex {
     #[view]
     public fun get_swap_simulation_given_out_by_denom(
         pair_denom: String, offer_denom: String, return_amount: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwapLock {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         let offer_metadata = coin::denom_to_metadata(offer_denom);
         get_swap_simulation_given_out(
@@ -371,7 +410,7 @@ module minitia_std::dex {
     #[view]
     public fun get_provide_simulation(
         pair: Object<Config>, coin_a_amount_in: u64, coin_b_amount_in: u64
-    ): u64 acquires Pool {
+    ): u64 acquires Pool, FlashSwapLock {
         let pool_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pool_addr);
 
@@ -383,7 +422,7 @@ module minitia_std::dex {
     #[view]
     public fun get_single_asset_provide_simulation(
         pair: Object<Config>, offer_asset_metadata: Object<Metadata>, amount_in: u64
-    ): u64 acquires Config, Pool {
+    ): u64 acquires Config, Pool, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
 
@@ -397,19 +436,22 @@ module minitia_std::dex {
 
     #[view]
     /// get pool info
-    public fun get_pool_info(pair: Object<Config>): PoolInfoResponse acquires Pool {
+    public fun get_pool_info(pair: Object<Config>): PoolInfoResponse acquires Pool, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pair_addr);
+        let (pool_coin_a, pool_coin_b) = pool_amounts(pool, pair_addr);
         PoolInfoResponse {
-            coin_a_amount: fungible_asset::balance(pool.coin_a_store),
-            coin_b_amount: fungible_asset::balance(pool.coin_b_store),
+            coin_a_amount: pool_coin_a,
+            coin_b_amount: pool_coin_b,
             total_share: option::extract(&mut fungible_asset::supply(pair))
         }
     }
 
     #[view]
     /// get pool info
-    public fun get_pool_info_by_denom(pair_denom: String): PoolInfoResponse acquires Pool {
+    public fun get_pool_info_by_denom(
+        pair_denom: String
+    ): PoolInfoResponse acquires Pool, FlashSwapLock {
         let pair_metadata = coin::denom_to_metadata(pair_denom);
         get_pool_info(object::convert(pair_metadata))
     }
@@ -731,7 +773,7 @@ module minitia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, Pool, ModuleStore {
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock {
         let (_, timestamp) = get_block_info();
         let weights = Weights {
             weights_before: Weight { coin_a_weight, coin_b_weight, timestamp },
@@ -772,7 +814,7 @@ module minitia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, ModuleStore, Pool {
+    ) acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock {
         let (_, timestamp) = get_block_info();
         assert!(
             start_time > timestamp,
@@ -854,7 +896,7 @@ module minitia_std::dex {
         coin_a_amount_in: u64,
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
-    ) acquires CoinCapabilities, Config, Pool {
+    ) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
         provide_liquidity_from_coin_store(
             account,
             pair,
@@ -871,11 +913,10 @@ module minitia_std::dex {
         coin_a_amount_in: u64,
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
-    ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool {
+    ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
-        let pool = borrow_global_mut<Pool>(pair_addr);
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
+        let pool = borrow_global<Pool>(pair_addr);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
         // calculate the best coin amount
@@ -937,7 +978,7 @@ module minitia_std::dex {
         liquidity: u64,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>
-    ) acquires CoinCapabilities, Config, Pool {
+    ) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
         assert!(
             liquidity != 0,
             error::invalid_argument(EZERO_LIQUIDITY)
@@ -968,7 +1009,7 @@ module minitia_std::dex {
         offer_coin: Object<Metadata>,
         offer_coin_amount: u64,
         min_return: Option<u64>
-    ) acquires Config, Pool {
+    ) acquires Config, Pool, FlashSwapLock {
         let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
         let return_coin = swap(pair, offer_coin);
 
@@ -988,7 +1029,7 @@ module minitia_std::dex {
         provide_coin: Object<Metadata>,
         amount_in: u64,
         min_liquidity: Option<u64>
-    ) acquires Config, CoinCapabilities, Pool {
+    ) acquires Config, CoinCapabilities, Pool, FlashSwapLock {
         let addr = signer::address_of(account);
         let provide_coin = coin::withdraw(account, provide_coin, amount_in);
         let liquidity_token =
@@ -1003,19 +1044,23 @@ module minitia_std::dex {
         lp_token: FungibleAsset,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>
-    ): (FungibleAsset, FungibleAsset) acquires CoinCapabilities, Config, Pool {
+    ): (FungibleAsset, FungibleAsset) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
         let pair_addr = coin_address(&lp_token);
-        let pool = borrow_global_mut<Pool>(pair_addr);
-        let config = borrow_global_mut<Config>(pair_addr);
+
+        // check pool is not locked by flash swap
+        assert_pool_unlocked(pair_addr);
+
+        let pool = borrow_global<Pool>(pair_addr);
+        let config = borrow_global<Config>(pair_addr);
         let total_share =
             option::extract(
                 &mut fungible_asset::supply(
                     fungible_asset::metadata_from_asset(&lp_token)
                 )
             );
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
+        let (coin_a_store, coin_b_store) = (pool.coin_a_store, pool.coin_b_store);
         let given_token_amount = fungible_asset::amount(&lp_token);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
         let given_share_ratio =
             bigdecimal::from_ratio_u128((given_token_amount as u128), total_share);
         let coin_a_amount_out =
@@ -1054,21 +1099,12 @@ module minitia_std::dex {
                 liquidity: given_token_amount
             }
         );
-        let pool = borrow_global_mut<Pool>(pair_addr);
 
         // withdraw and return the coins
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         (
-            fungible_asset::withdraw(
-                pair_signer,
-                pool.coin_a_store,
-                coin_a_amount_out
-            ),
-            fungible_asset::withdraw(
-                pair_signer,
-                pool.coin_b_store,
-                coin_b_amount_out
-            )
+            fungible_asset::withdraw(pair_signer, coin_a_store, coin_a_amount_out),
+            fungible_asset::withdraw(pair_signer, coin_b_store, coin_b_amount_out)
         )
     }
 
@@ -1079,9 +1115,13 @@ module minitia_std::dex {
         pair: Object<Config>,
         provide_coin: FungibleAsset,
         min_liquidity_amount: Option<u64>
-    ): FungibleAsset acquires Config, CoinCapabilities, Pool {
+    ): FungibleAsset acquires Config, CoinCapabilities, Pool, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
-        let pool = borrow_global_mut<Pool>(pair_addr);
+
+        // check pool is not locked by flash swap
+        assert_pool_unlocked(pair_addr);
+
+        let pool = borrow_global<Pool>(pair_addr);
 
         let provide_metadata = fungible_asset::metadata_from_asset(&provide_coin);
         let provide_amount = fungible_asset::amount(&provide_coin);
@@ -1131,7 +1171,12 @@ module minitia_std::dex {
     /// Swap directly
     public fun swap(
         pair: Object<Config>, offer_coin: FungibleAsset
-    ): FungibleAsset acquires Config, Pool {
+    ): FungibleAsset acquires Config, Pool, FlashSwapLock {
+        let pair_addr = object::object_address(&pair);
+
+        // check pool is not locked by flash swap
+        assert_pool_unlocked(pair_addr);
+
         let offer_amount = fungible_asset::amount(&offer_coin);
         let offer_metadata = fungible_asset::metadata_from_asset(&offer_coin);
         let offer_address = object::object_address(&offer_metadata);
@@ -1167,8 +1212,7 @@ module minitia_std::dex {
             );
 
         // apply swap result to pool
-        let pair_addr = object::object_address(&pair);
-        let pool = borrow_global_mut<Pool>(pair_addr);
+        let pool = borrow_global<Pool>(pair_addr);
         let config = borrow_global<Config>(pair_addr);
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         let return_coin =
@@ -1195,6 +1239,86 @@ module minitia_std::dex {
         return_coin
     }
 
+    /// FlashSwap is a special swap that allows the user to use return coin first and repay the offer coin later.
+    /// The borrower should repay the offer coin by calling `repay_flash_swap` function with FlashSwapReceipt object.
+    ///
+    /// https://move-book.com/programmability/hot-potato-pattern.html
+    public fun flash_swap(
+        pair: Object<Config>,
+        offer_coin: Object<Metadata>,
+        offer_amount: u64,
+        min_return: Option<u64>
+    ): (FungibleAsset, FlashSwapReceipt) acquires Config, Pool, FlashSwapLock {
+        let pair_addr = object::object_address(&pair);
+
+        // check pool is not locked by flash swap
+        assert_pool_unlocked(pair_addr);
+
+        // zero offer amount would be invalidated in swap_simulation
+        let (return_amount, fee_amount) =
+            get_swap_simulation_with_fee(pair, offer_coin, offer_amount);
+        assert!(
+            option::is_none(&min_return)
+                || *option::borrow(&min_return) <= return_amount,
+            error::invalid_state(EMIN_RETURN)
+        );
+
+        let pool = borrow_global<Pool>(pair_addr);
+        let pool_config = borrow_global<Config>(pair_addr);
+        let pair_signer = &object::generate_signer_for_extending(&pool_config.extend_ref);
+
+        let coin_a_metadata = fungible_asset::store_metadata(pool.coin_a_store);
+        let (return_coin_store, coin_a_borrow_amount, coin_b_borrow_amount) =
+            if (offer_coin == coin_a_metadata) {
+                (pool.coin_b_store, offer_amount, 0)
+            } else {
+                (pool.coin_a_store, 0, offer_amount)
+            };
+
+        // store flash swap to prevent recursive flash swap
+        move_to(pair_signer, FlashSwapLock { coin_a_borrow_amount, coin_b_borrow_amount });
+
+        let return_coin =
+            fungible_asset::withdraw(pair_signer, return_coin_store, return_amount);
+
+        // emit events
+        event::emit<FlashSwapEvent>(
+            FlashSwapEvent {
+                offer_coin: object::object_address(&offer_coin),
+                return_coin: coin_address(&return_coin),
+                liquidity_token: pair_addr,
+                offer_amount,
+                return_amount,
+                fee_amount
+            }
+        );
+
+        (return_coin, FlashSwapReceipt { pair_addr })
+    }
+
+    public fun repay_flash_swap(
+        repay_fa: FungibleAsset, receipt: FlashSwapReceipt
+    ) acquires Pool, FlashSwapLock {
+        let FlashSwapReceipt { pair_addr } = receipt;
+        let FlashSwapLock { coin_a_borrow_amount, coin_b_borrow_amount } =
+            move_from(pair_addr);
+
+        let pool = borrow_global<Pool>(pair_addr);
+        let (repay_amount, repay_store) =
+            if (coin_a_borrow_amount > 0) {
+                (coin_a_borrow_amount, pool.coin_a_store)
+            } else {
+                (coin_b_borrow_amount, pool.coin_b_store)
+            };
+
+        assert!(
+            fungible_asset::amount(&repay_fa) == repay_amount,
+            error::invalid_argument(EFAILED_TO_REPAY_FLASH_SWAP)
+        );
+
+        fungible_asset::deposit(repay_store, repay_fa);
+    }
+
     /// Sum of weights must be 1
     fun assert_weights(weights: Weights) {
         assert!(
@@ -1219,6 +1343,13 @@ module minitia_std::dex {
         );
     }
 
+    fun assert_pool_unlocked(pair_addr: address) {
+        assert!(
+            !exists<FlashSwapLock>(pair_addr),
+            error::invalid_state(EPOOL_LOCKED)
+        );
+    }
+
     public fun create_pair(
         creator: &signer,
         name: String,
@@ -1227,7 +1358,7 @@ module minitia_std::dex {
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         weights: Weights
-    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool {
+    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock {
         let (mint_cap, burn_cap, freeze_cap, extend_ref) =
             coin::initialize_and_generate_extend_ref(
                 creator,
@@ -1252,18 +1383,18 @@ module minitia_std::dex {
         );
 
         let pair_signer = &object::generate_signer_for_extending(&extend_ref);
-        let pair_address = signer::address_of(pair_signer);
+        let pair_addr = signer::address_of(pair_signer);
         // transfer pair object's ownership to minitia_std
-        object::transfer_raw(creator, pair_address, @minitia_std);
+        object::transfer_raw(creator, pair_addr, @minitia_std);
 
         let coin_a_store =
             primary_fungible_store::create_primary_store(
-                pair_address,
+                pair_addr,
                 fungible_asset::asset_metadata(&coin_a)
             );
         let coin_b_store =
             primary_fungible_store::create_primary_store(
-                pair_address,
+                pair_addr,
                 fungible_asset::asset_metadata(&coin_b)
             );
         let coin_a_addr = coin_address(&coin_a);
@@ -1299,14 +1430,14 @@ module minitia_std::dex {
 
         let liquidity_token =
             provide_liquidity(
-                object::address_to_object<Config>(pair_address),
+                object::address_to_object<Config>(pair_addr),
                 coin_a,
                 coin_b,
                 option::none()
             );
 
         // update weights
-        let config = borrow_global_mut<Config>(pair_address);
+        let config = borrow_global_mut<Config>(pair_addr);
         config.weights = weights;
 
         // update module store
@@ -1319,7 +1450,7 @@ module minitia_std::dex {
         let pair_key = PairKey {
             coin_a: coin_a_addr,
             coin_b: coin_b_addr,
-            liquidity_token: pair_address
+            liquidity_token: pair_addr
         };
 
         // add pair to table for queries
@@ -1329,7 +1460,7 @@ module minitia_std::dex {
             PairResponse {
                 coin_a: coin_a_addr,
                 coin_b: coin_b_addr,
-                liquidity_token: pair_address,
+                liquidity_token: pair_addr,
                 weights,
                 swap_fee_rate
             }
@@ -1340,7 +1471,7 @@ module minitia_std::dex {
             CreatePairEvent {
                 coin_a: coin_a_addr,
                 coin_b: coin_b_addr,
-                liquidity_token: pair_address,
+                liquidity_token: pair_addr,
                 weights,
                 swap_fee_rate
             }
@@ -1356,10 +1487,14 @@ module minitia_std::dex {
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         min_liquidity_amount: Option<u64>
-    ): FungibleAsset acquires Config, Pool, CoinCapabilities {
-        let pool_addr = object::object_address(&pair);
-        let config = borrow_global_mut<Config>(pool_addr);
-        let pool = borrow_global_mut<Pool>(pool_addr);
+    ): FungibleAsset acquires Config, Pool, CoinCapabilities, FlashSwapLock {
+        let pair_addr = object::object_address(&pair);
+
+        // check pool is not locked by flash swap
+        assert_pool_unlocked(pair_addr);
+
+        let config = borrow_global<Config>(pair_addr);
+        let pool = borrow_global<Pool>(pair_addr);
         check_lbp_ended(&config.weights);
 
         let coin_a_amount_in = fungible_asset::amount(&coin_a);
@@ -1380,7 +1515,7 @@ module minitia_std::dex {
             ProvideEvent {
                 coin_a: coin_address(&coin_a),
                 coin_b: coin_address(&coin_b),
-                liquidity_token: pool_addr,
+                liquidity_token: pair_addr,
                 coin_a_amount: coin_a_amount_in,
                 coin_b_amount: coin_b_amount_in,
                 liquidity
@@ -1390,7 +1525,7 @@ module minitia_std::dex {
         fungible_asset::deposit(pool.coin_a_store, coin_a);
         fungible_asset::deposit(pool.coin_b_store, coin_b);
 
-        let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pool_addr);
+        let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
         coin::mint(
             &liquidity_token_capabilities.mint_cap,
             liquidity
@@ -1480,9 +1615,9 @@ module minitia_std::dex {
         pair: Object<Config>,
         coin_a_amount_in: u64,
         coin_b_amount_in: u64
-    ): u64 {
-        let coin_a_amount = fungible_asset::balance(pool.coin_a_store);
-        let coin_b_amount = fungible_asset::balance(pool.coin_b_store);
+    ): u64 acquires FlashSwapLock {
+        let pair_addr = object::object_address(&pair);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
         if (total_share == 0) {
@@ -1509,7 +1644,7 @@ module minitia_std::dex {
         pair: Object<Config>,
         provide_metadata: Object<Metadata>,
         amount_in: u64
-    ): (u64, u64, bool) acquires Config {
+    ): (u64, u64, bool) acquires Config, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         check_lbp_ended(&config.weights);
@@ -1532,6 +1667,7 @@ module minitia_std::dex {
 
         // load values for fee and increased liquidity amount calculation
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
+        let (pool_amount_a, pool_amount_b) = pool_amounts(pool, pair_addr);
         let (normalized_weight, pool_amount_in) =
             if (is_provide_a) {
                 let normalized_weight =
@@ -1539,8 +1675,8 @@ module minitia_std::dex {
                         coin_a_weight,
                         bigdecimal::add(coin_a_weight, coin_b_weight)
                     );
-                let pool_amount_in = fungible_asset::balance(pool.coin_a_store);
-                (normalized_weight, pool_amount_in)
+
+                (normalized_weight, pool_amount_a)
             } else {
                 let normalized_weight =
                     bigdecimal::div(
@@ -1548,9 +1684,7 @@ module minitia_std::dex {
                         bigdecimal::add(coin_a_weight, coin_b_weight)
                     );
 
-                let pool_amount_in = fungible_asset::balance(pool.coin_b_store);
-
-                (normalized_weight, pool_amount_in)
+                (normalized_weight, pool_amount_b)
             };
 
         // CONTRACT: cannot provide more than the pool amount to prevent huge price impact
@@ -1585,7 +1719,7 @@ module minitia_std::dex {
     /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
     public fun pool_info(
         pair: Object<Config>, lbp_assertion: bool
-    ): (u64, u64, BigDecimal, BigDecimal, BigDecimal) acquires Config, Pool {
+    ): (u64, u64, BigDecimal, BigDecimal, BigDecimal) acquires Config, Pool, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
         let config = borrow_global<Config>(pair_addr);
         if (lbp_assertion) {
@@ -1598,11 +1732,12 @@ module minitia_std::dex {
         };
 
         let pool = borrow_global<Pool>(pair_addr);
+        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
 
         (
-            fungible_asset::balance(pool.coin_a_store),
-            fungible_asset::balance(pool.coin_b_store),
+            coin_a_amount,
+            coin_b_amount,
             coin_a_weight,
             coin_b_weight,
             config.swap_fee_rate
@@ -1690,6 +1825,21 @@ module minitia_std::dex {
             fungible_asset::store_metadata(pool.coin_a_store),
             fungible_asset::store_metadata(pool.coin_b_store)
         )
+    }
+
+    public fun pool_amounts(pool: &Pool, pair_addr: address): (u64, u64) acquires FlashSwapLock {
+        let amount_a = fungible_asset::balance(pool.coin_a_store);
+        let amount_b = fungible_asset::balance(pool.coin_b_store);
+
+        if (exists<FlashSwapLock>(pair_addr)) {
+            let flash_swap = borrow_global<FlashSwapLock>(pair_addr);
+            (
+                amount_a + flash_swap.coin_a_borrow_amount,
+                amount_b + flash_swap.coin_b_borrow_amount
+            )
+        } else {
+            (amount_a, amount_b)
+        }
     }
 
     /// a^x = 1 + sigma[(k^n)/n!]
@@ -1806,7 +1956,7 @@ module minitia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool {
+    fun end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock {
         init_module(&chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
@@ -1953,7 +2103,9 @@ module minitia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun lbp_end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool {
+    fun lbp_end_to_end(
+        chain: signer
+    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock {
         init_module(&chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
@@ -2128,7 +2280,9 @@ module minitia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun get_pair_test(chain: signer) acquires CoinCapabilities, Config, Pool, ModuleStore {
+    fun get_pair_test(
+        chain: signer
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock {
         init_module(&chain);
         minitia_std::primary_fungible_store::init_module_for_test();
 
@@ -2383,5 +2537,259 @@ module minitia_std::dex {
                 ],
             3
         );
+    }
+
+    #[test_only]
+    fun test_setup(chain: &signer) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock {
+        init_module(chain);
+        minitia_std::primary_fungible_store::init_module_for_test();
+
+        let chain_addr = signer::address_of(chain);
+
+        let (initia_burn_cap, initia_freeze_cap, initia_mint_cap) =
+            initialized_coin(chain, string::utf8(b"INIT"));
+        let (usdc_burn_cap, usdc_freeze_cap, usdc_mint_cap) =
+            initialized_coin(chain, string::utf8(b"USDC"));
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
+        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
+
+        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
+
+        // spot price is 1
+        create_pair_script(
+            chain,
+            std::string::utf8(b"name"),
+            std::string::utf8(b"SYMBOL"),
+            bigdecimal::from_ratio_u64(3, 1000),
+            bigdecimal::from_ratio_u64(8, 10),
+            bigdecimal::from_ratio_u64(2, 10),
+            coin::metadata(chain_addr, string::utf8(b"INIT")),
+            coin::metadata(chain_addr, string::utf8(b"USDC")),
+            80000000,
+            20000000
+        );
+
+        assert!(
+            coin::balance(chain_addr, init_metadata) == 20000000,
+            0
+        );
+        assert!(
+            coin::balance(chain_addr, usdc_metadata) == 80000000,
+            1
+        );
+
+        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
+        assert!(
+            coin::balance(chain_addr, lp_metadata) == 80000000,
+            2
+        );
+
+        move_to(
+            chain,
+            CoinCapsInit {
+                burn_cap: initia_burn_cap,
+                freeze_cap: initia_freeze_cap,
+                mint_cap: initia_mint_cap
+            }
+        );
+
+        move_to(
+            chain,
+            CoinCapsUsdc {
+                burn_cap: usdc_burn_cap,
+                freeze_cap: usdc_freeze_cap,
+                mint_cap: usdc_mint_cap
+            }
+        );
+    }
+
+    struct TestMetadata has drop {
+        lp_metadata: Object<Metadata>,
+        offer_metadata: Object<Metadata>,
+        return_metadata: Object<Metadata>
+    }
+
+    #[test_only]
+    fun test_setup_flash_swap(
+        chain: &signer,
+        borrower: &signer,
+        borrow_amount: u64,
+        mint_amount: u64
+    ): (TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        test_setup(chain);
+
+        let chain_addr = signer::address_of(chain);
+        let borrower_addr = signer::address_of(borrower);
+
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"INIT"));
+        let usdc_metadata = coin::metadata(chain_addr, string::utf8(b"USDC"));
+        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+
+        coin::mint_to(
+            &borrow_global<CoinCapsInit>(chain_addr).mint_cap,
+            borrower_addr,
+            mint_amount
+        );
+        let offer_fa = coin::withdraw(borrower, init_metadata, mint_amount);
+        // flash_swap init to usdc
+        let (return_fa, receipt) =
+            flash_swap(
+                pair,
+                init_metadata,
+                borrow_amount,
+                option::none()
+            );
+
+        (
+            TestMetadata {
+                lp_metadata,
+                offer_metadata: init_metadata,
+                return_metadata: usdc_metadata
+            },
+            offer_fa,
+            return_fa,
+            receipt
+        )
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    fun test_dex_flash_swap(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+
+        repay_flash_swap(offer_fa, receipt);
+        assert!(
+            !exists<FlashSwapLock>(object::object_address(&test_metadata.lp_metadata)),
+            5
+        );
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x10017, location = Self)]
+    fun test_dex_flash_swap_not_enough_repayment(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (_, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 999);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+
+        repay_flash_swap(offer_fa, receipt);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x10017, location = Self)]
+    fun test_dex_flash_swap_extra_repayment(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (_, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1001);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+
+        repay_flash_swap(offer_fa, receipt);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_recursive(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, offer_fa);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // recursive flash_swap
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let (return_fa, receipt) =
+            flash_swap(
+                pair,
+                test_metadata.offer_metadata,
+                1000,
+                option::none()
+            );
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_swap(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute swap
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let return_fa = swap(pair, offer_fa);
+        coin::deposit(borrower_addr, return_fa);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_provide_liquidity(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute provide_liquidity
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let lp_fa = provide_liquidity(pair, offer_fa, return_fa, option::none());
+
+        coin::deposit(borrower_addr, lp_fa);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_single_asset_provide_liquidity(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute provide_liquidity
+        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
+        let lp_fa = single_asset_provide_liquidity(pair, offer_fa, option::none());
+
+        coin::deposit(borrower_addr, lp_fa);
+    }
+
+    #[test(chain = @0x1, borrower = @0x1782)]
+    #[expected_failure(abort_code = 0x30016, location = Self)]
+    fun test_dex_flash_swap_block_withdraw_liquidity(
+        chain: &signer, borrower: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+        let (test_metadata, offer_fa, return_fa, receipt) =
+            test_setup_flash_swap(chain, borrower, 1000, 1000);
+        let borrower_addr = signer::address_of(borrower);
+        coin::deposit(borrower_addr, offer_fa);
+        coin::deposit(borrower_addr, return_fa);
+        let FlashSwapReceipt { pair_addr: _ } = receipt;
+
+        // execute provide_liquidity
+        let lp_fa = coin::withdraw(chain, test_metadata.lp_metadata, 1);
+        let (a_fa, b_fa) = withdraw_liquidity(lp_fa, option::none(), option::none());
+
+        coin::deposit(borrower_addr, a_fa);
+        coin::deposit(borrower_addr, b_fa);
     }
 }
