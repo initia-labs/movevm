@@ -73,18 +73,29 @@ module minitia_std::object_code_deployment {
         object_address: address
     }
 
+    #[deprecated]
     /// Creates a new object with a unique address derived from the publisher address and the object seed.
     /// Publishes the code passed in the function to the newly created object.
     /// The caller must provide package metadata describing the package via `metadata_serialized` and
     /// the code to be published via `code`. This contains a vector of modules to be deployed on-chain.
     public entry fun publish(
-        publisher: &signer, module_ids: vector<String>, code: vector<vector<u8>>
+        publisher: &signer, _module_ids: vector<String>, code: vector<vector<u8>>
+    ) {
+        publish_v2(publisher, code);
+    }
+
+    /// Creates a new object with a unique address derived from the publisher address and the object seed.
+    /// Publishes the code passed in the function to the newly created object.
+    /// The caller must provide package metadata describing the package via `metadata_serialized` and
+    /// the code to be published via `code`. This contains a vector of modules to be deployed on-chain.
+    public entry fun publish_v2(
+        publisher: &signer, code: vector<vector<u8>>
     ) {
         let publisher_address = signer::address_of(publisher);
         let object_seed = object_seed(publisher_address);
         let constructor_ref = &object::create_named_object(publisher, object_seed);
         let code_signer = &object::generate_signer(constructor_ref);
-        code::publish(code_signer, module_ids, code, 1);
+        code::publish_v2(code_signer, code, 1);
 
         event::emit(Publish { object_address: signer::address_of(code_signer) });
 

@@ -7,3 +7,4 @@ InitiaStdlib = { local = "../../../../../../precompile/modules/initia_stdlib" }
 
 [addresses]
 std =  "0x1"
+publisher = "0x9999"

@@ -1,14 +1,10 @@
 use move_binary_format::{
-    access::ModuleAccess,
-    compatibility::Compatibility,
     deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::CompiledScript,
-    CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress,
-    language_storage::ModuleId,
     value::{MoveTypeLayout, MoveValue},
     vm_status::{StatusCode, VMStatus},
 };
@@ -18,16 +14,16 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     native_extensions::NativeContextExtensions,
     session::SerializedReturnValues,
-    ModuleStorage, RuntimeEnvironment,
+    RuntimeEnvironment,
 };
-use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
+use move_vm_types::resolver::MoveResolver;
 
-use std::{collections::BTreeSet, sync::Arc};
+use std::sync::Arc;
 
+use initia_move_gas::MiscGasParameters;
 use initia_move_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
 };
-use initia_move_gas::{MiscGasParameters, NumBytes};
 use initia_move_json::serialize_move_value_to_json_value;
 use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
@@ -67,9 +63,8 @@ use initia_move_types::{
 use crate::{
     session::{SessionExt, SessionOutput},
     verifier::{
-        config::verifier_config, errors::metadata_validation_error,
-        event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata,
-        module_metadata::validate_publish_request, script::reject_unstable_bytecode_for_script,
+        config::verifier_config, event_validation::verify_no_event_emission_in_script,
+        metadata::get_vm_metadata, script::reject_unstable_bytecode_for_script,
         transaction_arg_validation::validate_combine_signer_and_txn_args,
         view_function::validate_view_function_and_construct,
     },
@@ -120,12 +115,12 @@ impl InitiaVM {
     }
 
     #[inline(always)]
-    fn allow_unstable(&self) -> bool {
+    pub(crate) fn allow_unstable(&self) -> bool {
         self.initia_vm_config.allow_unstable
     }
 
     #[inline(always)]
-    pub fn deserialize_config(&self) -> &DeserializerConfig {
+    pub fn deserializer_config(&self) -> &DeserializerConfig {
         &self.move_vm.vm_config().deserializer_config
     }
 
@@ -202,17 +197,16 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let publish_request = PublishRequest {
-            destination: AccountAddress::ONE,
-            expected_modules: None,
-            module_bundle,
-        };
-
-        let session_output = self.finish_with_module_publishing(
-            session,
+        let session_output = session.finish_with_module_publish(
+            self.deserializer_config(),
+            self.allow_unstable(),
             &code_storage,
             &mut gas_meter,
-            publish_request,
+            PublishRequest {
+                publisher: AccountAddress::ONE,
+                module_bundle,
+                upgrade_policy: 1,
+            },
             &mut traversal_context,
             Some(allowed_publishers),
         )?;
@@ -375,7 +369,7 @@ impl InitiaVM {
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
-                    self.deserialize_config(),
+                    self.deserializer_config(),
                 ) {
                     Ok(script) => script,
                     Err(err) => {
@@ -468,8 +462,9 @@ impl InitiaVM {
         }?;
 
         let session_output = if let Some(publish_request) = session.extract_publish_request() {
-            self.finish_with_module_publishing(
-                session,
+            session.finish_with_module_publish(
+                self.deserializer_config(),
+                self.allow_unstable(),
                 code_storage,
                 gas_meter,
                 publish_request,
@@ -485,142 +480,6 @@ impl InitiaVM {
         let output = self.success_message_cleanup(session_output, gas_meter)?;
 
         Ok(output)
-    }
-
-    /// Resolve a pending code publish request registered via the NativeCodeContext and initialize moduleg enesis.
-    fn finish_with_module_publishing<S: StateView>(
-        &self,
-        mut session: SessionExt,
-        code_storage: &InitiaStorage<S>,
-        gas_meter: &mut InitiaGasMeter,
-        publish_request: PublishRequest,
-        traversal_context: &mut TraversalContext,
-        // `init_genesis` will not be executed if `allowed_publishers` is `None`.
-        allowed_publishers: Option<Vec<AccountAddress>>,
-    ) -> VMResult<SessionOutput> {
-        let PublishRequest {
-            destination,
-            module_bundle,
-            expected_modules,
-        } = publish_request;
-
-        let modules = self.deserialize_module_bundle(&module_bundle)?;
-        let modules: &Vec<CompiledModule> =
-            traversal_context.referenced_module_bundles.alloc(modules);
-
-        self.check_publish_request(
-            &mut session,
-            code_storage,
-            gas_meter,
-            &module_bundle,
-            expected_modules,
-            modules,
-            traversal_context,
-        )?;
-
-        session.module_publishing_and_initialization(
-            code_storage,
-            gas_meter,
-            traversal_context,
-            destination,
-            module_bundle,
-            modules,
-            Compatibility::new(true, false),
-            allowed_publishers,
-        )
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn check_publish_request<'a, S: StateView>(
-        &self,
-        session: &mut SessionExt,
-        code_storage: &InitiaStorage<S>,
-        gas_meter: &mut InitiaGasMeter,
-        module_bundle: &ModuleBundle,
-        expected_modules: Option<Vec<String>>,
-        modules: &'a [CompiledModule],
-        traversal_context: &mut TraversalContext<'a>,
-    ) -> VMResult<()> {
-        // Note: Feature gating is needed here because the traversal of the dependencies could
-        //       result in shallow-loading of the modules and therefore subtle changes in
-        //       the error semantics.
-        {
-            // Charge old versions of existing modules, in case of upgrades.
-            for module in modules.iter() {
-                let addr = module.self_addr();
-                let name = module.self_name();
-
-                // TODO: Allow the check of special addresses to be customized.
-                if addr.is_special() || traversal_context.visited.insert((addr, name), ()).is_some()
-                {
-                    continue;
-                }
-
-                let size_if_module_exists = code_storage
-                    .fetch_module_size_in_bytes(addr, name)?
-                    .map(|v| v as u64);
-
-                if let Some(size) = size_if_module_exists {
-                    gas_meter
-                        .charge_dependency(false, addr, name, NumBytes::new(size))
-                        .map_err(|err| {
-                            err.finish(Location::Module(ModuleId::new(*addr, name.to_owned())))
-                        })?;
-                }
-            }
-
-            // Charge all modules in the bundle that is about to be published.
-            for (module, blob) in modules.iter().zip(module_bundle.iter()) {
-                let module_id = &module.self_id();
-                gas_meter
-                    .charge_dependency(
-                        true,
-                        module_id.address(),
-                        module_id.name(),
-                        NumBytes::new(blob.code().len() as u64),
-                    )
-                    .map_err(|err| err.finish(Location::Undefined))?;
-            }
-
-            // Charge all dependencies.
-            //
-            // Must exclude the ones that are in the current bundle because they have not
-            // been published yet.
-            let module_ids_in_bundle = modules
-                .iter()
-                .map(|module| (module.self_addr(), module.self_name()))
-                .collect::<BTreeSet<_>>();
-
-            session.check_dependencies_and_charge_gas(
-                code_storage,
-                gas_meter,
-                traversal_context,
-                modules
-                    .iter()
-                    .flat_map(|module| {
-                        module
-                            .immediate_dependencies_iter()
-                            .chain(module.immediate_friends_iter())
-                    })
-                    .filter(|addr_and_name| !module_ids_in_bundle.contains(addr_and_name)),
-            )?;
-        }
-
-        // validate modules are properly compiled with metadata
-        validate_publish_request(code_storage, modules, module_bundle, self.allow_unstable())?;
-
-        if let Some(expected_modules) = expected_modules {
-            for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
-                if m.self_id().short_str_lossless().as_str() != expected_id {
-                    return Err(metadata_validation_error(&format!(
-                        "unexpected module: '{}', expected: '{}'",
-                        m.self_id().name(),
-                        expected_id
-                    )));
-                }
-            }
-        }
-        Ok(())
     }
 
     fn success_message_cleanup(
@@ -640,26 +499,6 @@ impl InitiaVM {
             new_accounts,
             gas_usage_set,
         ))
-    }
-
-    /// Deserialize a module bundle.
-    fn deserialize_module_bundle(
-        &self,
-        module_bundle: &ModuleBundle,
-    ) -> VMResult<Vec<CompiledModule>> {
-        let mut result = vec![];
-        for module_blob in module_bundle.iter() {
-            match CompiledModule::deserialize_with_config(
-                module_blob.code(),
-                self.deserialize_config(),
-            ) {
-                Ok(module) => {
-                    result.push(module);
-                }
-                Err(err) => return Err(err.finish(Location::Undefined)),
-            }
-        }
-        Ok(result)
     }
 }
 
