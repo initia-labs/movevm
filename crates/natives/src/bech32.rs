@@ -1,14 +1,19 @@
+use bech32::{Bech32, Hrp};
 use move_core_types::gas_algebra::NumBytes;
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{loaded_data::runtime_types::Type, values::{Struct, Value}};
+use move_vm_types::{
+    loaded_data::runtime_types::Type,
+    values::{Struct, Value},
+};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
-use bech32::{Bech32, Hrp};
 
 use crate::{
-    helpers::get_string, interface::{
-        RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult
-    }, safely_pop_arg
+    helpers::get_string,
+    interface::{
+        RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+    },
+    safely_pop_arg,
 };
 
 // See stdlib/error.move
@@ -45,22 +50,21 @@ fn native_encode(
 
     let words = safely_pop_arg!(arguments, Vec<u8>);
     let raw_prefix = get_string(safely_pop_arg!(arguments, Struct))?;
-    let prefix = String::from_utf8(raw_prefix)
-        .map_err(|_| SafeNativeError::Abort {
-            abort_code: EINVALID_PREFIX,
-        })?;
+    let prefix = String::from_utf8(raw_prefix).map_err(|_| SafeNativeError::Abort {
+        abort_code: EINVALID_PREFIX,
+    })?;
     context.charge(
         gas_params.bech32_encode_base
             + gas_params.bech32_encode_unit * NumBytes::new((prefix.len() + words.len()) as u64),
     )?;
 
     let encoded_string = bech32::encode::<Bech32>(
-        Hrp::parse(prefix.as_str())
-        .map_err(|_| SafeNativeError::Abort {
+        Hrp::parse(prefix.as_str()).map_err(|_| SafeNativeError::Abort {
             abort_code: EINVALID_PREFIX,
         })?,
         words.as_slice(),
-    ).map_err(|_| SafeNativeError::Abort {
+    )
+    .map_err(|_| SafeNativeError::Abort {
         abort_code: EUNABLE_TO_ENCODE,
     })?;
 
@@ -86,25 +90,23 @@ fn native_decode(
     debug_assert_eq!(arguments.len(), 1);
 
     let raw_addr = get_string(safely_pop_arg!(arguments, Struct))?;
-    let addr = String::from_utf8(raw_addr)
-        .map_err(|_| SafeNativeError::Abort {
-            abort_code: EINVALID_ADDRESS,
-        })?;
+    let addr = String::from_utf8(raw_addr).map_err(|_| SafeNativeError::Abort {
+        abort_code: EINVALID_ADDRESS,
+    })?;
 
     context.charge(
         gas_params.bech32_decode_base
             + gas_params.bech32_decode_unit * NumBytes::new(addr.len() as u64),
     )?;
 
-    let (prefix, words) = bech32::decode(
-        addr.as_str()
-    ).map_err(|_| SafeNativeError::Abort {
+    let (prefix, words) = bech32::decode(addr.as_str()).map_err(|_| SafeNativeError::Abort {
         abort_code: EUNABLE_TO_DECODE,
     })?;
 
     Ok(smallvec![
-        Value::struct_(Struct::pack(vec![
-            Value::vector_u8(prefix.as_bytes().to_vec())])),
+        Value::struct_(Struct::pack(vec![Value::vector_u8(
+            prefix.as_bytes().to_vec()
+        )])),
         Value::vector_u8(words)
     ])
 }

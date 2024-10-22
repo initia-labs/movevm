@@ -79,14 +79,14 @@ fn native_sha3_256(
  *   gas cost: base_cost + unit_cost * max(input_length_in_bytes, legacy_min_input_len)
  *
  **************************************************************************************************/
- #[inline]
+#[inline]
 fn native_ripemd160(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let gas_params = &context.native_gas_params.move_stdlib;
-    
+
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
