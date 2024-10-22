@@ -1,4 +1,4 @@
-# Initia Standar Library
+# Initia Standard Library
 
 The Initia standard library defines stardarads, types and util modules of Initia.
 
