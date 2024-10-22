@@ -8,6 +8,7 @@ pub mod account;
 pub mod address;
 pub mod any;
 pub mod base64;
+pub mod bech32;
 pub mod biguint;
 pub mod block;
 pub mod code;
@@ -62,6 +63,7 @@ pub fn initia_move_natives(
     add_natives_from_module!("type_info", type_info::make_all(builder));
     add_natives_from_module!("from_bcs", from_bcs::make_all(builder));
     add_natives_from_module!("base64", base64::make_all(builder));
+    add_natives_from_module!("bech32", bech32::make_all(builder));
     add_natives_from_module!("keccak", keccak::make_all(builder));
     add_natives_from_module!("staking", staking::make_all(builder));
     add_natives_from_module!("cosmos", cosmos::make_all(builder));

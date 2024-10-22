@@ -39,6 +39,11 @@ crate::macros::define_gas_parameters!(
     [base64_decode_base: InternalGas, "base64.decode.base", 1102],
     [base64_decode_unit: InternalGasPerByte, "base64.decode.unit", 18],
 
+    [bech32_encode_base: InternalGas, "bech32.encode.base", 1102],
+    [bech32_encode_unit: InternalGasPerByte, "bech32.encode.unit", 18],
+    [bech32_decode_base: InternalGas, "bech32.decode.base", 1102],
+    [bech32_decode_unit: InternalGasPerByte, "bech32.decode.unit", 18],
+
     [crypto_ed25519_base: InternalGas, "crypto.ed25519.base", 551],
     [crypto_ed25519_per_sig_verify: InternalGasPerArg, "crypto.ed25519.per_sig_verify", 981492],
     [crypto_ed25519_per_pubkey_deserialize: InternalGasPerArg, "crypto.ed25519.per_pubkey_deserialize", 139688],
