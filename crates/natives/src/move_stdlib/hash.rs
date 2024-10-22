@@ -74,6 +74,37 @@ fn native_sha3_256(
 }
 
 /***************************************************************************************************
+ * native fun ripemd160
+ *
+ *   gas cost: base_cost + unit_cost * max(input_length_in_bytes, legacy_min_input_len)
+ *
+ **************************************************************************************************/
+ #[inline]
+fn native_ripemd160(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.move_stdlib;
+    
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let hash_arg = safely_pop_arg!(arguments, Vec<u8>);
+
+    context.charge(
+        gas_params.hash_ripemd160_base
+            + gas_params.hash_ripemd160_per_byte * NumBytes::new(hash_arg.len() as u64),
+    )?;
+
+    let mut hasher = ripemd::Ripemd160::new();
+    hasher.update(&hash_arg);
+    let hash_vec = hasher.finalize().to_vec();
+
+    Ok(smallvec![Value::vector_u8(hash_vec)])
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 pub fn make_all(
@@ -82,6 +113,7 @@ pub fn make_all(
     let natives = [
         ("sha2_256", native_sha2_256 as RawSafeNative),
         ("sha3_256", native_sha3_256),
+        ("ripemd160", native_ripemd160),
     ];
 
     builder.make_named_natives(natives)
