@@ -26,16 +26,14 @@ const EINVALID_PREFIX: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 102;
 const EINVALID_ADDRESS: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 103;
 
 /*
-    native public fun encode(prefix: String, words: vector<u8>): String;
-    native public fun decode(data: String): (String, vector<u8>);
-    native public fun to_words(data: vector<u8>): vector<u8>;
-    native public fun from_words(data: vector<u8>): vector<u8>;
+    native public fun encode(prefix: String, data: vector<u8>): String;
+    native public fun decode(addr: String): (String, vector<u8>);
 */
 
 /***************************************************************************************************
  * native fun encode
  *
- *   gas cost: base_cost + unit_cost * (prefix_len + words_len)
+ *   gas cost: base_cost + unit_cost * (prefix_len + data_len)
  *
  **************************************************************************************************/
 fn native_encode(
@@ -48,21 +46,21 @@ fn native_encode(
     debug_assert!(ty_args.is_empty());
     debug_assert_eq!(arguments.len(), 2);
 
-    let words = safely_pop_arg!(arguments, Vec<u8>);
+    let data = safely_pop_arg!(arguments, Vec<u8>);
     let raw_prefix = get_string(safely_pop_arg!(arguments, Struct))?;
     let prefix = String::from_utf8(raw_prefix).map_err(|_| SafeNativeError::Abort {
         abort_code: EINVALID_PREFIX,
     })?;
     context.charge(
         gas_params.bech32_encode_base
-            + gas_params.bech32_encode_unit * NumBytes::new((prefix.len() + words.len()) as u64),
+            + gas_params.bech32_encode_unit * NumBytes::new((prefix.len() + data.len()) as u64),
     )?;
 
     let encoded_string = bech32::encode::<Bech32>(
         Hrp::parse(prefix.as_str()).map_err(|_| SafeNativeError::Abort {
             abort_code: EINVALID_PREFIX,
         })?,
-        words.as_slice(),
+        data.as_slice(),
     )
     .map_err(|_| SafeNativeError::Abort {
         abort_code: EUNABLE_TO_ENCODE,
