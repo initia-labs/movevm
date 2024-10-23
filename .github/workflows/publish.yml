@@ -2,7 +2,7 @@ name: publish changed files to move-natives on release
 
 on:
   release:
-    types: [published]
+    types: [published, created]
 
 jobs:
   copy-files:
