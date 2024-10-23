@@ -16,6 +16,8 @@ crate::macros::define_gas_parameters!(
         [hash_sha2_256_per_byte: InternalGasPerByte, "hash.sha2_256.per_byte", 183],
         [hash_sha3_256_base: InternalGas, "hash.sha3_256.base", 14704],
         [hash_sha3_256_per_byte: InternalGasPerByte, "hash.sha3_256.per_byte", 165],
+        [hash_ripemd160_base: InternalGas, "hash.ripemd160.base", 11028],
+        [hash_ripemd160_per_byte: InternalGasPerByte, "hash.ripemd160.per_byte", 183],
 
         // Note(Gas): this initial value is guesswork.
         [signer_borrow_address_base: InternalGas, "signer.borrow_address.base", 735],
