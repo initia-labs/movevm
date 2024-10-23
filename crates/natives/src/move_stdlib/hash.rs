@@ -20,7 +20,7 @@ use crate::{
 /***************************************************************************************************
  * native fun sha2_256
  *
- *   gas cost: base_cost + unit_cost * max(input_length_in_bytes, legacy_min_input_len)
+ *   gas cost: base_cost + unit_cost * input_length_in_bytes
  *
  **************************************************************************************************/
 #[inline]
@@ -48,7 +48,7 @@ fn native_sha2_256(
 /***************************************************************************************************
  * native fun sha3_256
  *
- *   gas cost: base_cost + unit_cost * max(input_length_in_bytes, legacy_min_input_len)
+ *   gas cost: base_cost + unit_cost * input_length_in_bytes
  *
  **************************************************************************************************/
 #[inline]
@@ -76,7 +76,7 @@ fn native_sha3_256(
 /***************************************************************************************************
  * native fun ripemd160
  *
- *   gas cost: base_cost + unit_cost * max(input_length_in_bytes, legacy_min_input_len)
+ *   gas cost: base_cost + unit_cost * input_length_in_bytes
  *
  **************************************************************************************************/
 #[inline]

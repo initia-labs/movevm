@@ -6,35 +6,32 @@ module initia_std::bech32 {
 
     #[test_only]
     use initia_std::string;
-    #[test_only]
-    use initia_std::hex;
+
     #[test]
-    fun test_encode() {
+    fun test_bech32_encode() {
         let prefix = string::utf8(b"init");
-        let data = hex::decode_string(&string::utf8(b"12eafdba79c3dd7b90e3712ee475423153a722c7"));
+        let data = x"12eafdba79c3dd7b90e3712ee475423153a722c7";
         let got = encode(prefix, data);
         let expected = string::utf8(b"init1zt40mwnec0whhy8rwyhwga2zx9f6wgk8p3x098");
         assert!(got == expected, 0);
 
         let prefix = string::utf8(b"celestia");
-        let data = hex::decode_string(&string::utf8(b"12eafdba79c3dd7b90e3712ee475423153a722c7"));
+        let data = x"12eafdba79c3dd7b90e3712ee475423153a722c7";
         let got = encode(prefix, data);
         let expected = string::utf8(b"celestia1zt40mwnec0whhy8rwyhwga2zx9f6wgk87dhv5g");
         assert!(got == expected, 1);
     }
 
     #[test]
-    fun test_decode() {
+    fun test_bech32_decode() {
         let addr = string::utf8(b"init1zt40mwnec0whhy8rwyhwga2zx9f6wgk8p3x098");
         let (prefix, data) = decode(addr);
         assert!(prefix == string::utf8(b"init"), 0);
-        let data = *string::bytes(&hex::encode_to_string(&data));
-        assert!(data == b"12eafdba79c3dd7b90e3712ee475423153a722c7", 1);
+        assert!(data == x"12eafdba79c3dd7b90e3712ee475423153a722c7", 1);
 
         let addr = string::utf8(b"celestia1zt40mwnec0whhy8rwyhwga2zx9f6wgk87dhv5g");
         let (prefix, data) = decode(addr);
         assert!(prefix == string::utf8(b"celestia"), 2);
-        let data = *string::bytes(&hex::encode_to_string(&data));
-        assert!(data == b"12eafdba79c3dd7b90e3712ee475423153a722c7", 3);
+        assert!(data == x"12eafdba79c3dd7b90e3712ee475423153a722c7", 3);
     }
 }
