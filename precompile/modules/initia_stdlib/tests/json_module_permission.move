@@ -63,7 +63,7 @@ module 0xcafe::json_module_permission_tests {
         let ref = object::create_object(@std, true);
         let bz = json::marshal(&ref);
 
-        // canonot create ConstructorRef from the other module.
+        // cannot create ConstructorRef from the other module.
         let _ref2 = json::unmarshal<ConstructorRef>(bz);
     }
 
@@ -74,7 +74,7 @@ module 0xcafe::json_module_permission_tests {
         let opt = HoldByOption{a: option::some(ref)};
         let bz = json::marshal(&opt);
 
-        // canonot create ConstructorRef from the other module.
+        // cannot create ConstructorRef from the other module.
         let _ref2 = json::unmarshal<HoldByOption>(bz);
     }
 
@@ -85,7 +85,7 @@ module 0xcafe::json_module_permission_tests {
         let opt = HoldByVector{a: vector[ref]};
         let bz = json::marshal(&opt);
 
-        // canonot create ConstructorRef from the other module.
+        // cannot create ConstructorRef from the other module.
         let _ref2 = json::unmarshal<HoldByVector>(bz);
     }
 }
