@@ -24,6 +24,8 @@ const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 // native errors always start from 100
 const EUNABLE_TO_MARSHAL_DELAYED_FIELD: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 3;
 const EUNABLE_TO_UNMARSHAL_DELAYED_FIELD: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 4;
+const EUNABLE_TO_MARSHAL_SERIALIZATION_ERROR: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 5;
+const EUNABLE_TO_UNMARSHAL_DESERIALIZATION_ERROR: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 6;
 
 fn native_marshal_internal(
     context: &mut SafeNativeContext,
@@ -51,9 +53,9 @@ fn native_marshal_internal(
     let annotated_layout = context.type_to_fully_annotated_layout(ty)?;
     let decorated_value = move_value.decorate(&annotated_layout);
     let serde_value = serialize_move_value_to_json_value(&decorated_value).map_err(|_| {
-        SafeNativeError::InvariantViolation(PartialVMError::new(
-            StatusCode::VALUE_SERIALIZATION_ERROR,
-        ))
+        SafeNativeError::Abort {
+            abort_code: EUNABLE_TO_MARSHAL_SERIALIZATION_ERROR,
+        }
     })?;
 
     let serde_bytes = serde_value.to_string().into_bytes();
@@ -87,6 +89,12 @@ fn native_marshal_to_string(
     })
 }
 
+fn invariant_violation() -> SafeNativeError {
+    SafeNativeError::InvariantViolation(PartialVMError::new(
+        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+    ))
+}
+
 fn native_unmarshal(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -98,6 +106,7 @@ fn native_unmarshal(
     debug_assert_eq!(arguments.len(), 1);
 
     let ty = &ty_args[0];
+
     let (_, has_identifier_mappings) = context.type_to_type_layout_with_identifier_mappings(ty)?;
     if has_identifier_mappings {
         return Err(SafeNativeError::Abort {
@@ -108,11 +117,22 @@ fn native_unmarshal(
     let annotated_layout = context.type_to_fully_annotated_layout(ty)?;
     let serde_bytes = safely_pop_arg!(arguments, Vec<u8>);
 
-    let value = deserialize_json_to_value(&annotated_layout, &serde_bytes).map_err(|_| {
-        SafeNativeError::InvariantViolation(PartialVMError::new(
-            StatusCode::VALUE_DESERIALIZATION_ERROR,
-        ))
-    })?;
+    // Extract caller from the stack to assert the struct creation module permission.
+    let caller = context
+        .stack_frames(1)
+        .stack_trace()
+        .first()
+        .ok_or_else(invariant_violation)?
+        .0
+        .clone()
+        .ok_or_else(invariant_violation)?;
+
+    let value =
+        deserialize_json_to_value(&caller, &annotated_layout, &serde_bytes).map_err(|_| {
+            SafeNativeError::Abort {
+                abort_code: EUNABLE_TO_UNMARSHAL_DESERIALIZATION_ERROR,
+            }
+        })?;
 
     context.charge(
         gas_params.json_unmarshal_base
@@ -130,9 +150,9 @@ pub fn make_all(
     builder: &SafeNativeBuilder,
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let natives = [
-        ("marshal", native_marshal as RawSafeNative),
-        ("marshal_to_string", native_marshal_to_string),
-        ("unmarshal", native_unmarshal),
+        ("marshal_internal", native_marshal as RawSafeNative),
+        ("marshal_to_string_internal", native_marshal_to_string),
+        ("unmarshal_internal", native_unmarshal),
     ];
 
     builder.make_named_natives(natives)
