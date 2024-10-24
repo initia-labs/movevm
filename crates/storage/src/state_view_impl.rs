@@ -14,7 +14,7 @@ use move_core_types::language_storage::StructTag;
 use move_core_types::metadata::Metadata;
 use move_core_types::value::MoveTypeLayout;
 use move_core_types::vm_status::StatusCode;
-use move_vm_types::code_storage::ModuleBytesStorage;
+use move_vm_types::code::ModuleBytesStorage;
 use move_vm_types::resolver::{resource_size, ModuleResolver, ResourceResolver};
 
 use initia_move_types::access_path::AccessPath;

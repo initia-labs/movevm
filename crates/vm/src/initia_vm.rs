@@ -41,8 +41,8 @@ use initia_move_natives::{
 };
 use initia_move_storage::{
     initia_storage::InitiaStorage,
-    module_cache::{new_initia_module_cache, InitiaModuleCache},
-    script_cache::{new_initia_script_cache, InitiaScriptCache},
+    module_cache::InitiaModuleCache,
+    script_cache::InitiaScriptCache,
     state_view::StateView,
     table_resolver::TableResolver,
 };
@@ -99,8 +99,8 @@ impl InitiaVM {
             vm_config,
         ));
         let move_vm = MoveVM::new_with_runtime_environment(&runtime_environment);
-        let script_cache = new_initia_script_cache(initia_vm_config.script_cache_capacity);
-        let module_cache = new_initia_module_cache(initia_vm_config.module_cache_capacity);
+        let script_cache = InitiaScriptCache::new(initia_vm_config.script_cache_capacity);
+        let module_cache = InitiaModuleCache::new(initia_vm_config.module_cache_capacity);
 
         Self {
             move_vm: Arc::new(move_vm),
@@ -124,6 +124,11 @@ impl InitiaVM {
     #[inline(always)]
     pub fn deserializer_config(&self) -> &DeserializerConfig {
         &self.move_vm.vm_config().deserializer_config
+    }
+
+    #[inline(always)]
+    pub fn runtime_environment(&self) -> Arc<RuntimeEnvironment> {
+        self.runtime_environment.clone()
     }
 
     fn create_session<
@@ -182,10 +187,10 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        self.runtime_environment.flush_struct_info_cache();
+        let runtime_environment = self.runtime_environment.clone();
         let code_storage = InitiaStorage::new(
             storage,
-            &self.runtime_environment,
+            &runtime_environment,
             self.script_cache.clone(),
             self.module_cache.clone(),
         );
@@ -232,7 +237,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
-        self.runtime_environment.flush_struct_info_cache();
+        let runtime_environment = self.runtime_environment.clone();
 
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
@@ -240,7 +245,7 @@ impl InitiaVM {
 
         let code_storage = InitiaStorage::new(
             storage,
-            &self.runtime_environment,
+            &runtime_environment,
             self.script_cache.clone(),
             self.module_cache.clone(),
         );
@@ -275,10 +280,10 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        self.runtime_environment.flush_struct_info_cache();
+        let runtime_environment = self.runtime_environment.clone();
         let code_storage = InitiaStorage::new(
             storage,
-            &self.runtime_environment,
+            &runtime_environment,
             self.script_cache.clone(),
             self.module_cache.clone(),
         );

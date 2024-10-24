@@ -1,65 +1,173 @@
 use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 
-use clru::{CLruCache, CLruCacheConfig, WeightScale};
-use move_binary_format::CompiledModule;
+use bytes::Bytes;
+use clru::{CLruCache, CLruCacheConfig};
+use move_binary_format::{errors::{Location, PartialVMError, VMResult}, CompiledModule};
+use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
 use move_vm_runtime::Module;
+use move_vm_types::code::{ModuleCode, ModuleCodeBuilder, WithBytes, WithHash};
 use parking_lot::Mutex;
 
-use crate::state_view::Checksum;
+use crate::{code_scale::ModuleCodeScale, state_view::Checksum};
 
-/// An entry in [InitiaModuleStorage]. As modules are accessed, entries can be "promoted", e.g., a
-/// deserialized representation can be converted into the verified one.
-#[derive(Debug, Clone)]
-pub enum ModuleCacheEntry {
-    Deserialized {
-        module: Arc<CompiledModule>,
-        module_size: usize,
-    },
-    Verified {
-        module: Arc<Module>,
-        // this is used to calculate the weight of the entry
-        module_size: usize,
-    },
+/// Extension for modules stored in [UnsyncModuleStorage] to also capture information about bytes
+/// and hash.
+pub struct BytesWithHash {
+    /// Bytes of the module.
+    bytes: Bytes,
+    /// Hash of the module.
+    hash: [u8; 32],
 }
 
-impl ModuleCacheEntry {
-    /// Returns the verified module if the entry is verified, and [None] otherwise.
-    pub fn into_verified(self) -> Option<Arc<Module>> {
-        match self {
-            Self::Deserialized { .. } => None,
-            Self::Verified { module, .. } => Some(module),
-        }
-    }
-
-    pub fn compiled_module(&self) -> Arc<CompiledModule> {
-        match self {
-            ModuleCacheEntry::Deserialized { module, .. } => module.clone(),
-            ModuleCacheEntry::Verified { module, .. } => module.compiled_module().clone(),
-        }
-    }
-
-    fn module_size(&self) -> usize {
-        match self {
-            Self::Deserialized { module_size, .. } => *module_size,
-            Self::Verified { module_size, .. } => *module_size,
-        }
+impl BytesWithHash {
+    /// Returns new extension containing bytes and hash.
+    pub fn new(bytes: Bytes, hash: [u8; 32]) -> Self {
+        Self { bytes, hash }
     }
 }
 
-pub struct ModuleCacheEntryScale;
-
-impl WeightScale<Checksum, ModuleCacheEntry> for ModuleCacheEntryScale {
-    fn weight(&self, _key: &Checksum, value: &ModuleCacheEntry) -> usize {
-        value.module_size()
+impl WithBytes for BytesWithHash {
+    fn bytes(&self) -> &Bytes {
+        &self.bytes
     }
 }
 
-pub type InitiaModuleCache =
-    Mutex<CLruCache<Checksum, ModuleCacheEntry, RandomState, ModuleCacheEntryScale>>;
+impl WithHash for BytesWithHash {
+    fn hash(&self) -> &[u8; 32] {
+        &self.hash
+    }
+}
 
-pub fn new_initia_module_cache(cache_capacity: usize) -> Arc<InitiaModuleCache> {
-    Arc::new(Mutex::new(CLruCache::with_config(
-        CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
-            .with_scale(ModuleCacheEntryScale),
-    )))
+/// Placeholder for module versioning since we do not allow to mutate [UnsyncModuleStorage].
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct NoVersion;
+
+pub struct InitiaModuleCache {
+    module_cache: Mutex<CLruCache<Checksum, Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>, RandomState, ModuleCodeScale>>,
+}
+
+impl InitiaModuleCache {
+    pub fn new(cache_capacity: usize) -> Arc<InitiaModuleCache> {
+        Arc::new(InitiaModuleCache {
+            module_cache: Mutex::new(CLruCache::with_config(
+                CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
+                    .with_scale(ModuleCodeScale)
+            )),
+        })
+    }
+}
+
+// modified ModuleCache trait implementation
+impl InitiaModuleCache {
+    #[allow(unused)]
+    pub(crate) fn insert_deserialized_module(
+        &self,
+        key: Checksum,
+        deserialized_code: CompiledModule,
+        extension: Arc<BytesWithHash>,
+        version: NoVersion,
+    ) -> VMResult<()> {
+        let mut module_cache = self.module_cache.lock();
+
+        match module_cache.get(&key) {
+            // we don't use version of the module, so we don't need to check it
+            Some(_) => Ok(()),
+            None => {
+                let module_id = deserialized_code.self_id();
+                let module = Arc::new(ModuleCode::from_deserialized(deserialized_code, extension, version));
+                module_cache
+                    .put_with_weight(key, module)
+                    .map_err(|_| {
+                        PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                            .with_message("Module storage cache eviction error".to_string())
+                            .finish(Location::Module(module_id))
+                    })?;
+                Ok(())
+            },
+        }
+    }
+
+    pub(crate) fn insert_verified_module(
+        &self,
+        key: Checksum,
+        verified_code: Module,
+        extension: Arc<BytesWithHash>,
+        version: NoVersion,
+    ) -> VMResult<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>> {
+        let mut module_cache = self.module_cache.lock();
+
+        match module_cache.get(&key) {
+            Some(code) =>  {
+                if code.code().is_verified() {
+                    Ok(code.clone())
+                } else {
+                    let module_id = verified_code.self_id();
+                    let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
+                    module_cache.put_with_weight(key, module.clone()).map_err(|_| {
+                        PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                            .with_message("Module storage cache eviction error".to_string())
+                            .finish(Location::Module(module_id))
+                    })?;
+                    Ok(module)
+                }
+            },
+            None => {
+                let module_id = verified_code.self_id();
+                let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
+                module_cache.put_with_weight(key, module.clone()).map_err(|_| {
+                    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                        .with_message("Module storage cache eviction error".to_string())
+                        .finish(Location::Module(module_id))
+                })?;
+                Ok(module)
+            },
+        }
+    }
+
+    pub(crate) fn get_module_or_build_with(
+        &self,
+        id: &ModuleId,
+        checksum: &Checksum,
+        builder: &dyn ModuleCodeBuilder<
+            Key = ModuleId,
+            Deserialized = CompiledModule,
+            Verified = Module,
+            Extension = BytesWithHash,
+            Version = NoVersion,
+        >,
+    ) -> VMResult<
+        Option<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>>,
+    > {
+        let mut module_cache = self.module_cache.lock();
+        Ok(match module_cache.get(checksum) {
+            Some(code) => Some(code.clone()),
+            None => {
+                match builder.build(id)? {
+                    Some(code) => {
+                        if code.extension().hash() != checksum {
+                            return Err(PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                .with_message("Checksum mismatch".to_string())
+                                .finish(Location::Module(id.clone()))
+                            );
+                        }
+
+                        let code = Arc::new(code);
+                        module_cache.put_with_weight(checksum.clone(), code.clone()).map_err(|_| {
+                            PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                                .with_message("Module storage cache eviction error".to_string())
+                                .finish(Location::Module(id.clone()))
+                        })?;
+                        Some(code)
+                    },
+                    None => None,
+                }
+            }
+        })
+    }
+
+    #[allow(unused)]
+    pub(crate) fn num_modules(&self) -> usize {
+        let module_cache = self.module_cache.lock();
+        module_cache.len()
+    }
 }

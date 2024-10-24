@@ -21,7 +21,7 @@ use move_core_types::{
 };
 use move_vm_runtime::compute_code_hash;
 use move_vm_types::{
-    code_storage::ModuleBytesStorage,
+    code::ModuleBytesStorage,
     resolver::{resource_size, ModuleResolver, ResourceResolver},
 };
 use std::{

@@ -22,6 +22,7 @@ clru = { workspace = true }
 parking_lot = { workspace = true }
 sha3 = { workspace = true }
 claims = { workspace = true }
+get-size = { workspace = true}
 
 [dev-dependencies]
 move-vm-test-utils = { workspace = true }

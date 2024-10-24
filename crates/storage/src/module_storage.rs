@@ -2,25 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    module_cache::{InitiaModuleCache, ModuleCacheEntry},
+    module_cache::{BytesWithHash, InitiaModuleCache, NoVersion},
     state_view::{Checksum, ChecksumStorage},
 };
 use bytes::Bytes;
-#[cfg(test)]
-use claims::assert_some;
+
 use move_binary_format::{
-    errors::{Location, PartialVMError, VMResult},
+    errors::VMResult,
     CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
-    metadata::Metadata, vm_status::StatusCode,
+    metadata::Metadata,
 };
 use move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, WithRuntimeEnvironment};
 use move_vm_types::{
-    code_storage::ModuleBytesStorage, module_cyclic_dependency_error, module_linker_error,
+    code::{ModuleBytesStorage, ModuleCode, ModuleCodeBuilder, WithBytes, WithHash}, module_cyclic_dependency_error, module_linker_error,
 };
-use std::{borrow::Borrow, collections::BTreeSet, ops::Deref, sync::Arc};
+use std::{borrow::Borrow, collections::HashSet, ops::Deref, sync::Arc};
 
 /// Implementation of (not thread-safe) module storage used for Move unit tests, and externally.
 pub struct InitiaModuleStorage<'a, S> {
@@ -64,11 +63,19 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaModuleStorage<'a, S> f
     }
 }
 
-impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
+impl<'s, S: ModuleBytesStorage + ChecksumStorage> WithRuntimeEnvironment
+    for InitiaModuleStorage<'s, S>
+{
+    fn runtime_environment(&self) -> &RuntimeEnvironment {
+        self.runtime_environment
+    }
+}
+
+impl<'s, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'s, S> {
     /// Private constructor from borrowed byte storage. Creates empty module storage cache.
     fn from_borrowed(
-        runtime_environment: &'a RuntimeEnvironment,
-        storage: &'a S,
+        runtime_environment: &'s RuntimeEnvironment,
+        storage: &'s S,
         module_cache: Arc<InitiaModuleCache>,
     ) -> Self {
         Self {
@@ -81,7 +88,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
     /// Private constructor that captures provided byte storage by value. Creates empty module
     /// storage cache.
     fn from_owned(
-        runtime_environment: &'a RuntimeEnvironment,
+        runtime_environment: &'s RuntimeEnvironment, 
         storage: S,
         module_cache: Arc<InitiaModuleCache>,
     ) -> Self {
@@ -92,210 +99,91 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'a, S> {
         }
     }
 
-    /// Returns true if the module is cached.
-    fn is_module_cached(&self, checksum: &Checksum) -> bool {
-        self.module_cache.lock().contains(checksum)
-    }
-
-    /// If the module does not exist, returns true, and false otherwise. For modules that exist, if
-    /// the module is not yet cached in module storage, fetches it from the baseline storage and
-    /// caches as a deserialized entry.
-    fn ensure_module_cached(
-        &self,
-        checksum: &Checksum,
-        address: &AccountAddress,
-        module_name: &IdentStr,
-    ) -> VMResult<bool> {
-        use ModuleCacheEntry::*;
-
-        if !self.is_module_cached(checksum) {
-            let bytes = match self.fetch_module_bytes(address, module_name)? {
-                Some(bytes) => bytes,
-                None => return Ok(true),
-            };
-
-            let (module, module_size, module_hash) = self
-                .runtime_environment
-                .deserialize_into_compiled_module(&bytes)?;
-
-            if checksum != &module_hash {
-                return Err(
-                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(format!(
-                            "Checksum mismatch for module '{}::{}'",
-                            address, module_name
-                        ))
-                        .finish(Location::Module(ModuleId::new(
-                            *address,
-                            module_name.to_owned(),
-                        ))),
-                );
-            }
-
-            self.runtime_environment
-                .paranoid_check_module_address_and_name(&module, address, module_name)?;
-
-            self.module_cache
-                .lock()
-                .put_with_weight(
-                    module_hash,
-                    Deserialized {
-                        module: Arc::new(module),
-                        module_size,
-                    },
-                )
-                .map_err(|_| {
-                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message("Module storage cache eviction error".to_string())
-                        .finish(Location::Module(ModuleId::new(
-                            *address,
-                            module_name.to_owned(),
-                        )))
-                })?;
-        }
-        Ok(false)
-    }
-
-    /// Returns the entry in module storage (deserialized or verified) and an error if it does not
-    /// exist. This API clones the underlying entry pointers.
-    fn fetch_existing_module_storage_entry(
-        &self,
-        address: &AccountAddress,
-        module_name: &IdentStr,
-    ) -> VMResult<(Checksum, ModuleCacheEntry)> {
-        let checksum = self
-            .byte_storage()
-            .fetch_checksum(address, module_name)?
-            .ok_or(module_linker_error!(address, module_name))?;
-
-        if self.ensure_module_cached(&checksum, address, module_name)? {
-            return Err(module_linker_error!(address, module_name));
-        }
-        // At this point module storage contains a deserialized entry, because the function
-        // above puts it there if it was not cached already.
-        Ok((
-            checksum,
-            self.module_cache
-                .lock()
-                .get(&checksum)
-                .ok_or(module_linker_error!(address, module_name))?
-                .clone(),
-        ))
-    }
-
-    /// Visits the dependencies of the given module. If dependencies form a cycle (which should not
-    /// be the case as we check this when modules are added to the module storage), an error is
-    /// returned.
-    ///
-    /// Important: this implementation **does not** load transitive friends. While it is possible
-    /// to view friends as `used-by` relation, it cannot be checked fully. For example, consider
-    /// the case when we have four modules A, B, C, D and let `X --> Y` be a dependency relation
-    /// (Y is a dependency of X) and `X ==> Y ` a friend relation (X declares Y a friend). Then
-    /// consider the case `A --> B <== C --> D <== A`. Here, if we opt for `used-by` semantics,
-    /// there is a cycle. But it cannot be checked, since, A only sees B and D, and C sees B and D,
-    /// but both B and D do not see any dependencies or friends. Hence, A cannot discover C and
-    /// vice-versa, making detection of such corner cases only possible if **all existing modules
-    /// are checked**, which is clearly infeasible.
-    fn fetch_verified_module_and_visit_all_transitive_dependencies(
-        &self,
-        address: &AccountAddress,
-        module_name: &IdentStr,
-        visited: &mut BTreeSet<ModuleId>,
-    ) -> VMResult<Arc<Module>> {
-        use ModuleCacheEntry::*;
-        // Get the module, and in case it is verified, return early.
-        let (checksum, entry) = self.fetch_existing_module_storage_entry(address, module_name)?;
-        let (module, module_size) = match entry {
-            Deserialized {
-                module,
-                module_size,
-            } => (module, module_size),
-            Verified { module, .. } => return Ok(module),
-        };
-
-        // Step 1: verify compiled module locally.
-        let locally_verified_module = self.runtime_environment.build_locally_verified_module(
-            module,
-            module_size,
-            &checksum,
-        )?;
-
-        // Step 2: visit all dependencies and collect them for later verification.
-        let mut verified_immediate_dependencies = vec![];
-        for (addr, name) in locally_verified_module.immediate_dependencies_iter() {
-            // Check if the module has been already visited and verified.
-            let (_, dep_entry) = self.fetch_existing_module_storage_entry(addr, name)?;
-            if let Some(dep_module) = dep_entry.into_verified() {
-                verified_immediate_dependencies.push(dep_module);
-                continue;
-            }
-
-            // Otherwise, either we have visited this module but not yet verified (hence,
-            // we found a cycle) or we have not visited it yet and need to verify it.
-            let module_id = ModuleId::new(*addr, name.to_owned());
-            if visited.insert(module_id) {
-                let module = self.fetch_verified_module_and_visit_all_transitive_dependencies(
-                    addr, name, visited,
-                )?;
-                verified_immediate_dependencies.push(module);
-            } else {
-                return Err(module_cyclic_dependency_error!(address, module_name));
-            }
-        }
-
-        // Step 3: verify module with dependencies.
-        let module = Arc::new(
-            self.runtime_environment
-                .build_verified_module(locally_verified_module, &verified_immediate_dependencies)?,
-        );
-
-        // Step 4: update storage representation to fully verified one.
-        self.module_cache
-            .lock()
-            .put_with_weight(
-                checksum,
-                Verified {
-                    module: module.clone(),
-                    module_size,
-                },
-            )
-            .map_err(|_| {
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("Module storage cache eviction error".to_string())
-                    .finish(Location::Module(ModuleId::new(
-                        *address,
-                        module_name.to_owned(),
-                    )))
-            })?;
-        Ok(module)
-    }
-
     /// The reference to the baseline byte storage used by this module storage.
     pub fn byte_storage(&self) -> &S {
         &self.base_storage
     }
-}
 
-impl<'e, B: ModuleBytesStorage + ChecksumStorage> WithRuntimeEnvironment
-    for InitiaModuleStorage<'e, B>
-{
-    fn runtime_environment(&self) -> &RuntimeEnvironment {
-        self.runtime_environment
+    /// Test-only method that checks the state of the module cache.
+    #[cfg(test)]
+    pub(crate) fn assert_cached_state(
+        &self,
+        deserialized: Vec<&'s ModuleId>,
+        deserialized_checksum: Vec<&'s Checksum>,
+        verified: Vec<&'s ModuleId>,
+        verified_checksum: Vec<&'s Checksum>,
+    ) {
+        assert_eq!(self.module_cache.num_modules(), deserialized.len() + verified.len());
+        assert_eq!(deserialized.len(), deserialized_checksum.len());
+        for (id, checksum) in deserialized.into_iter().zip(deserialized_checksum) {
+            let result = self.module_cache.get_module_or_build_with(id, checksum, self);
+            let module = claims::assert_some!(claims::assert_ok!(result));
+            assert!(!module.code().is_verified())
+        }
+        assert_eq!(verified.len(), verified_checksum.len());
+        for (id, checksum) in verified.into_iter().zip(verified_checksum) {
+            let result = self.module_cache.get_module_or_build_with(id, checksum, self);
+            let module = claims::assert_some!(claims::assert_ok!(result));
+            assert!(module.code().is_verified())
+        }
     }
 }
 
-impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStorage<'e, B> {
+impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder
+    for InitiaModuleStorage<'s, S>
+{
+    type Deserialized = CompiledModule;
+    type Extension = BytesWithHash;
+    type Key = ModuleId;
+    type Verified = Module;
+    type Version = NoVersion;
+
+    fn build(
+        &self,
+        key: &Self::Key,
+    ) -> VMResult<
+        Option<ModuleCode<Self::Deserialized, Self::Verified, Self::Extension, Self::Version>>,
+    > {
+        let bytes = match self
+            .base_storage
+            .fetch_module_bytes(key.address(), key.name())?
+        {
+            Some(bytes) => bytes,
+            None => return Ok(None),
+        };
+
+        let checksum = match self.base_storage.fetch_checksum(key.address(), key.name())?
+        {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
+
+        let (compiled_module, _, hash) = self
+            .runtime_environment()
+            .deserialize_into_compiled_module(&bytes)?;
+
+        if checksum != hash {
+            return Err(module_linker_error!(key.address(), key.name()));
+        }
+
+        let extension = Arc::new(BytesWithHash::new(bytes, hash));
+        let module = ModuleCode::from_deserialized(compiled_module, extension, NoVersion);
+        Ok(Some(module))
+    }
+}
+
+impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStorage<'a, S> {
     fn check_module_exists(
         &self,
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<bool> {
-        // Cached modules in module storage are a subset of modules in byte
-        // storage, so it is sufficient to check existence based on it.
-        Ok(self
-            .base_storage
-            .fetch_checksum(address, module_name)?
-            .is_some())
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(false),
+        };
+        Ok(self.module_cache.get_module_or_build_with(&id, &checksum, self)?.is_some())
     }
 
     fn fetch_module_bytes(
@@ -303,7 +191,15 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Bytes>> {
-        self.base_storage.fetch_module_bytes(address, module_name)
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
+        Ok(self
+            .module_cache
+            .get_module_or_build_with(&id, &checksum, self)?
+            .map(|module| module.extension().bytes().clone()))
     }
 
     fn fetch_module_size_in_bytes(
@@ -311,9 +207,15 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<usize>> {
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
         Ok(self
-            .fetch_module_bytes(address, module_name)?
-            .map(|b| b.len()))
+            .module_cache
+            .get_module_or_build_with(&id, &checksum, self)?
+            .map(|module| module.extension().bytes().len()))
     }
 
     fn fetch_module_metadata(
@@ -321,9 +223,15 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Vec<Metadata>>> {
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
         Ok(self
-            .fetch_deserialized_module(address, module_name)?
-            .map(|module| module.metadata.clone()))
+            .module_cache
+            .get_module_or_build_with(&id, &checksum, self)?
+            .map(|module| module.code().deserialized().metadata.clone()))
     }
 
     fn fetch_deserialized_module(
@@ -331,24 +239,15 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<CompiledModule>>> {
-        let checksum =
-            if let Some(checksum) = self.byte_storage().fetch_checksum(address, module_name)? {
-                checksum
-            } else {
-                return Ok(None);
-            };
-
-        if self.ensure_module_cached(&checksum, address, module_name)? {
-            return Ok(None);
-        }
-
-        // At this point module storage contains a deserialized entry, because the function
-        // above puts it there if it existed and was not cached already.
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
         Ok(self
             .module_cache
-            .lock()
-            .get(&checksum)
-            .map(|entry| entry.compiled_module()))
+            .get_module_or_build_with(&id, &checksum, self)?
+            .map(|module| module.code().deserialized().clone()))
     }
 
     fn fetch_verified_module(
@@ -356,18 +255,123 @@ impl<'e, B: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<Module>>> {
-        if !self.check_module_exists(address, module_name)? {
-            return Ok(None);
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
+
+        // Look up the verified module in cache, if it is not there, or if the module is not yet
+        // verified, we need to load & verify its transitive dependencies.
+        let module = match self.module_cache.get_module_or_build_with(&id, &checksum, self)? {
+            Some(module) => module,
+            None => return Ok(None),
+        };
+
+        if module.code().is_verified() {
+            return Ok(Some(module.code().verified().clone()));
         }
 
-        let mut visited = BTreeSet::new();
-        let module = self.fetch_verified_module_and_visit_all_transitive_dependencies(
-            address,
-            module_name,
+        let mut visited = HashSet::new();
+        visited.insert(id.clone());
+        Ok(Some(visit_dependencies_and_verify(
+            id,
+            checksum,
+            module,
             &mut visited,
-        )?;
-        Ok(Some(module))
+            self,
+        )?))
     }
+}
+
+/// Visits the dependencies of the given module. If dependencies form a cycle (which should not be
+/// the case as we check this when modules are added to the module cache), an error is returned.
+///
+/// Note:
+///   This implementation **does not** load transitive friends. While it is possible to view
+///   friends as `used-by` relation, it cannot be checked fully. For example, consider the case
+///   when we have four modules A, B, C, D and let `X --> Y` be a dependency relation (Y is a
+///   dependency of X) and `X ==> Y ` a friend relation (X declares Y a friend). Then consider the
+///   case `A --> B <== C --> D <== A`. Here, if we opt for `used-by` semantics, there is a cycle.
+///   But it cannot be checked, since, A only sees B and D, and C sees B and D, but both B and D do
+///   not see any dependencies or friends. Hence, A cannot discover C and vice-versa, making
+///   detection of such corner cases only possible if **all existing modules are checked**, which
+///   is clearly infeasible.
+fn visit_dependencies_and_verify<'a, S: ModuleBytesStorage + ChecksumStorage>(
+    module_id: ModuleId,
+    checksum: Checksum,
+    module: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+    visited: &mut HashSet<ModuleId>,
+    module_cache_with_context: &InitiaModuleStorage<'a, S>,
+) -> VMResult<Arc<Module>> {
+    let runtime_environment = module_cache_with_context.runtime_environment;
+
+    // Step 1: Local verification.
+    runtime_environment.paranoid_check_module_address_and_name(
+        module.code().deserialized(),
+        module_id.address(),
+        module_id.name(),
+    )?;
+    let locally_verified_code = runtime_environment.build_locally_verified_module(
+        module.code().deserialized().clone(),
+        module.extension().size_in_bytes(),
+        module.extension().hash(),
+    )?;
+
+    // Step 2: Traverse and collect all verified immediate dependencies so that we can verify
+    // non-local properties of the module.
+    let mut verified_dependencies = vec![];
+    for (addr, name) in locally_verified_code.immediate_dependencies_iter() {
+        let dependency_id = ModuleId::new(*addr, name.to_owned());
+        match module_cache_with_context.base_storage.fetch_checksum(addr, name)? {
+            Some(dependency_checksum) => {
+                let dependency = module_cache_with_context
+                    .module_cache
+                    .get_module_or_build_with(&dependency_id, &dependency_checksum, module_cache_with_context)?
+                    .ok_or_else(|| module_linker_error!(addr, name))?;
+
+                // Dependency is already verified!
+                if dependency.code().is_verified() {
+                    verified_dependencies.push(dependency.code().verified().clone());
+                    continue;
+                }
+
+                if visited.insert(dependency_id.clone()) {
+                    // Dependency is not verified, and we have not visited it yet.
+                    let verified_dependency = visit_dependencies_and_verify(
+                        dependency_id.clone(),
+                        dependency_checksum,
+                        dependency,
+                        visited,
+                        module_cache_with_context,
+                    )?;
+                    verified_dependencies.push(verified_dependency);
+                } else {
+                    // We must have found a cycle otherwise.
+                    return Err(module_cyclic_dependency_error!(
+                        dependency_id.address(),
+                        dependency_id.name()
+                    ));
+                }
+            },
+            None => {
+                return Err(module_cyclic_dependency_error!(
+                    dependency_id.address(),
+                    dependency_id.name()
+                ));
+            }
+        };
+    }
+
+    let verified_code =
+        runtime_environment.build_verified_module(locally_verified_code, &verified_dependencies)?;
+    let module = module_cache_with_context.module_cache.insert_verified_module(
+        checksum,
+        verified_code,
+        module.extension().clone(),
+        module.version(),
+    )?;
+    Ok(module.code().verified().clone())
 }
 
 /// Represents owned or borrowed types, similar to [std::borrow::Cow] but without enforcing
@@ -390,41 +394,23 @@ impl<'a, T> Deref for BorrowedOrOwned<'a, T> {
 }
 
 #[cfg(test)]
-impl<'e, B: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'e, B> {
-    pub(crate) fn does_not_have_cached_modules(&self, checksum: &Checksum) -> bool {
-        self.module_cache.lock().get(checksum).is_none()
-    }
-
-    pub(crate) fn matches<P: Fn(&ModuleCacheEntry) -> bool>(
-        &self,
-        checksums: impl IntoIterator<Item = &'e Checksum>,
-        predicate: P,
-    ) -> bool {
-        let module_cache = self.module_cache.lock();
-        let checksums_in_storage = module_cache
-            .iter()
-            .filter_map(|(checksum, entry)| predicate(entry).then_some(checksum))
-            .collect::<BTreeSet<_>>();
-        let checksums = checksums.into_iter().collect::<BTreeSet<_>>();
-        checksums.is_subset(&checksums_in_storage) && checksums_in_storage.is_subset(&checksums)
-    }
-}
-
-#[cfg(test)]
 pub(crate) mod test {
-    use crate::{memory_module_storage::InMemoryStorage, module_cache::new_initia_module_cache};
-
-    use super::*;
-    use claims::{assert_err, assert_none, assert_ok};
+    use bytes::Bytes;
+    use claims::{assert_err, assert_none, assert_ok, assert_some};
     use move_binary_format::{
         file_format::empty_module_with_dependencies_and_friends,
-        file_format_common::VERSION_DEFAULT,
+        file_format_common::VERSION_DEFAULT, CompiledModule,
     };
-    use move_core_types::{ident_str, vm_status::StatusCode};
+    use move_core_types::{
+        account_address::AccountAddress, ident_str, identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode
+    };
+    use move_vm_runtime::{ModuleStorage, RuntimeEnvironment};
+
+    use crate::{memory_module_storage::InMemoryStorage, module_cache::InitiaModuleCache, module_storage::AsInitiaModuleStorage, state_view::Checksum};
 
     pub const TEST_CACHE_CAPACITY: usize = 100;
 
-    fn module<'a>(
+    fn make_module<'a>(
         module_name: &'a str,
         dependencies: impl IntoIterator<Item = &'a str>,
         friends: impl IntoIterator<Item = &'a str>,
@@ -445,16 +431,15 @@ pub(crate) mod test {
         dependencies: impl IntoIterator<Item = &'a str>,
         friends: impl IntoIterator<Item = &'a str>,
     ) -> Checksum {
-        let (module, bytes) = module(module_name, dependencies, friends);
+        let (module, bytes) = make_module(module_name, dependencies, friends);
         module_bytes_storage.add_module_bytes(module.self_addr(), module.self_name(), bytes)
     }
 
     #[test]
-    fn test_ensure_module_cached() {
+    fn test_module_does_not_exist() {
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            InMemoryStorage::new().into_initia_module_storage(&runtime_environment, module_cache);
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+        let module_storage = InMemoryStorage::new().into_initia_module_storage(&runtime_environment, module_cache);
 
         let result = module_storage.check_module_exists(&AccountAddress::ZERO, ident_str!("a"));
         assert!(!assert_ok!(result));
@@ -477,23 +462,27 @@ pub(crate) mod test {
     #[test]
     fn test_module_exists() {
         let mut module_bytes_storage = InMemoryStorage::new();
-        let checksum = add_module_bytes(&mut module_bytes_storage, "a", vec![], vec![]);
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+        let checksum_a = add_module_bytes(&mut module_bytes_storage, "a", vec![], vec![]);
+        let id = ModuleId::new(AccountAddress::ZERO, Identifier::new("a").unwrap());
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        let result = module_storage.check_module_exists(&AccountAddress::ZERO, ident_str!("a"));
-        assert!(assert_ok!(result));
-        assert!(module_storage.does_not_have_cached_modules(&checksum));
+        assert!(assert_ok!(
+            module_storage.check_module_exists(id.address(), id.name())
+        ));
+        module_storage.assert_cached_state(vec![&id], vec![&checksum_a], vec![], vec![]);
     }
 
     #[test]
     fn test_deserialized_caching() {
-        use ModuleCacheEntry::*;
-
         let mut module_bytes_storage = InMemoryStorage::new();
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+
+        let a_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("a").unwrap());
+        let c_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("c").unwrap());
+
         let checksum_a = add_module_bytes(&mut module_bytes_storage, "a", vec!["b", "c"], vec![]);
         add_module_bytes(&mut module_bytes_storage, "b", vec![], vec![]);
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec!["d", "e"], vec![]);
@@ -501,37 +490,30 @@ pub(crate) mod test {
         add_module_bytes(&mut module_bytes_storage, "e", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        let result = module_storage.fetch_module_metadata(&AccountAddress::ZERO, ident_str!("a"));
-        assert_eq!(
-            assert_some!(assert_ok!(result)),
-            module("a", vec!["b", "c"], vec![]).0.metadata
-        );
+        let result = module_storage.fetch_module_metadata(a_id.address(), a_id.name());
+        let expected = make_module("a", vec!["b", "c"], vec![]).0.metadata;
+        assert_eq!(assert_some!(assert_ok!(result)), expected);
+        module_storage.assert_cached_state(vec![&a_id], vec![&checksum_a], vec![], vec![]);
 
-        assert!(module_storage.matches(vec![&checksum_a], |e| { matches!(e, Deserialized { .. }) }));
-        assert!(module_storage.matches(vec![], |e| matches!(e, Verified { .. })));
-
-        let result =
-            module_storage.fetch_deserialized_module(&AccountAddress::ZERO, ident_str!("c"));
-        assert_eq!(
-            assert_some!(assert_ok!(result)).as_ref(),
-            &module("c", vec!["d", "e"], vec![]).0
-        );
-
-        assert!(module_storage.matches(vec![&checksum_a, &checksum_c], |e| {
-            matches!(e, Deserialized { .. })
-        }));
-        assert!(module_storage.matches(vec![], |e| matches!(e, Verified { .. })));
+        let result = module_storage.fetch_deserialized_module(c_id.address(), c_id.name());
+        let expected = make_module("c", vec!["d", "e"], vec![]).0;
+        assert_eq!(assert_some!(assert_ok!(result)).as_ref(), &expected);
+        module_storage.assert_cached_state(vec![&a_id, &c_id], vec![&checksum_a, &checksum_c], vec![], vec![]);
     }
 
     #[test]
     fn test_dependency_tree_traversal() {
-        use ModuleCacheEntry::*;
-
         let mut module_bytes_storage = InMemoryStorage::new();
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+
+        let a_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("a").unwrap());
+        let b_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("b").unwrap());
+        let c_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("c").unwrap());
+        let d_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("d").unwrap());
+        let e_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("e").unwrap());
+
         let checksum_a = add_module_bytes(&mut module_bytes_storage, "a", vec!["b", "c"], vec![]);
         let checksum_b = add_module_bytes(&mut module_bytes_storage, "b", vec![], vec![]);
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec!["d", "e"], vec![]);
@@ -539,41 +521,30 @@ pub(crate) mod test {
         let checksum_e = add_module_bytes(&mut module_bytes_storage, "e", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("c"));
-        assert_ok!(result);
-        assert!(module_storage.matches(vec![], |e| matches!(e, Deserialized { .. })));
-        assert!(
-            module_storage.matches(vec![&checksum_c, &checksum_d, &checksum_e], |e| {
-                matches!(e, Verified { .. })
-            })
-        );
+        assert_ok!(module_storage.fetch_verified_module(c_id.address(), c_id.name()));
+        module_storage.assert_cached_state(vec![], vec![],vec![&c_id, &d_id, &e_id], vec![&checksum_c, &checksum_d, &checksum_e]);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("a"));
-        assert_ok!(result);
-        assert!(module_storage.matches(
-            vec![
-                &checksum_a,
-                &checksum_b,
-                &checksum_c,
-                &checksum_d,
-                &checksum_e
-            ],
-            |e| { matches!(e, Verified { .. }) }
-        ));
+        assert_ok!(module_storage.fetch_verified_module(a_id.address(), a_id.name()));
+        module_storage.assert_cached_state(vec![],vec![], vec![&a_id, &b_id, &c_id, &d_id, &e_id], vec![&checksum_a, &checksum_b, &checksum_c, &checksum_d, &checksum_e]);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("a"));
-        assert_ok!(result);
+        assert_ok!(module_storage.fetch_verified_module(a_id.address(), a_id.name()));
     }
 
     #[test]
     fn test_dependency_dag_traversal() {
-        use ModuleCacheEntry::*;
-
         let mut module_bytes_storage = InMemoryStorage::new();
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+
+        let a_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("a").unwrap());
+        let b_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("b").unwrap());
+        let c_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("c").unwrap());
+        let d_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("d").unwrap());
+        let e_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("e").unwrap());
+        let f_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("f").unwrap());
+        let g_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("g").unwrap());
+
         let checksum_a = add_module_bytes(&mut module_bytes_storage, "a", vec!["b", "c"], vec![]);
         let checksum_b = add_module_bytes(&mut module_bytes_storage, "b", vec!["d"], vec![]);
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec!["d"], vec![]);
@@ -583,57 +554,36 @@ pub(crate) mod test {
         let checksum_g = add_module_bytes(&mut module_bytes_storage, "g", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        assert_ok!(module_storage.fetch_deserialized_module(&AccountAddress::ZERO, ident_str!("a")));
-        assert_ok!(module_storage.fetch_deserialized_module(&AccountAddress::ZERO, ident_str!("c")));
-        assert!(module_storage.matches(vec![&checksum_a, &checksum_c], |e| {
-            matches!(e, Deserialized { .. })
-        }));
-        assert!(module_storage.matches(vec![], |e| matches!(e, Verified { .. })));
+        assert_ok!(module_storage.fetch_deserialized_module(a_id.address(), a_id.name()));
+        assert_ok!(module_storage.fetch_deserialized_module(c_id.address(), c_id.name()));
+        module_storage.assert_cached_state(vec![&a_id, &c_id], vec![&checksum_a, &checksum_c],vec![], vec![]);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("d"));
-        assert_ok!(result);
-        assert!(module_storage.matches(vec![&checksum_a, &checksum_c], |e| {
-            matches!(e, Deserialized { .. })
-        }));
-        assert!(module_storage.matches(
-            vec![&checksum_d, &checksum_e, &checksum_f, &checksum_g],
-            |e| { matches!(e, Verified { .. }) }
-        ));
+        assert_ok!(module_storage.fetch_verified_module(d_id.address(), d_id.name()));
+        module_storage.assert_cached_state(vec![&a_id, &c_id], vec![&checksum_a, &checksum_c], vec![&d_id, &e_id, &f_id, &g_id], vec![&checksum_d, &checksum_e, &checksum_f, &checksum_g]);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("a"));
-        assert_ok!(result);
-        assert!(module_storage.matches(vec![], |e| matches!(e, Deserialized { .. })));
-        assert!(module_storage.matches(
-            vec![
-                &checksum_a,
-                &checksum_b,
-                &checksum_c,
-                &checksum_d,
-                &checksum_e,
-                &checksum_f,
-                &checksum_g
-            ],
-            |e| matches!(e, Verified { .. }),
-        ));
+        assert_ok!(module_storage.fetch_verified_module(a_id.address(), a_id.name()));
+        module_storage.assert_cached_state(vec![], vec![], vec![
+            &a_id, &b_id, &c_id, &d_id, &e_id, &f_id, &g_id,
+        ], vec![&checksum_a, &checksum_b, &checksum_c, &checksum_d, &checksum_e, &checksum_f, &checksum_g]);
     }
 
     #[test]
     fn test_cyclic_dependencies_traversal_fails() {
         let mut module_bytes_storage = InMemoryStorage::new();
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+
+        let c_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("c").unwrap());
+
         add_module_bytes(&mut module_bytes_storage, "a", vec!["b"], vec![]);
         add_module_bytes(&mut module_bytes_storage, "b", vec!["c"], vec![]);
         add_module_bytes(&mut module_bytes_storage, "c", vec!["a"], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("c"));
+        let result = module_storage.fetch_verified_module(c_id.address(), c_id.name());
         assert_eq!(
             assert_err!(result).major_status(),
             StatusCode::CYCLIC_MODULE_DEPENDENCY
@@ -642,49 +592,43 @@ pub(crate) mod test {
 
     #[test]
     fn test_cyclic_friends_are_allowed() {
-        use ModuleCacheEntry::*;
-
         let mut module_bytes_storage = InMemoryStorage::new();
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+
+        let c_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("c").unwrap());
+
         add_module_bytes(&mut module_bytes_storage, "a", vec![], vec!["b"]);
         add_module_bytes(&mut module_bytes_storage, "b", vec![], vec!["c"]);
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec![], vec!["a"]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("c"));
+        let result = module_storage.fetch_verified_module(c_id.address(), c_id.name());
         assert_ok!(result);
 
         // Since `c` has no dependencies, only it gets deserialized and verified.
-        assert!(module_storage.matches(vec![], |e| matches!(e, Deserialized { .. })));
-        assert!(module_storage.matches(vec![&checksum_c], |e| matches!(e, Verified { .. })));
+        module_storage.assert_cached_state(vec![], vec![], vec![&c_id], vec![&checksum_c]);
     }
 
     #[test]
     fn test_transitive_friends_are_allowed_to_be_transitive_dependencies() {
-        use ModuleCacheEntry::*;
-
         let mut module_bytes_storage = InMemoryStorage::new();
+        let module_cache = InitiaModuleCache::new(TEST_CACHE_CAPACITY);
+
+        let a_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("a").unwrap());
+        let b_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("b").unwrap());
+        let c_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("c").unwrap());
+
         let checksum_a = add_module_bytes(&mut module_bytes_storage, "a", vec!["b"], vec!["d"]);
         let checksum_b = add_module_bytes(&mut module_bytes_storage, "b", vec!["c"], vec![]);
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec![], vec![]);
         add_module_bytes(&mut module_bytes_storage, "d", vec![], vec!["c"]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let module_cache = new_initia_module_cache(TEST_CACHE_CAPACITY);
-        let module_storage =
-            module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
+        let module_storage = module_bytes_storage.into_initia_module_storage(&runtime_environment, module_cache);
 
-        let result = module_storage.fetch_verified_module(&AccountAddress::ZERO, ident_str!("a"));
-        assert_ok!(result);
-
-        assert!(module_storage.matches(vec![], |e| matches!(e, Deserialized { .. })));
-        assert!(
-            module_storage.matches(vec![&checksum_a, &checksum_b, &checksum_c], |e| {
-                matches!(e, Verified { .. })
-            })
-        );
+        assert_ok!(module_storage.fetch_verified_module(a_id.address(), a_id.name()));
+        module_storage.assert_cached_state(vec![], vec![], vec![&a_id, &b_id, &c_id], vec![&checksum_a, &checksum_b, &checksum_c]);
     }
 }
