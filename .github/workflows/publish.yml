@@ -9,7 +9,7 @@ on:
 jobs:
   copy-files:
     name: Copy files to move-natives
-    if: startsWith(github.event.workflow_run.head_commit.message, 'refs/tags/') # Ensure it only triggers for tags
+    if: startsWith(github.event.workflow_run.head_branch, 'v') # Check if the run was triggered by a tag, adjust 'v' if needed
     runs-on: ubuntu-latest
 
     steps:
@@ -30,7 +30,7 @@ jobs:
           destination-repo: 'move-natives'
           destination-branch: 'main'
           email: 'infra@initia.xyz'
-          commit-msg: 'bump movevm on tag release ${{ github.event.workflow_run.head_commit.id }}'
+          commit-msg: 'bump movevm ${{ github.event.workflow_run.head_branch }}'
 
       - name: Push shared dynamic libraries to builder.js
         uses: initia-labs/actions/push-to-repo@main
@@ -49,4 +49,4 @@ jobs:
           destination-branch: 'main'
           destination-dir: 'library'
           email: 'infra@initia.xyz'
-          commit-msg: 'bump movevm on tag release ${{ github.event.workflow_run.head_commit.id }}'
+          commit-msg: 'bump movevm ${{ github.event.workflow_run.head_branch }}'
