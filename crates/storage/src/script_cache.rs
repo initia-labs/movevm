@@ -33,7 +33,6 @@ impl InitiaScriptCache {
         deserialized_script: CompiledScript,
     ) -> VMResult<Arc<CompiledScript>> {
         let mut script_cache = self.script_cache.lock();
-
         match script_cache.get(&key) {
             Some(code) => Ok(code.deserialized().clone()),
             None => {

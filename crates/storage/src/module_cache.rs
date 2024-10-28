@@ -2,6 +2,7 @@ use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 
 use bytes::Bytes;
 use clru::{CLruCache, CLruCacheConfig};
+use get_size::GetSize;
 use move_binary_format::{errors::{Location, PartialVMError, VMResult}, CompiledModule};
 use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
 use move_vm_runtime::Module;
@@ -10,10 +11,16 @@ use parking_lot::Mutex;
 
 use crate::{code_scale::ModuleCodeScale, state_view::Checksum};
 
+fn bytes_len(bytes: &Bytes) -> usize {
+    bytes.len()
+}
+
 /// Extension for modules stored in [UnsyncModuleStorage] to also capture information about bytes
 /// and hash.
+#[derive(GetSize)]
 pub struct BytesWithHash {
     /// Bytes of the module.
+    #[get_size(size_fn = bytes_len)]
     bytes: Bytes,
     /// Hash of the module.
     hash: [u8; 32],
@@ -40,6 +47,7 @@ impl WithHash for BytesWithHash {
 
 /// Placeholder for module versioning since we do not allow to mutate [UnsyncModuleStorage].
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(GetSize)]
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {

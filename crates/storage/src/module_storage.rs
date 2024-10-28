@@ -158,6 +158,8 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder
             None => return Ok(None),
         };
 
+
+
         let (compiled_module, _, hash) = self
             .runtime_environment()
             .deserialize_into_compiled_module(&bytes)?;

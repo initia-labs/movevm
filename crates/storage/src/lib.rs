@@ -10,3 +10,5 @@ pub mod module_storage;
 pub mod script_cache;
 
 pub mod code_scale;
+
+mod move_core_type;

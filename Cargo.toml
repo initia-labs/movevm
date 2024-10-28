@@ -107,10 +107,11 @@ bytes = "1.4.0"
 parking_lot = "0.12.1"
 base64 = "0.21.7"
 bigdecimal = ">=0.4.5"
+primitive-types = { version = "0.10" }
 bech32 = "0.11"
 triomphe = "0.1.9"
 tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
-get-size = "0.1.4"
+get-size = { version = "0.1.4", features = ["derive"]}
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES
