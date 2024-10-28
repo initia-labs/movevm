@@ -36,7 +36,7 @@ use super::{
 };
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum AccessSpecifier {
     /// Universal access granted
     Any,
@@ -47,7 +47,7 @@ pub enum AccessSpecifier {
     Constraint(Vec<AccessSpecifierClause>, Vec<AccessSpecifierClause>),
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct AccessSpecifierClause {
     pub kind: AccessKind,
     pub resource: ResourceSpecifier,
@@ -55,7 +55,7 @@ pub struct AccessSpecifierClause {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum ResourceSpecifier {
     Any,
     DeclaredAtAddress(AccountAddress),
@@ -65,7 +65,7 @@ pub enum ResourceSpecifier {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum AddressSpecifier {
     Any,
     Literal(AccountAddress),
@@ -76,7 +76,7 @@ pub enum AddressSpecifier {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum AddressSpecifierFunction {
     /// Identity function -- just returns the value of the parameter.
     Identity,
@@ -86,7 +86,7 @@ pub enum AddressSpecifierFunction {
     ObjectAddress,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct AccessInstance {
     pub kind: AccessKind,
     pub resource: StructIdentifier,

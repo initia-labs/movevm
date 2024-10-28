@@ -16,7 +16,7 @@ use super::{
     runtime_types::{StructType, Type},
 };
 
-#[derive(GetSize)]
+#[derive(GetSize, Debug)]
 pub struct Module {
     id: ModuleId,
 
@@ -68,20 +68,20 @@ pub struct Module {
     pub(crate) single_signature_token_map: BTreeMap<SignatureIndex, Type>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub(crate) struct StructDef {
     pub(crate) field_count: u16,
     pub(crate) definition_struct_type: Arc<StructType>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub(crate) struct StructInstantiation {
     pub(crate) field_count: u16,
     pub(crate) definition_struct_type: Arc<StructType>,
     pub(crate) instantiation: Vec<Type>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub(crate) struct StructVariantInfo {
     pub(crate) field_count: u16,
     pub(crate) variant: VariantIndex,
@@ -89,14 +89,14 @@ pub(crate) struct StructVariantInfo {
     pub(crate) instantiation: Vec<Type>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub(crate) struct FieldHandle {
     pub(crate) offset: usize,
     pub(crate) field_ty: Type,
     pub(crate) definition_struct_type: Arc<StructType>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub(crate) struct FieldInstantiation {
     pub(crate) offset: usize,
     pub(crate) uninstantiated_field_ty: Type,
@@ -104,7 +104,7 @@ pub(crate) struct FieldInstantiation {
     pub(crate) instantiation: Vec<Type>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub(crate) struct VariantFieldInfo {
     pub(crate) offset: usize,
     pub(crate) uninstantiated_field_ty: Type,

@@ -11,7 +11,7 @@ use super::{
     runtime_types::Type,
 };
 
-#[derive(GetSize)]
+#[derive(GetSize, Debug)]
 pub struct Script {
     // primitive pools
     pub(crate) script: Arc<CompiledScript>,

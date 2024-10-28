@@ -20,7 +20,7 @@ fn bytes_len(bytes: &Bytes) -> usize {
 
 /// Extension for modules stored in [UnsyncModuleStorage] to also capture information about bytes
 /// and hash.
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct BytesWithHash {
     /// Bytes of the module.
     #[get_size(size_fn = bytes_len)]
@@ -49,7 +49,7 @@ impl WithHash for BytesWithHash {
 }
 
 /// Placeholder for module versioning since we do not allow to mutate [UnsyncModuleStorage].
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, GetSize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, GetSize, Debug)]
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {

@@ -9,14 +9,14 @@ use get_size::GetSize;
 use smallbitvec::SmallBitVec;
 use triomphe::Arc as TriompheArc;
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct DepthFormula {
     pub terms: Vec<(TypeParameterIndex, u64)>, // Ti + Ci
     pub constant: Option<u64>,                 // Cbase
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructType {
     pub idx: StructNameIndex,
     pub layout: StructLayout,
@@ -29,22 +29,23 @@ pub struct StructType {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum StructLayout {
     Single(Vec<(Identifier, Type)>),
     Variants(Vec<(Identifier, Vec<(Identifier, Type)>)>),
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructNameIndex(pub usize);
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructIdentifier {
     pub module: ModuleId,
     pub name: Identifier,
 }
 
 #[allow(dead_code)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Type {
     Bool,
     U8,
@@ -97,7 +98,7 @@ impl GetSize for Type {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 // Cache for the ability of struct. They will be ignored when comparing equality or Ord as they are just used for caching purpose.
 pub struct AbilityInfo {
     base_ability_set: AbilitySet,
@@ -105,7 +106,7 @@ pub struct AbilityInfo {
     phantom_ty_args_mask: SmallBitVec,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct TypeBuilder {
     // Maximum number of nodes a fully-instantiated type has.
     max_ty_size: u64,

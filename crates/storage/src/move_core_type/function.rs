@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 
 use super::{
     file_format::{AbilitySet, AccessSpecifier, Bytecode, FunctionDefinitionIndex},
@@ -29,6 +29,14 @@ pub struct Function {
     pub(crate) access_specifier: AccessSpecifier,
 }
 
+impl Debug for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.debug_struct("Function")
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
 #[allow(dead_code)]
 #[derive(GetSize)]
 /// For loaded function representation, specifies the owner: a script or a module.
@@ -48,7 +56,7 @@ pub struct LoadedFunction {
     pub(crate) function: Arc<Function>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, Debug)]
 pub(crate) struct FunctionInstantiation {
     // index to `ModuleCache::functions` global table
     pub(crate) handle: FunctionHandle,
@@ -56,7 +64,7 @@ pub(crate) struct FunctionInstantiation {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, Debug)]
 pub(crate) enum FunctionHandle {
     Local(Arc<Function>),
     Remote { module: ModuleId, name: Identifier },

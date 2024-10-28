@@ -3,7 +3,7 @@ use get_size::GetSize;
 use primitive_types::U256 as PrimitiveU256;
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum Bytecode {
     Pop,
     Ret,
@@ -94,7 +94,7 @@ pub enum Bytecode {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct U256(PrimitiveU256);
 
 impl GetSize for U256 {
@@ -112,7 +112,7 @@ macro_rules! define_index {
         kind: $kind: ident,
         doc: $comment: literal,
     } => {
-        #[derive(GetSize)]
+        #[derive(GetSize, PartialEq, Eq, Debug)]
         pub struct $name(pub TableIndex);
     };
 }
@@ -232,7 +232,7 @@ pub type TypeSignaturePool = Vec<TypeSignature>;
 /// locals used and their types.
 pub type SignaturePool = Vec<Signature>;
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct ModuleHandle {
     /// Index into the `AddressIdentifierIndex`. Identifies module-holding account's address.
     pub address: AddressIdentifierIndex,
@@ -240,7 +240,7 @@ pub struct ModuleHandle {
     pub name: IdentifierIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructHandle {
     /// The module that defines the type.
     pub module: ModuleHandleIndex,
@@ -254,7 +254,7 @@ pub struct StructHandle {
     pub type_parameters: Vec<StructTypeParameter>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructTypeParameter {
     /// The type parameter constraints.
     pub constraints: AbilitySet,
@@ -262,7 +262,7 @@ pub struct StructTypeParameter {
     pub is_phantom: bool,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FunctionHandle {
     /// The module that defines the function.
     pub module: ModuleHandleIndex,
@@ -281,13 +281,13 @@ pub struct FunctionHandle {
     pub access_specifiers: Option<Vec<AccessSpecifier>>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FieldHandle {
     pub owner: StructDefinitionIndex,
     pub field: MemberCount,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct VariantFieldHandle {
     /// The structure which defines the variant.
     pub struct_index: StructDefinitionIndex,
@@ -298,51 +298,51 @@ pub struct VariantFieldHandle {
     pub field: MemberCount,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructVariantHandle {
     pub struct_index: StructDefinitionIndex,
     pub variant: VariantIndex,
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum StructFieldInformation {
     Native,
     Declared(Vec<FieldDefinition>),
     DeclaredVariants(Vec<VariantDefinition>),
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructDefInstantiation {
     pub def: StructDefinitionIndex,
     pub type_parameters: SignatureIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructVariantInstantiation {
     pub handle: StructVariantHandleIndex,
     pub type_parameters: SignatureIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FunctionInstantiation {
     pub handle: FunctionHandleIndex,
     pub type_parameters: SignatureIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FieldInstantiation {
     pub handle: FieldHandleIndex,
     pub type_parameters: SignatureIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct VariantFieldInstantiation {
     pub handle: VariantFieldHandleIndex,
     pub type_parameters: SignatureIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct StructDefinition {
     /// The `StructHandle` for this `StructDefinition`. This has the name and the abilities
     /// for the type.
@@ -353,7 +353,7 @@ pub struct StructDefinition {
     pub field_information: StructFieldInformation,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FieldDefinition {
     /// The name of the field.
     pub name: IdentifierIndex,
@@ -361,14 +361,14 @@ pub struct FieldDefinition {
     pub signature: TypeSignature,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct VariantDefinition {
     pub name: IdentifierIndex,
     pub fields: Vec<FieldDefinition>,
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum Visibility {
     /// Accessible within its defining module only.
     Private = 0x0,
@@ -381,7 +381,7 @@ pub enum Visibility {
     Friend = 0x3,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FunctionDefinition {
     /// The prototype of the function (module, name, signature).
     pub function: FunctionHandleIndex,
@@ -404,10 +404,10 @@ pub struct FunctionDefinition {
     pub code: Option<CodeUnit>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct TypeSignature(pub SignatureToken);
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct FunctionSignature {
     /// The list of return types.
     pub return_: Vec<SignatureToken>,
@@ -417,7 +417,7 @@ pub struct FunctionSignature {
     pub type_parameters: Vec<AbilitySet>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct Signature(pub Vec<SignatureToken>);
 
 /// Type parameters are encoded as indices. This index can also be used to lookup the kind of a
@@ -425,7 +425,7 @@ pub struct Signature(pub Vec<SignatureToken>);
 pub type TypeParameterIndex = u16;
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum Ability {
     /// Allows values of types with this ability to be copied, via CopyLoc or ReadRef
     Copy = 0x1,
@@ -440,16 +440,16 @@ pub enum Ability {
     Key = 0x8,
 }
 
-#[derive(GetSize)]
-pub struct AbilitySet(u8);
+#[derive(GetSize, PartialEq, Eq, Debug)]
+pub struct AbilitySet(pub u8);
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct AbilitySetIterator {
     set: AbilitySet,
     idx: u8,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct AccessSpecifier {
     /// The kind of access: read, write, or both.
     pub kind: AccessKind,
@@ -462,7 +462,7 @@ pub struct AccessSpecifier {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum AccessKind {
     Reads,
     Writes,
@@ -470,7 +470,7 @@ pub enum AccessKind {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum ResourceSpecifier {
     /// Any resource
     Any,
@@ -485,7 +485,7 @@ pub enum ResourceSpecifier {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum AddressSpecifier {
     /// Resource can be stored at any address.
     Any,
@@ -504,7 +504,7 @@ pub enum AddressSpecifier {
 }
 
 #[allow(dead_code)]
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub enum SignatureToken {
     /// Boolean, `true` or `false`.
     Bool,
@@ -538,23 +538,23 @@ pub enum SignatureToken {
     U256,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct SignatureTokenPreorderTraversalIter<'a> {
     stack: Vec<&'a SignatureToken>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct SignatureTokenPreorderTraversalIterWithDepth<'a> {
     stack: Vec<(&'a SignatureToken, usize)>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct Constant {
     pub type_: SignatureToken,
     pub data: Vec<u8>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct CodeUnit {
     /// List of locals type. All locals are typed.
     pub locals: SignatureIndex,
@@ -562,7 +562,7 @@ pub struct CodeUnit {
     pub code: Vec<Bytecode>,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct CompiledScript {
     /// Version number found during deserialization
     pub version: u32,
@@ -593,7 +593,7 @@ pub struct CompiledScript {
     pub parameters: SignatureIndex,
 }
 
-#[derive(GetSize)]
+#[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct CompiledModule {
     /// Version number found during deserialization
     pub version: u32,

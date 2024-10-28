@@ -172,7 +172,7 @@ impl<M: ModuleStorage> InitiaCodeStorage<M> {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use claims::assert_ok;
     use move_binary_format::{
         file_format::empty_script_with_dependencies, file_format_common::VERSION_DEFAULT,
@@ -190,7 +190,7 @@ mod test {
         script_cache::InitiaScriptCache,
     };
 
-    fn make_script<'a>(dependencies: impl IntoIterator<Item = &'a str>) -> Vec<u8> {
+    pub fn make_script<'a>(dependencies: impl IntoIterator<Item = &'a str>) -> Vec<u8> {
         let mut script = empty_script_with_dependencies(dependencies);
         script.version = VERSION_DEFAULT;
 
