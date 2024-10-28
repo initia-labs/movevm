@@ -29,8 +29,13 @@
 
 use get_size::GetSize;
 
-use super::{file_format::{AccessKind, LocalIndex}, move_core_type::{AccountAddress, ModuleId}, runtime_types::{StructIdentifier, Type}};
+use super::{
+    file_format::{AccessKind, LocalIndex},
+    move_core_type::{AccountAddress, ModuleId},
+    runtime_types::{StructIdentifier, Type},
+};
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum AccessSpecifier {
     /// Universal access granted
@@ -49,6 +54,7 @@ pub struct AccessSpecifierClause {
     pub address: AddressSpecifier,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum ResourceSpecifier {
     Any,
@@ -58,6 +64,7 @@ pub enum ResourceSpecifier {
     ResourceInstantiation(StructIdentifier, Vec<Type>),
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum AddressSpecifier {
     Any,
@@ -68,6 +75,7 @@ pub enum AddressSpecifier {
     Eval(AddressSpecifierFunction, LocalIndex),
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum AddressSpecifierFunction {
     /// Identity function -- just returns the value of the parameter.

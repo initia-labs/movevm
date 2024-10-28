@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use get_size::GetSize;
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum Code<D, V> {
     /// Deserialized code, not yet verified with bytecode verifier.

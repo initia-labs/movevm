@@ -3,20 +3,17 @@
 
 use ambassador::Delegate;
 use bytes::Bytes;
-use move_binary_format::{
-    errors::VMResult,
-    file_format::CompiledScript,
-    CompiledModule,
-};
-use move_core_types::{
-    account_address::AccountAddress, identifier::IdentStr, metadata::Metadata,
-};
+use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
+use move_core_types::{account_address::AccountAddress, identifier::IdentStr, metadata::Metadata};
 use move_vm_runtime::{
     ambassador_impl_ModuleStorage, ambassador_impl_WithRuntimeEnvironment, compute_code_hash,
     logging::expect_no_verification_errors, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
     Script, WithRuntimeEnvironment,
 };
-use move_vm_types::{code::{Code, ModuleBytesStorage}, module_linker_error};
+use move_vm_types::{
+    code::{Code, ModuleBytesStorage},
+    module_linker_error,
+};
 use std::sync::Arc;
 
 use crate::{
@@ -106,8 +103,9 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
                 let deserialized_script = self
                     .runtime_environment()
                     .deserialize_into_script(serialized_script)?;
-                self.script_cache.insert_deserialized_script(hash, deserialized_script)?
-            },
+                self.script_cache
+                    .insert_deserialized_script(hash, deserialized_script)?
+            }
         })
     }
 
@@ -143,7 +141,8 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
             .runtime_environment()
             .build_verified_script(locally_verified_script, &immediate_dependencies)?;
 
-        self.script_cache.insert_verified_script(hash, verified_script)
+        self.script_cache
+            .insert_verified_script(hash, verified_script)
     }
 }
 
@@ -157,8 +156,10 @@ impl<M: ModuleStorage> InitiaCodeStorage<M> {
         deserialized: Vec<&'b Checksum>,
         verified: Vec<&'b Checksum>,
     ) {
-
-        assert_eq!(self.script_cache.num_scripts(), deserialized.len() + verified.len());
+        assert_eq!(
+            self.script_cache.num_scripts(),
+            deserialized.len() + verified.len()
+        );
         for hash in deserialized {
             let script = claims::assert_some!(self.script_cache.get_script(hash));
             assert!(!script.is_verified())
@@ -176,10 +177,18 @@ mod test {
     use move_binary_format::{
         file_format::empty_script_with_dependencies, file_format_common::VERSION_DEFAULT,
     };
-    use move_core_types::{account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId};
+    use move_core_types::{
+        account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
+    };
     use move_vm_runtime::{compute_code_hash, CodeStorage, RuntimeEnvironment};
 
-    use crate::{code_storage::AsInitiaCodeStorage, memory_module_storage::InMemoryStorage, module_cache::InitiaModuleCache, module_storage::test::{add_module_bytes, TEST_CACHE_CAPACITY}, script_cache::InitiaScriptCache};
+    use crate::{
+        code_storage::AsInitiaCodeStorage,
+        memory_module_storage::InMemoryStorage,
+        module_cache::InitiaModuleCache,
+        module_storage::test::{add_module_bytes, TEST_CACHE_CAPACITY},
+        script_cache::InitiaScriptCache,
+    };
 
     fn make_script<'a>(dependencies: impl IntoIterator<Item = &'a str>) -> Vec<u8> {
         let mut script = empty_script_with_dependencies(dependencies);
@@ -201,7 +210,11 @@ mod test {
         add_module_bytes(&mut module_bytes_storage, "c", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, script_cache, module_cache);
+        let code_storage = module_bytes_storage.into_initia_code_storage(
+            &runtime_environment,
+            script_cache,
+            module_cache,
+        );
 
         let serialized_script = make_script(vec!["a"]);
         let hash_1 = compute_code_hash(&serialized_script);
@@ -229,7 +242,11 @@ mod test {
         let checksum_c = add_module_bytes(&mut module_bytes_storage, "c", vec![], vec![]);
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
-        let code_storage = module_bytes_storage.into_initia_code_storage(&runtime_environment, script_cache, module_cache);
+        let code_storage = module_bytes_storage.into_initia_code_storage(
+            &runtime_environment,
+            script_cache,
+            module_cache,
+        );
 
         let serialized_script = make_script(vec!["a"]);
         let hash = compute_code_hash(&serialized_script);
@@ -244,9 +261,12 @@ mod test {
         assert_ok!(code_storage.verify_and_cache_script(&serialized_script));
 
         // Script is verified, so its dependencies are loaded into cache.
-        code_storage
-            .module_storage()
-            .assert_cached_state(vec![], vec![], vec![&a_id, &b_id, &c_id], vec![&checksum_a, &checksum_b, &checksum_c]);
+        code_storage.module_storage().assert_cached_state(
+            vec![],
+            vec![],
+            vec![&a_id, &b_id, &c_id],
+            vec![&checksum_a, &checksum_b, &checksum_c],
+        );
         code_storage.assert_cached_state(vec![], vec![&hash]);
     }
 }

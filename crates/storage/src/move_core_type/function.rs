@@ -1,9 +1,16 @@
 use std::sync::Arc;
 
-use move_vm_runtime::native_functions::NativeFunction;
+use super::{
+    file_format::{AbilitySet, AccessSpecifier, Bytecode, FunctionDefinitionIndex},
+    modules::Module,
+    move_core_type::{Identifier, ModuleId},
+    runtime_types::Type,
+    script::Script,
+};
 use get_size::GetSize;
-use super::{file_format::{AbilitySet, AccessSpecifier, Bytecode, FunctionDefinitionIndex}, modules::Module, move_core_type::{Identifier, ModuleId}, runtime_types::Type, script::Script};
+use move_vm_runtime::native_functions::NativeFunction;
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub struct Function {
     pub(crate) file_format_version: u32,
@@ -22,6 +29,7 @@ pub struct Function {
     pub(crate) access_specifier: AccessSpecifier,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 /// For loaded function representation, specifies the owner: a script or a module.
 pub(crate) enum LoadedFunctionOwner {
@@ -47,6 +55,7 @@ pub(crate) struct FunctionInstantiation {
     pub(crate) instantiation: Vec<Type>,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub(crate) enum FunctionHandle {
     Local(Arc<Function>),

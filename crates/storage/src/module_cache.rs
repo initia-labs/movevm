@@ -3,7 +3,10 @@ use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 use bytes::Bytes;
 use clru::{CLruCache, CLruCacheConfig};
 use get_size::GetSize;
-use move_binary_format::{errors::{Location, PartialVMError, VMResult}, CompiledModule};
+use move_binary_format::{
+    errors::{Location, PartialVMError, VMResult},
+    CompiledModule,
+};
 use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
 use move_vm_runtime::Module;
 use move_vm_types::code::{ModuleCode, ModuleCodeBuilder, WithBytes, WithHash};
@@ -46,12 +49,18 @@ impl WithHash for BytesWithHash {
 }
 
 /// Placeholder for module versioning since we do not allow to mutate [UnsyncModuleStorage].
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
-#[derive(GetSize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, GetSize)]
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {
-    module_cache: Mutex<CLruCache<Checksum, Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>, RandomState, ModuleCodeScale>>,
+    module_cache: Mutex<
+        CLruCache<
+            Checksum,
+            Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+            RandomState,
+            ModuleCodeScale,
+        >,
+    >,
 }
 
 impl InitiaModuleCache {
@@ -59,7 +68,7 @@ impl InitiaModuleCache {
         Arc::new(InitiaModuleCache {
             module_cache: Mutex::new(CLruCache::with_config(
                 CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
-                    .with_scale(ModuleCodeScale)
+                    .with_scale(ModuleCodeScale),
             )),
         })
     }
@@ -82,16 +91,18 @@ impl InitiaModuleCache {
             Some(_) => Ok(()),
             None => {
                 let module_id = deserialized_code.self_id();
-                let module = Arc::new(ModuleCode::from_deserialized(deserialized_code, extension, version));
-                module_cache
-                    .put_with_weight(key, module)
-                    .map_err(|_| {
-                        PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-                            .with_message("Module storage cache eviction error".to_string())
-                            .finish(Location::Module(module_id))
-                    })?;
+                let module = Arc::new(ModuleCode::from_deserialized(
+                    deserialized_code,
+                    extension,
+                    version,
+                ));
+                module_cache.put_with_weight(key, module).map_err(|_| {
+                    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                        .with_message("Module storage cache eviction error".to_string())
+                        .finish(Location::Module(module_id))
+                })?;
                 Ok(())
-            },
+            }
         }
     }
 
@@ -105,30 +116,35 @@ impl InitiaModuleCache {
         let mut module_cache = self.module_cache.lock();
 
         match module_cache.get(&key) {
-            Some(code) =>  {
+            Some(code) => {
                 if code.code().is_verified() {
                     Ok(code.clone())
                 } else {
                     let module_id = verified_code.self_id();
-                    let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
-                    module_cache.put_with_weight(key, module.clone()).map_err(|_| {
+                    let module =
+                        Arc::new(ModuleCode::from_verified(verified_code, extension, version));
+                    module_cache
+                        .put_with_weight(key, module.clone())
+                        .map_err(|_| {
+                            PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                                .with_message("Module storage cache eviction error".to_string())
+                                .finish(Location::Module(module_id))
+                        })?;
+                    Ok(module)
+                }
+            }
+            None => {
+                let module_id = verified_code.self_id();
+                let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
+                module_cache
+                    .put_with_weight(key, module.clone())
+                    .map_err(|_| {
                         PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
                             .with_message("Module storage cache eviction error".to_string())
                             .finish(Location::Module(module_id))
                     })?;
-                    Ok(module)
-                }
-            },
-            None => {
-                let module_id = verified_code.self_id();
-                let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
-                module_cache.put_with_weight(key, module.clone()).map_err(|_| {
-                    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-                        .with_message("Module storage cache eviction error".to_string())
-                        .finish(Location::Module(module_id))
-                })?;
                 Ok(module)
-            },
+            }
         }
     }
 
@@ -143,33 +159,32 @@ impl InitiaModuleCache {
             Extension = BytesWithHash,
             Version = NoVersion,
         >,
-    ) -> VMResult<
-        Option<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>>,
-    > {
+    ) -> VMResult<Option<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>>> {
         let mut module_cache = self.module_cache.lock();
         Ok(match module_cache.get(checksum) {
             Some(code) => Some(code.clone()),
-            None => {
-                match builder.build(id)? {
-                    Some(code) => {
-                        if code.extension().hash() != checksum {
-                            return Err(PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .with_message("Checksum mismatch".to_string())
-                                .finish(Location::Module(id.clone()))
-                            );
-                        }
+            None => match builder.build(id)? {
+                Some(code) => {
+                    if code.extension().hash() != checksum {
+                        return Err(PartialVMError::new(
+                            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                        )
+                        .with_message("Checksum mismatch".to_string())
+                        .finish(Location::Module(id.clone())));
+                    }
 
-                        let code = Arc::new(code);
-                        module_cache.put_with_weight(checksum.clone(), code.clone()).map_err(|_| {
+                    let code = Arc::new(code);
+                    module_cache
+                        .put_with_weight(*checksum, code.clone())
+                        .map_err(|_| {
                             PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
                                 .with_message("Module storage cache eviction error".to_string())
                                 .finish(Location::Module(id.clone()))
                         })?;
-                        Some(code)
-                    },
-                    None => None,
+                    Some(code)
                 }
-            }
+                None => None,
+            },
         })
     }
 

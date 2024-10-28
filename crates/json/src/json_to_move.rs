@@ -343,8 +343,7 @@ mod json_arg_testing {
     use bigdecimal::FromPrimitive;
     use bytes::Bytes;
     use initia_move_storage::{
-        module_cache::InitiaModuleCache, script_cache::InitiaScriptCache,
-        state_view::StateView,
+        module_cache::InitiaModuleCache, script_cache::InitiaScriptCache, state_view::StateView,
     };
     use initia_move_types::access_path::{AccessPath, DataPath};
     use move_binary_format::{

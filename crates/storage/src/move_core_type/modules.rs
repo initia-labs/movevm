@@ -2,11 +2,19 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::{BTreeMap, HashMap}, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 use get_size::GetSize;
 
-use super::{file_format::{CompiledModule, SignatureIndex, VariantIndex}, function::{Function, FunctionHandle, FunctionInstantiation}, move_core_type::{Identifier, ModuleId}, runtime_types::{StructType, Type}};
+use super::{
+    file_format::{CompiledModule, SignatureIndex, VariantIndex},
+    function::{Function, FunctionHandle, FunctionInstantiation},
+    move_core_type::{Identifier, ModuleId},
+    runtime_types::{StructType, Type},
+};
 
 #[derive(GetSize)]
 pub struct Module {

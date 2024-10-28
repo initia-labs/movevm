@@ -5,7 +5,11 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use get_size::GetSize;
 
-use super::{file_format::{CompiledScript, SignatureIndex}, function::{Function, FunctionHandle, FunctionInstantiation}, runtime_types::Type};
+use super::{
+    file_format::{CompiledScript, SignatureIndex},
+    function::{Function, FunctionHandle, FunctionInstantiation},
+    runtime_types::Type,
+};
 
 #[derive(GetSize)]
 pub struct Script {
@@ -23,4 +27,3 @@ pub struct Script {
     // a map of single-token signature indices to type
     pub(crate) single_signature_token_map: BTreeMap<SignatureIndex, Type>,
 }
-

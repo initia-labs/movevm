@@ -2,6 +2,7 @@ use super::move_core_type::{AccountAddress, Identifier, Metadata};
 use get_size::GetSize;
 use primitive_types::U256 as PrimitiveU256;
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum Bytecode {
     Pop,
@@ -92,6 +93,7 @@ pub enum Bytecode {
     CastU256,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct U256(PrimitiveU256);
 
@@ -224,6 +226,7 @@ pub type AddressIdentifierPool = Vec<AccountAddress>;
 pub type ConstantPool = Vec<Constant>;
 /// The pool of `TypeSignature` instances. Those are system and user types used and
 /// their composition (e.g. &U64).
+#[allow(dead_code)]
 pub type TypeSignaturePool = Vec<TypeSignature>;
 /// The pool of `Signature` instances. Every function definition must define the set of
 /// locals used and their types.
@@ -301,6 +304,7 @@ pub struct StructVariantHandle {
     pub variant: VariantIndex,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum StructFieldInformation {
     Native,
@@ -363,6 +367,7 @@ pub struct VariantDefinition {
     pub fields: Vec<FieldDefinition>,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum Visibility {
     /// Accessible within its defining module only.
@@ -413,14 +418,13 @@ pub struct FunctionSignature {
 }
 
 #[derive(GetSize)]
-pub struct Signature(
-    pub Vec<SignatureToken>,
-);
+pub struct Signature(pub Vec<SignatureToken>);
 
 /// Type parameters are encoded as indices. This index can also be used to lookup the kind of a
 /// type parameter in the `FunctionHandle` and `StructHandle`.
 pub type TypeParameterIndex = u16;
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum Ability {
     /// Allows values of types with this ability to be copied, via CopyLoc or ReadRef
@@ -457,6 +461,7 @@ pub struct AccessSpecifier {
     pub address: AddressSpecifier,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum AccessKind {
     Reads,
@@ -464,6 +469,7 @@ pub enum AccessKind {
     Acquires, // reads or writes
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum ResourceSpecifier {
     /// Any resource
@@ -478,6 +484,7 @@ pub enum ResourceSpecifier {
     ResourceInstantiation(StructHandleIndex, SignatureIndex),
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum AddressSpecifier {
     /// Resource can be stored at any address.
@@ -496,6 +503,7 @@ pub enum AddressSpecifier {
     ),
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum SignatureToken {
     /// Boolean, `true` or `false`.

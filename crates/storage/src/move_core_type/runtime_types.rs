@@ -1,11 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-use super::{file_format::{AbilitySet, StructTypeParameter, TypeParameterIndex}, move_core_type::{Identifier, ModuleId}};
+use super::{
+    file_format::{AbilitySet, StructTypeParameter, TypeParameterIndex},
+    move_core_type::{Identifier, ModuleId},
+};
 use get_size::GetSize;
-use triomphe::Arc as TriompheArc;
 use smallbitvec::SmallBitVec;
-
+use triomphe::Arc as TriompheArc;
 
 #[derive(GetSize)]
 pub struct DepthFormula {
@@ -13,6 +15,7 @@ pub struct DepthFormula {
     pub constant: Option<u64>,                 // Cbase
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub struct StructType {
     pub idx: StructNameIndex,
@@ -25,6 +28,7 @@ pub struct StructType {
     pub module: ModuleId,
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 pub enum StructLayout {
     Single(Vec<(Identifier, Type)>),
@@ -40,7 +44,7 @@ pub struct StructIdentifier {
     pub name: Identifier,
 }
 
-
+#[allow(dead_code)]
 pub enum Type {
     Bool,
     U8,
@@ -77,7 +81,11 @@ impl GetSize for Type {
             Type::Signer => 0,
             Type::Vector(t) => t.as_ref().get_size(),
             Type::Struct { idx, ability } => idx.get_size() + ability.get_size(),
-            Type::StructInstantiation { idx, ty_args, ability } => idx.get_size() + ty_args.as_ref().get_size() + ability.get_size(),
+            Type::StructInstantiation {
+                idx,
+                ty_args,
+                ability,
+            } => idx.get_size() + ty_args.as_ref().get_size() + ability.get_size(),
             Type::Reference(t) => t.get_size(),
             Type::MutableReference(t) => t.get_size(),
             Type::TyParam(_) => 0,
@@ -88,6 +96,7 @@ impl GetSize for Type {
     }
 }
 
+#[allow(dead_code)]
 #[derive(GetSize)]
 // Cache for the ability of struct. They will be ignored when comparing equality or Ord as they are just used for caching purpose.
 pub struct AbilityInfo {

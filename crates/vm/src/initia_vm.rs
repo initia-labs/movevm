@@ -40,11 +40,8 @@ use initia_move_natives::{
     block::NativeBlockContext, staking::StakingAPI, table::NativeTableContext,
 };
 use initia_move_storage::{
-    initia_storage::InitiaStorage,
-    module_cache::InitiaModuleCache,
-    script_cache::InitiaScriptCache,
-    state_view::StateView,
-    table_resolver::TableResolver,
+    initia_storage::InitiaStorage, module_cache::InitiaModuleCache,
+    script_cache::InitiaScriptCache, state_view::StateView, table_resolver::TableResolver,
 };
 use initia_move_types::{
     account::Accounts,
