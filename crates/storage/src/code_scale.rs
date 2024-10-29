@@ -19,20 +19,53 @@ use crate::move_core_type::file_format::CompiledModule as MyCompiledModule;
 use crate::move_core_type::modules::Module as MyModule;
 use crate::state_view::Checksum;
 
+#[cfg(any(test, feature = "testing"))]
+use pretty_assertions::assert_eq;
+#[cfg(any(test, feature = "testing"))]
+use move_vm_types::code::{WithBytes, WithHash};
+
 pub struct CodeScale;
 
 unsafe fn convert_to_my_code(
     code: &Code<CompiledScript, Script>,
 ) -> &MyCode<MyCompiledScript, MyScript> {
-    &*(code as *const Code<CompiledScript, Script>
-        as *const MyCode<MyCompiledScript, MyScript>)
+    let my_code = &*(code as *const Code<CompiledScript, Script>
+        as *const MyCode<MyCompiledScript, MyScript>);
+    #[cfg(any(test, feature = "testing"))]
+    {
+        match &my_code {
+            MyCode::Deserialized(compiled_script) => {
+                assert_eq!(format!("{:?}", code.deserialized().as_ref()), format!("{:?}", compiled_script.as_ref()));
+            }
+            MyCode::Verified(script) => {
+                assert_eq!(format!("{:?}", code.verified().as_ref()), format!("{:?}", script.as_ref()));
+            }
+        };
+    }
+    my_code
 }
 
 unsafe fn convert_to_my_module_code(
     code: &ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>,
 ) -> &MyModuleCode<MyCompiledModule, MyModule, BytesWithHash, NoVersion> {
-    &*(code as *const ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>
-        as *const MyModuleCode<MyCompiledModule, MyModule, BytesWithHash, NoVersion>)
+    let my_module_code = &*(code as *const ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>
+        as *const MyModuleCode<MyCompiledModule, MyModule, BytesWithHash, NoVersion>);
+    #[cfg(any(test, feature = "testing"))]
+    {        
+        assert_eq!(*my_module_code.extension.bytes(), code.extension().bytes());
+        assert_eq!(*my_module_code.extension.hash(), *code.extension().hash());
+        assert_eq!(my_module_code.version, code.version());
+
+        match &my_module_code.code {
+            MyCode::Deserialized(compiled_module) => {
+                assert_eq!(format!("{:?}", code.code().deserialized().as_ref()), format!("{:?}", compiled_module.as_ref()));
+            }
+            MyCode::Verified(module) => {
+                assert_eq!(format!("{:?}", code.code().verified().as_ref()), format!("{:?}", module.as_ref()));
+            }
+        };
+    }
+    my_module_code
 }
 
 impl WeightScale<Checksum, Code<CompiledScript, Script>> for CodeScale {
@@ -81,6 +114,8 @@ mod test {
     use crate::move_core_type::file_format::{AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature, Visibility};
     use crate::move_core_type::move_core_type::{AccountAddress as MyAccountAddress, Identifier as MyIdentifier};
     use crate::script_cache::InitiaScriptCache;
+    
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_compiled_module_convert_to_my_module_code() {

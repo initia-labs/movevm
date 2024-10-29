@@ -1,9 +1,11 @@
+use std::fmt;
+
 use super::move_core_type::{AccountAddress, Identifier, Metadata};
 use get_size::GetSize;
 use primitive_types::U256 as PrimitiveU256;
 
 #[allow(dead_code)]
-#[derive(GetSize, PartialEq, Eq, Debug)]
+#[derive(GetSize, PartialEq, Eq)]
 pub enum Bytecode {
     Pop,
     Ret,
@@ -94,6 +96,104 @@ pub enum Bytecode {
     CastU256,
 }
 
+impl ::std::fmt::Debug for Bytecode {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        match self {
+            Bytecode::Pop => write!(f, "Pop"),
+            Bytecode::Ret => write!(f, "Ret"),
+            Bytecode::BrTrue(a) => write!(f, "BrTrue({})", a),
+            Bytecode::BrFalse(a) => write!(f, "BrFalse({})", a),
+            Bytecode::Branch(a) => write!(f, "Branch({})", a),
+            Bytecode::LdU8(a) => write!(f, "LdU8({})", a),
+            Bytecode::LdU16(a) => write!(f, "LdU16({})", a),
+            Bytecode::LdU32(a) => write!(f, "LdU32({})", a),
+            Bytecode::LdU64(a) => write!(f, "LdU64({})", a),
+            Bytecode::LdU128(a) => write!(f, "LdU128({})", a),
+            Bytecode::LdU256(a) => write!(f, "LdU256({})", a),
+            Bytecode::CastU8 => write!(f, "CastU8"),
+            Bytecode::CastU16 => write!(f, "CastU16"),
+            Bytecode::CastU32 => write!(f, "CastU32"),
+            Bytecode::CastU64 => write!(f, "CastU64"),
+            Bytecode::CastU128 => write!(f, "CastU128"),
+            Bytecode::CastU256 => write!(f, "CastU256"),
+            Bytecode::LdConst(a) => write!(f, "LdConst({})", a),
+            Bytecode::LdTrue => write!(f, "LdTrue"),
+            Bytecode::LdFalse => write!(f, "LdFalse"),
+            Bytecode::CopyLoc(a) => write!(f, "CopyLoc({})", a),
+            Bytecode::MoveLoc(a) => write!(f, "MoveLoc({})", a),
+            Bytecode::StLoc(a) => write!(f, "StLoc({})", a),
+            Bytecode::Call(a) => write!(f, "Call({})", a),
+            Bytecode::CallGeneric(a) => write!(f, "CallGeneric({})", a),
+            Bytecode::Pack(a) => write!(f, "Pack({})", a),
+            Bytecode::PackGeneric(a) => write!(f, "PackGeneric({})", a),
+            Bytecode::PackVariant(a) => write!(f, "PackVariant({})", a),
+            Bytecode::TestVariant(a) => write!(f, "TestVariant({})", a),
+            Bytecode::PackVariantGeneric(a) => write!(f, "PackVariantGeneric({})", a),
+            Bytecode::TestVariantGeneric(a) => write!(f, "TestVariantGeneric({})", a),
+            Bytecode::Unpack(a) => write!(f, "Unpack({})", a),
+            Bytecode::UnpackGeneric(a) => write!(f, "UnpackGeneric({})", a),
+            Bytecode::UnpackVariant(a) => write!(f, "UnpackVariant({})", a),
+            Bytecode::UnpackVariantGeneric(a) => write!(f, "UnpackVariantGeneric({})", a),
+            Bytecode::ReadRef => write!(f, "ReadRef"),
+            Bytecode::WriteRef => write!(f, "WriteRef"),
+            Bytecode::FreezeRef => write!(f, "FreezeRef"),
+            Bytecode::MutBorrowLoc(a) => write!(f, "MutBorrowLoc({})", a),
+            Bytecode::ImmBorrowLoc(a) => write!(f, "ImmBorrowLoc({})", a),
+            Bytecode::MutBorrowField(a) => write!(f, "MutBorrowField({:?})", a),
+            Bytecode::MutBorrowFieldGeneric(a) => write!(f, "MutBorrowFieldGeneric({:?})", a),
+            Bytecode::MutBorrowVariantField(a) => write!(f, "MutBorrowVariantField({:?})", a),
+            Bytecode::MutBorrowVariantFieldGeneric(a) => {
+                write!(f, "MutBorrowVariantFieldGeneric({:?})", a)
+            },
+            Bytecode::ImmBorrowField(a) => write!(f, "ImmBorrowField({:?})", a),
+            Bytecode::ImmBorrowFieldGeneric(a) => write!(f, "ImmBorrowFieldGeneric({:?})", a),
+            Bytecode::ImmBorrowVariantField(a) => write!(f, "ImmBorrowVariantField({:?})", a),
+            Bytecode::ImmBorrowVariantFieldGeneric(a) => {
+                write!(f, "ImmBorrowVariantFieldGeneric({:?})", a)
+            },
+            Bytecode::MutBorrowGlobal(a) => write!(f, "MutBorrowGlobal({:?})", a),
+            Bytecode::MutBorrowGlobalGeneric(a) => write!(f, "MutBorrowGlobalGeneric({:?})", a),
+            Bytecode::ImmBorrowGlobal(a) => write!(f, "ImmBorrowGlobal({:?})", a),
+            Bytecode::ImmBorrowGlobalGeneric(a) => write!(f, "ImmBorrowGlobalGeneric({:?})", a),
+            Bytecode::Add => write!(f, "Add"),
+            Bytecode::Sub => write!(f, "Sub"),
+            Bytecode::Mul => write!(f, "Mul"),
+            Bytecode::Mod => write!(f, "Mod"),
+            Bytecode::Div => write!(f, "Div"),
+            Bytecode::BitOr => write!(f, "BitOr"),
+            Bytecode::BitAnd => write!(f, "BitAnd"),
+            Bytecode::Xor => write!(f, "Xor"),
+            Bytecode::Shl => write!(f, "Shl"),
+            Bytecode::Shr => write!(f, "Shr"),
+            Bytecode::Or => write!(f, "Or"),
+            Bytecode::And => write!(f, "And"),
+            Bytecode::Not => write!(f, "Not"),
+            Bytecode::Eq => write!(f, "Eq"),
+            Bytecode::Neq => write!(f, "Neq"),
+            Bytecode::Lt => write!(f, "Lt"),
+            Bytecode::Gt => write!(f, "Gt"),
+            Bytecode::Le => write!(f, "Le"),
+            Bytecode::Ge => write!(f, "Ge"),
+            Bytecode::Abort => write!(f, "Abort"),
+            Bytecode::Nop => write!(f, "Nop"),
+            Bytecode::Exists(a) => write!(f, "Exists({:?})", a),
+            Bytecode::ExistsGeneric(a) => write!(f, "ExistsGeneric({:?})", a),
+            Bytecode::MoveFrom(a) => write!(f, "MoveFrom({:?})", a),
+            Bytecode::MoveFromGeneric(a) => write!(f, "MoveFromGeneric({:?})", a),
+            Bytecode::MoveTo(a) => write!(f, "MoveTo({:?})", a),
+            Bytecode::MoveToGeneric(a) => write!(f, "MoveToGeneric({:?})", a),
+            Bytecode::VecPack(a, n) => write!(f, "VecPack({}, {})", a, n),
+            Bytecode::VecLen(a) => write!(f, "VecLen({})", a),
+            Bytecode::VecImmBorrow(a) => write!(f, "VecImmBorrow({})", a),
+            Bytecode::VecMutBorrow(a) => write!(f, "VecMutBorrow({})", a),
+            Bytecode::VecPushBack(a) => write!(f, "VecPushBack({})", a),
+            Bytecode::VecPopBack(a) => write!(f, "VecPopBack({})", a),
+            Bytecode::VecUnpack(a, n) => write!(f, "VecUnpack({}, {})", a, n),
+            Bytecode::VecSwap(a) => write!(f, "VecSwap({})", a),
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct U256(PrimitiveU256);
@@ -101,6 +201,11 @@ pub struct U256(PrimitiveU256);
 impl GetSize for U256 {
     fn get_size(&self) -> usize {
         4
+    }
+}
+impl fmt::Display for U256 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -113,8 +218,20 @@ macro_rules! define_index {
         kind: $kind: ident,
         doc: $comment: literal,
     } => {
-        #[derive(GetSize, PartialEq, Eq, Debug)]
+        #[derive(GetSize, PartialEq, Eq)]
         pub struct $name(pub TableIndex);
+
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+
+        impl ::std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                write!(f, "{}({})", stringify!($name), self.0)
+            }
+        }
     };
 }
 
@@ -441,13 +558,105 @@ pub enum Ability {
     Key = 0x8,
 }
 
-#[derive(GetSize, PartialEq, Eq, Debug)]
+impl Ability {
+    fn from_u8(u: u8) -> Option<Self> {
+        match u {
+            0x1 => Some(Ability::Copy),
+            0x2 => Some(Ability::Drop),
+            0x4 => Some(Ability::Store),
+            0x8 => Some(Ability::Key),
+            _ => None,
+        }
+    }
+}
+
+#[derive(GetSize, PartialEq, Eq, Copy, Clone)]
 pub struct AbilitySet(pub u8);
+
+#[allow(dead_code)]
+impl AbilitySet {
+    /// Ability set containing all abilities
+    pub const ALL: Self = Self(
+        // Cannot use AbilitySet bitor because it is not const
+        (Ability::Copy as u8)
+            | (Ability::Drop as u8)
+            | (Ability::Store as u8)
+            | (Ability::Key as u8),
+    );
+    /// The empty ability set
+    pub const EMPTY: Self = Self(0);
+    /// Abilities for `Functions`
+    pub const FUNCTIONS: AbilitySet = Self(Ability::Drop as u8);
+    /// Abilities for `Bool`, `U8`, `U64`, `U128`, and `Address`
+    pub const PRIMITIVES: AbilitySet =
+        Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
+    /// Abilities for `Reference` and `MutableReference`
+    pub const REFERENCES: AbilitySet = Self((Ability::Copy as u8) | (Ability::Drop as u8));
+    /// Abilities for `Signer`
+    pub const SIGNER: AbilitySet = Self(Ability::Drop as u8);
+    /// Abilities for `Vector`, note they are predicated on the type argument
+    pub const VECTOR: AbilitySet =
+        Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
+
+    #[inline]
+    fn is_subset_bits(sub: u8, sup: u8) -> bool {
+        (sub & sup) == sub
+    }
+
+    pub fn from_u8(byte: u8) -> Option<Self> {
+        // If there is a bit set in the read `byte`, that bit must be set in the
+        // `AbilitySet` containing all `Ability`s
+        // This corresponds the byte being a bit set subset of ALL
+        // The byte is a subset of ALL if the intersection of the two is the original byte
+        if Self::is_subset_bits(byte, Self::ALL.0) {
+            Some(Self(byte))
+        } else {
+            None
+        }
+    }
+}
+
+impl IntoIterator for AbilitySet {
+    type IntoIter = AbilitySetIterator;
+    type Item = Ability;
+
+    fn into_iter(self) -> Self::IntoIter {
+        AbilitySetIterator {
+            idx: 0x1,
+            set: self,
+        }
+    }
+}
+
+impl std::fmt::Debug for AbilitySet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "[")?;
+        for ability in *self {
+            write!(f, "{:?}, ", ability)?;
+        }
+        write!(f, "]")
+    }
+}
 
 #[derive(GetSize, PartialEq, Eq, Debug)]
 pub struct AbilitySetIterator {
     set: AbilitySet,
     idx: u8,
+}
+
+impl Iterator for AbilitySetIterator {
+    type Item = Ability;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.idx <= 0x8 {
+            let next = Ability::from_u8(self.set.0 & self.idx);
+            self.idx <<= 1;
+            if next.is_some() {
+                return next;
+            }
+        }
+        None
+    }
 }
 
 #[derive(GetSize, PartialEq, Eq, Debug)]

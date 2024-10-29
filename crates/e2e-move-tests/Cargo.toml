@@ -44,5 +44,6 @@ default = []
 testing = [
     "initia-move-gas/testing",
     "initia-move-natives/testing",
+    "initia-move-storage/testing",
     "move-vm-runtime/testing",
 ]
