@@ -80,6 +80,29 @@ fn native_stargate(
     Ok(smallvec![])
 }
 
+#[cfg(feature = "testing")]
+fn native_requested_messages(
+    context: &mut SafeNativeContext,
+    ty_args: Vec<Type>,
+    _arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.cosmos_stargate_base)?;
+
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(_arguments.is_empty());
+
+    let cosmos_context = context.extensions().get::<NativeCosmosContext>();
+    let messages = cosmos_context
+        .messages
+        .borrow()
+        .clone()
+        .into_iter()
+        .map(|m| Value::struct_(Struct::pack(vec![Value::vector_u8(m.data)])));
+
+    Ok(smallvec![Value::vector_for_testing_only(messages)])
+}
+
 /***************************************************************************************************
  * module
  *
@@ -87,7 +110,14 @@ fn native_stargate(
 pub fn make_all(
     builder: &SafeNativeBuilder,
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
-    let natives = vec![("stargate_internal", native_stargate as RawSafeNative)];
+    let mut natives = vec![];
+    natives.extend([("stargate_internal", native_stargate as RawSafeNative)]);
+
+    #[cfg(feature = "testing")]
+    natives.extend([(
+        "requested_messages",
+        native_requested_messages as RawSafeNative,
+    )]);
 
     builder.make_named_natives(natives)
 }

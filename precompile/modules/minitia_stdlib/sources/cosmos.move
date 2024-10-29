@@ -199,7 +199,7 @@ module minitia_std::cosmos {
         _type_: String,
         delegator_address: String,
         validator_address: String,
-        amount: vector<CosmosCoin>,
+        amount: vector<CosmosCoin>
     }
 
     struct CosmosCoin has copy, drop {
@@ -220,12 +220,7 @@ module minitia_std::cosmos {
                     _type_: string::utf8(b"/initia.mstaking.v1.MsgDelegate"),
                     delegator_address: address::to_sdk(signer::address_of(delegator)),
                     validator_address: validator,
-                    amount: vector[
-                        CosmosCoin {
-                            denom: metadata_to_denom(metadata),
-                            amount
-                        }
-                    ]
+                    amount: vector[CosmosCoin { denom: metadata_to_denom(metadata), amount }]
                 }
             )
         )
@@ -244,14 +239,11 @@ module minitia_std::cosmos {
             sender,
             json::marshal(
                 &FuncCommunityPoolRequest {
-                    _type_: string::utf8(b"/cosmos.distribution.v1beta1.MsgFundCommunityPool"),
+                    _type_: string::utf8(
+                        b"/cosmos.distribution.v1beta1.MsgFundCommunityPool"
+                    ),
                     depositor: address::to_sdk(signer::address_of(sender)),
-                    amount: vector[
-                        CosmosCoin {
-                            denom: metadata_to_denom(metadata),
-                            amount
-                        }
-                    ]
+                    amount: vector[CosmosCoin { denom: metadata_to_denom(metadata), amount }]
                 }
             )
         )
@@ -301,10 +293,7 @@ module minitia_std::cosmos {
                         denom: metadata_to_denom(metadata),
                         amount: token_amount
                     },
-                    timeout_height: TimeoutHeight {
-                        revision_number,
-                        revision_height
-                    },
+                    timeout_height: TimeoutHeight { revision_number, revision_height },
                     timeout_timestamp,
                     memo
                 }
@@ -322,7 +311,7 @@ module minitia_std::cosmos {
         source_channel: String,
         timeout_height: TimeoutHeight,
         timeout_timestamp: u64,
-        memo: String,
+        memo: String
     }
 
     /// ICS721 ibc nft_transfer
@@ -350,10 +339,7 @@ module minitia_std::cosmos {
                     token_ids,
                     source_port,
                     source_channel,
-                    timeout_height: TimeoutHeight {
-                        revision_number,
-                        revision_height
-                    },
+                    timeout_height: TimeoutHeight { revision_number, revision_height },
                     timeout_timestamp,
                     memo
                 }
@@ -364,7 +350,7 @@ module minitia_std::cosmos {
     struct Fee has copy, drop {
         recv_fee: vector<CosmosCoin>,
         ack_fee: vector<CosmosCoin>,
-        timeout_fee: vector<CosmosCoin>,
+        timeout_fee: vector<CosmosCoin>
     }
 
     struct PayFeeRequest has copy, drop {
@@ -373,7 +359,7 @@ module minitia_std::cosmos {
         source_port: String,
         source_channel: String,
         fee: Fee,
-        relayers: vector<String>,
+        relayers: vector<String>
     }
 
     /// ICS29 ibc relayer fee
@@ -415,7 +401,7 @@ module minitia_std::cosmos {
                                 denom: metadata_to_denom(timeout_fee_metadata),
                                 amount: timeout_fee_amount
                             }
-                        ],
+                        ]
                     },
                     relayers: vector::empty()
                 }
@@ -426,6 +412,15 @@ module minitia_std::cosmos {
     native fun stargate_internal(
         sender: address, data: vector<u8>, option: Options
     );
+
+    #[test_only]
+    native public fun requested_messages(): vector<String>;
+
+    #[test_only]
+    public fun was_message_requested(msg: &String): bool {
+        use std::vector;
+        vector::contains(&requested_messages(), msg)
+    }
 
     // ================================================== Options =================================================
 
@@ -491,5 +486,31 @@ module minitia_std::cosmos {
             callback_id: id,
             callback_fid: *string::bytes(&fid)
         }
+    }
+
+    //=========================================== Tests ===========================================
+
+    #[test(sender = @0xcafe)]
+    public fun test_stargate_vote(sender: &signer) {
+        use std::string::utf8;
+
+        let voter = utf8(b"voter");
+        let proposal_id = 1;
+        let option = 1;
+        let metadata = utf8(b"metadata");
+        stargate_vote(sender, proposal_id, voter, option, metadata);
+
+        let msg =
+            json::marshal_to_string(
+                &VoteRequest {
+                    _type_: utf8(b"/cosmos.gov.v1.MsgVote"),
+                    proposal_id,
+                    voter: voter,
+                    option,
+                    metadata: metadata
+                }
+            );
+
+        assert!(was_message_requested(&msg), 1);
     }
 }

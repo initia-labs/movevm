@@ -9,15 +9,12 @@ module std::hash {
 
     #[test]
     fun ripemd160_test() {
-        let inputs = vector[
-        b"testing",
-        b"",
-        ];
+        let inputs = vector[b"testing", b""];
 
         // From https://www.browserling.com/tools/ripemd160-hash
         let outputs = vector[
-        x"b89ba156b40bed29a5965684b7d244c49a3a769b",
-        x"9c1185a5c5e9fc54612808977ee8f548b2258d31",
+            x"b89ba156b40bed29a5965684b7d244c49a3a769b",
+            x"9c1185a5c5e9fc54612808977ee8f548b2258d31"
         ];
 
         let i = 0;
@@ -32,4 +29,3 @@ module std::hash {
         };
     }
 }
-

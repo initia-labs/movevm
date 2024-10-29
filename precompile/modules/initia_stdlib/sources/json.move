@@ -252,7 +252,6 @@ module initia_std::json {
         );
     }
 
-
     #[test_only]
     use std::object::{Self, ConstructorRef};
 
