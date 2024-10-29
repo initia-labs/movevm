@@ -87,19 +87,29 @@ module initia_std::json {
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
-    native public fun marshal<T: drop>(value: &T): vector<u8>;
+    public fun marshal<T: drop>(value: &T): vector<u8> {
+        marshal_internal(value)
+    }
 
     /// Marshal data to JSON string.
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
-    native public fun marshal_to_string<T: drop>(value: &T): String;
+    public fun marshal_to_string<T: drop>(value: &T): String {
+        marshal_to_string_internal(value)
+    }
 
     /// Unmarshal JSON bytes to the given struct.
     ///
     /// NOTE: key `@type` is converted to `_type_`
     /// NOTE: key `move` is converted to `_move_`
-    native public fun unmarshal<T: drop>(json: vector<u8>): T;
+    public fun unmarshal<T: drop>(json: vector<u8>): T {
+        unmarshal_internal(json)
+    }
+
+    native fun marshal_internal<T: drop>(value: &T): vector<u8>;
+    native fun marshal_to_string_internal<T: drop>(value: &T): String;
+    native fun unmarshal_internal<T: drop>(json: vector<u8>): T;
 
     #[test_only]
     use std::biguint::{Self, BigUint};
@@ -132,7 +142,7 @@ module initia_std::json {
     struct EmptyObject has copy, drop {}
 
     #[test]
-    fun test_empty_marshal_unmarshal_empty() {
+    fun test_json_empty_marshal_unmarshal_empty() {
         let json = marshal(&EmptyObject {});
         assert!(json == b"{}", 1);
 
@@ -141,7 +151,7 @@ module initia_std::json {
     }
 
     #[test]
-    fun test_marshal_unmarshal_u64() {
+    fun test_json_marshal_unmarshal_u64() {
         let json = marshal(&10u64);
         assert!(json == b"\"10\"", 1);
 
@@ -150,7 +160,7 @@ module initia_std::json {
     }
 
     #[test]
-    fun test_marshal_unmarshal_vector_u8() {
+    fun test_json_marshal_unmarshal_vector_u8() {
         let json = marshal(&vector[1u8, 2u8, 3u8]);
         assert!(json == b"\"010203\"", 1);
 
@@ -159,7 +169,7 @@ module initia_std::json {
     }
 
     #[test]
-    fun test_marshal_unmarshal() {
+    fun test_json_marshal_unmarshal() {
         let obj = TestObject {
             a: 42,
             b: true,
@@ -235,5 +245,17 @@ module initia_std::json {
                 == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}",
             9
         );
+    }
+
+    #[test_only]
+    use std::object::{Self, ConstructorRef};
+
+    #[test]
+    #[expected_failure(abort_code = 0x10006, location = Self)]
+    /// cannot create other module's struct resource.
+    public fun test_json_module_permission() {
+        let ref = object::create_object(@std, true);
+        let bz = marshal(&ref);
+        let _ref2 = unmarshal<ConstructorRef>(bz);
     }
 }
