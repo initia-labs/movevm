@@ -31,6 +31,7 @@ pub enum Bytecode {
     Unpack(StructDefinitionIndex),
     UnpackGeneric(StructDefInstantiationIndex),
     UnpackVariant(StructVariantHandleIndex),
+    UnpackVariantGeneric(StructVariantInstantiationIndex),
     TestVariant(StructVariantHandleIndex),
     TestVariantGeneric(StructVariantInstantiationIndex),
     ReadRef,

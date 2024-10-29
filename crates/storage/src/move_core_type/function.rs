@@ -1,11 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use super::{
-    file_format::{AbilitySet, AccessSpecifier, Bytecode, FunctionDefinitionIndex},
-    modules::Module,
-    move_core_type::{Identifier, ModuleId},
-    runtime_types::Type,
-    script::Script,
+    file_format::{AbilitySet, Bytecode, FunctionDefinitionIndex}, modules::Module, move_core_type::{Identifier, ModuleId}, runtime_access_specifier::AccessSpecifier, runtime_types::Type, script::Script
 };
 use get_size::GetSize;
 use move_vm_runtime::native_functions::NativeFunction;

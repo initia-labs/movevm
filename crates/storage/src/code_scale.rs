@@ -246,7 +246,9 @@ mod test {
 
         let converted_script = match my_script_code {
             MyCode::Deserialized(_) => panic!("Expected verified code"),
-            MyCode::Verified(code) => code
+            MyCode::Verified(code) => { 
+                code
+            }
         };
         assert_eq!(format!("{:?}", script.as_ref()), format!("{:?}", converted_script.as_ref()));
     }
