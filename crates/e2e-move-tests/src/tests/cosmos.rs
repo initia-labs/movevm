@@ -244,7 +244,7 @@ fn test_cosmos_transfer() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
@@ -316,7 +316,7 @@ fn test_cosmos_nft_transfer() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
@@ -415,7 +415,7 @@ fn test_cosmos_pay_fee() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
@@ -461,7 +461,7 @@ fn test_cosmos_move_execute() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
@@ -505,7 +505,7 @@ fn test_cosmos_move_execute_with_json() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
@@ -548,7 +548,7 @@ fn test_cosmos_move_script() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
@@ -589,7 +589,7 @@ fn test_cosmos_move_script_with_json() {
             None,
             None,
             Some(vec![CosmosMessage {
-                sender: sender,
+                sender,
                 data: expected_data.into_bytes(),
                 allow_failure: false,
                 callback: None,
