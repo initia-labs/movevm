@@ -441,9 +441,10 @@ fn test_cosmos_move_execute() {
 
     let arg1_hex = hex::encode(arg1.clone());
     let arg2_hex = hex::encode(arg2.clone());
+    let module_addr_hex = module_address.to_hex_literal();
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecute\",\"args\":[\"{arg1_hex}\",\"{arg2_hex}\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_address}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecute\",\"args\":[\"{arg1_hex}\",\"{arg2_hex}\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
 
     let test_move_execute = (
         sender,
@@ -487,7 +488,8 @@ fn test_cosmos_move_execute_with_json() {
 
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecuteJSON\",\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_address}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+    let module_addr_hex = module_address.to_hex_literal();
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecuteJSON\",\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
 
     let test_move_execute = (
         sender,
