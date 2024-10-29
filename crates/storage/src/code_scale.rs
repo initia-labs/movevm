@@ -71,7 +71,13 @@ unsafe fn convert_to_my_module_code(
 impl WeightScale<Checksum, Code<CompiledScript, Script>> for CodeScale {
     fn weight(&self, _key: &Checksum, value: &Code<CompiledScript, Script>) -> usize {
         unsafe {
-            convert_to_my_code(value).get_size()
+            let converted_value = convert_to_my_code(value);
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| converted_value.get_size()))
+            .unwrap_or_else(|_| {
+                eprintln!("Failed to convert script code to custom code");
+                // If the conversion fails, return a temporary value
+                1024 * 1024
+            })
         }
     }
 }
@@ -87,13 +93,19 @@ impl WeightScale<Checksum, Arc<ModuleCode<CompiledModule, Module, BytesWithHash,
         value: &Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
     ) -> usize {
         unsafe {
-            convert_to_my_module_code(value).get_size()
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {convert_to_my_module_code(value).get_size()}))
+            .unwrap_or_else(|_| {
+                eprintln!("Failed to convert module code to custom code");
+                // If the conversion fails, return a temporary value
+                1024 * 1024
+            })
         }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use core::panic;
     use std::str::FromStr;
     use std::sync::Arc;
 
@@ -287,4 +299,22 @@ mod test {
         };
         assert_eq!(format!("{:?}", script.as_ref()), format!("{:?}", converted_script.as_ref()));
     }
+
+    // #[test]
+    // fn test_panic_on_conversion_failure() {
+    //     let code = unsafe {
+    //         let mut script = empty_script();
+    //         std::ptr::write_bytes(&mut script, 0, 10);
+    //         Code::Deserialized(Arc::new(script))
+    //     };
+        
+    //     let script_cache = InitiaScriptCache::new(TEST_CACHE_CAPACITY);
+    //     let mut cache = script_cache.script_cache.lock();
+
+    //     assert_eq!(cache.weight(), 0);
+    //     if cache.put_with_weight([0u8; 32], code).is_err() {
+    //         panic!("Failed to put code in cache");
+    //     }
+    //     assert_eq!(cache.weight(), 1024*1024);
+    // }
 }

@@ -13,7 +13,7 @@ use parking_lot::Mutex;
 use crate::{code_scale::CodeScale, state_view::Checksum};
 
 pub struct InitiaScriptCache {
-    script_cache: Mutex<CLruCache<Checksum, Code<CompiledScript, Script>, RandomState, CodeScale>>,
+    pub(crate) script_cache: Mutex<CLruCache<Checksum, Code<CompiledScript, Script>, RandomState, CodeScale>>,
 }
 
 impl InitiaScriptCache {

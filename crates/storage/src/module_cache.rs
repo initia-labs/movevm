@@ -53,7 +53,7 @@ impl WithHash for BytesWithHash {
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {
-    module_cache: Mutex<
+    pub(crate) module_cache: Mutex<
         CLruCache<
             Checksum,
             Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
