@@ -1,6 +1,7 @@
 /// This module provides interfaces to allow CosmosMessage
 /// execution after the move execution finished.
 module initia_std::cosmos {
+    use std::address;
     use std::signer;
     use std::vector;
     use std::string::{Self, String};
@@ -8,6 +9,8 @@ module initia_std::cosmos {
     use std::fungible_asset::Metadata;
     use std::collection::{Collection};
     use std::error;
+    use std::coin::metadata_to_denom;
+    use std::collection::collection_to_class_id;
 
     use initia_std::json;
 
@@ -68,6 +71,16 @@ module initia_std::cosmos {
         stargate_internal(signer::address_of(sender), data, options)
     }
 
+    struct ExecuteRequest has copy, drop {
+        _type_: String,
+        sender: String,
+        module_address: address,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<vector<u8>>
+    }
+
     public entry fun move_execute(
         sender: &signer,
         module_address: address,
@@ -76,15 +89,30 @@ module initia_std::cosmos {
         type_args: vector<String>,
         args: vector<vector<u8>>
     ) {
-        move_execute_internal(
-            signer::address_of(sender),
-            module_address,
-            *string::bytes(&module_name),
-            *string::bytes(&function_name),
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
-            args,
-            false
+        stargate(
+            sender,
+            json::marshal(
+                &ExecuteRequest {
+                    _type_: string::utf8(b"/initia.move.v1.MsgExecute"),
+                    sender: address::to_sdk(signer::address_of(sender)),
+                    module_address,
+                    module_name,
+                    function_name,
+                    type_args,
+                    args
+                }
+            )
         )
+    }
+
+    struct ExecuteJSONRequest has copy, drop {
+        _type_: String,
+        sender: String,
+        module_address: address,
+        module_name: String,
+        function_name: String,
+        type_args: vector<String>,
+        args: vector<String>
     }
 
     public entry fun move_execute_with_json(
@@ -95,15 +123,28 @@ module initia_std::cosmos {
         type_args: vector<String>,
         args: vector<String>
     ) {
-        move_execute_internal(
-            signer::address_of(sender),
-            module_address,
-            *string::bytes(&module_name),
-            *string::bytes(&function_name),
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
-            vector::map_ref(&args, |v| *string::bytes(v)),
-            true
+        stargate(
+            sender,
+            json::marshal(
+                &ExecuteJSONRequest {
+                    _type_: string::utf8(b"/initia.move.v1.MsgExecuteJSON"),
+                    sender: address::to_sdk(signer::address_of(sender)),
+                    module_address,
+                    module_name,
+                    function_name,
+                    type_args,
+                    args
+                }
+            )
         )
+    }
+
+    struct ScriptRequest has copy, drop {
+        _type_: String,
+        sender: String,
+        code_bytes: vector<u8>,
+        type_args: vector<String>,
+        args: vector<vector<u8>>
     }
 
     public entry fun move_script(
@@ -112,13 +153,26 @@ module initia_std::cosmos {
         type_args: vector<String>,
         args: vector<vector<u8>>
     ) {
-        move_script_internal(
-            signer::address_of(sender),
-            code_bytes,
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
-            args,
-            false
+        stargate(
+            sender,
+            json::marshal(
+                &ScriptRequest {
+                    _type_: string::utf8(b"/initia.move.v1.MsgScript"),
+                    sender: address::to_sdk(signer::address_of(sender)),
+                    code_bytes,
+                    type_args,
+                    args
+                }
+            )
         )
+    }
+
+    struct ScriptJSONRequest has copy, drop {
+        _type_: String,
+        sender: String,
+        code_bytes: vector<u8>,
+        type_args: vector<String>,
+        args: vector<String>
     }
 
     public entry fun move_script_with_json(
@@ -127,13 +181,30 @@ module initia_std::cosmos {
         type_args: vector<String>,
         args: vector<String>
     ) {
-        move_script_internal(
-            signer::address_of(sender),
-            code_bytes,
-            vector::map_ref(&type_args, |v| *string::bytes(v)),
-            vector::map_ref(&args, |v| *string::bytes(v)),
-            true
+        stargate(
+            sender,
+            json::marshal(
+                &ScriptJSONRequest {
+                    _type_: string::utf8(b"/initia.move.v1.MsgScriptJSON"),
+                    sender: address::to_sdk(signer::address_of(sender)),
+                    code_bytes,
+                    type_args,
+                    args
+                }
+            )
         )
+    }
+
+    struct DelegateRequest has copy, drop {
+        _type_: String,
+        delegator_address: String,
+        validator_address: String,
+        amount: vector<CosmosCoin>,
+    }
+
+    struct CosmosCoin has copy, drop {
+        denom: String,
+        amount: u64
     }
 
     public entry fun delegate(
@@ -142,18 +213,65 @@ module initia_std::cosmos {
         metadata: Object<Metadata>,
         amount: u64
     ) {
-        delegate_internal(
-            signer::address_of(delegator),
-            *string::bytes(&validator),
-            &metadata,
-            amount
+        stargate(
+            delegator,
+            json::marshal(
+                &DelegateRequest {
+                    _type_: string::utf8(b"/initia.mstaking.v1.MsgDelegate"),
+                    delegator_address: address::to_sdk(signer::address_of(delegator)),
+                    validator_address: validator,
+                    amount: vector[
+                        CosmosCoin {
+                            denom: metadata_to_denom(metadata),
+                            amount
+                        }
+                    ]
+                }
+            )
         )
+    }
+
+    struct FuncCommunityPoolRequest has copy, drop {
+        _type_: String,
+        depositor: String,
+        amount: vector<CosmosCoin>
     }
 
     public entry fun fund_community_pool(
         sender: &signer, metadata: Object<Metadata>, amount: u64
     ) {
-        fund_community_pool_internal(signer::address_of(sender), &metadata, amount)
+        stargate(
+            sender,
+            json::marshal(
+                &FuncCommunityPoolRequest {
+                    _type_: string::utf8(b"/cosmos.distribution.v1beta1.MsgFundCommunityPool"),
+                    depositor: address::to_sdk(signer::address_of(sender)),
+                    amount: vector[
+                        CosmosCoin {
+                            denom: metadata_to_denom(metadata),
+                            amount
+                        }
+                    ]
+                }
+            )
+        )
+    }
+
+    struct TransferRequest has copy, drop {
+        _type_: String,
+        source_port: String,
+        source_channel: String,
+        sender: String,
+        receiver: String,
+        token: CosmosCoin,
+        timeout_height: TimeoutHeight,
+        timeout_timestamp: u64,
+        memo: String
+    }
+
+    struct TimeoutHeight has copy, drop {
+        revision_number: u64,
+        revision_height: u64
     }
 
     /// ICS20 ibc transfer
@@ -170,18 +288,41 @@ module initia_std::cosmos {
         timeout_timestamp: u64,
         memo: String
     ) {
-        transfer_internal(
-            signer::address_of(sender),
-            *string::bytes(&receiver),
-            &metadata,
-            token_amount,
-            *string::bytes(&source_port),
-            *string::bytes(&source_channel),
-            revision_number,
-            revision_height,
-            timeout_timestamp,
-            *string::bytes(&memo)
+        stargate(
+            sender,
+            json::marshal(
+                &TransferRequest {
+                    _type_: string::utf8(b"/ibc.applications.transfer.v1.MsgTransfer"),
+                    source_port,
+                    source_channel,
+                    sender: address::to_sdk(signer::address_of(sender)),
+                    receiver,
+                    token: CosmosCoin {
+                        denom: metadata_to_denom(metadata),
+                        amount: token_amount
+                    },
+                    timeout_height: TimeoutHeight {
+                        revision_number,
+                        revision_height
+                    },
+                    timeout_timestamp,
+                    memo
+                }
+            )
         )
+    }
+
+    struct NFTTransferRequest has copy, drop {
+        _type_: String,
+        sender: String,
+        receiver: String,
+        class_id: String,
+        token_ids: vector<String>,
+        source_port: String,
+        source_channel: String,
+        timeout_height: TimeoutHeight,
+        timeout_timestamp: u64,
+        memo: String,
     }
 
     /// ICS721 ibc nft_transfer
@@ -198,18 +339,41 @@ module initia_std::cosmos {
         timeout_timestamp: u64,
         memo: String
     ) {
-        nft_transfer_internal(
-            signer::address_of(sender),
-            *string::bytes(&receiver),
-            &collection,
-            vector::map_ref(&token_ids, |v| *string::bytes(v)),
-            *string::bytes(&source_port),
-            *string::bytes(&source_channel),
-            revision_number,
-            revision_height,
-            timeout_timestamp,
-            *string::bytes(&memo)
+        stargate(
+            sender,
+            json::marshal(
+                &NFTTransferRequest {
+                    _type_: string::utf8(b"/ibc.applications.nft_transfer.v1.MsgTransfer"),
+                    sender: address::to_sdk(signer::address_of(sender)),
+                    receiver,
+                    class_id: collection_to_class_id(collection),
+                    token_ids,
+                    source_port,
+                    source_channel,
+                    timeout_height: TimeoutHeight {
+                        revision_number,
+                        revision_height
+                    },
+                    timeout_timestamp,
+                    memo
+                }
+            )
         )
+    }
+
+    struct Fee has copy, drop {
+        recv_fee: vector<CosmosCoin>,
+        ack_fee: vector<CosmosCoin>,
+        timeout_fee: vector<CosmosCoin>,
+    }
+
+    struct PayFeeRequest has copy, drop {
+        _type_: String,
+        _signer_: String,
+        source_port: String,
+        source_channel: String,
+        fee: Fee,
+        relayers: vector<String>,
     }
 
     /// ICS29 ibc relayer fee
@@ -225,88 +389,42 @@ module initia_std::cosmos {
         timeout_fee_metadata: Object<Metadata>,
         timeout_fee_amount: u64
     ) {
-        pay_fee_internal(
-            signer::address_of(sender),
-            *string::bytes(&source_port),
-            *string::bytes(&source_channel),
-            &recv_fee_metadata,
-            recv_fee_amount,
-            &ack_fee_metadata,
-            ack_fee_amount,
-            &timeout_fee_metadata,
-            timeout_fee_amount
+        stargate(
+            sender,
+            json::marshal(
+                &PayFeeRequest {
+                    _type_: string::utf8(b"/ibc.applications.fee.v1.MsgPayPacketFee"),
+                    _signer_: address::to_sdk(signer::address_of(sender)),
+                    source_port,
+                    source_channel,
+                    fee: Fee {
+                        recv_fee: vector[
+                            CosmosCoin {
+                                denom: metadata_to_denom(recv_fee_metadata),
+                                amount: recv_fee_amount
+                            }
+                        ],
+                        ack_fee: vector[
+                            CosmosCoin {
+                                denom: metadata_to_denom(ack_fee_metadata),
+                                amount: ack_fee_amount
+                            }
+                        ],
+                        timeout_fee: vector[
+                            CosmosCoin {
+                                denom: metadata_to_denom(timeout_fee_metadata),
+                                amount: timeout_fee_amount
+                            }
+                        ],
+                    },
+                    relayers: vector::empty()
+                }
+            )
         )
     }
 
     native fun stargate_internal(
         sender: address, data: vector<u8>, option: Options
-    );
-
-    native fun move_execute_internal(
-        sender: address,
-        module_address: address,
-        module_name: vector<u8>,
-        function_name: vector<u8>,
-        type_args: vector<vector<u8>>,
-        args: vector<vector<u8>>,
-        is_json: bool
-    );
-
-    native fun move_script_internal(
-        sender: address,
-        code_bytes: vector<u8>,
-        type_args: vector<vector<u8>>,
-        args: vector<vector<u8>>,
-        is_json: bool
-    );
-
-    native fun delegate_internal(
-        delegator: address,
-        validator: vector<u8>,
-        metadata: &Object<Metadata>,
-        amount: u64
-    );
-
-    native fun fund_community_pool_internal(
-        sender: address, metadata: &Object<Metadata>, amount: u64
-    );
-
-    native fun transfer_internal(
-        sender: address,
-        receiver: vector<u8>,
-        metadata: &Object<Metadata>,
-        token_amount: u64,
-        source_port: vector<u8>,
-        source_channel: vector<u8>,
-        revision_number: u64,
-        revision_height: u64,
-        timeout_timestamp: u64,
-        memo: vector<u8>
-    );
-
-    native fun nft_transfer_internal(
-        sender: address,
-        receiver: vector<u8>,
-        collection: &Object<Collection>,
-        token_ids: vector<vector<u8>>,
-        source_port: vector<u8>,
-        source_channel: vector<u8>,
-        revision_number: u64,
-        revision_height: u64,
-        timeout_timestamp: u64,
-        memo: vector<u8>
-    );
-
-    native fun pay_fee_internal(
-        sender: address,
-        source_port: vector<u8>,
-        source_channel: vector<u8>,
-        recv_fee_metadata: &Object<Metadata>,
-        recv_fee_amount: u64,
-        ack_fee_metadata: &Object<Metadata>,
-        ack_fee_amount: u64,
-        timeout_fee_metadata: &Object<Metadata>,
-        timeout_fee_amount: u64
     );
 
     // ================================================== Options =================================================

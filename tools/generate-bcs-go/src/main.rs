@@ -10,9 +10,7 @@ use initia_move_types::{
         CompilerCoverageSourceOptions, CompilerCoverageSummaryOptions, CompilerDocgenOptions,
         CompilerTestOptions,
     },
-    cosmos::{
-        CosmosCoin, CosmosMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage, StakingMessage,
-    },
+    cosmos::CosmosMessage,
     entry_function::EntryFunction,
     env::Env,
     gas_usage::GasUsage,
@@ -39,12 +37,6 @@ fn main() {
     tracer.trace_simple_type::<ModuleId>().unwrap();
     tracer.trace_simple_type::<ResourceKey>().unwrap();
     tracer.trace_simple_type::<StakingDelta>().unwrap();
-    tracer.trace_simple_type::<CosmosCoin>().unwrap();
-    tracer.trace_simple_type::<IBCHeight>().unwrap();
-    tracer.trace_simple_type::<IBCMessage>().unwrap();
-    tracer.trace_simple_type::<IBCFee>().unwrap();
-    tracer.trace_simple_type::<MoveMessage>().unwrap();
-    tracer.trace_simple_type::<StakingMessage>().unwrap();
     tracer.trace_simple_type::<CosmosMessage>().unwrap();
     tracer.trace_simple_type::<Account>().unwrap();
     tracer.trace_simple_type::<GasUsage>().unwrap();
