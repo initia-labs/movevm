@@ -33,7 +33,10 @@ impl Debug for CosmosMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CosmosMessage")
             .field("sender", &self.sender)
-            .field("data", &str::from_utf8(&self.data).unwrap())
+            .field(
+                "data",
+                &str::from_utf8(&self.data).unwrap_or("<invalid UTF-8>"),
+            )
             .field("allow_failure", &self.allow_failure)
             .field("callback", &self.callback)
             .finish()
