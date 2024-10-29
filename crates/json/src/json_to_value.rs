@@ -252,6 +252,7 @@ pub fn convert_json_value_to_value(
                                 let field_name = match f.name.as_str() {
                                     "_type_" => "@type",
                                     "_move_" => "move",
+                                    "_signer_" => "signer",
                                     v => v,
                                 };
 

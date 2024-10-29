@@ -87,6 +87,7 @@ module initia_std::json {
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
+    /// NOTE: key `_signer_` is converted to `signer`
     public fun marshal<T: drop>(value: &T): vector<u8> {
         marshal_internal(value)
     }
@@ -95,6 +96,7 @@ module initia_std::json {
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
+    /// /// NOTE: key `_signer_` is converted to `signer`
     public fun marshal_to_string<T: drop>(value: &T): String {
         marshal_to_string_internal(value)
     }
@@ -103,6 +105,7 @@ module initia_std::json {
     ///
     /// NOTE: key `@type` is converted to `_type_`
     /// NOTE: key `move` is converted to `_move_`
+    /// NOTE: key `signer` is converted to `_signer_`
     public fun unmarshal<T: drop>(json: vector<u8>): T {
         unmarshal_internal(json)
     }
@@ -127,6 +130,7 @@ module initia_std::json {
         f: Option<TestObject2>,
         _type_: String,
         _move_: String,
+        _signer_: String,
         biguint: BigUint,
         bigdecimal: BigDecimal
     }
@@ -179,6 +183,7 @@ module initia_std::json {
             f: option::none(),
             _type_: string::utf8(b"/cosmos.gov.v1.MsgVote"),
             _move_: string::utf8(b"move"),
+            _signer_: string::utf8(b"signer"),
             biguint: biguint::from_u64(42),
             bigdecimal: bigdecimal::from_ratio_u64(123, 10000)
         };
@@ -186,7 +191,7 @@ module initia_std::json {
         let json = marshal(&obj);
         assert!(
             json
-                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"010203\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}",
+                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"010203\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\",\"signer\":\"signer\"}",
             1
         );
 
@@ -242,11 +247,10 @@ module initia_std::json {
         let json5 = marshal(&json_obj);
         assert!(
             json5
-                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\"}",
+                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\",\"signer\":\"signer\"}",
             9
         );
     }
-
 
     #[test_only]
     use std::object::{Self, ConstructorRef};
