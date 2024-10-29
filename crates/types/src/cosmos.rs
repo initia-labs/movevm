@@ -32,7 +32,7 @@ pub struct CosmosMessage {
 impl Debug for CosmosMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CosmosMessage")
-            .field("sender", &self.sender)
+            .field("sender", &self.sender.to_canonical_string())
             .field(
                 "data",
                 &str::from_utf8(&self.data).unwrap_or("<invalid UTF-8>"),
