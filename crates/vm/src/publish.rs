@@ -35,7 +35,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn finish_with_module_publish<S: StateView>(
         mut self,
-        deseirlizer_config: &DeserializerConfig,
+        deserializer_config: &DeserializerConfig,
         allow_unstable: bool,
         code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
@@ -49,7 +49,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             upgrade_policy,
         } = publish_request;
 
-        let modules = deserialize_module_bundle(&module_bundle, deseirlizer_config)?;
+        let modules = deserialize_module_bundle(&module_bundle, deserializer_config)?;
         let modules: &Vec<CompiledModule> =
             traversal_context.referenced_module_bundles.alloc(modules);
 
@@ -209,11 +209,10 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                     continue;
                 }
 
-                let size_if_module_exists = code_storage
+                if let Some(size) = code_storage
                     .fetch_module_size_in_bytes(addr, name)?
-                    .map(|v| v as u64);
-
-                if let Some(size) = size_if_module_exists {
+                    .map(|v| v as u64) 
+                {
                     gas_meter
                         .charge_dependency(false, addr, name, NumBytes::new(size))
                         .map_err(|err| {
@@ -287,8 +286,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         upgrade_policy: UpgradePolicy,
     ) -> VMResult<()> {
         let mut module_ids = vec![];
-        let mut vec_deps_addresses = vec![];
-        let mut vec_deps_module_ids = vec![];
+        let mut dependency_addresses = vec![];
+        let mut dependency_module_ids = vec![];
         for module in modules {
             let mut deps_addresses = vec![];
             let mut deps_module_ids = vec![];
@@ -304,8 +303,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             }
 
             module_ids.push(module.self_id().short_str_lossless());
-            vec_deps_addresses.push(deps_addresses);
-            vec_deps_module_ids.push(deps_module_ids);
+            dependency_addresses.push(deps_addresses);
+            dependency_module_ids.push(deps_module_ids);
         }
 
         let _ = self.inner.execute_function_bypass_visibility(
@@ -315,8 +314,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             vec![
                 MoveValue::Signer(publisher).simple_serialize().unwrap(),
                 bcs::to_bytes(&module_ids).unwrap(),
-                bcs::to_bytes(&vec_deps_addresses).unwrap(),
-                bcs::to_bytes(&vec_deps_module_ids).unwrap(),
+                bcs::to_bytes(&dependency_addresses).unwrap(),
+                bcs::to_bytes(&dependency_module_ids).unwrap(),
                 bcs::to_bytes(&upgrade_policy.to_u8()).unwrap(),
             ],
             gas_meter,
@@ -330,11 +329,11 @@ impl<'r, 'l> SessionExt<'r, 'l> {
 
 fn deserialize_module_bundle(
     module_bundle: &ModuleBundle,
-    deseirlizer_config: &DeserializerConfig,
+    deserializer_config: &DeserializerConfig,
 ) -> VMResult<Vec<CompiledModule>> {
     let mut result = vec![];
     for module_blob in module_bundle.iter() {
-        match CompiledModule::deserialize_with_config(module_blob.code(), deseirlizer_config) {
+        match CompiledModule::deserialize_with_config(module_blob.code(), deserializer_config) {
             Ok(module) => {
                 result.push(module);
             }
