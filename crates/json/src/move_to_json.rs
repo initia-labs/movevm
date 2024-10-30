@@ -103,6 +103,7 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                         let field_name = match id.as_str() {
                             "_type_" => "@type",
                             "_move_" => "move",
+                            "_signer_" => "signer",
                             v => v,
                         };
 

@@ -1,13 +1,14 @@
+use core::str;
+
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
 use initia_move_natives::code::UpgradePolicy;
-use initia_move_types::cosmos::{
-    CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage,
-    StakingMessage, StargateCallback, StargateMessage,
-};
+use initia_move_types::cosmos::{CosmosCallback, CosmosMessage};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
+
+use bech32::{Bech32, Hrp};
 use sha3::{Digest, Sha3_256};
 
 const STAKING_SYMBOL: &[u8] = b"ustake";
@@ -107,6 +108,13 @@ fn test_cosmos_delegate() {
     );
     tests.push(test_initialize_coin);
 
+    let staking_denom = str::from_utf8(STAKING_SYMBOL).unwrap();
+    let delegator_cosmos_addr = bech32::encode::<Bech32>(
+        Hrp::parse_unchecked("init"),
+        &delegator_address.into_bytes(),
+    )
+    .unwrap();
+    let expected_data = format!("{{\"@type\":\"/initia.mstaking.v1.MsgDelegate\",\"amount\":[{{\"amount\":\"{amount}\",\"denom\":\"{staking_denom}\"}}],\"delegator_address\":\"{delegator_cosmos_addr}\",\"validator_address\":\"{validator_address}\"}}");
     let test_delegate = (
         delegator_address,
         "0x1::cosmos::delegate",
@@ -120,11 +128,12 @@ fn test_cosmos_delegate() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Staking(StakingMessage::Delegate {
-                delegator_address,
-                validator_address,
-                amount: CosmosCoin { amount, metadata },
-            })]),
+            Some(vec![CosmosMessage {
+                sender: delegator_address,
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_delegate);
@@ -155,6 +164,12 @@ fn test_cosmos_fund_community_pool() {
     );
     tests.push(test_initialize_coin);
 
+    let denom = str::from_utf8(STAKING_SYMBOL).unwrap();
+    let depositor_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender_address.into_bytes())
+            .unwrap();
+    let expected_data = format!("{{\"@type\":\"/cosmos.distribution.v1beta1.MsgFundCommunityPool\",\"amount\":[{{\"amount\":\"{amount}\",\"denom\":\"{denom}\"}}],\"depositor\":\"{depositor_cosmos_addr}\"}}");
+
     let test_fund_community_pool = (
         sender_address,
         "0x1::cosmos::fund_community_pool",
@@ -164,12 +179,12 @@ fn test_cosmos_fund_community_pool() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Distribution(
-                DistributionMessage::FundCommunityPool {
-                    sender_address,
-                    amount: CosmosCoin { amount, metadata },
-                },
-            )]),
+            Some(vec![CosmosMessage {
+                sender: sender_address,
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_fund_community_pool);
@@ -207,6 +222,11 @@ fn test_cosmos_transfer() {
     );
     tests.push(test_initialize_coin);
 
+    let denom = str::from_utf8(STAKING_SYMBOL).unwrap();
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let expected_data = format!("{{\"@type\":\"/ibc.applications.transfer.v1.MsgTransfer\",\"memo\":\"{memo}\",\"receiver\":\"{receiver}\",\"sender\":\"{sender_cosmos_addr}\",\"source_channel\":\"{source_channel}\",\"source_port\":\"{source_port}\",\"timeout_height\":{{\"revision_height\":\"{revision_height}\",\"revision_number\":\"{revision_number}\"}},\"timeout_timestamp\":\"{timeout_timestamp}\",\"token\":{{\"amount\":\"{amount}\",\"denom\":\"{denom}\"}}}}");
+
     let test_transfer = (
         sender,
         "0x1::cosmos::transfer",
@@ -226,19 +246,12 @@ fn test_cosmos_transfer() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::IBC(IBCMessage::Transfer {
-                source_port,
-                source_channel,
-                token: CosmosCoin { amount, metadata },
+            Some(vec![CosmosMessage {
                 sender,
-                receiver,
-                timeout_height: IBCHeight {
-                    revision_height,
-                    revision_number,
-                },
-                timeout_timestamp,
-                memo,
-            })]),
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_transfer);
@@ -281,6 +294,11 @@ fn test_cosmos_nft_transfer() {
     );
     tests.push(test_create_collection);
 
+    let class_id = str::from_utf8(COLLECTION_NAME).unwrap();
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let expected_data = format!("{{\"@type\":\"/ibc.applications.nft_transfer.v1.MsgTransfer\",\"class_id\":\"{class_id}\",\"memo\":\"{memo}\",\"receiver\":\"{receiver}\",\"sender\":\"{sender_cosmos_addr}\",\"source_channel\":\"{source_channel}\",\"source_port\":\"{source_port}\",\"timeout_height\":{{\"revision_height\":\"{revision_height}\",\"revision_number\":\"{revision_number}\"}},\"timeout_timestamp\":\"{timeout_timestamp}\",\"token_ids\":[\"id1\",\"id2\"]}}");
+
     let test_nft_transfer = (
         sender,
         "0x1::cosmos::nft_transfer",
@@ -300,20 +318,12 @@ fn test_cosmos_nft_transfer() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::IBC(IBCMessage::NFTTransfer {
-                source_port,
-                source_channel,
-                collection,
-                token_ids,
+            Some(vec![CosmosMessage {
                 sender,
-                receiver,
-                timeout_height: IBCHeight {
-                    revision_height,
-                    revision_number,
-                },
-                timeout_timestamp,
-                memo,
-            })]),
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_nft_transfer);
@@ -382,6 +392,13 @@ fn test_cosmos_pay_fee() {
     );
     tests.push(test_initialize_coin);
 
+    let recv_fee_denom = str::from_utf8(STAKING_SYMBOL).unwrap();
+    let ack_fee_denom = str::from_utf8(FEE_A_SYMBOL).unwrap();
+    let timeout_fee_denom = str::from_utf8(FEE_B_SYMBOL).unwrap();
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let expected_data = format!("{{\"@type\":\"/ibc.applications.fee.v1.MsgPayPacketFee\",\"fee\":{{\"ack_fee\":[{{\"amount\":\"{ack_fee_amount}\",\"denom\":\"{ack_fee_denom}\"}}],\"recv_fee\":[{{\"amount\":\"{recv_fee_amount}\",\"denom\":\"{recv_fee_denom}\"}}],\"timeout_fee\":[{{\"amount\":\"{timeout_fee_amount}\",\"denom\":\"{timeout_fee_denom}\"}}]}},\"relayers\":[],\"signer\":\"{sender_cosmos_addr}\",\"source_channel\":\"{source_channel}\",\"source_port\":\"{source_port}\"}}");
+
     let test_pay_fee = (
         sender,
         "0x1::cosmos::pay_fee",
@@ -400,25 +417,12 @@ fn test_cosmos_pay_fee() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::IBC(IBCMessage::PayFee {
-                signer: sender,
-                source_port,
-                source_channel,
-                fee: IBCFee {
-                    recv_fee: CosmosCoin {
-                        metadata: recv_fee_metadata,
-                        amount: recv_fee_amount,
-                    },
-                    ack_fee: CosmosCoin {
-                        metadata: ack_fee_metadata,
-                        amount: ack_fee_amount,
-                    },
-                    timeout_fee: CosmosCoin {
-                        metadata: timeout_fee_metadata,
-                        amount: timeout_fee_amount,
-                    },
-                },
-            })]),
+            Some(vec![CosmosMessage {
+                sender,
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_pay_fee);
@@ -438,6 +442,13 @@ fn test_cosmos_move_execute() {
     let arg1 = vec![1, 2, 3];
     let arg2 = vec![4, 5, 6];
 
+    let arg1_hex = hex::encode(arg1.clone());
+    let arg2_hex = hex::encode(arg2.clone());
+    let module_addr_hex = module_address.to_hex_literal();
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecute\",\"args\":[\"{arg1_hex}\",\"{arg2_hex}\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+
     let test_move_execute = (
         sender,
         "0x1::cosmos::move_execute",
@@ -453,15 +464,12 @@ fn test_cosmos_move_execute() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Move(MoveMessage::Execute {
+            Some(vec![CosmosMessage {
                 sender,
-                module_address,
-                module_name,
-                function_name,
-                type_args: vec![type_arg1, type_arg2],
-                args: vec![arg1, arg2],
-                is_json: false,
-            })]),
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_move_execute);
@@ -481,6 +489,11 @@ fn test_cosmos_move_execute_with_json() {
     let arg1 = b"\"hello\"".to_vec();
     let arg2 = b"\"world\"".to_vec();
 
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let module_addr_hex = module_address.to_hex_literal();
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecuteJSON\",\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+
     let test_move_execute = (
         sender,
         "0x1::cosmos::move_execute_with_json",
@@ -496,15 +509,12 @@ fn test_cosmos_move_execute_with_json() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Move(MoveMessage::Execute {
+            Some(vec![CosmosMessage {
                 sender,
-                module_address,
-                module_name,
-                function_name,
-                type_args: vec![type_arg1, type_arg2],
-                args: vec![arg1, arg2],
-                is_json: true,
-            })]),
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_move_execute);
@@ -522,6 +532,13 @@ fn test_cosmos_move_script() {
     let arg1 = vec![1, 2, 3];
     let arg2 = vec![4, 5, 6];
 
+    let code_bytes_hex = hex::encode(code_bytes.clone());
+    let arg1_hex = hex::encode(arg1.clone());
+    let arg2_hex = hex::encode(arg2.clone());
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgScript\",\"args\":[\"{arg1_hex}\",\"{arg2_hex}\"],\"code_bytes\":\"{code_bytes_hex}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+
     let test_move_script = (
         sender,
         "0x1::cosmos::move_script",
@@ -535,13 +552,12 @@ fn test_cosmos_move_script() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Move(MoveMessage::Script {
+            Some(vec![CosmosMessage {
                 sender,
-                code_bytes,
-                type_args: vec![type_arg1, type_arg2],
-                args: vec![arg1, arg2],
-                is_json: false,
-            })]),
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_move_script);
@@ -559,6 +575,11 @@ fn test_cosmos_move_script_with_json() {
     let arg1 = b"\"hello\"".to_vec();
     let arg2 = b"\"world\"".to_vec();
 
+    let code_bytes_hex = hex::encode(code_bytes.clone());
+    let sender_cosmos_addr =
+        bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgScriptJSON\",\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"],\"code_bytes\":\"{code_bytes_hex}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+
     let test_move_script = (
         sender,
         "0x1::cosmos::move_script_with_json",
@@ -572,13 +593,12 @@ fn test_cosmos_move_script_with_json() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Move(MoveMessage::Script {
+            Some(vec![CosmosMessage {
                 sender,
-                code_bytes,
-                type_args: vec![type_arg1, type_arg2],
-                args: vec![arg1, arg2],
-                is_json: true,
-            })]),
+                data: expected_data.into_bytes(),
+                allow_failure: false,
+                callback: None,
+            }]),
         ),
     );
     tests.push(test_move_script);
@@ -601,12 +621,12 @@ fn test_cosmos_stargate() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Stargate(StargateMessage {
+            Some(vec![CosmosMessage {
                 sender,
                 data: data.as_bytes().to_vec(),
                 allow_failure: false,
                 callback: None,
-            })]),
+            }]),
         ),
     );
     tests.push(test_stargate);
@@ -625,17 +645,17 @@ fn test_cosmos_stargate() {
             VMStatus::Executed,
             None,
             None,
-            Some(vec![CosmosMessage::Stargate(StargateMessage {
+            Some(vec![CosmosMessage {
                 sender,
                 data: data.as_bytes().to_vec(),
                 allow_failure: false,
-                callback: Some(StargateCallback {
+                callback: Some(CosmosCallback {
                     id: 123,
                     module_address: AccountAddress::from_hex_literal("0xcafe").unwrap(),
                     module_name: "test".to_string(),
                     function_name: "callback".to_string(),
                 }),
-            })]),
+            }]),
         ),
     );
     tests.push(test_stargate);

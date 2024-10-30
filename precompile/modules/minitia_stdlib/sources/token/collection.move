@@ -22,9 +22,11 @@ module minitia_std::collection {
     use std::signer;
     use std::string::{Self, String};
     use std::vector;
+    use std::bcs;
     use minitia_std::event;
     use minitia_std::object::{Self, ConstructorRef, Object};
     use minitia_std::table::{Self, Table};
+    use minitia_std::hex;
 
     use minitia_std::royalty::{Self, Royalty};
 
@@ -385,6 +387,21 @@ module minitia_std::collection {
     #[view]
     public fun uri<T: key>(collection: Object<T>): String acquires Collection {
         borrow(collection).uri
+    }
+
+    #[view]
+    public fun collection_to_class_id<T: key>(collection: Object<T>): String acquires Collection {
+        let col = borrow(collection);
+        if (col.creator == @minitia_std) {
+            return col.name
+        };
+
+        let metadata_addr = object::object_address(&collection);
+        let denom = string::utf8(b"move/");
+        let addr_bytes = bcs::to_bytes(&metadata_addr);
+        let addr_string = hex::encode_to_string(&addr_bytes);
+        string::append(&mut denom, addr_string);
+        return denom
     }
 
     #[view]
