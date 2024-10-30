@@ -802,11 +802,15 @@ func BcsDeserializeIdentifier(input []byte) (Identifier, error) {
 
 type InitiaVMConfig struct {
 	AllowUnstable bool
+	ScriptCacheCapacity uint64
+	ModuleCacheCapacity uint64
 }
 
 func (obj *InitiaVMConfig) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := serializer.SerializeBool(obj.AllowUnstable); err != nil { return err }
+	if err := serializer.SerializeU64(obj.ScriptCacheCapacity); err != nil { return err }
+	if err := serializer.SerializeU64(obj.ModuleCacheCapacity); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -824,6 +828,8 @@ func DeserializeInitiaVMConfig(deserializer serde.Deserializer) (InitiaVMConfig,
 	var obj InitiaVMConfig
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.AllowUnstable = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.ScriptCacheCapacity = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.ModuleCacheCapacity = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

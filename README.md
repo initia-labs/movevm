@@ -1,4 +1,5 @@
 # Initia MoveVM
+
 The Initia MoveVM is forked from [wasmvm](https://github.com/CosmWasm/wasmvm) with some modifications to support ([Aptos](https://github.com/aptos-labs/aptos-core)) MoveVM.
 This mechanism allows the users to compile, initialize, and execute Move Smart Contracts from Go applications, in particular from [x/move](https://github.com/initia-labs/initia/tree/main/x/move).
 
@@ -8,7 +9,7 @@ This repo contains both Rust and Go codes. The rust code is compiled into a dll/
 
 ## Supported Platform
 
-Requires **Rust 1.77+ and Go 1.22+.**
+Requires **Rust 1.80+ and Go 1.22+.**
 
 The Rust implementation of the VM is compiled to a library called libmovevm. This is then linked to the Go code when the final binary is built. For that reason not all systems supported by Go are supported by this project.
 
@@ -44,4 +45,4 @@ There are two parts to this code - go and rust. The first step is to ensure that
 
 If this is present, then `make test` will run the Go test suite and you can import this code freely. If it is not present you will have to build it for your system, and ideally add it to this repo with a PR (on your fork). We will set up a proper CI system for building these binaries, but we are not there yet.
 
-To build the rust side, try make `build-rust` and wait for it to compile. This depends on `cargo` being installed with rustc version 1.77+. Generally, you can just use rustup to install all this with no problems.
+To build the rust side, try make `build-rust` and wait for it to compile. This depends on `cargo` being installed with rustc version 1.80+. Generally, you can just use rustup to install all this with no problems.

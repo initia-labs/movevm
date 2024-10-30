@@ -1,6 +1,7 @@
 use crate::test_utils::generate_account;
 use crate::tests::common::{ExpectedOutput, ExpectedOutputItem};
 use crate::MoveHarness;
+use initia_move_natives::code::UpgradePolicy;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
@@ -22,7 +23,9 @@ fn run_tests(tests: Vec<TestInput>) {
     h.initialize();
 
     // publish table data
-    let output = h.publish_package(&test_addr, path).expect("should success");
+    let output = h
+        .publish_package(&test_addr, path, UpgradePolicy::Compatible)
+        .expect("should success");
     h.commit(output, true);
 
     for (senders, entry, ty_args, args, exp_output) in tests {

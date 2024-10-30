@@ -3,6 +3,7 @@
 
 use bytes::Bytes;
 use initia_move_compiler::built_package::BuiltPackage;
+use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::env::Env;
 use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
@@ -13,7 +14,7 @@ use move_package::BuildConfig;
 use crate::test_utils::mock_chain::{MockAPI, MockChain, MockState, MockTableState};
 use crate::test_utils::parser::MemberId;
 use initia_move_gas::Gas;
-use initia_move_storage::{state_view::StateView, state_view_impl::StateViewImpl};
+use initia_move_storage::state_view::StateView;
 use initia_move_types::access_path::AccessPath;
 use initia_move_types::message::{Message, MessageOutput};
 use initia_move_types::module::ModuleBundle;
@@ -69,7 +70,6 @@ impl MoveHarness {
 
     pub fn initialize(&mut self) {
         let state = self.chain.create_state();
-        let resolver = StateViewImpl::new(&state);
         let mut table_resolver = MockTableState::new(&state);
 
         let env = Env::new(
@@ -85,7 +85,7 @@ impl MoveHarness {
             .initialize(
                 &self.api,
                 &env,
-                &resolver,
+                &state,
                 &mut table_resolver,
                 self.load_precompiled_stdlib()
                     .expect("Failed to load precompiles"),
@@ -109,9 +109,10 @@ impl MoveHarness {
         &mut self,
         acc: &AccountAddress,
         path: &str,
+        upgrade_policy: UpgradePolicy,
     ) -> Result<MessageOutput, VMStatus> {
-        let (module_ids, code) = self.compile_package(path);
-        let msg = self.create_publish_message(*acc, module_ids, code);
+        let code = self.compile_package(path);
+        let msg = self.create_publish_message(*acc, code, upgrade_policy);
         self.run_message(msg)
     }
 
@@ -158,7 +159,6 @@ impl MoveHarness {
         view_fn: ViewFunction,
         state: &MockState,
     ) -> Result<ViewOutput, VMStatus> {
-        let resolver = StateViewImpl::new(state);
         let mut table_resolver = MockTableState::new(state);
 
         let gas_limit = Gas::new(100_000_000u64);
@@ -176,7 +176,7 @@ impl MoveHarness {
             &mut gas_meter,
             &self.api,
             &env,
-            &resolver,
+            state,
             &mut table_resolver,
             &view_fn,
         )
@@ -188,7 +188,7 @@ impl MoveHarness {
         vals
     }
 
-    pub fn compile_package(&mut self, path: &str) -> (Vec<String>, Vec<Vec<u8>>) {
+    pub fn compile_package(&mut self, path: &str) -> Vec<Vec<u8>> {
         let package_path = path_in_crate(path);
         let package = BuiltPackage::build(
             package_path.clone(),
@@ -202,29 +202,22 @@ impl MoveHarness {
         )
         .expect("compile failed");
 
-        (
-            package
-                .modules()
-                .map(|v| v.self_id().short_str_lossless())
-                .collect(),
-            package.extract_code(),
-        )
+        package.extract_code()
     }
 
     pub fn create_publish_message(
         &mut self,
         sender: AccountAddress,
-        module_ids: Vec<String>,
         modules: Vec<Vec<u8>>,
+        upgrade_policy: UpgradePolicy,
     ) -> Message {
         let ef = MoveHarness::create_entry_function_with_json(
-            str::parse("0x1::code::publish").unwrap(),
+            str::parse("0x1::code::publish_v2").unwrap(),
             vec![],
             vec![
-                serde_json::to_string(&module_ids).unwrap(),
                 serde_json::to_string(&modules.iter().map(hex::encode).collect::<Vec<String>>())
                     .unwrap(),
-                serde_json::to_string(&(1_u8)).unwrap(), // compatible upgrade policy
+                serde_json::to_string(&upgrade_policy.to_u8()).unwrap(), // compatible upgrade policy
             ],
         );
         Message::execute(vec![sender], ef)
@@ -321,8 +314,6 @@ impl MoveHarness {
         );
 
         let state = self.chain.create_state();
-
-        let resolver = StateViewImpl::new(&state);
         let mut table_resolver = MockTableState::new(&state);
 
         let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> =
@@ -332,7 +323,7 @@ impl MoveHarness {
             &mut gas_meter,
             &self.api,
             &env,
-            &resolver,
+            &state,
             &mut table_resolver,
             message,
         )
@@ -351,7 +342,6 @@ impl MoveHarness {
             Self::generate_random_hash().try_into().unwrap(),
         );
 
-        let resolver = StateViewImpl::new(state);
         let mut table_resolver = MockTableState::new(state);
 
         let gas_limit = Gas::new(100_000_000u64);
@@ -360,7 +350,7 @@ impl MoveHarness {
             &mut gas_meter,
             &self.api,
             &env,
-            &resolver,
+            state,
             &mut table_resolver,
             message,
         )

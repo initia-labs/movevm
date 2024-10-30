@@ -1,16 +1,10 @@
 use move_binary_format::{
-    access::ModuleAccess,
-    compatibility::Compatibility,
     deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMResult},
     file_format::CompiledScript,
-    CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress,
-    ident_str,
-    identifier::Identifier,
-    language_storage::ModuleId,
     value::{MoveTypeLayout, MoveValue},
     vm_status::{StatusCode, VMStatus},
 };
@@ -20,20 +14,21 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     native_extensions::NativeContextExtensions,
     session::SerializedReturnValues,
+    RuntimeEnvironment,
 };
-use move_vm_types::{gas::GasMeter, resolver::MoveResolver};
+use move_vm_types::resolver::MoveResolver;
 
-use std::{collections::BTreeSet, sync::Arc};
+use std::sync::Arc;
 
+use initia_move_gas::MiscGasParameters;
 use initia_move_gas::{
     Gas, InitiaGasMeter, InitiaGasParameters, InitialGasSchedule, NativeGasParameters,
 };
-use initia_move_gas::{MiscGasParameters, NumBytes};
 use initia_move_json::serialize_move_value_to_json_value;
 use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
     all_natives,
-    code::{NativeCodeContext, PublishRequest},
+    code::{NativeCodeContext, PublishRequest, UpgradePolicy},
     cosmos::NativeCosmosContext,
     event::NativeEventContext,
     oracle::{NativeOracleContext, OracleAPI},
@@ -44,7 +39,10 @@ use initia_move_natives::{
 use initia_move_natives::{
     block::NativeBlockContext, staking::StakingAPI, table::NativeTableContext,
 };
-use initia_move_storage::table_resolver::TableResolver;
+use initia_move_storage::{
+    initia_storage::InitiaStorage, module_cache::InitiaModuleCache,
+    script_cache::InitiaScriptCache, state_view::StateView, table_resolver::TableResolver,
+};
 use initia_move_types::{
     account::Accounts,
     cosmos::CosmosMessages,
@@ -52,7 +50,6 @@ use initia_move_types::{
     gas_usage::GasUsageSet,
     json_event::JsonEvents,
     message::{Message, MessageOutput, MessagePayload},
-    metadata::INIT_MODULE_FUNCTION_NAME,
     module::ModuleBundle,
     staking_change_set::StakingChangeSet,
     view_function::{ViewFunction, ViewOutput},
@@ -63,28 +60,26 @@ use initia_move_types::{
 use crate::{
     session::{SessionExt, SessionOutput},
     verifier::{
-        config::verifier_config, errors::metadata_validation_error,
-        event_validation::verify_no_event_emission_in_script, metadata::get_vm_metadata,
-        module_init::verify_module_init_function, module_metadata::validate_publish_request,
-        script::reject_unstable_bytecode_for_script,
+        config::verifier_config, event_validation::verify_no_event_emission_in_script,
+        metadata::get_vm_metadata, script::reject_unstable_bytecode_for_script,
         transaction_arg_validation::validate_combine_signer_and_txn_args,
-        view_function::validate_view_function,
+        view_function::validate_view_function_and_construct,
     },
 };
 
-#[derive(Clone)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct InitiaVM {
     move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
     initia_vm_config: InitiaVMConfig,
+    runtime_environment: Arc<RuntimeEnvironment>,
+    script_cache: Arc<InitiaScriptCache>,
+    module_cache: Arc<InitiaModuleCache>,
 }
 
 impl Default for InitiaVM {
     fn default() -> Self {
-        Self::new(InitiaVMConfig {
-            allow_unstable: true,
-        })
+        Self::new(InitiaVMConfig::default())
     }
 }
 
@@ -94,14 +89,24 @@ impl InitiaVM {
         let misc_params = MiscGasParameters::initial();
         let vm_config = VMConfig {
             verifier_config: verifier_config(),
+            use_loader_v2: true,
             ..Default::default()
         };
-        let move_vm = MoveVM::new_with_config(all_natives(gas_params, misc_params), vm_config);
+        let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(
+            all_natives(gas_params, misc_params),
+            vm_config,
+        ));
+        let move_vm = MoveVM::new_with_runtime_environment(&runtime_environment);
+        let script_cache = InitiaScriptCache::new(initia_vm_config.script_cache_capacity);
+        let module_cache = InitiaModuleCache::new(initia_vm_config.module_cache_capacity);
 
         Self {
             move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
             initia_vm_config,
+            runtime_environment,
+            script_cache,
+            module_cache,
         }
     }
 
@@ -110,13 +115,18 @@ impl InitiaVM {
     }
 
     #[inline(always)]
-    fn allow_unstable(&self) -> bool {
+    pub(crate) fn allow_unstable(&self) -> bool {
         self.initia_vm_config.allow_unstable
     }
 
     #[inline(always)]
-    pub fn deserialize_config(&self) -> &DeserializerConfig {
+    pub fn deserializer_config(&self) -> &DeserializerConfig {
         &self.move_vm.vm_config().deserializer_config
+    }
+
+    #[inline(always)]
+    pub fn runtime_environment(&self) -> Arc<RuntimeEnvironment> {
+        self.runtime_environment.clone()
     }
 
     fn create_session<
@@ -163,79 +173,57 @@ impl InitiaVM {
 
     #[allow(clippy::too_many_arguments)]
     pub fn initialize<
-        M: MoveResolver,
+        S: StateView,
         T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &mut self,
         api: &A,
         env: &Env,
-        state_view_impl: &M,
-        table_view_impl: &mut T,
+        storage: &S,
+        table_resolver: &mut T,
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
+        let runtime_environment = self.runtime_environment();
+        let code_storage = InitiaStorage::new(
+            storage,
+            &runtime_environment,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
+        );
+        let move_resolver = code_storage.state_view_impl();
+
         let gas_limit = Gas::new(u64::MAX);
         let gas_params = self.gas_params.clone();
         let mut gas_meter = InitiaGasMeter::new(gas_params, gas_limit);
 
-        let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
+        let session = self.create_session(api, env, move_resolver, table_resolver);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let publish_request = PublishRequest {
-            destination: AccountAddress::ONE,
-            expected_modules: None,
-            module_bundle,
-        };
-
-        let published_module_ids = self.resolve_pending_code_publish(
-            state_view_impl,
-            &mut session,
+        let session_output = session.finish_with_module_publish(
+            self.deserializer_config(),
+            self.allow_unstable(),
+            &code_storage,
             &mut gas_meter,
-            publish_request,
+            PublishRequest {
+                publisher: AccountAddress::ONE,
+                module_bundle,
+                upgrade_policy: UpgradePolicy::Compatible,
+            },
             &mut traversal_context,
+            Some(allowed_publishers),
         )?;
 
-        // execute code::init_genesis to properly store module metadata.
-        {
-            const CODE_MODULE_NAME: &str = "code";
-            const INIT_GENESIS_FUNCTION_NAME: &str = "init_genesis";
-            let args: Vec<Vec<u8>> = vec![
-                MoveValue::Signer(AccountAddress::ONE)
-                    .simple_serialize()
-                    .unwrap(),
-                bcs::to_bytes(&published_module_ids).unwrap(),
-                bcs::to_bytes(&allowed_publishers).unwrap(),
-            ];
-
-            let function = session.load_function(
-                &ModuleId::new(
-                    AccountAddress::ONE,
-                    Identifier::new(CODE_MODULE_NAME).unwrap(),
-                ),
-                &Identifier::new(INIT_GENESIS_FUNCTION_NAME).unwrap(),
-                &[],
-            )?;
-
-            // ignore the output
-            session.execute_entry_function(
-                function,
-                args,
-                &mut gas_meter,
-                &mut traversal_context,
-            )?;
-        }
-
         // session cleanup
-        let session_output = session.finish()?;
         let output: MessageOutput = self.success_message_cleanup(session_output, &mut gas_meter)?;
 
         Ok(output)
     }
 
     pub fn execute_message<
-        M: MoveResolver,
+        S: StateView,
         T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
@@ -243,13 +231,22 @@ impl InitiaVM {
         gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
-        state_view_impl: &M,
-        table_view_impl: &mut T,
+        storage: &S,
+        table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
+        let runtime_environment = self.runtime_environment();
+
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
+
+        let code_storage = InitiaStorage::new(
+            storage,
+            &runtime_environment,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
+        );
 
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((msg.size() as u64).into())?;
@@ -257,8 +254,8 @@ impl InitiaVM {
         let res = self.execute_script_or_entry_function(
             api,
             env,
-            state_view_impl,
-            table_view_impl,
+            &code_storage,
+            table_resolver,
             senders,
             msg.payload(),
             gas_meter,
@@ -269,7 +266,7 @@ impl InitiaVM {
     }
 
     pub fn execute_view_function<
-        M: MoveResolver,
+        S: StateView,
         T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
@@ -277,23 +274,33 @@ impl InitiaVM {
         gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
-        state_view_impl: &M,
-        table_view_impl: &mut T,
+        storage: &S,
+        table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        // flush loader cache if invalidated
-        self.move_vm.flush_loader_cache_if_invalidated();
-
-        let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
+        let runtime_environment = self.runtime_environment();
+        let code_storage = InitiaStorage::new(
+            storage,
+            &runtime_environment,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
+        );
+        let move_resolver = code_storage.state_view_impl();
+        let mut session = self.create_session(api, env, move_resolver, table_resolver);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let function =
-            session.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
-        let metadata = get_vm_metadata(&session, view_fn.module());
-        let args = validate_view_function(
+        let function = session.load_function(
+            &code_storage,
+            view_fn.module(),
+            view_fn.function(),
+            view_fn.ty_args(),
+        )?;
+        let metadata = get_vm_metadata(&code_storage, view_fn.module());
+
+        let args = validate_view_function_and_construct(
             &mut session,
-            state_view_impl,
+            &code_storage,
             view_fn.args().to_vec(),
             view_fn.function(),
             &function,
@@ -311,6 +318,7 @@ impl InitiaVM {
             args,
             gas_meter,
             &mut traversal_context,
+            &code_storage,
         )?;
 
         // load fully annotated type layouts for return value serialization
@@ -319,12 +327,13 @@ impl InitiaVM {
             .return_tys()
             .iter()
             .map(|ty| {
-                let ty_tag = session.get_type_tag(ty)?;
-                session.get_fully_annotated_type_layout(&ty_tag)
+                session
+                    .inner
+                    .get_fully_annotated_type_layout_from_ty(ty, &code_storage)
             })
             .collect::<VMResult<Vec<_>>>()?;
 
-        let session_output = session.finish()?;
+        let session_output = session.finish(&code_storage)?;
         let (events, _, _, _, _) = session_output;
         let json_events = JsonEvents::new(events.into_iter().map(|e| e.into_inner()).collect());
         let ret = serialize_response_to_json(&ret_ty_layouts, res)?
@@ -335,28 +344,27 @@ impl InitiaVM {
 
     #[allow(clippy::too_many_arguments)]
     fn execute_script_or_entry_function<
-        M: MoveResolver,
+        S: StateView,
         T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
         &self,
         api: &A,
         env: &Env,
-        state_view_impl: &M,
-        table_view_impl: &mut T,
+        code_storage: &InitiaStorage<S>,
+        table_resolver: &mut T,
         senders: Vec<AccountAddress>,
         payload: &MessagePayload,
         gas_meter: &mut InitiaGasMeter,
         traversal_context: &mut TraversalContext,
     ) -> Result<MessageOutput, VMStatus> {
-        // flush loader cache if invalidated
-        self.move_vm.flush_loader_cache_if_invalidated();
-
-        let mut session = self.create_session(api, env, state_view_impl, table_view_impl);
+        let move_resolver = code_storage.state_view_impl();
+        let mut session = self.create_session(api, env, move_resolver, table_resolver);
 
         match payload {
             MessagePayload::Script(script) => {
                 session.check_script_dependencies_and_check_gas(
+                    code_storage,
                     gas_meter,
                     traversal_context,
                     script.code(),
@@ -364,11 +372,12 @@ impl InitiaVM {
 
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
-                let function = session.load_script(script.code(), script.ty_args())?;
+                let function =
+                    session.load_script(code_storage, script.code(), script.ty_args())?;
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
-                    self.deserialize_config(),
+                    self.deserializer_config(),
                 ) {
                     Ok(script) => script,
                     Err(err) => {
@@ -389,7 +398,7 @@ impl InitiaVM {
 
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
-                    state_view_impl,
+                    code_storage,
                     senders,
                     script.args().to_vec(),
                     &function,
@@ -402,6 +411,7 @@ impl InitiaVM {
                     args,
                     gas_meter,
                     traversal_context,
+                    code_storage,
                 )
             }
             MessagePayload::Execute(entry_fn) => {
@@ -409,12 +419,14 @@ impl InitiaVM {
                     .referenced_module_ids
                     .alloc(entry_fn.module().clone());
                 session.check_dependencies_and_charge_gas(
+                    code_storage,
                     gas_meter,
                     traversal_context,
                     [(module_id.address(), module_id.name())],
                 )?;
 
                 let function = session.load_function(
+                    code_storage,
                     entry_fn.module(),
                     entry_fn.function(),
                     entry_fn.ty_args(),
@@ -433,9 +445,11 @@ impl InitiaVM {
                     );
                 }
 
+                // need check function.is_friend_or_private() ??
+
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
-                    state_view_impl,
+                    code_storage,
                     senders,
                     entry_fn.args().to_vec(),
                     &function,
@@ -445,218 +459,35 @@ impl InitiaVM {
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
 
-                session.execute_entry_function(function, args, gas_meter, traversal_context)
+                session.execute_entry_function(
+                    function,
+                    args,
+                    gas_meter,
+                    traversal_context,
+                    code_storage,
+                )
             }
         }?;
 
-        if let Some(publish_request) = session.extract_publish_request() {
-            // mark loader cache as invalid until loader v2 is implemented
-            self.move_vm.mark_loader_cache_as_invalid();
-
-            self.resolve_pending_code_publish(
-                state_view_impl,
-                &mut session,
+        let session_output = if let Some(publish_request) = session.extract_publish_request() {
+            session.finish_with_module_publish(
+                self.deserializer_config(),
+                self.allow_unstable(),
+                code_storage,
                 gas_meter,
                 publish_request,
                 traversal_context,
-            )?;
-        }
-
-        let session_output = session.finish()?;
+                None,
+            )?
+        } else {
+            session.finish(code_storage)?
+        };
 
         // Charge for gas cost for write set ops
         gas_meter.charge_write_set_gas(&session_output.1)?;
         let output = self.success_message_cleanup(session_output, gas_meter)?;
 
         Ok(output)
-    }
-
-    /// Resolve a pending code publish request registered via the NativeCodeContext.
-    fn resolve_pending_code_publish<M: MoveResolver>(
-        &self,
-        resolver: &M,
-        session: &mut SessionExt,
-        gas_meter: &mut InitiaGasMeter,
-        publish_request: PublishRequest,
-        traversal_context: &mut TraversalContext,
-    ) -> VMResult<Vec<String>> {
-        let PublishRequest {
-            destination,
-            module_bundle,
-            expected_modules,
-        } = publish_request;
-
-        let modules = self.deserialize_module_bundle(&module_bundle)?;
-        let modules: &Vec<CompiledModule> =
-            traversal_context.referenced_module_bundles.alloc(modules);
-
-        // Note: Feature gating is needed here because the traversal of the dependencies could
-        //       result in shallow-loading of the modules and therefore subtle changes in
-        //       the error semantics.
-        {
-            // Charge old versions of existing modules, in case of upgrades.
-            for module in modules.iter() {
-                let id = module.self_id();
-                let addr = module.self_addr();
-                let name = module.self_name();
-
-                // TODO: Allow the check of special addresses to be customized.
-                if addr.is_special() || traversal_context.visited.insert((addr, name), ()).is_some()
-                {
-                    continue;
-                }
-
-                let size_if_module_exists = resolver
-                    .get_module(&id)
-                    .map_err(|e| e.finish(Location::Undefined))?
-                    .map(|m| m.len() as u64);
-
-                if let Some(size) = size_if_module_exists {
-                    gas_meter
-                        .charge_dependency(false, addr, name, NumBytes::new(size))
-                        .map_err(|err| {
-                            err.finish(Location::Module(ModuleId::new(*addr, name.to_owned())))
-                        })?;
-                }
-            }
-
-            // Charge all modules in the bundle that is about to be published.
-            for (module, blob) in modules.iter().zip(module_bundle.iter()) {
-                let module_id = &module.self_id();
-                gas_meter
-                    .charge_dependency(
-                        true,
-                        module_id.address(),
-                        module_id.name(),
-                        NumBytes::new(blob.code().len() as u64),
-                    )
-                    .map_err(|err| err.finish(Location::Undefined))?;
-            }
-
-            // Charge all dependencies.
-            //
-            // Must exclude the ones that are in the current bundle because they have not
-            // been published yet.
-            let module_ids_in_bundle = modules
-                .iter()
-                .map(|module| (module.self_addr(), module.self_name()))
-                .collect::<BTreeSet<_>>();
-
-            session.check_dependencies_and_charge_gas(
-                gas_meter,
-                traversal_context,
-                modules
-                    .iter()
-                    .flat_map(|module| {
-                        module
-                            .immediate_dependencies_iter()
-                            .chain(module.immediate_friends_iter())
-                    })
-                    .filter(|addr_and_name| !module_ids_in_bundle.contains(addr_and_name)),
-            )?;
-        }
-
-        // validate modules are properly compiled with metadata
-        validate_publish_request(session, modules, &module_bundle, self.allow_unstable())?;
-
-        if let Some(expected_modules) = expected_modules {
-            for (m, expected_id) in modules.iter().zip(expected_modules.iter()) {
-                if m.self_id().short_str_lossless().as_str() != expected_id {
-                    return Err(metadata_validation_error(&format!(
-                        "unexpected module: '{}', expected: '{}'",
-                        m.self_id().name(),
-                        expected_id
-                    )));
-                }
-            }
-        }
-
-        // Check what modules exist before publishing.
-        let mut exists = BTreeSet::new();
-        for m in modules.iter() {
-            let id = m.self_id();
-
-            if session.exists_module(&id)? {
-                exists.insert(id);
-            }
-        }
-
-        // sort the modules by dependencies
-        let (sorted_module_bundle, published_module_ids, sorted_compiled_modules) = module_bundle
-            .sorted_code_and_modules(modules)
-            .map_err(|e| e.finish(Location::Undefined))?;
-
-        // publish and cache the modules on loader cache.
-        session.publish_module_bundle_with_compat_config(
-            sorted_module_bundle.into_inner(),
-            destination,
-            gas_meter,
-            // treat friends as private
-            Compatibility::new(true, false),
-        )?;
-
-        // call init function of the each module
-        self.execute_module_initialization(
-            session,
-            gas_meter,
-            sorted_compiled_modules,
-            exists,
-            &[destination],
-            traversal_context,
-        )?;
-
-        Ok(published_module_ids)
-    }
-
-    /// Execute all module initializers.
-    fn execute_module_initialization(
-        &self,
-        session: &mut SessionExt,
-        gas_meter: &mut InitiaGasMeter,
-        modules: Vec<&CompiledModule>,
-        exists: BTreeSet<ModuleId>,
-        senders: &[AccountAddress],
-        traversal_context: &mut TraversalContext,
-    ) -> VMResult<()> {
-        let init_func_name = ident_str!(INIT_MODULE_FUNCTION_NAME);
-        for module in modules {
-            if exists.contains(&module.self_id()) {
-                // Call initializer only on first publish.
-                continue;
-            }
-
-            let init_function = session.load_function(&module.self_id(), init_func_name, &[]);
-            // it is ok to not have init_module function
-            // init_module function should be (1) private and (2) has no return value
-            // Note that for historic reasons, verification here is treated
-            // as StatusCode::CONSTRAINT_NOT_SATISFIED, there this cannot be unified
-            // with the general verify_module above.
-            if init_function.is_ok() {
-                if verify_module_init_function(module).is_ok() {
-                    let args: Vec<Vec<u8>> = senders
-                        .iter()
-                        .map(|s| MoveValue::Signer(*s).simple_serialize().unwrap())
-                        .collect();
-
-                    // first execution does not execute `charge_call`, so need to record call here
-                    gas_meter.record_call(&module.self_id());
-
-                    session.execute_function_bypass_visibility(
-                        &module.self_id(),
-                        init_func_name,
-                        vec![],
-                        args,
-                        gas_meter,
-                        traversal_context,
-                    )?;
-                } else {
-                    return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
-                        .finish(Location::Module(module.self_id())));
-                }
-            }
-        }
-
-        Ok(())
     }
 
     fn success_message_cleanup(
@@ -676,26 +507,6 @@ impl InitiaVM {
             new_accounts,
             gas_usage_set,
         ))
-    }
-
-    /// Deserialize a module bundle.
-    fn deserialize_module_bundle(
-        &self,
-        module_bundle: &ModuleBundle,
-    ) -> VMResult<Vec<CompiledModule>> {
-        let mut result = vec![];
-        for module_blob in module_bundle.iter() {
-            match CompiledModule::deserialize_with_config(
-                module_blob.code(),
-                self.deserialize_config(),
-            ) {
-                Ok(module) => {
-                    result.push(module);
-                }
-                Err(err) => return Err(err.finish(Location::Undefined)),
-            }
-        }
-        Ok(result)
     }
 }
 

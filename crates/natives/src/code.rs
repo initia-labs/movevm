@@ -1,5 +1,4 @@
 use crate::{
-    helpers::get_string,
     interface::{
         RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
     },
@@ -9,20 +8,37 @@ use better_any::{Tid, TidAble};
 use initia_move_types::module::ModuleBundle;
 use move_core_types::{account_address::AccountAddress, gas_algebra::NumBytes};
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{
-    loaded_data::runtime_types::Type,
-    values::{Struct, Value},
-};
+use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
 use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-/// Whether a compatibility check should be performed for upgrades. The check only passes if
-/// a new module has (a) the same public functions (b) for existing resources, no layout change.
-const _UPGRADE_POLICY_COMPATIBLE: u8 = 1;
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum UpgradePolicy {
+    /// Whether a compatibility check should be performed for upgrades. The check only passes if
+    /// a new module has (a) the same public functions (b) for existing resources, no layout change.
+    Compatible = 1,
+    /// Whether the modules in the package are immutable and cannot be upgraded.
+    Immutable = 2,
+}
 
-/// Whether the modules in the package are immutable and cannot be upgraded.
-const _UPGRADE_POLICY_IMMUTABLE: u8 = 2;
+impl TryFrom<u8> for UpgradePolicy {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(UpgradePolicy::Compatible),
+            2 => Ok(UpgradePolicy::Immutable),
+            _ => Err(()),
+        }
+    }
+}
+
+impl UpgradePolicy {
+    pub fn to_u8(self) -> u8 {
+        self as u8
+    }
+}
 
 /// A wrapper around the representation of a Move Option, which is a vector with 0 or 1 element.
 /// TODO: move this elsewhere for reuse?
@@ -63,7 +79,7 @@ const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 
 // native errors always start from 100
 const EALREADY_REQUESTED: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
-const EUNABLE_TO_PARSE_STRING: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 101;
+const EINVALID_UPGRADE_POLICY: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 101;
 
 /// The native code context.
 #[derive(Tid, Default)]
@@ -76,9 +92,9 @@ pub struct NativeCodeContext {
 /// Represents a request for code publishing made from a native call and to be processed
 /// by the Initia VM.
 pub struct PublishRequest {
-    pub destination: AccountAddress,
+    pub publisher: AccountAddress,
     pub module_bundle: ModuleBundle,
-    pub expected_modules: Option<Vec<String>>,
+    pub upgrade_policy: UpgradePolicy,
 }
 
 /***************************************************************************************************
@@ -112,6 +128,12 @@ fn native_request_publish(
 
     context.charge(gas_params.code_request_publish_base_cost)?;
 
+    let upgrade_policy = UpgradePolicy::try_from(safely_pop_arg!(arguments, u8)).map_err(|_| {
+        SafeNativeError::Abort {
+            abort_code: EINVALID_UPGRADE_POLICY,
+        }
+    })?;
+
     let mut code: Vec<Vec<u8>> = vec![];
     for module_code in safely_pop_vec_arg!(arguments, Vec<u8>) {
         context.charge(
@@ -120,21 +142,7 @@ fn native_request_publish(
         code.push(module_code);
     }
 
-    let mut expected_modules: Vec<String> = vec![];
-    for name in safely_pop_vec_arg!(arguments, Struct) {
-        let str_bytes = get_string(name)?;
-
-        context.charge(
-            gas_params.code_request_publish_per_byte * NumBytes::new(str_bytes.len() as u64),
-        )?;
-        expected_modules.push(String::from_utf8(str_bytes).map_err(|_| {
-            SafeNativeError::Abort {
-                abort_code: EUNABLE_TO_PARSE_STRING,
-            }
-        })?);
-    }
-
-    let destination = safely_pop_arg!(arguments, AccountAddress);
+    let publisher = safely_pop_arg!(arguments, AccountAddress);
 
     let code_context = context.extensions_mut().get_mut::<NativeCodeContext>();
     if code_context.requested_module_bundle.is_some() {
@@ -144,9 +152,9 @@ fn native_request_publish(
     }
 
     code_context.requested_module_bundle = Some(PublishRequest {
-        destination,
+        publisher,
         module_bundle: ModuleBundle::new(code),
-        expected_modules: Some(expected_modules),
+        upgrade_policy,
     });
 
     Ok(smallvec![])

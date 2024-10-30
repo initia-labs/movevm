@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 pub const ERROR_PREFIX: &str = "E";
 pub const VIEW_FUN_ATTRIBUTE: &str = "view";
 pub const EVENT_STRUCT_ATTRIBUTE: &str = "event";
+pub const CODE_MODULE_NAME: &str = "code";
 pub const INIT_MODULE_FUNCTION_NAME: &str = "init_module";
+pub const INIT_GENESIS_FUNCTION_NAME: &str = "init_genesis";
+pub const VERIFY_PUBLISH_REQUEST: &str = "verify_publish_request";
 pub const METADATA_V0_MIN_FILE_FORMAT_VERSION: u32 = 6;
 
 /// The keys used to identify the metadata in the metadata section of the module bytecode.
