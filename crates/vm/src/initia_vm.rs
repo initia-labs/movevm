@@ -28,7 +28,7 @@ use initia_move_json::serialize_move_value_to_json_value;
 use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
     all_natives,
-    code::{NativeCodeContext, PublishRequest},
+    code::{NativeCodeContext, PublishRequest, UpgradePolicy},
     cosmos::NativeCosmosContext,
     event::NativeEventContext,
     oracle::{NativeOracleContext, OracleAPI},
@@ -89,6 +89,7 @@ impl InitiaVM {
         let misc_params = MiscGasParameters::initial();
         let vm_config = VMConfig {
             verifier_config: verifier_config(),
+            use_loader_v2: true,
             ..Default::default()
         };
         let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(
@@ -209,7 +210,7 @@ impl InitiaVM {
             PublishRequest {
                 publisher: AccountAddress::ONE,
                 module_bundle,
-                upgrade_policy: 1,
+                upgrade_policy: UpgradePolicy::Compatible,
             },
             &mut traversal_context,
             Some(allowed_publishers),

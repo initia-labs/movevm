@@ -1,6 +1,7 @@
 use crate::MoveHarness;
 use bigdecimal::num_bigint::BigUint;
 use bigdecimal::FromPrimitive;
+use initia_move_natives::code::UpgradePolicy;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{StructTag, TypeTag};
@@ -26,7 +27,7 @@ fn success_generic(ty_args: Vec<TypeTag>, tests: Vec<TestInput>) {
     h.initialize();
 
     // publish package
-    let output = h.publish_package(&acc, path, 1).expect("should success");
+    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
     h.commit(output, true);
 
     // Check in initial state, resource does not exist.
@@ -74,7 +75,7 @@ fn fail_generic(ty_args: Vec<TypeTag>, tests: Vec<(&str, Vec<Vec<u8>>, StatusCod
     h.initialize();
 
     // publish package
-    let output = h.publish_package(&acc, path, 1).expect("should success");
+    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
     h.commit(output, true);
 
     // Check in initial state, resource does not exist.
@@ -749,7 +750,7 @@ fn json_object_args() {
     h.initialize();
 
     // publish package
-    let output = h.publish_package(&acc, path, 1).expect("should success");
+    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
     h.commit(output, true);
 
     // execute create_object
@@ -794,7 +795,7 @@ fn biguint_bigdecimal() {
     h.initialize();
 
     // publish package
-    let output = h.publish_package(&acc, path, 1).expect("should success");
+    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
     h.commit(output, true);
 
     // execute create_object
