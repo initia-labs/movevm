@@ -34,6 +34,12 @@ impl TryFrom<u8> for UpgradePolicy {
     }
 }
 
+impl UpgradePolicy {
+    pub fn to_u8(self) -> u8 {
+        self as u8
+    }
+}
+
 /// A wrapper around the representation of a Move Option, which is a vector with 0 or 1 element.
 /// TODO: move this elsewhere for reuse?
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]

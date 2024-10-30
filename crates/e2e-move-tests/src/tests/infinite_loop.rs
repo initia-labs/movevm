@@ -1,4 +1,5 @@
 use crate::MoveHarness;
+use initia_move_natives::code::UpgradePolicy;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::StatusCode;
 
@@ -12,7 +13,7 @@ fn empty_while_loop() {
 
     h.initialize();
 
-    let output = h.publish_package(&acc, path, 1).expect("should success");
+    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
     h.commit(output, true);
 
     let err = h

@@ -1,5 +1,6 @@
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
+use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::cosmos::{
     CosmosCoin, CosmosMessage, DistributionMessage, IBCFee, IBCHeight, IBCMessage, MoveMessage,
     StakingMessage, StargateCallback, StargateMessage,
@@ -62,7 +63,7 @@ fn run_tests(tests: Vec<TestInput>) {
     h.initialize();
 
     // publish package
-    let output = h.publish_package(&acc, path, 1).expect("should success");
+    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
     h.commit(output, true);
 
     for (sender, entry, ty_args, args, exp_output) in tests {

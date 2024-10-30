@@ -317,7 +317,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                 bcs::to_bytes(&module_ids).unwrap(),
                 bcs::to_bytes(&vec_deps_addresses).unwrap(),
                 bcs::to_bytes(&vec_deps_module_ids).unwrap(),
-                bcs::to_bytes(&upgrade_policy).unwrap(),
+                bcs::to_bytes(&upgrade_policy.to_u8()).unwrap(),
             ],
             gas_meter,
             traversal_context,

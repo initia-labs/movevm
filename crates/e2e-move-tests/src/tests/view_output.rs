@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::MoveHarness;
+use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::json_event::JsonEvents;
 use initia_move_types::view_function::ViewFunction;
 use move_core_types::identifier::Identifier;
@@ -18,7 +19,7 @@ fn test_view_output() {
 
     // publish std coin
     let output = h
-        .publish_package(&deployer_addr, path, 1)
+        .publish_package(&deployer_addr, path, UpgradePolicy::Compatible)
         .expect("should success");
     h.commit(output, true);
 

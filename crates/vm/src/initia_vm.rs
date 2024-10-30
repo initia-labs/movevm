@@ -89,6 +89,7 @@ impl InitiaVM {
         let misc_params = MiscGasParameters::initial();
         let vm_config = VMConfig {
             verifier_config: verifier_config(),
+            use_loader_v2: true,
             ..Default::default()
         };
         let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(

@@ -3,6 +3,7 @@
 
 use bytes::Bytes;
 use initia_move_compiler::built_package::BuiltPackage;
+use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::env::Env;
 use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
@@ -108,7 +109,7 @@ impl MoveHarness {
         &mut self,
         acc: &AccountAddress,
         path: &str,
-        upgrade_policy: u8,
+        upgrade_policy: UpgradePolicy,
     ) -> Result<MessageOutput, VMStatus> {
         let code = self.compile_package(path);
         let msg = self.create_publish_message(*acc, code, upgrade_policy);
@@ -208,7 +209,7 @@ impl MoveHarness {
         &mut self,
         sender: AccountAddress,
         modules: Vec<Vec<u8>>,
-        upgrade_policy: u8,
+        upgrade_policy: UpgradePolicy,
     ) -> Message {
         let ef = MoveHarness::create_entry_function_with_json(
             str::parse("0x1::code::publish_v2").unwrap(),
@@ -216,7 +217,7 @@ impl MoveHarness {
             vec![
                 serde_json::to_string(&modules.iter().map(hex::encode).collect::<Vec<String>>())
                     .unwrap(),
-                serde_json::to_string(&upgrade_policy).unwrap(), // compatible upgrade policy
+                serde_json::to_string(&upgrade_policy.to_u8()).unwrap(), // compatible upgrade policy
             ],
         );
         Message::execute(vec![sender], ef)
