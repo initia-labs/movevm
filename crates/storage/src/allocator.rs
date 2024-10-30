@@ -38,7 +38,6 @@ pub(crate) fn get_size_of<T: Clone>(t: Arc<T>) -> usize {
         REQUEST_THREAD_ID = Some(std::thread::current().id());
         let _ = (*t).clone();
         msize = SIZE_COUNTER + size_of::<T>();
-        // println!("SIZE_COUNTER {} {}", SIZE_COUNTER, size_of::<T>());
         SIZE_COUNTER = 0;
         REQUEST_THREAD_ID = None;
     }
