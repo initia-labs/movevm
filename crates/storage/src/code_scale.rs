@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use clru::WeightScale;
-use move_binary_format::access::ModuleAccess;
 use move_binary_format::file_format::CompiledScript;
 use move_binary_format::CompiledModule;
 use move_vm_runtime::Module;
@@ -36,11 +35,9 @@ impl WeightScale<Checksum, Arc<ModuleCode<CompiledModule, Module, BytesWithHash,
     ) -> usize {
         match value.code() {
             Code::Deserialized(compiled_module) => {
-                println!("compiled: {:?}", compiled_module.name());
                 get_size_of(compiled_module.clone())
             },
             Code::Verified(module) => {
-                println!("module: {:?}", module.name());
                 get_size_of(module.clone())
             },
         }
