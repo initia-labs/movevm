@@ -1,6 +1,6 @@
 use move_binary_format::{
     deserializer::DeserializerConfig,
-    errors::{Location, PartialVMError, PartialVMResult, VMResult},
+    errors::{Location, PartialVMError, VMResult},
     file_format::CompiledScript,
 };
 use move_core_types::{
@@ -326,9 +326,8 @@ impl InitiaVM {
         let ret_ty_layouts = function
             .return_tys()
             .iter()
-            .map(|ty| session.type_to_fully_annotated_layout(ty, &code_storage, &mut 0, 0))
-            .collect::<PartialVMResult<Vec<_>>>()
-            .map_err(|e| e.finish(Location::Undefined))?;
+            .map(|ty| session.inner.get_fully_annotated_type_layout_from_ty(ty, &code_storage))
+            .collect::<VMResult<Vec<_>>>()?;
 
         let session_output = session.finish(&code_storage)?;
         let (events, _, _, _, _) = session_output;
