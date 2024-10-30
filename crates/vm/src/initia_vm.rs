@@ -185,7 +185,7 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment.clone();
+        let runtime_environment = self.runtime_environment();
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
@@ -235,7 +235,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment.clone();
+        let runtime_environment = self.runtime_environment();
 
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
@@ -278,7 +278,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment.clone();
+        let runtime_environment = self.runtime_environment();
         let code_storage = InitiaStorage::new(
             storage,
             &runtime_environment,
