@@ -11,7 +11,7 @@ pub struct Identifier(Box<str>);
 
 impl GetSize for Identifier {
     fn get_size(&self) -> usize {
-        self.0.len()
+        std::mem::size_of::<Box<str>>() + self.0.len()
     }
 }
 
