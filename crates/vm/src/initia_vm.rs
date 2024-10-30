@@ -28,7 +28,7 @@ use initia_move_json::serialize_move_value_to_json_value;
 use initia_move_natives::{
     account::{AccountAPI, NativeAccountContext},
     all_natives,
-    code::{NativeCodeContext, PublishRequest},
+    code::{NativeCodeContext, PublishRequest, UpgradePolicy},
     cosmos::NativeCosmosContext,
     event::NativeEventContext,
     oracle::{NativeOracleContext, OracleAPI},
@@ -209,7 +209,7 @@ impl InitiaVM {
             PublishRequest {
                 publisher: AccountAddress::ONE,
                 module_bundle,
-                upgrade_policy: 1,
+                upgrade_policy: UpgradePolicy::Compatible,
             },
             &mut traversal_context,
             Some(allowed_publishers),

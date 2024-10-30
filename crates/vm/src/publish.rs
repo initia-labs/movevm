@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use initia_move_gas::{InitiaGasMeter, NumBytes};
-use initia_move_natives::code::PublishRequest;
+use initia_move_natives::code::{PublishRequest, UpgradePolicy};
 use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
 use initia_move_types::{
     metadata::{
@@ -189,7 +189,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         publisher: AccountAddress,
         module_bundle: &ModuleBundle,
         modules: &'a [CompiledModule],
-        upgrade_policy: u8,
+        upgrade_policy: UpgradePolicy,
         traversal_context: &mut TraversalContext<'a>,
         allow_unsafe: bool,
         skip_dependencies_upgrade_policy_verification: bool,
@@ -284,7 +284,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         traversal_context: &mut TraversalContext<'_>,
         publisher: AccountAddress,
         modules: &[CompiledModule],
-        upgrade_policy: u8,
+        upgrade_policy: UpgradePolicy,
     ) -> VMResult<()> {
         let mut module_ids = vec![];
         let mut vec_deps_addresses = vec![];

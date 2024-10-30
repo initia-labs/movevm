@@ -13,12 +13,26 @@ use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-/// Whether a compatibility check should be performed for upgrades. The check only passes if
-/// a new module has (a) the same public functions (b) for existing resources, no layout change.
-const _UPGRADE_POLICY_COMPATIBLE: u8 = 1;
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum UpgradePolicy {
+    /// Whether a compatibility check should be performed for upgrades. The check only passes if
+    /// a new module has (a) the same public functions (b) for existing resources, no layout change.
+    Compatible = 1,
+    /// Whether the modules in the package are immutable and cannot be upgraded.
+    Immutable = 2,
+}
 
-/// Whether the modules in the package are immutable and cannot be upgraded.
-const _UPGRADE_POLICY_IMMUTABLE: u8 = 2;
+impl TryFrom<u8> for UpgradePolicy {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(UpgradePolicy::Compatible),
+            2 => Ok(UpgradePolicy::Immutable),
+            _ => Err(()),
+        }
+    }
+}
 
 /// A wrapper around the representation of a Move Option, which is a vector with 0 or 1 element.
 /// TODO: move this elsewhere for reuse?
@@ -59,6 +73,7 @@ const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 
 // native errors always start from 100
 const EALREADY_REQUESTED: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
+const EINVALID_UPGRADE_POLICY: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 101;
 
 /// The native code context.
 #[derive(Tid, Default)]
@@ -73,7 +88,7 @@ pub struct NativeCodeContext {
 pub struct PublishRequest {
     pub publisher: AccountAddress,
     pub module_bundle: ModuleBundle,
-    pub upgrade_policy: u8,
+    pub upgrade_policy: UpgradePolicy,
 }
 
 /***************************************************************************************************
@@ -107,7 +122,8 @@ fn native_request_publish(
 
     context.charge(gas_params.code_request_publish_base_cost)?;
 
-    let upgrade_policy = safely_pop_arg!(arguments, u8);
+    let upgrade_policy = UpgradePolicy::try_from(safely_pop_arg!(arguments, u8))
+        .map_err(|_| SafeNativeError::Abort { abort_code: EINVALID_UPGRADE_POLICY})?;
 
     let mut code: Vec<Vec<u8>> = vec![];
     for module_code in safely_pop_vec_arg!(arguments, Vec<u8>) {
