@@ -89,8 +89,13 @@ impl<'s, S: StateView> ModuleBytesStorage for StateViewImpl<'s, S> {
         module_name: &IdentStr,
     ) -> VMResult<Option<Bytes>> {
         let module_id = ModuleId::new(*address, module_name.to_owned());
-        let module_bytes = match self.get_module(&module_id) {
-            Ok(Some(bytes)) => bytes,
+        let module_bytes = match self.get_module(&module_id).map_err(|e| {
+            e.finish(Location::Module(ModuleId::new(
+                *address,
+                module_name.to_owned(),
+            )))
+        })? {
+            Some(bytes) => bytes,
             _ => return Ok(None),
         };
         Ok(Some(module_bytes))

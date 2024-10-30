@@ -2,7 +2,6 @@ use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 
 use bytes::Bytes;
 use clru::{CLruCache, CLruCacheConfig};
-use get_size::GetSize;
 use move_binary_format::{
     errors::{Location, PartialVMError, VMError, VMResult},
     CompiledModule,
@@ -20,16 +19,11 @@ fn handle_cache_error(module_id: ModuleId) -> VMError {
         .finish(Location::Module(module_id))
 }
 
-fn bytes_len(bytes: &Bytes) -> usize {
-    bytes.len()
-}
-
 /// Extension for modules stored in [InitialModuleCache] to also capture information about bytes
 /// and hash.
-#[derive(GetSize, PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct BytesWithHash {
     /// Bytes of the module.
-    #[get_size(size_fn = bytes_len)]
     bytes: Bytes,
     /// Hash of the module.
     hash: [u8; 32],
@@ -55,7 +49,7 @@ impl WithHash for BytesWithHash {
 }
 
 /// Placeholder for module versioning since we do not allow mutations in [InitiaModuleCache].
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, GetSize, Debug)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {
