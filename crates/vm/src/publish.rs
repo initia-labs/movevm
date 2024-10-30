@@ -211,7 +211,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
 
                 if let Some(size) = code_storage
                     .fetch_module_size_in_bytes(addr, name)?
-                    .map(|v| v as u64) 
+                    .map(|v| v as u64)
                 {
                     gas_meter
                         .charge_dependency(false, addr, name, NumBytes::new(size))

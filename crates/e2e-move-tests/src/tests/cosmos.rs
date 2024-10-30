@@ -63,7 +63,9 @@ fn run_tests(tests: Vec<TestInput>) {
     h.initialize();
 
     // publish package
-    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
+    let output = h
+        .publish_package(&acc, path, UpgradePolicy::Compatible)
+        .expect("should success");
     h.commit(output, true);
 
     for (sender, entry, ty_args, args, exp_output) in tests {

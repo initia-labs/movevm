@@ -22,7 +22,7 @@ use move_core_types::{
 use move_vm_types::{
     code::ModuleBytesStorage,
     resolver::{resource_size, ModuleResolver, ResourceResolver},
-    sha3_256
+    sha3_256,
 };
 use std::{
     collections::{btree_map, BTreeMap},

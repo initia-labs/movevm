@@ -9,17 +9,20 @@ fn setup_harness() -> (MoveHarness, AccountAddress) {
     (h, acc)
 }
 
-fn publish_and_commit(h: &mut MoveHarness, acc: &AccountAddress, path: &str, policy: UpgradePolicy) {
-    let output = h.publish_package(acc, path, policy).expect("should succeed");
+fn publish_and_commit(
+    h: &mut MoveHarness,
+    acc: &AccountAddress,
+    path: &str,
+    policy: UpgradePolicy,
+) {
+    let output = h
+        .publish_package(acc, path, policy)
+        .expect("should succeed");
     h.commit(output, true);
 }
 
 fn view_string(h: &mut MoveHarness, path: &str) -> String {
-    let view_function = h.create_view_function(
-        str::parse(path).unwrap(),
-        vec![],
-        vec![],
-    );
+    let view_function = h.create_view_function(str::parse(path).unwrap(), vec![], vec![]);
 
     h.run_view_function(view_function).expect("should succeed")
 }
@@ -27,12 +30,22 @@ fn view_string(h: &mut MoveHarness, path: &str) -> String {
 #[test]
 fn test_simple_publish_compatible() {
     let (mut h, acc) = setup_harness();
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer", UpgradePolicy::Compatible);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer",
+        UpgradePolicy::Compatible,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer::view_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
 
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer2", UpgradePolicy::Compatible);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer2",
+        UpgradePolicy::Compatible,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer2::view_my_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
@@ -41,12 +54,22 @@ fn test_simple_publish_compatible() {
 #[test]
 fn test_simple_publish_immutable() {
     let (mut h, acc) = setup_harness();
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer", UpgradePolicy::Immutable);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer",
+        UpgradePolicy::Immutable,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer::view_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
 
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer2", UpgradePolicy::Immutable);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer2",
+        UpgradePolicy::Immutable,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer2::view_my_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
@@ -55,24 +78,40 @@ fn test_simple_publish_immutable() {
 #[test]
 fn test_publish_immutable_referring_compatible() {
     let (mut h, acc) = setup_harness();
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer", UpgradePolicy::Compatible);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer",
+        UpgradePolicy::Compatible,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer::view_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
 
     let path = "src/tests/string_viewer.data/viewer2";
-    h.publish_package(&acc, path, UpgradePolicy::Immutable).expect_err("expected an error during package publishing");
+    h.publish_package(&acc, path, UpgradePolicy::Immutable)
+        .expect_err("expected an error during package publishing");
 }
 
 #[test]
 fn test_publish_compatible_referring_immutable() {
     let (mut h, acc) = setup_harness();
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer", UpgradePolicy::Immutable);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer",
+        UpgradePolicy::Immutable,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer::view_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);
 
-    publish_and_commit(&mut h, &acc, "src/tests/string_viewer.data/viewer2", UpgradePolicy::Compatible);
+    publish_and_commit(
+        &mut h,
+        &acc,
+        "src/tests/string_viewer.data/viewer2",
+        UpgradePolicy::Compatible,
+    );
 
     let view_output = view_string(&mut h, "0x9999::string_viewer2::view_my_string");
     assert_eq!("\"Hello, World!\"".to_string(), view_output);

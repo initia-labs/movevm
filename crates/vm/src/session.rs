@@ -30,7 +30,10 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use move_vm_runtime::{session::Session, ModuleStorage};
-use move_vm_types::{loaded_data::runtime_types::{StructNameIndex, StructType, Type}, sha3_256};
+use move_vm_types::{
+    loaded_data::runtime_types::{StructNameIndex, StructType, Type},
+    sha3_256,
+};
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,

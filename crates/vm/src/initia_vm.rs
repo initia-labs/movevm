@@ -326,7 +326,11 @@ impl InitiaVM {
         let ret_ty_layouts = function
             .return_tys()
             .iter()
-            .map(|ty| session.inner.get_fully_annotated_type_layout_from_ty(ty, &code_storage))
+            .map(|ty| {
+                session
+                    .inner
+                    .get_fully_annotated_type_layout_from_ty(ty, &code_storage)
+            })
             .collect::<VMResult<Vec<_>>>()?;
 
         let session_output = session.finish(&code_storage)?;

@@ -13,7 +13,9 @@ fn empty_while_loop() {
 
     h.initialize();
 
-    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
+    let output = h
+        .publish_package(&acc, path, UpgradePolicy::Compatible)
+        .expect("should success");
     h.commit(output, true);
 
     let err = h

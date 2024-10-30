@@ -128,8 +128,11 @@ fn native_request_publish(
 
     context.charge(gas_params.code_request_publish_base_cost)?;
 
-    let upgrade_policy = UpgradePolicy::try_from(safely_pop_arg!(arguments, u8))
-        .map_err(|_| SafeNativeError::Abort { abort_code: EINVALID_UPGRADE_POLICY})?;
+    let upgrade_policy = UpgradePolicy::try_from(safely_pop_arg!(arguments, u8)).map_err(|_| {
+        SafeNativeError::Abort {
+            abort_code: EINVALID_UPGRADE_POLICY,
+        }
+    })?;
 
     let mut code: Vec<Vec<u8>> = vec![];
     for module_code in safely_pop_vec_arg!(arguments, Vec<u8>) {

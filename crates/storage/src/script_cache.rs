@@ -13,14 +13,15 @@ use parking_lot::Mutex;
 use crate::{code_scale::CodeScale, state_view::Checksum};
 
 pub struct InitiaScriptCache {
-    pub(crate) script_cache: Mutex<CLruCache<Checksum, Code<CompiledScript, Script>, RandomState, CodeScale>>,
+    pub(crate) script_cache:
+        Mutex<CLruCache<Checksum, Code<CompiledScript, Script>, RandomState, CodeScale>>,
 }
 
 impl InitiaScriptCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaScriptCache> {
         Arc::new(InitiaScriptCache {
             script_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
+                CLruCacheConfig::new(NonZeroUsize::new(cache_capacity).unwrap())
                     .with_scale(CodeScale),
             )),
         })

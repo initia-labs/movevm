@@ -12,8 +12,7 @@ use move_vm_runtime::{
 };
 use move_vm_types::{
     code::{Code, ModuleBytesStorage},
-    module_linker_error,
-    sha3_256
+    module_linker_error, sha3_256,
 };
 use std::sync::Arc;
 

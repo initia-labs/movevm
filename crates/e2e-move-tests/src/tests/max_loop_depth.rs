@@ -9,7 +9,9 @@ fn module_loop_depth_at_limit() {
     let mut h = MoveHarness::new();
 
     h.initialize();
-    let _ = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
+    let _ = h
+        .publish_package(&acc, path, UpgradePolicy::Compatible)
+        .expect("should success");
 }
 
 #[test]
@@ -18,6 +20,8 @@ fn module_loop_depth_just_above_limit() {
     let path = "src/tests/max_loop_depth.data/pack-bad";
     let mut h = MoveHarness::new();
     h.initialize();
-    let status = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect_err("should error");
+    let status = h
+        .publish_package(&acc, path, UpgradePolicy::Compatible)
+        .expect_err("should error");
     assert!(status.status_code() == StatusCode::LOOP_MAX_DEPTH_REACHED);
 }

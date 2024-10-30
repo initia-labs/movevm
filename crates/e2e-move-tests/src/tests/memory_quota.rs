@@ -10,7 +10,9 @@ fn clone_large_vectors() {
     let mut h = MoveHarness::new();
 
     h.initialize();
-    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
+    let output = h
+        .publish_package(&acc, path, UpgradePolicy::Compatible)
+        .expect("should success");
     h.commit(output, true);
 
     let _ = h
@@ -42,7 +44,9 @@ fn add_vec_to_table() {
 
     // Load the code
     h.initialize();
-    let output = h.publish_package(&acc, path, UpgradePolicy::Compatible).expect("should success");
+    let output = h
+        .publish_package(&acc, path, UpgradePolicy::Compatible)
+        .expect("should success");
     h.commit(output, true);
 
     let status = h

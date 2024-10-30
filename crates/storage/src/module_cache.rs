@@ -14,9 +14,9 @@ use parking_lot::Mutex;
 
 use crate::{code_scale::ModuleCodeScale, state_view::Checksum};
 
-fn handle_cache_error(module_id: ModuleId) -> VMError {  
-    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)  
-        .with_message("Module storage cache eviction error".to_string())  
+fn handle_cache_error(module_id: ModuleId) -> VMError {
+    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+        .with_message("Module storage cache eviction error".to_string())
         .finish(Location::Module(module_id))
 }
 
@@ -59,6 +59,7 @@ impl WithHash for BytesWithHash {
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {
+    #[allow(clippy::type_complexity)]
     pub(crate) module_cache: Mutex<
         CLruCache<
             Checksum,
@@ -71,11 +72,10 @@ pub struct InitiaModuleCache {
 
 impl InitiaModuleCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaModuleCache> {
-        let capacity = NonZeroUsize::new(cache_capacity.saturating_mul(1024 * 1024)).unwrap(); 
+        let capacity = NonZeroUsize::new(cache_capacity).unwrap();
         Arc::new(InitiaModuleCache {
             module_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(capacity)
-                    .with_scale(ModuleCodeScale),
+                CLruCacheConfig::new(capacity).with_scale(ModuleCodeScale),
             )),
         })
     }
@@ -145,6 +145,7 @@ impl InitiaModuleCache {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     pub(crate) fn get_module_or_build_with(
         &self,
         id: &ModuleId,

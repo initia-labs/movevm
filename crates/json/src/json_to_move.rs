@@ -34,11 +34,8 @@ pub trait StructResolver {
         index: StructNameIndex,
         module_storage: &impl ModuleStorage,
     ) -> Option<Arc<StructType>>;
-    fn type_to_type_tag(
-        &self,
-        ty: &Type,
-        module_storage: &impl ModuleStorage,
-    ) -> VMResult<TypeTag>;
+    fn type_to_type_tag(&self, ty: &Type, module_storage: &impl ModuleStorage)
+        -> VMResult<TypeTag>;
 }
 
 // deserialize json argument to JSONValue and convert to MoveValue,
@@ -395,7 +392,8 @@ mod json_arg_testing {
                 Struct { idx, .. } => {
                     let struct_ty =
                         self.get_struct_type(*idx, module_storage).ok_or_else(|| {
-                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).finish(Location::Undefined)
+                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                .finish(Location::Undefined)
                         })?;
                     Ok(TypeTag::Struct(Box::new(StructTag {
                         address: struct_ty.module.address,
@@ -404,7 +402,9 @@ mod json_arg_testing {
                         type_args: vec![],
                     })))
                 }
-                _ => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).finish(Location::Undefined)),
+                _ => {
+                    Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).finish(Location::Undefined))
+                }
             }
         }
     }
