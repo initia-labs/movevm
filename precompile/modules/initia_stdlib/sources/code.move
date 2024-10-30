@@ -328,18 +328,18 @@ module initia_std::code {
                     exists<MetadataStore>(dependency_addr),
                     error::not_found(EPACKAGE_DEP_MISSING)
                 );
-                let depenency_metadata_store =
+                let dependency_metadata_store =
                     borrow_global<MetadataStore>(dependency_addr);
 
                 assert!(
                     table::contains<String, ModuleMetadata>(
-                        &depenency_metadata_store.metadata, dependency_id
+                        &dependency_metadata_store.metadata, dependency_id
                     ),
                     error::not_found(EPACKAGE_DEP_MISSING)
                 );
                 let dependency_upgrade_policy =
                     table::borrow<String, ModuleMetadata>(
-                        &depenency_metadata_store.metadata, dependency_id
+                        &dependency_metadata_store.metadata, dependency_id
                     ).upgrade_policy;
 
                 assert!(
