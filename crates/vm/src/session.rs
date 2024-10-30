@@ -30,8 +30,8 @@ use move_core_types::{
     value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{compute_code_hash, session::Session, ModuleStorage};
-use move_vm_types::loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type};
+use move_vm_runtime::{session::Session, ModuleStorage};
+use move_vm_types::{loaded_data::runtime_types::{StructLayout, StructNameIndex, StructType, Type}, sha3_256};
 
 /// Maximal depth of a value in terms of type depth.
 pub const VALUE_DEPTH_MAX: u64 = 128;
@@ -123,7 +123,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             module_write_set.insert(
                 ap,
                 op.map(|v| {
-                    let checksum = compute_code_hash(&v);
+                    let checksum = sha3_256(&v);
                     checksum.into()
                 }),
             );

@@ -19,10 +19,10 @@ use move_core_types::{
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
-use move_vm_runtime::compute_code_hash;
 use move_vm_types::{
     code::ModuleBytesStorage,
     resolver::{resource_size, ModuleResolver, ResourceResolver},
+    sha3_256
 };
 use std::{
     collections::{btree_map, BTreeMap},
@@ -193,8 +193,8 @@ impl InMemoryAccountStorage {
                 (
                     k,
                     match v {
-                        Op::New(bytes) => Op::New(compute_code_hash(&bytes)),
-                        Op::Modify(bytes) => Op::Modify(compute_code_hash(&bytes)),
+                        Op::New(bytes) => Op::New(sha3_256(&bytes)),
+                        Op::Modify(bytes) => Op::Modify(sha3_256(&bytes)),
                         Op::Delete => Op::Delete,
                     },
                 )
@@ -246,7 +246,7 @@ impl InMemoryStorage {
         module_name: &IdentStr,
         bytes: Bytes,
     ) -> Checksum {
-        let checksum = compute_code_hash(&bytes);
+        let checksum = sha3_256(&bytes);
 
         let account = get_or_insert(&mut self.accounts, *address, || {
             InMemoryAccountStorage::new()

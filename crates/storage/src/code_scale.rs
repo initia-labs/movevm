@@ -113,8 +113,8 @@ mod test {
     use move_core_types::account_address::AccountAddress;
     use move_core_types::identifier::Identifier;
     use move_core_types::language_storage::ModuleId;
-    use move_vm_runtime::{compute_code_hash, CodeStorage, ModuleStorage, RuntimeEnvironment};
-    use move_vm_types::code::{Code, ModuleCode, WithBytes, WithHash};
+    use move_vm_runtime::{CodeStorage, ModuleStorage, RuntimeEnvironment};
+    use move_vm_types::{code::{Code, ModuleCode, WithBytes, WithHash}, sha3_256};
 
     use crate::code_storage::test::make_script;
     use crate::code_storage::AsInitiaCodeStorage;
@@ -284,7 +284,7 @@ mod test {
         );
 
         let serialized_script = make_script(vec!["a"]);
-        compute_code_hash(&serialized_script);
+        sha3_256(&serialized_script);
         code_storage.deserialize_and_cache_script(&serialized_script).unwrap();
         let script = code_storage.verify_and_cache_script(&serialized_script).unwrap();
         

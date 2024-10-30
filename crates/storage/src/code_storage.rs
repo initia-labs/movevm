@@ -6,13 +6,14 @@ use bytes::Bytes;
 use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
 use move_core_types::{account_address::AccountAddress, identifier::IdentStr, metadata::Metadata};
 use move_vm_runtime::{
-    ambassador_impl_ModuleStorage, ambassador_impl_WithRuntimeEnvironment, compute_code_hash,
+    ambassador_impl_ModuleStorage, ambassador_impl_WithRuntimeEnvironment,
     logging::expect_no_verification_errors, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
     Script, WithRuntimeEnvironment,
 };
 use move_vm_types::{
     code::{Code, ModuleBytesStorage},
     module_linker_error,
+    sha3_256
 };
 use std::sync::Arc;
 
@@ -96,7 +97,7 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
         &self,
         serialized_script: &[u8],
     ) -> VMResult<Arc<CompiledScript>> {
-        let hash = compute_code_hash(serialized_script);
+        let hash = sha3_256(serialized_script);
         Ok(match self.script_cache.get_script(&hash) {
             Some(script) => script.deserialized().clone(),
             None => {
@@ -112,7 +113,7 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
     fn verify_and_cache_script(&self, serialized_script: &[u8]) -> VMResult<Arc<Script>> {
         use Code::*;
 
-        let hash = compute_code_hash(serialized_script);
+        let hash = sha3_256(serialized_script);
         let deserialized_script = match self.script_cache.get_script(&hash) {
             Some(Verified(script)) => return Ok(script),
             Some(Deserialized(deserialized_script)) => deserialized_script,
@@ -180,7 +181,8 @@ pub(crate) mod test {
     use move_core_types::{
         account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
     };
-    use move_vm_runtime::{compute_code_hash, CodeStorage, RuntimeEnvironment};
+    use move_vm_runtime::{CodeStorage, RuntimeEnvironment};
+    use move_vm_types::sha3_256;
 
     use crate::{
         code_storage::AsInitiaCodeStorage,
@@ -217,11 +219,11 @@ pub(crate) mod test {
         );
 
         let serialized_script = make_script(vec!["a"]);
-        let hash_1 = compute_code_hash(&serialized_script);
+        let hash_1 = sha3_256(&serialized_script);
         assert_ok!(code_storage.deserialize_and_cache_script(&serialized_script));
 
         let serialized_script = make_script(vec!["b"]);
-        let hash_2 = compute_code_hash(&serialized_script);
+        let hash_2 = sha3_256(&serialized_script);
         assert_ok!(code_storage.deserialize_and_cache_script(&serialized_script));
 
         code_storage.assert_cached_state(vec![&hash_1, &hash_2], vec![]);
@@ -249,7 +251,7 @@ pub(crate) mod test {
         );
 
         let serialized_script = make_script(vec!["a"]);
-        let hash = compute_code_hash(&serialized_script);
+        let hash = sha3_256(&serialized_script);
         assert_ok!(code_storage.deserialize_and_cache_script(&serialized_script));
 
         // Nothing gets loaded into module cache.

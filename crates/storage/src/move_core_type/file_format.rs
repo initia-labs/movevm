@@ -200,7 +200,7 @@ pub struct U256(PrimitiveU256);
 
 impl GetSize for U256 {
     fn get_size(&self) -> usize {
-        4
+        32
     }
 }
 impl fmt::Display for U256 {
