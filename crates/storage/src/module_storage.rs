@@ -373,7 +373,7 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
                 }
             }
             None => {
-                return Err(module_cyclic_dependency_error!(
+                return Err(module_linker_error!(
                     dependency_id.address(),
                     dependency_id.name()
                 ));
