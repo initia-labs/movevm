@@ -183,7 +183,7 @@ mod test {
                 });
             }
             MyCode::Verified(_) => {
-                
+                panic!("Expected deserialized code");
             }
         }
     }
