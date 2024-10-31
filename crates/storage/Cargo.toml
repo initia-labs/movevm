@@ -22,17 +22,3 @@ clru = { workspace = true }
 parking_lot = { workspace = true }
 sha3 = { workspace = true }
 claims = { workspace = true }
-smallbitvec = { workspace = true }
-smallvec = { workspace = true }
-triomphe = { workspace = true }
-primitive-types = { workspace = true, features = ["impl-serde"] }
-
-[dev-dependencies]
-move-vm-test-utils = { workspace = true }
-
-
-[features]
-default = []
-testing = [
-    "move-vm-runtime/testing",
-]
