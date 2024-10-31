@@ -11,6 +11,7 @@ module minitia_std::cosmos {
     use std::error;
     use std::coin::metadata_to_denom;
     use std::collection::collection_to_class_id;
+    use std::base64;
 
     use minitia_std::json;
 
@@ -78,7 +79,7 @@ module minitia_std::cosmos {
         module_name: String,
         function_name: String,
         type_args: vector<String>,
-        args: vector<vector<u8>>
+        args: vector<String> // base64 encoded
     }
 
     public entry fun move_execute(
@@ -89,6 +90,7 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<vector<u8>>
     ) {
+        let args = vector::map(args, |arg| base64::to_string(arg));
         stargate(
             sender,
             json::marshal(
@@ -142,9 +144,9 @@ module minitia_std::cosmos {
     struct ScriptRequest has copy, drop {
         _type_: String,
         sender: String,
-        code_bytes: vector<u8>,
+        code_bytes: String, // base64 encoded
         type_args: vector<String>,
-        args: vector<vector<u8>>
+        args: vector<String> // base64 encoded
     }
 
     public entry fun move_script(
@@ -153,6 +155,8 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<vector<u8>>
     ) {
+        let args = vector::map(args, |arg| base64::to_string(arg));
+        let code_bytes = base64::to_string(code_bytes);
         stargate(
             sender,
             json::marshal(
@@ -170,7 +174,7 @@ module minitia_std::cosmos {
     struct ScriptJSONRequest has copy, drop {
         _type_: String,
         sender: String,
-        code_bytes: vector<u8>,
+        code_bytes: String,
         type_args: vector<String>,
         args: vector<String>
     }
@@ -181,6 +185,7 @@ module minitia_std::cosmos {
         type_args: vector<String>,
         args: vector<String>
     ) {
+        let code_bytes = base64::to_string(code_bytes);
         stargate(
             sender,
             json::marshal(
@@ -356,8 +361,8 @@ module minitia_std::cosmos {
     struct PayFeeRequest has copy, drop {
         _type_: String,
         _signer_: String,
-        source_port: String,
-        source_channel: String,
+        source_port_id: String,
+        source_channel_id: String,
         fee: Fee,
         relayers: vector<String>
     }
@@ -381,8 +386,8 @@ module minitia_std::cosmos {
                 &PayFeeRequest {
                     _type_: string::utf8(b"/ibc.applications.fee.v1.MsgPayPacketFee"),
                     _signer_: address::to_sdk(signer::address_of(sender)),
-                    source_port,
-                    source_channel,
+                    source_port_id: source_port,
+                    source_channel_id: source_channel,
                     fee: Fee {
                         recv_fee: vector[
                             CosmosCoin {
