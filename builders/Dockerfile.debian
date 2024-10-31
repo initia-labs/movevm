@@ -22,9 +22,6 @@ RUN wget --no-verbose "https://static.rust-lang.org/rustup/dist/x86_64-unknown-l
   && chmod -R 777 /usr/local/cargo \
   && rustup target add aarch64-unknown-linux-gnu
 
-# allow non-root user to download more deps later
-RUN chmod -R 777 /usr/local/cargo
-
 ## COPY BUILD SCRIPTS
 
 WORKDIR /code
