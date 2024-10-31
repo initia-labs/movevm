@@ -1,0 +1,69 @@
+# Use a debian version that is old enough to lead to a low
+# glibc requirement of builds.
+# Debian 11 "Bullseye" has long-term support until August 31st, 2026
+FROM --platform=linux/amd64 debian:11-slim
+
+RUN apt update -y \
+  && apt install -y gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu wget perl
+
+# GET FROM https://github.com/rust-lang/docker-rust-nightly
+ENV RUSTUP_HOME=/usr/local/rustup \
+  CARGO_HOME=/usr/local/cargo \
+  PATH=/usr/local/cargo/bin:$PATH
+
+RUN wget --no-verbose "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init" \
+  && chmod +x rustup-init \
+  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.80.1 \
+  && rm rustup-init \
+  && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+  && rustup --version \
+  && cargo --version \
+  && rustc --version \
+  && chmod -R 777 /usr/local/cargo \
+  && rustup target add aarch64-unknown-linux-gnu
+
+# allow non-root user to download more deps later
+RUN chmod -R 777 /usr/local/cargo
+
+## COPY BUILD SCRIPTS
+
+WORKDIR /code
+
+COPY guest/*.sh /opt/
+RUN chmod +x /opt/*.sh
+
+RUN mkdir /.cargo
+RUN chmod +rx /.cargo
+COPY guest/cargo-config /.cargo/config
+
+#############
+## OPENSSL ##
+#############
+
+RUN wget "https://www.openssl.org/source/openssl-1.1.1k.tar.gz"
+
+# Install openssl for x86_64. This is required by Move
+RUN tar -zxvf ./openssl-1.1.1k.tar.gz \
+  && cd openssl-1.1.1k \
+  && INSTALL_DIR="/opt/x86_64-openssl" \
+  && ./Configure linux-x86_64 --prefix="$INSTALL_DIR" threads no-shared \
+  && make -j$(nproc) \
+  && make install_sw \
+  && cd .. \
+  && rm -rf ./openssl-1.1.1k
+
+# Install openssl for cross-compilation. This is required by Move
+RUN tar -zxvf ./openssl-1.1.1k.tar.gz \
+  && cd openssl-1.1.1k \
+  && INSTALL_DIR="/opt/aarch64-openssl" \
+  && ./Configure linux-aarch64 --cross-compile-prefix=aarch64-linux-gnu- --prefix="$INSTALL_DIR" threads no-shared \
+  && make -j$(nproc) \
+  && make install_sw \
+  && cd .. \
+  && rm -rf ./openssl-1.1.1k
+
+RUN rm ./openssl-1.1.1k.tar.gz
+
+WORKDIR /code
+
+CMD ["/opt/build_linux.sh"]
