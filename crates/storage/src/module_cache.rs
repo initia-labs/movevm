@@ -11,7 +11,11 @@ use move_vm_runtime::Module;
 use move_vm_types::code::{ModuleCode, ModuleCodeBuilder, WithBytes, WithHash};
 use parking_lot::Mutex;
 
-use crate::{allocator::{initialize_size, get_size}, code_scale::{ModuleCodeScale, ModuleCodeWrapper}, state_view::Checksum};
+use crate::{
+    allocator::{get_size, initialize_size},
+    code_scale::{ModuleCodeScale, ModuleCodeWrapper},
+    state_view::Checksum,
+};
 
 fn handle_cache_error(module_id: ModuleId) -> VMError {
     PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
@@ -54,19 +58,13 @@ pub struct NoVersion;
 
 pub struct InitiaModuleCache {
     #[allow(clippy::type_complexity)]
-    pub(crate) module_cache: Mutex<
-        CLruCache<
-            Checksum,
-            ModuleCodeWrapper,
-            RandomState,
-            ModuleCodeScale,
-        >,
-    >,
+    pub(crate) module_cache:
+        Mutex<CLruCache<Checksum, ModuleCodeWrapper, RandomState, ModuleCodeScale>>,
 }
 
 impl InitiaModuleCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaModuleCache> {
-        let capacity = NonZeroUsize::new(cache_capacity).unwrap();
+        let capacity = NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap();
         Arc::new(InitiaModuleCache {
             module_cache: Mutex::new(CLruCache::with_config(
                 CLruCacheConfig::new(capacity).with_scale(ModuleCodeScale),
@@ -125,7 +123,10 @@ impl InitiaModuleCache {
                     let module =
                         Arc::new(ModuleCode::from_verified(verified_code, extension, version));
                     module_cache
-                        .put_with_weight(key, ModuleCodeWrapper::new(module.clone(), allocated_size))
+                        .put_with_weight(
+                            key,
+                            ModuleCodeWrapper::new(module.clone(), allocated_size),
+                        )
                         .map_err(|_| handle_cache_error(module_id))?;
                     Ok(module)
                 }
@@ -162,29 +163,29 @@ impl InitiaModuleCache {
                 let build_result = builder.build(id)?;
                 let allocated_size = get_size();
                 match build_result {
-                Some(code) => {
-                    if code.extension().hash() != checksum {
-                        return Err(PartialVMError::new(
-                            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
-                        )
-                        .with_message("Checksum mismatch".to_string())
-                        .finish(Location::Module(id.clone())));
-                    }
+                    Some(code) => {
+                        if code.extension().hash() != checksum {
+                            return Err(PartialVMError::new(
+                                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                            )
+                            .with_message("Checksum mismatch".to_string())
+                            .finish(Location::Module(id.clone())));
+                        }
 
-                    let code = Arc::new(code);
-                    let code_wrapper = ModuleCodeWrapper::new(code.clone(), allocated_size);
-                    module_cache
-                        .put_with_weight(*checksum, code_wrapper.clone())
-                        .map_err(|_| {
-                            PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-                                .with_message("Module storage cache eviction error".to_string())
-                                .finish(Location::Module(id.clone()))
-                        })?;
-                    Some(code_wrapper)
+                        let code = Arc::new(code);
+                        let code_wrapper = ModuleCodeWrapper::new(code.clone(), allocated_size);
+                        module_cache
+                            .put_with_weight(*checksum, code_wrapper.clone())
+                            .map_err(|_| {
+                                PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
+                                    .with_message("Module storage cache eviction error".to_string())
+                                    .finish(Location::Module(id.clone()))
+                            })?;
+                        Some(code_wrapper)
+                    }
+                    None => None,
                 }
-                None => None,
             }
-            },
         })
     }
 

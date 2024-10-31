@@ -21,13 +21,8 @@ impl WeightScale<Checksum, CodeWrapper> for CodeScale {
 
 pub struct ModuleCodeScale;
 
-impl WeightScale<Checksum, ModuleCodeWrapper> for ModuleCodeScale
-{
-    fn weight(
-        &self,
-        _key: &Checksum,
-        value: &ModuleCodeWrapper,
-    ) -> usize {
+impl WeightScale<Checksum, ModuleCodeWrapper> for ModuleCodeScale {
+    fn weight(&self, _key: &Checksum, value: &ModuleCodeWrapper) -> usize {
         value.size
     }
 }

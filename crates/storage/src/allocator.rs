@@ -1,9 +1,10 @@
 use std::{
-    alloc::{GlobalAlloc, Layout, System}, cell::Cell
+    alloc::{GlobalAlloc, Layout, System},
+    cell::Cell,
 };
 
 thread_local! {
-    static SIZE: Cell<usize> = Cell::new(0);
+    static SIZE: Cell<usize> = const { Cell::new(0) };
 }
 
 struct SizeCounterAllocator;

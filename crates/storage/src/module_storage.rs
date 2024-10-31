@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    allocator::{initialize_size, get_size}, module_cache::{BytesWithHash, InitiaModuleCache, NoVersion}, state_view::{Checksum, ChecksumStorage}
+    allocator::{get_size, initialize_size},
+    module_cache::{BytesWithHash, InitiaModuleCache, NoVersion},
+    state_view::{Checksum, ChecksumStorage},
 };
 use bytes::Bytes;
 
@@ -279,7 +281,9 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         };
 
         if module_code_wrapper.module_code.code().is_verified() {
-            return Ok(Some(module_code_wrapper.module_code.code().verified().clone()));
+            return Ok(Some(
+                module_code_wrapper.module_code.code().verified().clone(),
+            ));
         }
 
         let mut visited = HashSet::new();
@@ -335,19 +339,19 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
     let mut verified_dependencies = vec![];
     for (addr, name) in locally_verified_code.immediate_dependencies_iter() {
         let dependency_id = ModuleId::new(*addr, name.to_owned());
-        let dependency_checksum = module_cache_with_context
+        match module_cache_with_context
             .base_storage
             .fetch_checksum(addr, name)?
-            .ok_or_else(|| module_linker_error!(dependency_id.address(), dependency_id.name()))?;
-
-        let dependency = module_cache_with_context
-            .module_cache
-            .get_module_or_build_with(
-                &dependency_id,
-                &dependency_checksum,
-                module_cache_with_context,
-            )?
-            .ok_or_else(|| module_linker_error!(addr, name))?;
+        {
+            Some(dependency_checksum) => {
+                let dependency = module_cache_with_context
+                    .module_cache
+                    .get_module_or_build_with(
+                        &dependency_id,
+                        &dependency_checksum,
+                        module_cache_with_context,
+                    )?
+                    .ok_or_else(|| module_linker_error!(addr, name))?;
 
                 // Dependency is already verified!
                 if dependency.module_code.code().is_verified() {
