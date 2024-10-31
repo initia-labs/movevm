@@ -180,6 +180,9 @@ module initia_std::staking {
     /// Chain already has `StakingState` for the given metadata
     const ESTAKING_STATE_ALREADY_EXISTS: u64 = 16;
 
+    /// Invalid slash fraction
+    const EINVALID_SLASH_FRACHTION: u64 = 17;
+
     // Constants
 
     /// Max number of view function response items.
@@ -621,6 +624,8 @@ module initia_std::staking {
         validator: String,
         fraction: BigDecimal
     ) acquires ModuleStore {
+        assert!(bigdecimal::le(fraction, bigdecimal::one()), error::invalid_argument(EINVALID_SLASH_FRACHTION));
+
         check_chain_permission(chain);
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
