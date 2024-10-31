@@ -11,17 +11,14 @@ use move_vm_runtime::{
     Script, WithRuntimeEnvironment,
 };
 use move_vm_types::{
-    code::{Code, ModuleBytesStorage},
+    code::ModuleBytesStorage,
     module_linker_error,
     sha3_256
 };
 use std::sync::Arc;
 
 use crate::{
-    module_cache::InitiaModuleCache,
-    module_storage::{AsInitiaModuleStorage, InitiaModuleStorage},
-    script_cache::InitiaScriptCache,
-    state_view::ChecksumStorage,
+    allocator::{initialize_size, get_size}, module_cache::InitiaModuleCache, module_storage::{AsInitiaModuleStorage, InitiaModuleStorage}, script_cache::InitiaScriptCache, state_view::ChecksumStorage
 };
 
 /// Code storage that stores both modules and scripts (not thread-safe).
@@ -99,28 +96,37 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
     ) -> VMResult<Arc<CompiledScript>> {
         let hash = sha3_256(serialized_script);
         Ok(match self.script_cache.get_script(&hash) {
-            Some(script) => script.deserialized().clone(),
+            Some(script) => script.code.deserialized().clone(),
             None => {
+                initialize_size();
                 let deserialized_script = self
                     .runtime_environment()
                     .deserialize_into_script(serialized_script)?;
+                let allocated_size = get_size();
                 self.script_cache
-                    .insert_deserialized_script(hash, deserialized_script)?
+                    .insert_deserialized_script(hash, deserialized_script, allocated_size)?
             }
         })
     }
 
     fn verify_and_cache_script(&self, serialized_script: &[u8]) -> VMResult<Arc<Script>> {
-        use Code::*;
-
         let hash = sha3_256(serialized_script);
-        let deserialized_script = match self.script_cache.get_script(&hash) {
-            Some(Verified(script)) => return Ok(script),
-            Some(Deserialized(deserialized_script)) => deserialized_script,
-            None => self
+        let (deserialized_script, compiled_script_allocated_size) = match self.script_cache.get_script(&hash) {
+            Some(code_wrapper ) => {
+                if code_wrapper.code.is_verified() {
+                    return Ok(code_wrapper.code.verified().clone());
+                }
+                (code_wrapper.code.deserialized().clone(), code_wrapper.size)
+            }
+            None => {
+                initialize_size();
+                let compiled_script = self
                 .runtime_environment()
                 .deserialize_into_script(serialized_script)
-                .map(Arc::new)?,
+                .map(Arc::new)?;
+                let allocated_size = get_size();
+                (compiled_script, allocated_size)
+            }
         };
 
         // Locally verify the script.
@@ -138,12 +144,15 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
                     .ok_or_else(|| module_linker_error!(addr, name))
             })
             .collect::<VMResult<Vec<_>>>()?;
+
+        initialize_size();
         let verified_script = self
             .runtime_environment()
             .build_verified_script(locally_verified_script, &immediate_dependencies)?;
+        let allocated_size = get_size() + compiled_script_allocated_size;
 
         self.script_cache
-            .insert_verified_script(hash, verified_script)
+            .insert_verified_script(hash, verified_script, allocated_size)
     }
 }
 
@@ -163,11 +172,11 @@ impl<M: ModuleStorage> InitiaCodeStorage<M> {
         );
         for hash in deserialized {
             let script = claims::assert_some!(self.script_cache.get_script(hash));
-            assert!(!script.is_verified())
+            assert!(!script.code.is_verified())
         }
         for hash in verified {
             let script = claims::assert_some!(self.script_cache.get_script(hash));
-            assert!(script.is_verified())
+            assert!(script.code.is_verified())
         }
     }
 }

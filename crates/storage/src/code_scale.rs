@@ -7,52 +7,54 @@ use move_vm_runtime::Module;
 use move_vm_runtime::Script;
 use move_vm_types::code::{Code, ModuleCode};
 
-use crate::allocator::get_size_of;
 use crate::module_cache::BytesWithHash;
 use crate::module_cache::NoVersion;
 use crate::state_view::Checksum;
 
 pub struct CodeScale;
 
-impl WeightScale<Checksum, Code<CompiledScript, Script>> for CodeScale {
-    fn weight(&self, _key: &Checksum, value: &Code<CompiledScript, Script>) -> usize {
-        match value {
-            Code::Deserialized(compiled_script) => get_size_of(compiled_script.clone()),
-            Code::Verified(script) => get_size_of(script.clone()),
-        }
+impl WeightScale<Checksum, CodeWrapper> for CodeScale {
+    fn weight(&self, _key: &Checksum, value: &CodeWrapper) -> usize {
+        value.size
     }
 }
 
 pub struct ModuleCodeScale;
 
-impl WeightScale<Checksum, Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>>
-    for ModuleCodeScale
+impl WeightScale<Checksum, ModuleCodeWrapper> for ModuleCodeScale
 {
     fn weight(
         &self,
         _key: &Checksum,
-        value: &Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+        value: &ModuleCodeWrapper,
     ) -> usize {
-        match value.code() {
-            Code::Deserialized(compiled_module) => {
-                get_size_of(compiled_module.clone())
-            },
-            Code::Verified(module) => {
-                get_size_of(module.clone())
-            },
-        }
+        value.size
     }
 }
 
-#[cfg(test)]
-mod test {
-    use std::sync::Arc;
-    use move_binary_format::file_format::basic_test_module;
+#[derive(Clone)]
+pub struct CodeWrapper {
+    pub code: Code<CompiledScript, Script>,
+    pub size: usize,
+}
 
-    #[test]
-    fn test_get_size_of_compiled_module() {
-        let module = basic_test_module();
-        let size = crate::code_scale::get_size_of(Arc::new(module));
-        assert!(size > 0);
+impl CodeWrapper {
+    pub fn new(code: Code<CompiledScript, Script>, size: usize) -> Self {
+        Self { code, size }
+    }
+}
+
+#[derive(Clone)]
+pub struct ModuleCodeWrapper {
+    pub module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+    pub size: usize,
+}
+
+impl ModuleCodeWrapper {
+    pub fn new(
+        module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+        size: usize,
+    ) -> Self {
+        Self { module_code, size }
     }
 }

@@ -114,6 +114,8 @@ ripemd = "0.1.1"
 tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
 get-size = { version = "0.1.4", features = ["derive"]}
 pretty_assertions = "1.2.1"
+dashmap = { version = "5.5.3"}
+lazy_static = "1.4.0"
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES

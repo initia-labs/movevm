@@ -2,7 +2,6 @@ use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 
 use bytes::Bytes;
 use clru::{CLruCache, CLruCacheConfig};
-use get_size::GetSize;
 use move_binary_format::{
     errors::{Location, PartialVMError, VMError, VMResult},
     CompiledModule,
@@ -12,7 +11,7 @@ use move_vm_runtime::Module;
 use move_vm_types::code::{ModuleCode, ModuleCodeBuilder, WithBytes, WithHash};
 use parking_lot::Mutex;
 
-use crate::{code_scale::ModuleCodeScale, state_view::Checksum};
+use crate::{allocator::{initialize_size, get_size}, code_scale::{ModuleCodeScale, ModuleCodeWrapper}, state_view::Checksum};
 
 fn handle_cache_error(module_id: ModuleId) -> VMError {  
     PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)  
@@ -20,16 +19,10 @@ fn handle_cache_error(module_id: ModuleId) -> VMError {
         .finish(Location::Module(module_id))
 }
 
-fn bytes_len(bytes: &Bytes) -> usize {
-    bytes.len()
-}
-
 /// Extension for modules stored in [InitialModuleCache] to also capture information about bytes
 /// and hash.
-#[derive(GetSize, PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct BytesWithHash {
-    /// Bytes of the module.
-    #[get_size(size_fn = bytes_len)]
     bytes: Bytes,
     /// Hash of the module.
     hash: [u8; 32],
@@ -55,14 +48,14 @@ impl WithHash for BytesWithHash {
 }
 
 /// Placeholder for module versioning since we do not allow mutations in [InitiaModuleCache].
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, GetSize, Debug)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {
     pub(crate) module_cache: Mutex<
         CLruCache<
             Checksum,
-            Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+            ModuleCodeWrapper,
             RandomState,
             ModuleCodeScale,
         >,
@@ -88,6 +81,7 @@ impl InitiaModuleCache {
         &self,
         key: Checksum,
         deserialized_code: CompiledModule,
+        allocated_size: usize,
         extension: Arc<BytesWithHash>,
         version: NoVersion,
     ) -> VMResult<()> {
@@ -104,7 +98,7 @@ impl InitiaModuleCache {
                     version,
                 ));
                 module_cache
-                    .put_with_weight(key, module)
+                    .put_with_weight(key, ModuleCodeWrapper::new(module, allocated_size))
                     .map_err(|_| handle_cache_error(module_id))?;
                 Ok(())
             }
@@ -115,21 +109,22 @@ impl InitiaModuleCache {
         &self,
         key: Checksum,
         verified_code: Module,
+        allocated_size: usize,
         extension: Arc<BytesWithHash>,
         version: NoVersion,
     ) -> VMResult<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>> {
         let mut module_cache = self.module_cache.lock();
 
         match module_cache.get(&key) {
-            Some(code) => {
-                if code.code().is_verified() {
-                    Ok(code.clone())
+            Some(code_wrapper) => {
+                if code_wrapper.module_code.code().is_verified() {
+                    Ok(code_wrapper.module_code.clone())
                 } else {
                     let module_id = verified_code.self_id();
                     let module =
                         Arc::new(ModuleCode::from_verified(verified_code, extension, version));
                     module_cache
-                        .put_with_weight(key, module.clone())
+                        .put_with_weight(key, ModuleCodeWrapper::new(module.clone(), allocated_size))
                         .map_err(|_| handle_cache_error(module_id))?;
                     Ok(module)
                 }
@@ -138,7 +133,7 @@ impl InitiaModuleCache {
                 let module_id = verified_code.self_id();
                 let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
                 module_cache
-                    .put_with_weight(key, module.clone())
+                    .put_with_weight(key, ModuleCodeWrapper::new(module.clone(), allocated_size))
                     .map_err(|_| handle_cache_error(module_id))?;
                 Ok(module)
             }
@@ -156,11 +151,15 @@ impl InitiaModuleCache {
             Extension = BytesWithHash,
             Version = NoVersion,
         >,
-    ) -> VMResult<Option<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>>> {
+    ) -> VMResult<Option<ModuleCodeWrapper>> {
         let mut module_cache = self.module_cache.lock();
         Ok(match module_cache.get(checksum) {
-            Some(code) => Some(code.clone()),
-            None => match builder.build(id)? {
+            Some(code) => Some(ModuleCodeWrapper::new(code.module_code.clone(), code.size)),
+            None => {
+                initialize_size();
+                let build_result = builder.build(id)?;
+                let allocated_size = get_size();
+                match build_result {
                 Some(code) => {
                     if code.extension().hash() != checksum {
                         return Err(PartialVMError::new(
@@ -171,16 +170,18 @@ impl InitiaModuleCache {
                     }
 
                     let code = Arc::new(code);
+                    let code_wrapper = ModuleCodeWrapper::new(code.clone(), allocated_size);
                     module_cache
-                        .put_with_weight(*checksum, code.clone())
+                        .put_with_weight(*checksum, code_wrapper.clone())
                         .map_err(|_| {
                             PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
                                 .with_message("Module storage cache eviction error".to_string())
                                 .finish(Location::Module(id.clone()))
                         })?;
-                    Some(code)
+                    Some(code_wrapper)
                 }
                 None => None,
+            }
             },
         })
     }
