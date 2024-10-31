@@ -154,7 +154,7 @@ release-build-linux:
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) \
 		-v $(shell pwd):/code/ \
-		$(BUILDERS_PREFIX)-centos7
+		$(BUILDERS_PREFIX)-debian
 	cp artifacts/libmovevm.x86_64.so api
 	cp artifacts/libmovevm.aarch64.so api
 	cp artifacts/libcompiler.x86_64.so api
