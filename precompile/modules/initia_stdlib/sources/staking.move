@@ -181,7 +181,7 @@ module initia_std::staking {
     const ESTAKING_STATE_ALREADY_EXISTS: u64 = 16;
 
     /// Invalid slash fraction
-    const EINVALID_SLASH_FRACHTION: u64 = 17;
+    const EINVALID_SLASH_FRACTION: u64 = 17;
 
     // Constants
 
@@ -624,7 +624,7 @@ module initia_std::staking {
         validator: String,
         fraction: BigDecimal
     ) acquires ModuleStore {
-        assert!(bigdecimal::le(fraction, bigdecimal::one()), error::invalid_argument(EINVALID_SLASH_FRACHTION));
+        assert!(bigdecimal::le(fraction, bigdecimal::one()), error::invalid_argument(EINVALID_SLASH_FRACTION));
 
         check_chain_permission(chain);
 
