@@ -2,15 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    allocator::get_size,
+    code_scale::ModuleWrapper,
     module_cache::{BytesWithHash, InitiaModuleCache, NoVersion},
     state_view::{Checksum, ChecksumStorage},
 };
 use bytes::Bytes;
 
-use move_binary_format::{errors::VMResult, CompiledModule};
+use move_binary_format::{
+    errors::{Location, PartialVMError, VMResult},
+    CompiledModule,
+};
 use move_core_types::{
     account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
-    metadata::Metadata,
+    metadata::Metadata, vm_status::StatusCode,
 };
 use move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, WithRuntimeEnvironment};
 use move_vm_types::{
@@ -121,7 +126,7 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'s, S> {
                 .module_cache
                 .get_module_or_build_with(id, checksum, self);
             let module = claims::assert_some!(claims::assert_ok!(result));
-            assert!(!module.code().is_verified())
+            assert!(!module.module_code.code().is_verified())
         }
         assert_eq!(verified.len(), verified_checksum.len());
         for (id, checksum) in verified.into_iter().zip(verified_checksum) {
@@ -129,7 +134,7 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'s, S> {
                 .module_cache
                 .get_module_or_build_with(id, checksum, self);
             let module = claims::assert_some!(claims::assert_ok!(result));
-            assert!(module.code().is_verified())
+            assert!(module.module_code.code().is_verified())
         }
     }
 }
@@ -168,7 +173,11 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
             .deserialize_into_compiled_module(&bytes)?;
 
         if checksum != hash {
-            return Err(module_linker_error!(key.address(), key.name()));
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("Checksum mismatch".to_string())
+                    .finish(Location::Module(compiled_module.self_id())),
+            );
         }
 
         let extension = Arc::new(BytesWithHash::new(bytes, hash));
@@ -207,7 +216,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         Ok(self
             .module_cache
             .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.extension().bytes().clone()))
+            .map(|module| module.module_code.extension().bytes().clone()))
     }
 
     fn fetch_module_size_in_bytes(
@@ -223,7 +232,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         Ok(self
             .module_cache
             .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.extension().bytes().len()))
+            .map(|module| module.module_code.extension().bytes().len()))
     }
 
     fn fetch_module_metadata(
@@ -239,7 +248,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         Ok(self
             .module_cache
             .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.code().deserialized().metadata.clone()))
+            .map(|module| module.module_code.code().deserialized().metadata.clone()))
     }
 
     fn fetch_deserialized_module(
@@ -255,7 +264,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         Ok(self
             .module_cache
             .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.code().deserialized().clone()))
+            .map(|module| module.module_code.code().deserialized().clone()))
     }
 
     fn fetch_verified_module(
@@ -271,7 +280,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
 
         // Look up the verified module in cache, if it is not there, or if the module is not yet
         // verified, we need to load & verify its transitive dependencies.
-        let module = match self
+        let module_code_wrapper = match self
             .module_cache
             .get_module_or_build_with(&id, &checksum, self)?
         {
@@ -279,8 +288,10 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
             None => return Ok(None),
         };
 
-        if module.code().is_verified() {
-            return Ok(Some(module.code().verified().clone()));
+        if module_code_wrapper.module_code.code().is_verified() {
+            return Ok(Some(
+                module_code_wrapper.module_code.code().verified().clone(),
+            ));
         }
 
         let mut visited = HashSet::new();
@@ -288,7 +299,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         Ok(Some(visit_dependencies_and_verify(
             id,
             checksum,
-            module,
+            module_code_wrapper,
             &mut visited,
             self,
         )?))
@@ -311,11 +322,12 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
 fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
     module_id: ModuleId,
     checksum: Checksum,
-    module: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+    unverified_module_wrapper: ModuleWrapper,
     visited: &mut HashSet<ModuleId>,
     module_cache_with_context: &InitiaModuleStorage<'_, S>,
 ) -> VMResult<Arc<Module>> {
     let runtime_environment = module_cache_with_context.runtime_environment;
+    let module = unverified_module_wrapper.module_code;
 
     // Step 1: Local verification.
     runtime_environment.paranoid_check_module_address_and_name(
@@ -334,52 +346,65 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
     let mut verified_dependencies = vec![];
     for (addr, name) in locally_verified_code.immediate_dependencies_iter() {
         let dependency_id = ModuleId::new(*addr, name.to_owned());
-        let dependency_checksum = module_cache_with_context
+        match module_cache_with_context
             .base_storage
             .fetch_checksum(addr, name)?
-            .ok_or_else(|| module_linker_error!(dependency_id.address(), dependency_id.name()))?;
+        {
+            Some(dependency_checksum) => {
+                let dependency = module_cache_with_context
+                    .module_cache
+                    .get_module_or_build_with(
+                        &dependency_id,
+                        &dependency_checksum,
+                        module_cache_with_context,
+                    )?
+                    .ok_or_else(|| module_linker_error!(addr, name))?;
 
-        let dependency = module_cache_with_context
-            .module_cache
-            .get_module_or_build_with(
-                &dependency_id,
-                &dependency_checksum,
-                module_cache_with_context,
-            )?
-            .ok_or_else(|| module_linker_error!(addr, name))?;
+                // Dependency is already verified!
+                if dependency.module_code.code().is_verified() {
+                    verified_dependencies.push(dependency.module_code.code().verified().clone());
+                    continue;
+                }
 
-        // Dependency is already verified!
-        if dependency.code().is_verified() {
-            verified_dependencies.push(dependency.code().verified().clone());
-            continue;
-        }
-
-        if visited.insert(dependency_id.clone()) {
-            // Dependency is not verified, and we have not visited it yet.
-            let verified_dependency = visit_dependencies_and_verify(
-                dependency_id.clone(),
-                dependency_checksum,
-                dependency,
-                visited,
-                module_cache_with_context,
-            )?;
-            verified_dependencies.push(verified_dependency);
-        } else {
-            // We must have found a cycle otherwise.
-            return Err(module_cyclic_dependency_error!(
-                dependency_id.address(),
-                dependency_id.name()
-            ));
-        }
+                if visited.insert(dependency_id.clone()) {
+                    // Dependency is not verified, and we have not visited it yet.
+                    let verified_dependency = visit_dependencies_and_verify(
+                        dependency_id.clone(),
+                        dependency_checksum,
+                        dependency,
+                        visited,
+                        module_cache_with_context,
+                    )?;
+                    verified_dependencies.push(verified_dependency);
+                } else {
+                    // We must have found a cycle otherwise.
+                    return Err(module_cyclic_dependency_error!(
+                        dependency_id.address(),
+                        dependency_id.name()
+                    ));
+                }
+            }
+            None => {
+                return Err(module_linker_error!(
+                    dependency_id.address(),
+                    dependency_id.name()
+                ));
+            }
+        };
     }
 
-    let verified_code =
-        runtime_environment.build_verified_module(locally_verified_code, &verified_dependencies)?;
+    // Build verified module and the compute size of the verified module
+    let (verified_code, allocated_size_for_verified) = get_size(move || {
+        runtime_environment.build_verified_module(locally_verified_code, &verified_dependencies)
+    })?;
+
+    // Cache the verified module
     let module = module_cache_with_context
         .module_cache
         .insert_verified_module(
             checksum,
             verified_code,
+            allocated_size_for_verified + unverified_module_wrapper.size,
             module.extension().clone(),
             module.version(),
         )?;
