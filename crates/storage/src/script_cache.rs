@@ -80,9 +80,9 @@ impl InitiaScriptCache {
             }
         };
 
-        if new_script.is_some() {
+        if let Some(new_script) = new_script {
             script_cache
-                .put_with_weight(key, ScriptWrapper::new(new_script.unwrap(), allocated_size))
+                .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
                 .unwrap_or_else(|_| {
                     eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
                     None
