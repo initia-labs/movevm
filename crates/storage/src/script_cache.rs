@@ -2,10 +2,9 @@ use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 
 use clru::{CLruCache, CLruCacheConfig};
 use move_binary_format::{
-    errors::{Location, PartialVMError, VMResult},
+    errors::VMResult,
     file_format::CompiledScript,
 };
-use move_core_types::vm_status::StatusCode;
 use move_vm_runtime::Script;
 use move_vm_types::code::Code;
 use parking_lot::Mutex;
@@ -49,11 +48,10 @@ impl InitiaScriptCache {
                 // error occurs when the new script has a weight greater than the cache capacity
                 script_cache
                     .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                    .map_err(|_| {
-                        PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-                            .with_message("Script storage cache eviction error".to_string())
-                            .finish(Location::Script)
-                    })?;
+                    .unwrap_or_else(|_| {
+                        eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
+                        None
+                    });
 
                 Ok(deserialized_script)
             }
@@ -88,11 +86,10 @@ impl InitiaScriptCache {
         if new_script.is_some() {
             script_cache
                 .put_with_weight(key, ScriptWrapper::new(new_script.unwrap(), allocated_size))
-                .map_err(|_| {
-                    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-                        .with_message("Script storage cache eviction error".to_string())
-                        .finish(Location::Script)
-                })?;
+                .unwrap_or_else(|_| {
+                    eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
+                    None
+                });
         }
         Ok(verified_script)
     }

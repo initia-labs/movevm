@@ -3,7 +3,7 @@ use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 use bytes::Bytes;
 use clru::{CLruCache, CLruCacheConfig};
 use move_binary_format::{
-    errors::{Location, PartialVMError, VMError, VMResult},
+    errors::{Location, PartialVMError, VMResult},
     CompiledModule,
 };
 use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
@@ -16,12 +16,6 @@ use crate::{
     code_scale::{ModuleScale, ModuleWrapper},
     state_view::Checksum,
 };
-
-fn handle_cache_error(module_id: ModuleId) -> VMError {
-    PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-        .with_message("Module storage cache eviction error".to_string())
-        .finish(Location::Module(module_id))
-}
 
 /// Extension for modules stored in [InitialModuleCache] to also capture information about bytes
 /// and hash.
@@ -97,7 +91,10 @@ impl InitiaModuleCache {
                 ));
                 module_cache
                     .put_with_weight(key, ModuleWrapper::new(module, allocated_size))
-                    .map_err(|_| handle_cache_error(module_id))?;
+                    .unwrap_or_else(|_| {
+                        eprintln!("WARNING: failed to insert module {:?} into cache; cache capacity might be too small", module_id.short_str_lossless().to_string());
+                        None
+                    });
                 Ok(())
             }
         }
@@ -121,7 +118,10 @@ impl InitiaModuleCache {
                 let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
                 module_cache
                     .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
-                    .map_err(|_| handle_cache_error(module_id))?;
+                    .unwrap_or_else(|_| {
+                        eprintln!("WARNING: failed to insert module {:?} into cache; cache capacity might be too small", module_id.short_str_lossless().to_string());
+                        None
+                    });
                 Ok(module)
             }
         }
@@ -158,11 +158,10 @@ impl InitiaModuleCache {
                         let code_wrapper = ModuleWrapper::new(Arc::new(code), allocated_size);
                         module_cache
                             .put_with_weight(*checksum, code_wrapper.clone())
-                            .map_err(|_| {
-                                PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
-                                    .with_message("Module storage cache eviction error".to_string())
-                                    .finish(Location::Module(id.clone()))
-                            })?;
+                            .unwrap_or_else(|_| {
+                                eprintln!("WARNING: failed to insert module {:?} into cache; cache capacity might be too small", id.short_str_lossless().to_string());
+                                None
+                            });
                         Some(code_wrapper)
                     }
                     None => None,
