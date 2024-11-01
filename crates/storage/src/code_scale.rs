@@ -11,41 +11,41 @@ use crate::module_cache::BytesWithHash;
 use crate::module_cache::NoVersion;
 use crate::state_view::Checksum;
 
-pub struct CodeScale;
+pub struct ScriptScale;
 
-impl WeightScale<Checksum, CodeWrapper> for CodeScale {
-    fn weight(&self, _key: &Checksum, value: &CodeWrapper) -> usize {
+impl WeightScale<Checksum, ScriptWrapper> for ScriptScale {
+    fn weight(&self, _key: &Checksum, value: &ScriptWrapper) -> usize {
         value.size
     }
 }
 
-pub struct ModuleCodeScale;
+pub struct ModuleScale;
 
-impl WeightScale<Checksum, ModuleCodeWrapper> for ModuleCodeScale {
-    fn weight(&self, _key: &Checksum, value: &ModuleCodeWrapper) -> usize {
+impl WeightScale<Checksum, ModuleWrapper> for ModuleScale {
+    fn weight(&self, _key: &Checksum, value: &ModuleWrapper) -> usize {
         value.size
     }
 }
 
 #[derive(Clone)]
-pub struct CodeWrapper {
+pub struct ScriptWrapper {
     pub code: Code<CompiledScript, Script>,
     pub size: usize,
 }
 
-impl CodeWrapper {
+impl ScriptWrapper {
     pub fn new(code: Code<CompiledScript, Script>, size: usize) -> Self {
         Self { code, size }
     }
 }
 
 #[derive(Clone)]
-pub struct ModuleCodeWrapper {
+pub struct ModuleWrapper {
     pub module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
     pub size: usize,
 }
 
-impl ModuleCodeWrapper {
+impl ModuleWrapper {
     pub fn new(
         module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
         size: usize,

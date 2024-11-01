@@ -14,7 +14,7 @@ use move_vm_types::{code::ModuleBytesStorage, module_linker_error, sha3_256};
 use std::sync::Arc;
 
 use crate::{
-    allocator::{get_size, initialize_size},
+    allocator::get_size,
     module_cache::InitiaModuleCache,
     module_storage::{AsInitiaModuleStorage, InitiaModuleStorage},
     script_cache::InitiaScriptCache,
@@ -98,11 +98,13 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
         Ok(match self.script_cache.get_script(&hash) {
             Some(script) => script.code.deserialized().clone(),
             None => {
-                initialize_size();
-                let deserialized_script = self
-                    .runtime_environment()
-                    .deserialize_into_script(serialized_script)?;
-                let allocated_size = get_size();
+                // Deserialize the script and compute its size.
+                let (deserialized_script, allocated_size) = get_size(move || {
+                    self.runtime_environment()
+                        .deserialize_into_script(serialized_script)
+                })?;
+
+                // Cache the deserialized script.
                 self.script_cache.insert_deserialized_script(
                     hash,
                     deserialized_script,
@@ -120,16 +122,15 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
                     if code_wrapper.code.is_verified() {
                         return Ok(code_wrapper.code.verified().clone());
                     }
+
                     (code_wrapper.code.deserialized().clone(), code_wrapper.size)
                 }
                 None => {
-                    initialize_size();
-                    let compiled_script = self
-                        .runtime_environment()
-                        .deserialize_into_script(serialized_script)
-                        .map(Arc::new)?;
-                    let allocated_size = get_size();
-                    (compiled_script, allocated_size)
+                    get_size(move || {
+                        self.runtime_environment()
+                            .deserialize_into_script(serialized_script)
+                            .map(Arc::new)
+                    })?
                 }
             };
 
@@ -149,14 +150,18 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
             })
             .collect::<VMResult<Vec<_>>>()?;
 
-        initialize_size();
-        let verified_script = self
-            .runtime_environment()
-            .build_verified_script(locally_verified_script, &immediate_dependencies)?;
-        let allocated_size = get_size() + compiled_script_allocated_size;
+        // Verify the script and compute its size.
+        let (verified_script, allocated_size) = get_size(move || {
+            self.runtime_environment()
+                .build_verified_script(locally_verified_script, &immediate_dependencies)
+        })?;
 
-        self.script_cache
-            .insert_verified_script(hash, verified_script, allocated_size)
+        // Cache the verified script.
+        self.script_cache.insert_verified_script(
+            hash,
+            verified_script,
+            allocated_size + compiled_script_allocated_size,
+        )
     }
 }
 

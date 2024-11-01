@@ -12,8 +12,8 @@ use move_vm_types::code::{ModuleCode, ModuleCodeBuilder, WithBytes, WithHash};
 use parking_lot::Mutex;
 
 use crate::{
-    allocator::{get_size, initialize_size},
-    code_scale::{ModuleCodeScale, ModuleCodeWrapper},
+    allocator::get_size,
+    code_scale::{ModuleScale, ModuleWrapper},
     state_view::Checksum,
 };
 
@@ -58,8 +58,7 @@ pub struct NoVersion;
 
 pub struct InitiaModuleCache {
     #[allow(clippy::type_complexity)]
-    pub(crate) module_cache:
-        Mutex<CLruCache<Checksum, ModuleCodeWrapper, RandomState, ModuleCodeScale>>,
+    pub(crate) module_cache: Mutex<CLruCache<Checksum, ModuleWrapper, RandomState, ModuleScale>>,
 }
 
 impl InitiaModuleCache {
@@ -67,7 +66,7 @@ impl InitiaModuleCache {
         let capacity = NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap();
         Arc::new(InitiaModuleCache {
             module_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(capacity).with_scale(ModuleCodeScale),
+                CLruCacheConfig::new(capacity).with_scale(ModuleScale),
             )),
         })
     }
@@ -97,7 +96,7 @@ impl InitiaModuleCache {
                     version,
                 ));
                 module_cache
-                    .put_with_weight(key, ModuleCodeWrapper::new(module, allocated_size))
+                    .put_with_weight(key, ModuleWrapper::new(module, allocated_size))
                     .map_err(|_| handle_cache_error(module_id))?;
                 Ok(())
             }
@@ -113,29 +112,15 @@ impl InitiaModuleCache {
         version: NoVersion,
     ) -> VMResult<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>> {
         let mut module_cache = self.module_cache.lock();
-
         match module_cache.get(&key) {
-            Some(code_wrapper) => {
-                if code_wrapper.module_code.code().is_verified() {
-                    Ok(code_wrapper.module_code.clone())
-                } else {
-                    let module_id = verified_code.self_id();
-                    let module =
-                        Arc::new(ModuleCode::from_verified(verified_code, extension, version));
-                    module_cache
-                        .put_with_weight(
-                            key,
-                            ModuleCodeWrapper::new(module.clone(), allocated_size),
-                        )
-                        .map_err(|_| handle_cache_error(module_id))?;
-                    Ok(module)
-                }
+            Some(module_wrapper) if module_wrapper.module_code.code().is_verified() => {
+                Ok(module_wrapper.module_code.clone())
             }
-            None => {
+            _ => {
                 let module_id = verified_code.self_id();
                 let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
                 module_cache
-                    .put_with_weight(key, ModuleCodeWrapper::new(module.clone(), allocated_size))
+                    .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
                     .map_err(|_| handle_cache_error(module_id))?;
                 Ok(module)
             }
@@ -154,14 +139,12 @@ impl InitiaModuleCache {
             Extension = BytesWithHash,
             Version = NoVersion,
         >,
-    ) -> VMResult<Option<ModuleCodeWrapper>> {
+    ) -> VMResult<Option<ModuleWrapper>> {
         let mut module_cache = self.module_cache.lock();
         Ok(match module_cache.get(checksum) {
-            Some(code) => Some(ModuleCodeWrapper::new(code.module_code.clone(), code.size)),
+            Some(module_wrapper) => Some(module_wrapper.clone()),
             None => {
-                initialize_size();
-                let build_result = builder.build(id)?;
-                let allocated_size = get_size();
+                let (build_result, allocated_size) = get_size(move || builder.build(id))?;
                 match build_result {
                     Some(code) => {
                         if code.extension().hash() != checksum {
@@ -172,8 +155,7 @@ impl InitiaModuleCache {
                             .finish(Location::Module(id.clone())));
                         }
 
-                        let code = Arc::new(code);
-                        let code_wrapper = ModuleCodeWrapper::new(code.clone(), allocated_size);
+                        let code_wrapper = ModuleWrapper::new(Arc::new(code), allocated_size);
                         module_cache
                             .put_with_weight(*checksum, code_wrapper.clone())
                             .map_err(|_| {
