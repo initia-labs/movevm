@@ -31,12 +31,14 @@ static GLOBAL: SizeCounterAllocator = SizeCounterAllocator;
 
 #[inline]
 fn start_metering() {
+    debug_assert!(!METERING.with(|metering| metering.get()));
     SIZE.with(|size| size.set(0));
     METERING.with(|metering| metering.set(true));
 }
 
 #[inline]
 fn finish_metering() -> usize {
+    debug_assert!(METERING.with(|metering| metering.get()));
     METERING.with(|metering| metering.set(false));
     SIZE.with(|size| size.get())
 }
