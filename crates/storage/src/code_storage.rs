@@ -125,13 +125,11 @@ impl<M: ModuleStorage> CodeStorage for InitiaCodeStorage<M> {
 
                     (code_wrapper.code.deserialized().clone(), code_wrapper.size)
                 }
-                None => {
-                    get_size(move || {
-                        self.runtime_environment()
-                            .deserialize_into_script(serialized_script)
-                            .map(Arc::new)
-                    })?
-                }
+                None => get_size(move || {
+                    self.runtime_environment()
+                        .deserialize_into_script(serialized_script)
+                        .map(Arc::new)
+                })?,
             };
 
         // Locally verify the script.

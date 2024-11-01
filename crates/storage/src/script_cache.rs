@@ -1,10 +1,7 @@
 use std::{hash::RandomState, num::NonZeroUsize, sync::Arc};
 
 use clru::{CLruCache, CLruCacheConfig};
-use move_binary_format::{
-    errors::VMResult,
-    file_format::CompiledScript,
-};
+use move_binary_format::{errors::VMResult, file_format::CompiledScript};
 use move_vm_runtime::Script;
 use move_vm_types::code::Code;
 use parking_lot::Mutex;
