@@ -2,16 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    allocator::{get_size, initialize_size},
+    allocator::get_size,
+    code_scale::ModuleWrapper,
     module_cache::{BytesWithHash, InitiaModuleCache, NoVersion},
     state_view::{Checksum, ChecksumStorage},
 };
 use bytes::Bytes;
 
-use move_binary_format::{errors::VMResult, CompiledModule};
+use move_binary_format::{
+    errors::{Location, PartialVMError, VMResult},
+    CompiledModule,
+};
 use move_core_types::{
     account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
-    metadata::Metadata,
+    metadata::Metadata, vm_status::StatusCode,
 };
 use move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, WithRuntimeEnvironment};
 use move_vm_types::{
@@ -169,7 +173,11 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
             .deserialize_into_compiled_module(&bytes)?;
 
         if checksum != hash {
-            return Err(module_linker_error!(key.address(), key.name()));
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("Checksum mismatch".to_string())
+                    .finish(Location::Module(compiled_module.self_id())),
+            );
         }
 
         let extension = Arc::new(BytesWithHash::new(bytes, hash));
@@ -291,8 +299,7 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
         Ok(Some(visit_dependencies_and_verify(
             id,
             checksum,
-            module_code_wrapper.module_code,
-            module_code_wrapper.size,
+            module_code_wrapper,
             &mut visited,
             self,
         )?))
@@ -315,12 +322,12 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModule
 fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
     module_id: ModuleId,
     checksum: Checksum,
-    module: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
-    allocated_size: usize,
+    unverified_module_wrapper: ModuleWrapper,
     visited: &mut HashSet<ModuleId>,
     module_cache_with_context: &InitiaModuleStorage<'_, S>,
 ) -> VMResult<Arc<Module>> {
     let runtime_environment = module_cache_with_context.runtime_environment;
+    let module = unverified_module_wrapper.module_code;
 
     // Step 1: Local verification.
     runtime_environment.paranoid_check_module_address_and_name(
@@ -364,8 +371,7 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
                     let verified_dependency = visit_dependencies_and_verify(
                         dependency_id.clone(),
                         dependency_checksum,
-                        dependency.module_code,
-                        dependency.size,
+                        dependency,
                         visited,
                         module_cache_with_context,
                     )?;
@@ -387,17 +393,18 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
         };
     }
 
-    initialize_size();
-    let verified_code =
-        runtime_environment.build_verified_module(locally_verified_code, &verified_dependencies)?;
-    let module_allocated_size = get_size() + allocated_size;
+    // Build verified module and the compute size of the verified module
+    let (verified_code, allocated_size_for_verified) = get_size(move || {
+        runtime_environment.build_verified_module(locally_verified_code, &verified_dependencies)
+    })?;
 
+    // Cache the verified module
     let module = module_cache_with_context
         .module_cache
         .insert_verified_module(
             checksum,
             verified_code,
-            module_allocated_size,
+            allocated_size_for_verified + unverified_module_wrapper.size,
             module.extension().clone(),
             module.version(),
         )?;

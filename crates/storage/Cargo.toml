@@ -22,3 +22,6 @@ clru = { workspace = true }
 parking_lot = { workspace = true }
 sha3 = { workspace = true }
 claims = { workspace = true }
+
+[dev-dependencies]
+rand = { workspace = true }

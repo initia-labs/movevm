@@ -11,12 +11,12 @@ use move_vm_types::code::Code;
 use parking_lot::Mutex;
 
 use crate::{
-    code_scale::{CodeScale, CodeWrapper},
+    code_scale::{ScriptScale, ScriptWrapper},
     state_view::Checksum,
 };
 
 pub struct InitiaScriptCache {
-    pub(crate) script_cache: Mutex<CLruCache<Checksum, CodeWrapper, RandomState, CodeScale>>,
+    pub(crate) script_cache: Mutex<CLruCache<Checksum, ScriptWrapper, RandomState, ScriptScale>>,
 }
 
 impl InitiaScriptCache {
@@ -24,7 +24,7 @@ impl InitiaScriptCache {
         Arc::new(InitiaScriptCache {
             script_cache: Mutex::new(CLruCache::with_config(
                 CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
-                    .with_scale(CodeScale),
+                    .with_scale(ScriptScale),
             )),
         })
     }
@@ -48,7 +48,7 @@ impl InitiaScriptCache {
 
                 // error occurs when the new script has a weight greater than the cache capacity
                 script_cache
-                    .put_with_weight(key, CodeWrapper::new(new_script, allocated_size))
+                    .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
                     .map_err(|_| {
                         PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
                             .with_message("Script storage cache eviction error".to_string())
@@ -69,13 +69,13 @@ impl InitiaScriptCache {
         let mut script_cache = self.script_cache.lock();
 
         let (new_script, verified_script) = match script_cache.get(&key) {
-            Some(code) => {
-                if !code.code.is_verified() {
+            Some(script_wrapper) => {
+                if !script_wrapper.code.is_verified() {
                     let new_script = Code::from_verified(verified_script);
                     let verified_script = new_script.verified().clone();
                     (Some(new_script), verified_script)
                 } else {
-                    (None, code.code.verified().clone())
+                    (None, script_wrapper.code.verified().clone())
                 }
             }
             None => {
@@ -87,7 +87,7 @@ impl InitiaScriptCache {
 
         if new_script.is_some() {
             script_cache
-                .put_with_weight(key, CodeWrapper::new(new_script.unwrap(), allocated_size))
+                .put_with_weight(key, ScriptWrapper::new(new_script.unwrap(), allocated_size))
                 .map_err(|_| {
                     PartialVMError::new(StatusCode::MEMORY_LIMIT_EXCEEDED)
                         .with_message("Script storage cache eviction error".to_string())
@@ -97,16 +97,12 @@ impl InitiaScriptCache {
         Ok(verified_script)
     }
 
-    pub(crate) fn get_script(&self, key: &Checksum) -> Option<CodeWrapper> {
-        let mut script_cache = self.script_cache.lock();
-        script_cache
-            .get(key)
-            .map(|k| CodeWrapper::new(k.code.clone(), k.size))
+    pub(crate) fn get_script(&self, key: &Checksum) -> Option<ScriptWrapper> {
+        self.script_cache.lock().get(key).cloned()
     }
 
     #[allow(unused)]
     pub(crate) fn num_scripts(&self) -> usize {
-        let script_cache = self.script_cache.lock();
-        script_cache.len()
+        self.script_cache.lock().len()
     }
 }
