@@ -22,10 +22,7 @@ use initia_move_types::{
     view_function::{ViewFunction, ViewOutput},
     vm_config::InitiaVMConfig,
 };
-use move_core_types::{
-    identifier::Identifier,
-    language_storage::{ModuleId, ResourceKey, TypeTag},
-};
+use move_core_types::language_storage::{ModuleId, ResourceKey, TypeTag};
 
 fn main() {
     let mut tracer = Tracer::new(TracerConfig::default());
@@ -34,7 +31,6 @@ fn main() {
     let samples = Samples::new();
 
     // 2. Trace the main entry point(s) + every enum separately.
-    tracer.trace_type::<Identifier>(&samples).unwrap();
     tracer.trace_type::<TypeTag>(&samples).unwrap();
     tracer.trace_type::<ModuleId>(&samples).unwrap();
     tracer.trace_type::<ResourceKey>(&samples).unwrap();
@@ -62,7 +58,9 @@ fn main() {
     tracer
         .trace_type::<CompilerCoverageSummaryOptions>(&samples)
         .unwrap();
-    tracer.trace_type::<CompilerDocgenOptions>(&samples).unwrap();
+    tracer
+        .trace_type::<CompilerDocgenOptions>(&samples)
+        .unwrap();
     tracer.trace_type::<CompilerTestOptions>(&samples).unwrap();
 
     // aliases within StructTag
