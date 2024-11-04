@@ -204,7 +204,9 @@ module minitia_std::secp256k1 {
 
         // Test with an incorrect signature
         let invalid_sig_bytes = sig_bytes;
-        *std::vector::borrow_mut(&mut invalid_sig_bytes, 0) = 0xFF; // Corrupt the signature
+        *std::vector::borrow_mut(&mut invalid_sig_bytes, 0) = *std::vector::borrow(
+            &invalid_sig_bytes, 0
+        ) ^ 0x1; // Corrupt the signature
         let invalid_sig = ecdsa_signature_from_bytes(invalid_sig_bytes);
         assert!(!verify(msg, &pk, &invalid_sig), 3);
     }

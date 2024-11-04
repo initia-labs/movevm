@@ -1,8 +1,10 @@
 use std::{
+    collections::BTreeMap,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
 
+use bytes::Bytes;
 use initia_move_json::StructResolver;
 use initia_move_natives::{
     account::NativeAccountContext,
@@ -13,14 +15,25 @@ use initia_move_natives::{
     table::NativeTableContext,
 };
 use initia_move_types::{
-    account::Accounts, cosmos::CosmosMessages, event::ContractEvent,
-    staking_change_set::StakingChangeSet, write_set::WriteSet,
+    access_path::AccessPath,
+    account::Accounts,
+    cosmos::CosmosMessages,
+    event::ContractEvent,
+    staking_change_set::StakingChangeSet,
+    write_set::{WriteOp, WriteSet},
 };
 
-use move_binary_format::errors::{Location, PartialVMError, VMResult};
-use move_core_types::{language_storage::TypeTag, vm_status::StatusCode};
-use move_vm_runtime::session::Session;
-use move_vm_types::loaded_data::runtime_types::{StructNameIndex, StructType, Type};
+use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
+use move_core_types::{
+    effects::Op,
+    language_storage::{ModuleId, TypeTag},
+    vm_status::StatusCode,
+};
+use move_vm_runtime::{session::Session, ModuleStorage};
+use move_vm_types::{
+    loaded_data::runtime_types::{StructNameIndex, StructType, Type},
+    sha3_256,
+};
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
@@ -31,7 +44,7 @@ pub type SessionOutput<'r> = (
 );
 
 pub struct SessionExt<'r, 'l> {
-    inner: Session<'r, 'l>,
+    pub(crate) inner: Session<'r, 'l>,
 }
 
 impl<'r, 'l> SessionExt<'r, 'l> {
@@ -39,8 +52,10 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         Self { inner }
     }
 
-    pub fn finish(self) -> VMResult<SessionOutput<'r>> {
-        let (change_set, mut extensions) = self.inner.finish_with_extensions()?;
+    pub fn finish(self, module_storage: &impl ModuleStorage) -> VMResult<SessionOutput> {
+        let Self { inner } = self;
+
+        let (change_set, mut extensions) = inner.finish_with_extensions(module_storage)?;
         let event_context: NativeEventContext = extensions.remove::<NativeEventContext>();
         let events = event_context.into_events();
 
@@ -59,11 +74,12 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         let new_accounts = account_context.into_accounts();
 
         // build output change set from the changes
-        let write_set = WriteSet::new(change_set, table_change_set).map_err(|e| {
-            PartialVMError::new(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES)
-                .with_message(e.to_string())
-                .finish(Location::Undefined)
-        })?;
+        let write_set =
+            WriteSet::new_with_change_set(change_set, table_change_set).map_err(|e| {
+                PartialVMError::new(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES)
+                    .with_message(e.to_string())
+                    .finish(Location::Undefined)
+            })?;
 
         Ok((
             events,
@@ -78,15 +94,54 @@ impl<'r, 'l> SessionExt<'r, 'l> {
         let ctx = self.get_native_extensions().get_mut::<NativeCodeContext>();
         ctx.requested_module_bundle.take()
     }
+
+    /// Converts module bytes and their compiled representation extracted from publish request into
+    /// write ops. Only used by V2 loader implementation.
+    pub fn convert_modules_into_write_set(
+        module_storage: &impl ModuleStorage,
+        staged_modules: impl Iterator<Item = (ModuleId, Bytes)>,
+    ) -> PartialVMResult<WriteSet> {
+        let mut module_write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
+        for (module_id, bytes) in staged_modules {
+            let module_exists = module_storage
+                .check_module_exists(&module_id.address, &module_id.name)
+                .map_err(|e| e.to_partial())?;
+            let op = if module_exists {
+                Op::Modify(bytes)
+            } else {
+                Op::New(bytes)
+            };
+            let ap = AccessPath::code_access_path(module_id.address, module_id.name.to_owned());
+            module_write_set.insert(ap, op.clone().map(|v| v.into()));
+
+            let ap = AccessPath::checksum_access_path(module_id.address, module_id.name.to_owned());
+            module_write_set.insert(
+                ap,
+                op.map(|v| {
+                    let checksum = sha3_256(&v);
+                    checksum.into()
+                }),
+            );
+        }
+        Ok(WriteSet::new_with_write_set(module_write_set))
+    }
 }
 
 impl StructResolver for SessionExt<'_, '_> {
-    fn get_struct_type(&self, index: StructNameIndex) -> Option<Arc<StructType>> {
-        self.inner.get_struct_type(index)
+    fn get_struct_type(
+        &self,
+        index: StructNameIndex,
+        module_storage: &impl ModuleStorage,
+    ) -> Option<Arc<StructType>> {
+        self.inner.fetch_struct_ty_by_idx(index, module_storage)
     }
 
-    fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
-        self.inner.get_type_tag(ty)
+    fn type_to_type_tag(
+        &self,
+        ty: &Type,
+        module_storage: &impl ModuleStorage,
+    ) -> VMResult<TypeTag> {
+        self.inner.get_type_tag(ty, module_storage)
     }
 }
 

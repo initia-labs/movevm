@@ -1,9 +1,9 @@
 /// Extract metadata from the VM, upgrading V0 to V1 representation as needed
-use crate::session::SessionExt;
 use initia_move_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
 use move_binary_format::{file_format::CompiledScript, CompiledModule};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_model::metadata::{CompilationMetadata, COMPILATION_METADATA_KEY};
+use move_vm_runtime::ModuleStorage;
 
 /// Extract metadata from the VM, upgrading V0 to V1 representation as needed
 pub fn get_metadata(md: &[Metadata]) -> Option<RuntimeModuleMetadataV0> {
@@ -15,12 +15,13 @@ pub fn get_metadata(md: &[Metadata]) -> Option<RuntimeModuleMetadataV0> {
 }
 
 pub(crate) fn get_vm_metadata(
-    session: &SessionExt,
+    module_storage: &impl ModuleStorage,
     module_id: &ModuleId,
 ) -> Option<RuntimeModuleMetadataV0> {
-    session
-        .get_move_vm()
-        .with_module_metadata(module_id, get_metadata)
+    let metadata = module_storage
+        .fetch_module_metadata(module_id.address(), module_id.name())
+        .ok()??;
+    get_metadata(&metadata)
 }
 
 /// Extract metadata from a compiled module, upgrading V0 to V1 representation as needed.

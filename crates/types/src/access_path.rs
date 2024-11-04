@@ -67,6 +67,10 @@ impl AccessPath {
         AccessPath::new(address, Self::code_data_path(module_name))
     }
 
+    pub fn checksum_access_path(address: AccountAddress, module_name: Identifier) -> AccessPath {
+        AccessPath::new(address, Self::checksum_data_path(module_name))
+    }
+
     pub fn table_item_access_path(
         handle /* Table Address */: AccountAddress,
         key: Vec<u8>,
@@ -85,6 +89,10 @@ impl AccessPath {
 
     pub fn code_data_path(module_name: ModuleName) -> DataPath {
         DataPath::Code(module_name)
+    }
+
+    pub fn checksum_data_path(module_name: ModuleName) -> DataPath {
+        DataPath::Checksum(module_name)
     }
 
     pub fn table_item_data_path(key: Vec<u8>) -> DataPath {
@@ -133,12 +141,6 @@ impl fmt::Display for AccessPath {
     }
 }
 
-impl From<&ModuleId> for AccessPath {
-    fn from(id: &ModuleId) -> AccessPath {
-        AccessPath::code_access_path(*id.address(), id.name().to_owned())
-    }
-}
-
 impl From<&ResourceKey> for AccessPath {
     fn from(key: &ResourceKey) -> AccessPath {
         AccessPath::resource_access_path(key.address(), key.type_().clone())
@@ -148,6 +150,7 @@ impl From<&ResourceKey> for AccessPath {
 #[repr(u8)]
 pub enum DataType {
     Code,
+    Checksum,
     Resource,
     TableItem,
     TableInfo,
@@ -159,6 +162,11 @@ impl DataType {
     pub fn is_code(self) -> bool {
         matches!(self, DataType::Code)
     }
+
+    pub fn is_checksum(self) -> bool {
+        matches!(self, DataType::Checksum)
+    }
+
     pub fn is_resource(self) -> bool {
         matches!(self, DataType::Resource)
     }
@@ -177,6 +185,7 @@ impl DataType {
     pub fn from_index(idx: u8) -> Result<Self> {
         match idx {
             0 => Ok(DataType::Code),
+            1 => Ok(DataType::Checksum),
             2 => Ok(DataType::Resource),
             3 => Ok(DataType::TableItem),
             4 => Ok(DataType::TableInfo),
@@ -190,6 +199,7 @@ pub type ModuleName = Identifier;
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug, Serialize, Deserialize)]
 pub enum DataPath {
     Code(ModuleName),
+    Checksum(ModuleName),
     Resource(StructTag),
     TableItem(Vec<u8>),
     TableInfo,
@@ -198,6 +208,10 @@ pub enum DataPath {
 impl DataPath {
     pub fn is_code(&self) -> bool {
         matches!(self, DataPath::Code(_))
+    }
+
+    pub fn is_checksum(&self) -> bool {
+        matches!(self, DataPath::Checksum(_))
     }
 
     pub fn is_resource(&self) -> bool {
@@ -222,6 +236,7 @@ impl DataPath {
     pub fn data_type(&self) -> DataType {
         match self {
             DataPath::Code(_) => DataType::Code,
+            DataPath::Checksum(_) => DataType::Checksum,
             DataPath::Resource(_) => DataType::Resource,
             DataPath::TableItem(_) => DataType::TableItem,
             DataPath::TableInfo => DataType::TableInfo,
@@ -235,6 +250,7 @@ impl DataPath {
         let prefix = self.data_type().storage_index();
         let raw_key = match self {
             DataPath::Code(module_name) => bcs::to_bytes(module_name)?,
+            DataPath::Checksum(module_name) => bcs::to_bytes(module_name)?,
             DataPath::Resource(struct_tag) => bcs::to_bytes(struct_tag)?,
             DataPath::TableItem(key) => key.to_vec(),
             DataPath::TableInfo => vec![],
@@ -255,6 +271,7 @@ impl DataPath {
         let data_type = DataType::from_index(data_type).map_err(|e| anyhow!(e))?;
         match data_type {
             DataType::Code => Ok(DataPath::Code(bcs::from_bytes(&val[1..])?)),
+            DataType::Checksum => Ok(DataPath::Checksum(bcs::from_bytes(&val[1..])?)),
             DataType::Resource => Ok(DataPath::Resource(bcs::from_bytes(&val[1..])?)),
             DataType::TableItem => Ok(DataPath::TableItem(val[1..].to_vec())),
             DataType::TableInfo => Ok(DataPath::TableInfo),
@@ -271,6 +288,9 @@ impl fmt::Display for DataPath {
         let storage_index = self.data_type().storage_index();
         match self {
             DataPath::Code(module_name) => {
+                write!(f, "{}/{}", storage_index, module_name)
+            }
+            DataPath::Checksum(module_name) => {
                 write!(f, "{}/{}", storage_index, module_name)
             }
             DataPath::Resource(struct_tag) => {
@@ -300,6 +320,7 @@ impl FromStr for AccessPath {
 
         let data_path = match data_type {
             DataType::Code => AccessPath::code_data_path(Identifier::new(parts[2])?),
+            DataType::Checksum => AccessPath::checksum_data_path(Identifier::new(parts[2])?),
             DataType::Resource => AccessPath::resource_data_path(parse_struct_tag(parts[2])?),
             DataType::TableItem => AccessPath::table_item_data_path(decode_hex(parts[2])?),
             DataType::TableInfo => AccessPath::table_info_data_path(),

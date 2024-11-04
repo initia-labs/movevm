@@ -14,11 +14,13 @@ default = []
 
 [dependencies]
 initia-move-types = { workspace = true }
+initia-move-storage = { workspace = true }
 
 ## Move Dependencies
 move-core-types = { workspace = true }
 move-vm-types = { workspace = true }
 move-binary-format = { workspace = true }
+move-vm-runtime = { workspace = true }
 
 bigdecimal = { workspace = true }
 serde_json = { workspace = true }
@@ -31,5 +33,3 @@ smallbitvec = { workspace = true }
 triomphe = { workspace = true }
 bytes = { workspace = true }
 anyhow = { workspace = true }
-
-initia-move-storage = { workspace = true }

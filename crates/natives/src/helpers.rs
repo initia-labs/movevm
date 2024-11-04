@@ -1,6 +1,6 @@
 use std::str::from_utf8;
 
-use initia_move_types::cosmos::StargateCallback;
+use initia_move_types::cosmos::CosmosCallback;
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_vm_types::values::{Reference, Struct, StructRef, Value, Vector};
@@ -30,7 +30,7 @@ pub fn get_string(v: Struct) -> PartialVMResult<Vec<u8>> {
     )
 }
 
-pub fn get_stargate_options(v: Struct) -> PartialVMResult<(bool, Option<StargateCallback>)> {
+pub fn get_stargate_options(v: Struct) -> PartialVMResult<(bool, Option<CosmosCallback>)> {
     let mut vals: Vec<Value> = v
         .unpack()
         .map_err(|_| partial_extension_error("failed to deserialize arg"))?
@@ -71,7 +71,7 @@ pub fn get_stargate_options(v: Struct) -> PartialVMResult<(bool, Option<Stargate
 
         Ok((
             allow_failure,
-            Some(StargateCallback {
+            Some(CosmosCallback {
                 id: callback_id,
                 module_address: maddr,
                 module_name: mname,

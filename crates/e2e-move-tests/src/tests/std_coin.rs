@@ -1,5 +1,6 @@
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
+use initia_move_natives::code::UpgradePolicy;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
@@ -32,7 +33,7 @@ fn run_tests(tests: Vec<TestInput>) {
 
     // publish std coin
     let output = h
-        .publish_package(&minter_addr, path)
+        .publish_package(&minter_addr, path, UpgradePolicy::Compatible)
         .expect("should success");
     h.commit(output, true);
 

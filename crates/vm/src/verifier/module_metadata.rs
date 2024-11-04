@@ -17,7 +17,7 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use move_model::metadata::{CompilationMetadata, COMPILATION_METADATA_KEY};
-use move_vm_runtime::session::Session;
+use move_vm_runtime::ModuleStorage;
 
 use super::{
     errors::{
@@ -30,7 +30,7 @@ use super::{
 };
 
 pub(crate) fn validate_publish_request(
-    session: &Session,
+    module_storage: &impl ModuleStorage,
     modules: &[CompiledModule],
     module_bundle: &ModuleBundle,
     allow_unstable: bool,
@@ -47,7 +47,7 @@ pub(crate) fn validate_publish_request(
         validate_module_metadata(module).map_err(|e| metadata_validation_error(&e.to_string()))?;
     }
 
-    validate_module_events(session, modules)
+    validate_module_events(module_storage, modules)
         .map_err(|e| metadata_validation_error(&e.to_string()))?;
 
     Ok(())
