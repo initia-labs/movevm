@@ -44,18 +44,20 @@ test-filenames:
 	echo $(COMPILER_SHARED_LIB_DST)
 	echo $(COMPILER_SHARED_LIB_SRC)
 
-test: precompile test-rust test-go
+test: check-libs precompile test-rust test-go
 
+# TODO - codeql is failing without this symlink, not sure why
+#      - https://github.com/golang/go/issues/69605
 check-libs:
-	@if [ ! -f api/libmovevm.so ]; then \
-		cp api/libmovevm.x86_64.so api/libmovevm.so; \
+	@if [ ! -f api/$(SHARED_LIB_SRC) ]; then \
+		ln -s api/$(SHARED_LIB_DST) api/$(SHARED_LIB_SRC); \
 	fi
 
-	@if [ ! -f api/libcompiler.so]; then \
-		cp api/libcompiler.x86_64.so api/libcompiler.so; \
+	@if [ ! -f api/$(COMPILER_SHARED_LIB_SRC) ]; then \
+		ln -s api/$(COMPILER_SHARED_LIB_DST) api/$(COMPILER_SHARED_LIB_SRC); \
 	fi
 
-test-go: check-libs
+test-go:
 	RUST_BACKTRACE=full go test -v -count=1 -parallel=1 ./...
 
 test-safety:
@@ -135,7 +137,9 @@ clean:
 	@-rm libmovevm/bindings.h
 	@-rm libcompiler/bindings_compiler.h
 	@-rm api/$(SHARED_LIB_DST)
+	@-rm api/$(SHARED_LIB_SRC)
 	@-rm api/$(COMPILER_SHARED_LIB_DST)
+	@-rm api/$(COMPILER_SHARED_LIB_SRC)
 	@echo cleaned.
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
