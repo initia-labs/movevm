@@ -1,7 +1,7 @@
 use std::{env::current_dir, fs::File};
 
 use serde_generate::{golang::CodeGenerator, CodeGeneratorConfig, Encoding};
-use serde_reflection::{Tracer, TracerConfig};
+use serde_reflection::{Samples, Tracer, TracerConfig};
 
 use initia_move_types::{
     account::Account,
@@ -23,45 +23,47 @@ use initia_move_types::{
     vm_config::InitiaVMConfig,
 };
 use move_core_types::{
-    account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{ModuleId, ResourceKey, StructTag, TypeTag},
+    language_storage::{ModuleId, ResourceKey, TypeTag},
 };
 
 fn main() {
     let mut tracer = Tracer::new(TracerConfig::default());
-    tracer.trace_simple_type::<Identifier>().unwrap();
-    tracer.trace_simple_type::<AccountAddress>().unwrap();
-    tracer.trace_simple_type::<StructTag>().unwrap();
-    tracer.trace_simple_type::<TypeTag>().unwrap();
-    tracer.trace_simple_type::<ModuleId>().unwrap();
-    tracer.trace_simple_type::<ResourceKey>().unwrap();
-    tracer.trace_simple_type::<StakingDelta>().unwrap();
-    tracer.trace_simple_type::<CosmosMessage>().unwrap();
-    tracer.trace_simple_type::<Account>().unwrap();
-    tracer.trace_simple_type::<GasUsage>().unwrap();
-    tracer.trace_simple_type::<ExecutionResult>().unwrap();
-    tracer.trace_simple_type::<EntryFunction>().unwrap();
-    tracer.trace_simple_type::<ViewFunction>().unwrap();
-    tracer.trace_simple_type::<ViewOutput>().unwrap();
-    tracer.trace_simple_type::<ModuleBundle>().unwrap();
-    tracer.trace_simple_type::<Script>().unwrap();
-    tracer.trace_simple_type::<Env>().unwrap();
-    tracer.trace_simple_type::<TableInfo>().unwrap();
-    tracer.trace_simple_type::<InitiaVMConfig>().unwrap();
-    tracer.trace_simple_type::<CompilerArguments>().unwrap();
-    tracer.trace_simple_type::<CompilerBuildConfig>().unwrap();
+
+    // 1. Record samples for types with custom deserializers.
+    let samples = Samples::new();
+
+    // 2. Trace the main entry point(s) + every enum separately.
+    tracer.trace_type::<Identifier>(&samples).unwrap();
+    tracer.trace_type::<TypeTag>(&samples).unwrap();
+    tracer.trace_type::<ModuleId>(&samples).unwrap();
+    tracer.trace_type::<ResourceKey>(&samples).unwrap();
+    tracer.trace_type::<StakingDelta>(&samples).unwrap();
+    tracer.trace_type::<CosmosMessage>(&samples).unwrap();
+    tracer.trace_type::<Account>(&samples).unwrap();
+    tracer.trace_type::<GasUsage>(&samples).unwrap();
+    tracer.trace_type::<ExecutionResult>(&samples).unwrap();
+    tracer.trace_type::<EntryFunction>(&samples).unwrap();
+    tracer.trace_type::<ViewFunction>(&samples).unwrap();
+    tracer.trace_type::<ViewOutput>(&samples).unwrap();
+    tracer.trace_type::<ModuleBundle>(&samples).unwrap();
+    tracer.trace_type::<Script>(&samples).unwrap();
+    tracer.trace_type::<Env>(&samples).unwrap();
+    tracer.trace_type::<TableInfo>(&samples).unwrap();
+    tracer.trace_type::<InitiaVMConfig>(&samples).unwrap();
+    tracer.trace_type::<CompilerArguments>(&samples).unwrap();
+    tracer.trace_type::<CompilerBuildConfig>(&samples).unwrap();
     tracer
-        .trace_simple_type::<CompilerCoverageBytecodeOptions>()
+        .trace_type::<CompilerCoverageBytecodeOptions>(&samples)
         .unwrap();
     tracer
-        .trace_simple_type::<CompilerCoverageSourceOptions>()
+        .trace_type::<CompilerCoverageSourceOptions>(&samples)
         .unwrap();
     tracer
-        .trace_simple_type::<CompilerCoverageSummaryOptions>()
+        .trace_type::<CompilerCoverageSummaryOptions>(&samples)
         .unwrap();
-    tracer.trace_simple_type::<CompilerDocgenOptions>().unwrap();
-    tracer.trace_simple_type::<CompilerTestOptions>().unwrap();
+    tracer.trace_type::<CompilerDocgenOptions>(&samples).unwrap();
+    tracer.trace_type::<CompilerTestOptions>(&samples).unwrap();
 
     // aliases within StructTag
     tracer
