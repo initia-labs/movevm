@@ -2460,8 +2460,6 @@ module initia_std::minitswap {
         let denom_bytes_len = vector::length(&denom_bytes);
         let receiver_bytes = pad_zero(*string::bytes(receiver));
 
-        // selector: keccak256(b"minitswapHook(string,uint256,string)")
-        // start position of denom: padded(0x60)
         let hex_input = vector[0xbe, 0xed, 0x09, 0x35]; // selector: keccak256(b"minitswapHook(string,uint256,string")).slice(0, 4)
         vector::append(&mut hex_input, table_key::encode_u256(0x60)); // start position of denom: padded(0x60)
         vector::append(&mut hex_input, table_key::encode_u256((amount as u256)));
