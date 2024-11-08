@@ -2464,7 +2464,7 @@ module initia_std::minitswap {
         vector::append(&mut hex_input, table_key::encode_u256(0x60)); // start position of denom: padded(0x60)
         vector::append(&mut hex_input, table_key::encode_u256((amount as u256)));
         vector::append(
-            &mut hex_input, table_key::encode_u256((128 + denom_bytes_len as u256))
+            &mut hex_input, table_key::encode_u256((0x60 + 32 + denom_bytes_len as u256))
         ); // start position of receiver
         vector::append(
             &mut hex_input,
@@ -3418,7 +3418,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}"
+                    b"{\"evm\":null,\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}"
                 ),
             1
         );
@@ -3437,7 +3437,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}"
+                    b"{\"evm\":null,\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}"
                 ),
             3
         );
