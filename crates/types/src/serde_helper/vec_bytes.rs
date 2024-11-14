@@ -3,7 +3,7 @@
 
 use serde::{
     de::Deserializer,
-    set::{SerializeSeq, Serializer},
+    ser::{SerializeSeq, Serializer},
     Deserialize,
 };
 
