@@ -21,7 +21,7 @@ module minitia_std::json {
 
     /// Unmarshal JSON value to the given type.
     public fun unmarshal_json_value<T: drop>(json_value: JSONValue): T {
-        unmarshal(json_value.value)
+        unmarshal_internal(json_value.value)
     }
 
     /// Get the list of keys from the JSON object.
@@ -51,7 +51,7 @@ module minitia_std::json {
         };
 
         let elem = vector::borrow(&obj.elems, idx);
-        option::some(unmarshal<T>(elem.value))
+        option::some(unmarshal_internal<T>(elem.value))
     }
 
     /// Set or overwrite the element in the JSON object.
