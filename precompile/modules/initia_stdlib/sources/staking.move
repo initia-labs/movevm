@@ -624,7 +624,10 @@ module initia_std::staking {
         validator: String,
         fraction: BigDecimal
     ) acquires ModuleStore {
-        assert!(bigdecimal::le(fraction, bigdecimal::one()), error::invalid_argument(EINVALID_SLASH_FRACTION));
+        assert!(
+            bigdecimal::le(fraction, bigdecimal::one()),
+            error::invalid_argument(EINVALID_SLASH_FRACTION)
+        );
 
         check_chain_permission(chain);
 
