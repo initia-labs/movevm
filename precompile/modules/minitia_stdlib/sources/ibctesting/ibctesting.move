@@ -244,17 +244,15 @@ module minitia_std::ibctesting {
             // if allow_failure is false, then abort the transaction
             assert!(allow_failure, ECOSMOS_MESSAGE_FAILED);
 
-            if (allow_failure) {
-                if (callback_id > 0) {
-                    let function_info = callback_function_info(callback_fid);
-                    check_dispatch_type_compatibility_for_testing(
-                        &dispatchable_callback_function_info(), &function_info
-                    );
-                    dispatchable_callback(callback_id, false, &function_info);
-                };
-
-                return false;
+            if (callback_id > 0) {
+                let function_info = callback_function_info(callback_fid);
+                check_dispatch_type_compatibility_for_testing(
+                    &dispatchable_callback_function_info(), &function_info
+                );
+                dispatchable_callback(callback_id, false, &function_info);
             };
+
+            return false;
         };
 
         // withdraw token from the sender
