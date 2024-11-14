@@ -3962,7 +3962,7 @@ Event emitted when arb reverted
         <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error_invalid_state">error::invalid_state</a>(<a href="minitswap.md#0x1_minitswap_EEMERGENCY">EEMERGENCY</a>)
     );
 
-    // check metdata
+    // check metadata
     <b>let</b> share_token_metadata = <a href="fungible_asset.md#0x1_fungible_asset_metadata_from_asset">fungible_asset::metadata_from_asset</a>(&share_token);
     <b>assert</b>!(
         share_token_metadata == <a href="minitswap.md#0x1_minitswap_share_token_metadata">share_token_metadata</a>(),
@@ -4366,7 +4366,7 @@ Event emitted when arb reverted
             // and then calculate arb fee and get actual <b>return</b> amount which is same <b>with</b> return_amount_before_swap_fee - swap_fee_amount - arb_fee_amount
             // <b>to</b> make actual <b>return</b> amount <b>to</b> <b>return</b> amount, set return_amount_before_swap_fee = return_amount_before_swap_fee + return_diff
             // <b>where</b> return_diff = target <b>return</b> amount - actual <b>return</b> amount
-            // and recalculate offer amount repeatly until <b>return</b> amount &lt;= actual <b>return</b> amount
+            // and recalculate offer amount repeatedly until <b>return</b> amount &lt;= actual <b>return</b> amount
             // note that actual <b>return</b> is always small or equal <b>with</b> target <b>return</b> amount
 
             // adjust fee. <b>return</b> amount before swap fee = <b>return</b> amount * 1 / (1 - f)

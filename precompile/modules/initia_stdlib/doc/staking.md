@@ -926,7 +926,7 @@ util function to convert Unbonding => UnbondingResponse for third party queriers
 
 ## Function `get_delegation`
 
-Get delegation info of specifed addr and validator
+Get delegation info of specified addr and validator
 
 
 <pre><code>#[view]
@@ -2116,7 +2116,7 @@ Get <code>share</code> from <code><a href="staking.md#0x1_staking_Delegation">De
 
 ## Function `destroy_empty_delegation`
 
-Destory empty delegation
+Destroy empty delegation
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_destroy_empty_delegation">destroy_empty_delegation</a>(delegation: <a href="staking.md#0x1_staking_Delegation">staking::Delegation</a>)
@@ -2485,7 +2485,7 @@ Get <code>unbonding_amount</code> from <code><a href="staking.md#0x1_staking_Unb
 
 ## Function `destroy_empty_unbonding`
 
-Destory empty unbonding
+Destroy empty unbonding
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_destroy_empty_unbonding">destroy_empty_unbonding</a>(unbonding: <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>)
@@ -2576,7 +2576,7 @@ Deposit the unbonding into recipient's account.
 
 ## Function `withdraw_unbonding`
 
-Withdraw specifed <code>amount</code> of unbonding_amount from the unbonding.
+Withdraw specified <code>amount</code> of unbonding_amount from the unbonding.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="staking.md#0x1_staking_withdraw_unbonding">withdraw_unbonding</a>(<a href="account.md#0x1_account">account</a>: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;<a href="fungible_asset.md#0x1_fungible_asset_Metadata">fungible_asset::Metadata</a>&gt;, validator: <a href="../../move_nursery/../move_stdlib/doc/string.md#0x1_string_String">string::String</a>, release_time: u64, amount: u64): <a href="staking.md#0x1_staking_Unbonding">staking::Unbonding</a>

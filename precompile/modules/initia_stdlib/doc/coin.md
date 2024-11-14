@@ -475,7 +475,7 @@ Only fungible asset metadata owner can make changes.
 
 ## Function `mint`
 
-Mint FAs as the owner of metadat object.
+Mint FAs as the owner of metadata object.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_mint">mint</a>(mint_cap: &<a href="coin.md#0x1_coin_MintCapability">coin::MintCapability</a>, amount: u64): <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>
@@ -506,7 +506,7 @@ Mint FAs as the owner of metadat object.
 
 ## Function `mint_to`
 
-Mint FAs as the owner of metadat object to the primary fungible store of the given recipient.
+Mint FAs as the owner of metadata object to the primary fungible store of the given recipient.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_mint_to">mint_to</a>(mint_cap: &<a href="coin.md#0x1_coin_MintCapability">coin::MintCapability</a>, recipient: <b>address</b>, amount: u64)
@@ -539,7 +539,7 @@ Mint FAs as the owner of metadat object to the primary fungible store of the giv
 
 ## Function `burn`
 
-Burn FAs as the owner of metadat object.
+Burn FAs as the owner of metadata object.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="coin.md#0x1_coin_burn">burn</a>(burn_cap: &<a href="coin.md#0x1_coin_BurnCapability">coin::BurnCapability</a>, fa: <a href="fungible_asset.md#0x1_fungible_asset_FungibleAsset">fungible_asset::FungibleAsset</a>)

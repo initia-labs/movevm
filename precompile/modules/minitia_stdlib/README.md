@@ -1,4 +1,4 @@
-# Minitia Standar Library
+# Minitia Standard Library
 
 The Minitia standard library defines stardarads, types and util modules of Minitia.
 

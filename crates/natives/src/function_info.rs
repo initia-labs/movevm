@@ -19,7 +19,7 @@ use crate::{
     safely_pop_arg,
 };
 
-// Extract Identifer from a move value of type &String
+// Extract Identifier from a move value of type &String
 fn identifier_from_ref(v: Value) -> SafeNativeResult<Identifier> {
     let bytes = v
         .value_as::<StructRef>()

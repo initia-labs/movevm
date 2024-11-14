@@ -443,7 +443,7 @@ module initia_std::fungible_asset {
     }
 
     #[view]
-    /// Retrun true if given address has Metadata else return false
+    /// Return true if given address has Metadata else return false
     public fun is_fungible_asset(metadata_addr: address): bool {
         exists<Metadata>(metadata_addr)
     }

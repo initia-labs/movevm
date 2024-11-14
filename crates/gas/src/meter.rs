@@ -152,7 +152,7 @@ struct Frame {
 #[derive(Clone)]
 /// The official gas meter used inside the Initia VM.
 /// It maintains an internal gas counter, measured in internal gas units, and carries an environment
-/// consisting all the gas parameters, which it can lookup when performing gas calcuations.
+/// consisting all the gas parameters, which it can lookup when performing gas calculations.
 pub struct InitiaGasMeter {
     gas_params: InitiaGasParameters,
     balance: InternalGas,

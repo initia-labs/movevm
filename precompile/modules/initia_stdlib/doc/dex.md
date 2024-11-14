@@ -2584,7 +2584,7 @@ CONTRACT: not allow until LBP is ended
 
 ## Function `single_asset_provide_liquidity`
 
-Signle asset provide liquidity directly
+Single asset provide liquidity directly
 CONTRACT: cannot provide more than the pool amount to prevent huge price impact
 CONTRACT: not allow until LBP is ended
 

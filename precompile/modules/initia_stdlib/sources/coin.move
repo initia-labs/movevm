@@ -199,7 +199,7 @@ module initia_std::coin {
     // Admin operations
     //
 
-    /// Mint FAs as the owner of metadat object.
+    /// Mint FAs as the owner of metadata object.
     public fun mint(mint_cap: &MintCapability, amount: u64): FungibleAsset acquires ManagingRefs {
         let metadata = mint_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
@@ -213,7 +213,7 @@ module initia_std::coin {
         fungible_asset::mint(&refs.mint_ref, amount)
     }
 
-    /// Mint FAs as the owner of metadat object to the primary fungible store of the given recipient.
+    /// Mint FAs as the owner of metadata object to the primary fungible store of the given recipient.
     public fun mint_to(
         mint_cap: &MintCapability, recipient: address, amount: u64
     ) acquires ManagingRefs {
@@ -229,7 +229,7 @@ module initia_std::coin {
         primary_fungible_store::mint(&refs.mint_ref, recipient, amount)
     }
 
-    /// Burn FAs as the owner of metadat object.
+    /// Burn FAs as the owner of metadata object.
     public fun burn(burn_cap: &BurnCapability, fa: FungibleAsset) acquires ManagingRefs {
         let metadata = burn_cap.metadata;
         let metadata_addr = object::object_address(&metadata);

@@ -10,7 +10,7 @@ The dispatchable_fungible_asset wraps the existing fungible_asset module and add
 to customize the logic for withdraw and deposit operations. For example:
 
 - Deflation token: a fixed percentage of token will be destructed upon transfer.
-- Transfer allowlist: token can only be transfered to addresses in the allow list.
+- Transfer allowlist: token can only be transferred to addresses in the allow list.
 - Predicated transfer: transfer can only happen when some certain predicate has been met.
 - Loyalty token: a fixed loyalty will be paid to a designated address when a fungible asset transfer happens
 
@@ -285,7 +285,7 @@ Note: it does not move the underlying object.
 ## Function `transfer_assert_minimum_deposit`
 
 Transfer an <code>amount</code> of fungible asset from <code>from_store</code>, which should be owned by <code>sender</code>, to <code>receiver</code>.
-The recipient is guranteed to receive asset greater than the expected amount.
+The recipient is guaranteed to receive asset greater than the expected amount.
 Note: it does not move the underlying object.
 
 

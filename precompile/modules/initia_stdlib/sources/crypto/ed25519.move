@@ -40,7 +40,7 @@ module initia_std::ed25519 {
     // Functions
     //
 
-    /// Contructs an PublicKey struct, given 32-byte representation.
+    /// Constructs an PublicKey struct, given 32-byte representation.
     public fun public_key_from_bytes(bytes: vector<u8>): PublicKey {
         assert!(
             std::vector::length(&bytes) == PUBLIC_KEY_SIZE,

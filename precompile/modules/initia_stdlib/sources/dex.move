@@ -248,7 +248,7 @@ module initia_std::dex {
 
     const MAX_LIMIT: u8 = 30;
 
-    // TODO - find the resonable percision
+    // TODO - find the reasonable precision
     /// Result Precision of `pow` and `ln` function
     const PRECISION: u64 = 100000;
 
@@ -1108,7 +1108,7 @@ module initia_std::dex {
         )
     }
 
-    /// Signle asset provide liquidity directly
+    /// Single asset provide liquidity directly
     /// CONTRACT: cannot provide more than the pool amount to prevent huge price impact
     /// CONTRACT: not allow until LBP is ended
     public fun single_asset_provide_liquidity(

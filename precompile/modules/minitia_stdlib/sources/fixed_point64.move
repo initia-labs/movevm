@@ -546,7 +546,7 @@ module minitia_std::fixed_point64 {
     #[test_only]
     /// For functions that approximate a value it's useful to test a value is close
     /// to the most correct value up to last digit
-    fun assert_approx_the_same(x: u256, y: u256, precission: u128) {
+    fun assert_approx_the_same(x: u256, y: u256, precision: u128) {
         if (x < y) {
             let tmp = x;
             x = y;
@@ -554,11 +554,11 @@ module minitia_std::fixed_point64 {
         };
         let mult = 1u256;
         let n = 10u256;
-        while (precission > 0) {
-            if (precission % 2 == 1) {
+        while (precision > 0) {
+            if (precision % 2 == 1) {
                 mult = mult * n;
             };
-            precission = precission / 2;
+            precision = precision / 2;
             n = n * n;
         };
         assert!((x - y) * mult < x, 0);

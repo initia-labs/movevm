@@ -1301,7 +1301,7 @@ This can only be called at object creation time as constructor_ref is only avail
 
 ## Function `is_fungible_asset`
 
-Retrun true if given address has Metadata else return false
+Return true if given address has Metadata else return false
 
 
 <pre><code>#[view]

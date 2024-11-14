@@ -83,7 +83,7 @@ impl Clean {
 }
 
 fn validate_manifest(base_path: &Path) -> anyhow::Result<()> {
-    let manifest_path = base_path.join("Move.toml"); // manifest is in pakcage path
+    let manifest_path = base_path.join("Move.toml"); // manifest is in package path
     if !(manifest_path.is_file()) {
         bail!("move package not found in {}", base_path.display())
     }
