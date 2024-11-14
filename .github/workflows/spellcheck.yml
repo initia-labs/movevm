@@ -13,7 +13,7 @@ jobs:
         continue-on-error: true
         run: |
           sudo apt-get install codespell -y
-          codespell -w --ignore-words=.github/config/.codespellignore
+          codespell -w --ignore-words=.github/config/.codespellignore --skip="*.git,*.so,*.dylib,go.mod,go.sum,Cargo.toml"
       - uses: peter-evans/create-pull-request@v7.0.5
         if: github.event_name != 'pull_request'
         with:
