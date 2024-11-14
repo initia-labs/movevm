@@ -50,6 +50,7 @@ module initia_std::minitswap {
     // VM types
     const MOVE: u8 = 0;
     const COSMWASM: u8 = 1;
+    const EVM: u8 = 2;
 
     const MAX_LIMIT: u64 = 30;
 
@@ -1024,7 +1025,7 @@ module initia_std::minitswap {
         let (_, timestamp) = block::get_block_info();
 
         assert!(
-            vm_type == MOVE || vm_type == COSMWASM,
+            vm_type == MOVE || vm_type == COSMWASM || vm_type == EVM,
             error::invalid_argument(EVM_TYPE)
         );
 
@@ -2310,7 +2311,8 @@ module initia_std::minitswap {
 
     struct IBCMemo has copy, drop {
         _move_: MemoMove,
-        wasm: Option<MemoWasm>
+        wasm: Option<MemoWasm>,
+        evm: Option<MemoEvm>
     }
 
     struct MemoMove has copy, drop {
@@ -2355,6 +2357,22 @@ module initia_std::minitswap {
         receiver: String
     }
 
+    struct MemoEvm has copy, drop {
+        message: MemoEvmMessage
+    }
+
+    struct MemoEvmMessage has copy, drop {
+        contract_addr: String,
+        input: String,
+        value: String,
+        access_list: vector<MemoEvmAccessList>
+    }
+
+    struct MemoEvmAccessList has copy, drop {
+        address: String,
+        storage_keys: vector<String>
+    }
+
     fun generate_ibc_message(
         vm_type: u8,
         hook_contract: String,
@@ -2372,7 +2390,8 @@ module initia_std::minitswap {
                     module_name: string::utf8(b"minitswap")
                 }
             },
-            wasm: option::none()
+            wasm: option::none(),
+            evm: option::none()
         };
 
         // set hook message
@@ -2415,11 +2434,65 @@ module initia_std::minitswap {
                 );
 
                 hook_contract
+            } else if (vm_type == EVM) {
+                memo.evm = option::some(
+                    MemoEvm {
+                        message: MemoEvmMessage {
+                            contract_addr: hook_contract,
+                            input: create_evm_input(&op_denom, amount, &receiver),
+                            value: string::utf8(b"0"),
+                            access_list: vector[]
+                        }
+                    }
+                );
+
+                hook_contract
             } else {
                 abort(error::invalid_argument(EVM_TYPE))
             };
 
         (ibc_receiver, json::marshal_to_string(&memo))
+    }
+
+    // abi encode of minitswapHook(string,uint256,string)
+    fun create_evm_input(denom: &String, amount: u64, receiver: &String): String {
+        let denom_bytes = pad_zero(*string::bytes(denom));
+        let denom_bytes_len = vector::length(&denom_bytes);
+        let receiver_bytes = pad_zero(*string::bytes(receiver));
+
+        let hex_input = vector[0xbe, 0xed, 0x09, 0x35]; // selector: keccak256(b"minitswapHook(string,uint256,string")).slice(0, 4)
+        vector::append(&mut hex_input, table_key::encode_u256(0x60)); // start position of denom: padded(0x60)
+        vector::append(&mut hex_input, table_key::encode_u256((amount as u256)));
+        vector::append(
+            &mut hex_input, table_key::encode_u256((0x60 + 32 + denom_bytes_len as u256))
+        ); // start position of receiver
+        vector::append(
+            &mut hex_input,
+            table_key::encode_u256((string::length(denom) as u256))
+        ); // denom length
+        vector::append(&mut hex_input, denom_bytes); // denom bytes
+        vector::append(
+            &mut hex_input,
+            table_key::encode_u256((string::length(receiver) as u256))
+        ); // receiver length
+        vector::append(&mut hex_input, receiver_bytes); // receiver bytes
+
+        return to_string(&hex_input)
+    }
+
+    fun pad_zero(data: vector<u8>): vector<u8> {
+        let padding = vector[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0
+        ];
+        let pad_len = 32 - vector::length(&data) % 32;
+        if (pad_len == 32) {
+            return data
+        };
+
+        vector::trim_reverse(&mut padding, pad_len);
+        vector::append(&mut data, padding);
+        return data
     }
 
     struct FinalizeTokenWithdrawalRequest has copy, drop {
@@ -3345,7 +3418,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}"
+                    b"{\"evm\":null,\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}"
                 ),
             1
         );
@@ -3364,9 +3437,25 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}"
+                    b"{\"evm\":null,\"move\":{\"async_callback\":{\"id\":\"1\",\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}"
                 ),
             3
         );
+    }
+
+    #[test]
+    fun test_evm_input() {
+        assert!(
+            create_evm_input(
+                &string::utf8(
+                    b"l2/771d639f30fbe45e3fbca954ffbe2fcc26f915f5513c67a4a2d0bc1d635bdefd"
+                ),
+                100,
+                &string::utf8(b"init1lf0swvvhy3vqautdemmvunfmp0grfrjgzznx9s")
+            ) == string::utf8(
+                b"0xbeed09350000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000436c322f373731643633396633306662653435653366626361393534666662653266636332366639313566353531336336376134613264306263316436333562646566640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002b696e6974316c663073777676687933767161757464656d6d76756e666d7030677266726a677a7a6e783973000000000000000000000000000000000000000000"
+            ),
+            0
+        )
     }
 }

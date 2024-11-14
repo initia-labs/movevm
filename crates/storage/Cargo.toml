@@ -23,8 +23,5 @@ parking_lot = { workspace = true }
 sha3 = { workspace = true }
 claims = { workspace = true }
 
-[features]
-default = []
-testing = [
-    "move-vm-runtime/testing",
-]
+[dev-dependencies]
+rand = { workspace = true }

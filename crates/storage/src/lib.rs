@@ -9,4 +9,5 @@ pub mod module_cache;
 pub mod module_storage;
 pub mod script_cache;
 
+mod allocator;
 pub mod code_scale;
