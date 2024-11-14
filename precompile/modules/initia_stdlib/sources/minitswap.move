@@ -2486,7 +2486,7 @@ module initia_std::minitswap {
             0, 0, 0, 0, 0, 0
         ];
         let pad_len = 32 - vector::length(&data) % 32;
-        if (pad_len == 0) {
+        if (pad_len == 32) {
             return data
         };
 
