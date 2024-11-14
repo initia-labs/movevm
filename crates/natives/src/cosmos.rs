@@ -86,9 +86,6 @@ fn native_requested_messages(
     ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib;
-    context.charge(gas_params.cosmos_stargate_base)?;
-
     debug_assert!(ty_args.is_empty());
     debug_assert!(_arguments.is_empty());
 
