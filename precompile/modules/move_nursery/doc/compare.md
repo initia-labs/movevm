@@ -107,7 +107,7 @@ Keep this in mind when using this function to compare addresses.
         <b>if</b> (elem_cmp != 0) <b>return</b> elem_cmp
         // <b>else</b>, <a href="compare.md#0x1_compare">compare</a> next element
     };
-    // all compared elements equal; <b>use</b> length comparion <b>to</b> <b>break</b> the tie
+    // all compared elements equal; <b>use</b> length comparison <b>to</b> <b>break</b> the tie
     len_cmp
 }
 </code></pre>

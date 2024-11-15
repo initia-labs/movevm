@@ -660,7 +660,7 @@ Transfer <code>amount</code> of fungible asset from sender's primary store to re
 ## Function `transfer_assert_minimum_deposit`
 
 Transfer <code>amount</code> of fungible asset from sender's primary store to receiver's primary store.
-Use the minimum deposit assertion api to make sure receipient will receive a minimum amount of fund.
+Use the minimum deposit assertion api to make sure recipient will receive a minimum amount of fund.
 
 
 <pre><code><b>public</b> entry <b>fun</b> <a href="primary_fungible_store.md#0x1_primary_fungible_store_transfer_assert_minimum_deposit">transfer_assert_minimum_deposit</a>&lt;T: key&gt;(sender: &<a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer">signer</a>, metadata: <a href="object.md#0x1_object_Object">object::Object</a>&lt;T&gt;, recipient: <b>address</b>, amount: u64, expected: u64)

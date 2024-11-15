@@ -22,7 +22,7 @@ module initia_std::stableswap {
     }
 
     struct Pool has key {
-        /// Extend Refernce
+        /// Extend Reference
         extend_ref: ExtendRef,
         /// ANN
         ann: Ann,
@@ -1604,7 +1604,7 @@ module initia_std::stableswap {
             option::none()
         );
 
-        // theorically it should be 100000000, 100000000 but reduce 1 from return amount because of rounding error
+        // theoretically it should be 100000000, 100000000 but reduce 1 from return amount because of rounding error
         assert!(
             get_pool(pool).coin_balances == vector[100000001, 100000000],
             0
@@ -1653,7 +1653,7 @@ module initia_std::stableswap {
 
         let liquidity_after = coin::balance(chain_addr, metadata_lp);
 
-        // theorically it should be same but reduce 1 from return amount because of rounding error
+        // theoretically it should be same but reduce 1 from return amount because of rounding error
         assert!(liquidity_before == liquidity_after + 1, 0);
     }
 }

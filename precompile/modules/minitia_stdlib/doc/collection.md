@@ -872,7 +872,7 @@ Provides the count of the current selection if supply tracking is used
 ## Function `nfts`
 
 get nft list from collection
-if <code>start_after</code> is not none, seach nfts in range (start_after, ...]
+if <code>start_after</code> is not none, search nfts in range (start_after, ...]
 
 
 <pre><code>#[view]

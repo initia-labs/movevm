@@ -670,7 +670,7 @@ mod json_arg_testing {
             .unwrap()
         );
 
-        // invalid inner addresss
+        // invalid inner address
         let arg = b"[\"0xgg\"]";
         _ = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap_err();
     }

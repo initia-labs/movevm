@@ -1687,7 +1687,7 @@ module initia_std::minitswap {
             error::invalid_state(EEMERGENCY)
         );
 
-        // check metdata
+        // check metadata
         let share_token_metadata = fungible_asset::metadata_from_asset(&share_token);
         assert!(
             share_token_metadata == share_token_metadata(),
@@ -2941,7 +2941,7 @@ module initia_std::minitswap {
                 // and then calculate arb fee and get actual return amount which is same with return_amount_before_swap_fee - swap_fee_amount - arb_fee_amount
                 // to make actual return amount to return amount, set return_amount_before_swap_fee = return_amount_before_swap_fee + return_diff
                 // where return_diff = target return amount - actual return amount
-                // and recalculate offer amount repeatly until return amount <= actual return amount
+                // and recalculate offer amount repeatedly until return amount <= actual return amount
                 // note that actual return is always small or equal with target return amount
 
                 // adjust fee. return amount before swap fee = return amount * 1 / (1 - f)

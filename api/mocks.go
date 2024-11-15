@@ -20,7 +20,7 @@ func NewLookup() *Lookup {
 	}
 }
 
-// Get wraps the underlying DB's Get method panicing on error.
+// Get wraps the underlying DB's Get method panicking on error.
 func (l Lookup) Get(key []byte) []byte {
 	v, err := l.db.Get(key)
 	if err != nil {
@@ -30,21 +30,21 @@ func (l Lookup) Get(key []byte) []byte {
 	return v
 }
 
-// Set wraps the underlying DB's Set method panicing on error.
+// Set wraps the underlying DB's Set method panicking on error.
 func (l Lookup) Set(key, value []byte) {
 	if err := l.db.Set(key, value); err != nil {
 		panic(err)
 	}
 }
 
-// Delete wraps the underlying DB's Delete method panicing on error.
+// Delete wraps the underlying DB's Delete method panicking on error.
 func (l Lookup) Delete(key []byte) {
 	if err := l.db.Delete(key); err != nil {
 		panic(err)
 	}
 }
 
-// Iterator wraps the underlying DB's Iterator method panicing on error.
+// Iterator wraps the underlying DB's Iterator method panicking on error.
 func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
 	iter, err := l.db.Iterator(start, end)
 	if err != nil {
@@ -54,7 +54,7 @@ func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
 	return iter
 }
 
-// ReverseIterator wraps the underlying DB's ReverseIterator method panicing on error.
+// ReverseIterator wraps the underlying DB's ReverseIterator method panicking on error.
 func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
 	iter, err := l.db.ReverseIterator(start, end)
 	if err != nil {

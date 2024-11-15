@@ -112,7 +112,7 @@
 <code>extend_ref: <a href="object.md#0x1_object_ExtendRef">object::ExtendRef</a></code>
 </dt>
 <dd>
- Extend Refernce
+ Extend Reference
 </dd>
 <dt>
 <code>ann: <a href="stableswap.md#0x1_stableswap_Ann">stableswap::Ann</a></code>

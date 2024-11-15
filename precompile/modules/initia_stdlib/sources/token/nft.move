@@ -60,7 +60,7 @@ module initia_std::nft {
         delete_ref: object::DeleteRef
     }
 
-    /// This enables mutating descritpion and URI by higher level services.
+    /// This enables mutating description and URI by higher level services.
     struct MutatorRef has drop, store {
         self: address
     }

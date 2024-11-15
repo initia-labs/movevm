@@ -312,7 +312,7 @@ module initia_std::primary_fungible_store {
     }
 
     /// Transfer `amount` of fungible asset from sender's primary store to receiver's primary store.
-    /// Use the minimum deposit assertion api to make sure receipient will receive a minimum amount of fund.
+    /// Use the minimum deposit assertion api to make sure recipient will receive a minimum amount of fund.
     public entry fun transfer_assert_minimum_deposit<T: key>(
         sender: &signer,
         metadata: Object<T>,

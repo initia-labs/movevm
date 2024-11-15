@@ -343,7 +343,7 @@ Returns square root of x, precisely floor(sqrt(x))
     <b>let</b> res = 1 &lt;&lt; ((<a href="math128.md#0x1_math128_floor_log2">floor_log2</a>(x) + 1) &gt;&gt; 1);
     // We <b>use</b> standard newton-rhapson iteration <b>to</b> improve the initial approximation.
     // The <a href="../../move_nursery/../move_stdlib/doc/error.md#0x1_error">error</a> term evolves <b>as</b> delta_i+1 = delta_i^2 / 2 (quadratic convergence).
-    // It turns out that after 5 iterations the delta is smaller than 2^-64 and thus below the treshold.
+    // It turns out that after 5 iterations the delta is smaller than 2^-64 and thus below the threshold.
     res = (res + x / res) &gt;&gt; 1;
     res = (res + x / res) &gt;&gt; 1;
     res = (res + x / res) &gt;&gt; 1;

@@ -12,7 +12,7 @@ module initia_std::multisig {
     use initia_std::simple_map::{Self, SimpleMap};
     use initia_std::table::{Self, Table};
 
-    // errros
+    // errors
 
     const EINVALID_THRESHOLD: u64 = 1;
 
@@ -34,7 +34,7 @@ module initia_std::multisig {
 
     // constants
 
-    const STATUS: vector<vector<u8>> = vector[b"in voting preiod", b"executed", b"expired"];
+    const STATUS: vector<vector<u8>> = vector[b"in voting period", b"executed", b"expired"];
 
     const MAX_LIMIT: u8 = 30;
 

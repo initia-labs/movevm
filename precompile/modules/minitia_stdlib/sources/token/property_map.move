@@ -72,7 +72,7 @@ module minitia_std::property_map {
     }
 
     /// Burns the entire property map
-    /// TODO: hanlde when table is not empty
+    /// TODO: handle when table is not empty
     public fun burn(ref: MutatorRef) acquires PropertyMap {
         move_from<PropertyMap>(ref.self);
     }

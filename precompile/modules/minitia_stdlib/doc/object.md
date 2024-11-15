@@ -550,7 +550,7 @@ The version of ref does not match with object core version.
 
 <a id="0x1_object_MAXIMUM_OBJECT_NESTING"></a>
 
-Maximum nesting from one object to another. That is objects can technically have infinte
+Maximum nesting from one object to another. That is objects can technically have infinite
 nesting, but any checks such as transfer will only be evaluated this deep.
 
 

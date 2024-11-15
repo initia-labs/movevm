@@ -49,7 +49,7 @@ module initia_std::object {
     /// The version of ref does not match with object core version.
     const EVERSION_MISMATCH: u64 = 9;
 
-    /// Maximum nesting from one object to another. That is objects can technically have infinte
+    /// Maximum nesting from one object to another. That is objects can technically have infinite
     /// nesting, but any checks such as transfer will only be evaluated this deep.
     const MAXIMUM_OBJECT_NESTING: u8 = 8;
 

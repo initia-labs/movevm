@@ -137,7 +137,7 @@ module minitia_std::math128 {
         let res = 1 << ((floor_log2(x) + 1) >> 1);
         // We use standard newton-rhapson iteration to improve the initial approximation.
         // The error term evolves as delta_i+1 = delta_i^2 / 2 (quadratic convergence).
-        // It turns out that after 5 iterations the delta is smaller than 2^-64 and thus below the treshold.
+        // It turns out that after 5 iterations the delta is smaller than 2^-64 and thus below the threshold.
         res = (res + x / res) >> 1;
         res = (res + x / res) >> 1;
         res = (res + x / res) >> 1;
@@ -331,13 +331,13 @@ module minitia_std::math128 {
     #[test_only]
     /// For functions that approximate a value it's useful to test a value is close
     /// to the most correct value up to last digit
-    fun assert_approx_the_same(x: u128, y: u128, precission: u128) {
+    fun assert_approx_the_same(x: u128, y: u128, precision: u128) {
         if (x < y) {
             let tmp = x;
             x = y;
             y = tmp;
         };
-        let mult = pow(10, precission);
+        let mult = pow(10, precision);
         assert!((x - y) * mult < x, 0);
     }
 }

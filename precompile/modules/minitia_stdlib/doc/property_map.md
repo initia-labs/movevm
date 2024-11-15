@@ -352,7 +352,7 @@ Maximum number of characters in a property name
 ## Function `burn`
 
 Burns the entire property map
-TODO: hanlde when table is not empty
+TODO: handle when table is not empty
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="property_map.md#0x1_property_map_burn">burn</a>(ref: <a href="property_map.md#0x1_property_map_MutatorRef">property_map::MutatorRef</a>)
