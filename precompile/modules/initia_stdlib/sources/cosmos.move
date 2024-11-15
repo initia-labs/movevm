@@ -414,17 +414,30 @@ module initia_std::cosmos {
         )
     }
 
+    //
+    // Native Functions
+    //
+
     native fun stargate_internal(
         sender: address, data: vector<u8>, option: Options
     );
 
     #[test_only]
-    native public fun requested_messages(): vector<String>;
+    native public fun requested_messages(): (vector<String>, vector<Options>);
 
     #[test_only]
     public fun was_message_requested(msg: &String): bool {
+        was_message_requested_with_options(msg, &disallow_failure())
+    }
+
+    #[test_only]
+    public fun was_message_requested_with_options(
+        msg: &String, opt: &Options
+    ): bool {
         use std::vector;
-        vector::contains(&requested_messages(), msg)
+        let (messages, opts) = requested_messages();
+        let (found, idx) = vector::index_of(&messages, msg);
+        found && vector::borrow(&opts, idx) == opt
     }
 
     // ================================================== Options =================================================
@@ -493,6 +506,11 @@ module initia_std::cosmos {
         }
     }
 
+    /// Unpack options for external use
+    public fun unpack_options(opt: Options): (bool, u64, String) {
+        (opt.allow_failure, opt.callback_id, string::utf8(opt.callback_fid))
+    }
+
     //=========================================== Tests ===========================================
 
     #[test(sender = @0xcafe)]
@@ -517,5 +535,38 @@ module initia_std::cosmos {
             );
 
         assert!(was_message_requested(&msg), 1);
+    }
+
+    #[test(sender = @0xcafe)]
+    public fun test_stargate_with_options(sender: &signer) {
+        use std::string::{utf8, bytes};
+
+        let voter = utf8(b"voter");
+        let proposal_id = 1;
+        let option = 1;
+        let metadata = utf8(b"metadata");
+        let msg =
+            json::marshal_to_string(
+                &VoteRequest {
+                    _type_: utf8(b"/cosmos.gov.v1.MsgVote"),
+                    proposal_id,
+                    voter: voter,
+                    option,
+                    metadata: metadata
+                }
+            );
+
+        stargate_with_options(
+            sender,
+            *bytes(&msg),
+            allow_failure_with_callback(1, utf8(b"0x1::test::test_fn"))
+        );
+
+        assert!(
+            was_message_requested_with_options(
+                &msg, &allow_failure_with_callback(1, utf8(b"0x1::test::test_fn"))
+            ),
+            1
+        );
     }
 }

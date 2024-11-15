@@ -84,4 +84,23 @@ module minitia_std::function_info {
     // Test only dependencies so we can invoke those friend functions.
     #[test_only]
     friend minitia_std::function_info_tests;
+
+    #[test_only]
+    public fun load_module_from_function_for_testing(f: &FunctionInfo) {
+        load_module_from_function(f)
+    }
+
+    #[test_only]
+    public fun new_function_info_for_testing(
+        module_address: address, module_name: String, function_name: String
+    ): FunctionInfo {
+        new_function_info_from_address(module_address, module_name, function_name)
+    }
+
+    #[test_only]
+    public fun check_dispatch_type_compatibility_for_testing(
+        framework_function: &FunctionInfo, dispatch_target: &FunctionInfo
+    ): bool {
+        check_dispatch_type_compatibility(framework_function, dispatch_target)
+    }
 }

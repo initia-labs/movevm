@@ -73,6 +73,9 @@ test-storage:
 test-e2e: 
 	cargo test -p e2e-move-tests --features testing
 
+test-unit: 
+	cargo test stdlib_move_unit_tests --features testing -p e2e-move-tests
+
 build: precompile build-rust build-go
 
 build-rust: build-rust-release

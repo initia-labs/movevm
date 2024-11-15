@@ -10,3 +10,4 @@ MoveNursery = { local = "../move_nursery" }
 std = "0x1"
 initia_std = "0x1"
 relayer = "0x3d18d54532fc42e567090852db6eb21fa528f952"
+cafe = "0xcafe"

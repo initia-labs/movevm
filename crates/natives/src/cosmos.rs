@@ -86,9 +86,6 @@ fn native_requested_messages(
     ty_args: Vec<Type>,
     _arguments: VecDeque<Value>,
 ) -> SafeNativeResult<SmallVec<[Value; 1]>> {
-    let gas_params = &context.native_gas_params.initia_stdlib;
-    context.charge(gas_params.cosmos_stargate_base)?;
-
     debug_assert!(ty_args.is_empty());
     debug_assert!(_arguments.is_empty());
 
@@ -100,7 +97,37 @@ fn native_requested_messages(
         .into_iter()
         .map(|m| Value::struct_(Struct::pack(vec![Value::vector_u8(m.data)])));
 
-    Ok(smallvec![Value::vector_for_testing_only(messages)])
+    let options = cosmos_context
+        .messages
+        .borrow()
+        .clone()
+        .into_iter()
+        .map(|m| {
+            let (callback_id, callback_fid) = if let Some(callback) = m.callback {
+                (
+                    callback.id,
+                    format!(
+                        "{}::{}::{}",
+                        callback.module_address.to_standard_string(),
+                        callback.module_name,
+                        callback.function_name
+                    )
+                    .into_bytes(),
+                )
+            } else {
+                (0, vec![])
+            };
+            Value::struct_(Struct::pack(vec![
+                Value::bool(m.allow_failure),
+                Value::u64(callback_id),
+                Value::vector_u8(callback_fid),
+            ]))
+        });
+
+    Ok(smallvec![
+        Value::vector_for_testing_only(messages),
+        Value::vector_for_testing_only(options)
+    ])
 }
 
 /***************************************************************************************************

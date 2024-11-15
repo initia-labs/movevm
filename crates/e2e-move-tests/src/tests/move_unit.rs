@@ -20,6 +20,7 @@ use move_cli::base::test::{run_move_unit_tests_with_factory, UnitTestResult};
 use move_core_types::effects::ChangeSet;
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
+use move_model::metadata::{CompilerVersion, LanguageVersion};
 
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
@@ -69,6 +70,8 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         .compiler_config
         .known_attributes
         .clone_from(metadata::get_all_attribute_names());
+    build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_1);
+    build_config.compiler_config.language_version = Some(LanguageVersion::V2_1);
 
     let res = run_move_unit_tests_with_factory(
         &pkg_path,

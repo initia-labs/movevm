@@ -31,6 +31,9 @@ pub mod table;
 pub mod transaction_context;
 pub mod type_info;
 
+#[cfg(feature = "testing")]
+pub mod ibctesting;
+
 use initia_move_gas::{MiscGasParameters, NativeGasParameters};
 use interface::SafeNativeBuilder;
 use move_core_types::account_address::AccountAddress;
@@ -82,6 +85,9 @@ pub fn initia_move_natives(
         dispatchable_fungible_asset::make_all(builder)
     );
     add_natives_from_module!("biguint", biguint::make_all(builder));
+
+    #[cfg(feature = "testing")]
+    add_natives_from_module!("ibctesting", ibctesting::make_all(builder));
 
     make_table_from_iter(initia_std_addr, natives)
 }
