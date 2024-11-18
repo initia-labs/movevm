@@ -1,19 +1,22 @@
-name: publish changed files to move-natives on release
+name: Publish changed files to move-natives on tag creation
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release rust libmovevm"]
+    types:
+      - completed
 
 jobs:
   copy-files:
-    name: copy files to move-natives
+    name: Copy files to move-natives
+    if: startsWith(github.event.workflow_run.head_branch, 'v') # Check if the run was triggered by a tag, adjust 'v' if needed
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout movevm repository
+      - name: Checkout movevm repository
         uses: actions/checkout@v4
 
-      - name: push files to move-natives
+      - name: Push files to move-natives
         uses: initia-labs/actions/push-to-repo@main
         env:
           TOKEN_GITHUB: ${{ secrets.PUBLISH_TOKEN }}
@@ -27,8 +30,9 @@ jobs:
           destination-repo: 'move-natives'
           destination-branch: 'main'
           email: 'infra@initia.xyz'
-          commit-msg: 'bump movevm on release ${{ github.event.release.tag_name }}'
-      - name: push shared dynamic libraries to builder.js
+          commit-msg: 'bump movevm ${{ github.event.workflow_run.head_branch }}'
+
+      - name: Push shared dynamic libraries to builder.js
         uses: initia-labs/actions/push-to-repo@main
         env:
           TOKEN_GITHUB: ${{ secrets.PUBLISH_TOKEN }}
@@ -45,4 +49,4 @@ jobs:
           destination-branch: 'main'
           destination-dir: 'library'
           email: 'infra@initia.xyz'
-          commit-msg: 'bump movevm on release ${{ github.event.release.tag_name }}'
+          commit-msg: 'bump movevm ${{ github.event.workflow_run.head_branch }}'
