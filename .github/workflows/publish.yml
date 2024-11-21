@@ -26,11 +26,11 @@ jobs:
             precompile/modules/minitia_stdlib
             precompile/modules/move_nursery
             precompile/modules/move_stdlib
-          destination-username: 'initia-labs'
-          destination-repo: 'move-natives'
-          destination-branch: 'main'
-          email: 'infra@initia.xyz'
-          commit-msg: 'bump movevm ${{ github.event.workflow_run.head_branch }}'
+          destination-username: "initia-labs"
+          destination-repo: "move-natives"
+          destination-branch: "main"
+          email: "infra@initia.xyz"
+          commit-msg: "bump movevm ${{ github.event.workflow_run.head_branch }}"
 
       - name: Push shared dynamic libraries to builder.js
         uses: initia-labs/actions/push-to-repo@main
@@ -39,14 +39,14 @@ jobs:
         with:
           sources: |
             api/libmovevm.dylib
-            api/licompiler.dylib
+            api/libcompiler.dylib
             api/libmovevm.x86_64.so
             api/libmovevm.aarch64.so
             api/libcompiler.x86_64.so
             api/libcompiler.aarch64.so
-          destination-username: 'initia-labs'
-          destination-repo: 'builder.js'
-          destination-branch: 'main'
-          destination-dir: 'library'
-          email: 'infra@initia.xyz'
-          commit-msg: 'bump movevm ${{ github.event.workflow_run.head_branch }}'
+          destination-username: "initia-labs"
+          destination-repo: "builder.js"
+          destination-branch: "main"
+          destination-dir: "library"
+          email: "infra@initia.xyz"
+          commit-msg: "bump movevm ${{ github.event.workflow_run.head_branch }}"
