@@ -3,10 +3,10 @@ module github.com/initia-labs/movevm
 go 1.22
 
 require (
-	cosmossdk.io/math v1.3.0
+	cosmossdk.io/math v1.4.0
 	github.com/aptos-labs/serde-reflection/serde-generate/runtime/golang v0.0.0-20231213012317-73b6bbf74833
 	github.com/cosmos/cosmos-db v1.0.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
