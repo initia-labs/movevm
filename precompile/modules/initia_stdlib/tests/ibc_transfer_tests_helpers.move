@@ -43,7 +43,10 @@ module cafe::ibc_transfer_tests_helpers {
     struct OnTimeoutResponse has key {}
 
     public fun store_on_callback_request(
-        sender: address, amount: u64, expected_result: bool, id: u64
+        sender: address,
+        amount: u64,
+        expected_result: bool,
+        id: u64
     ) {
         let chain_signer = create_signer_for_test(@std);
         move_to<OnCallbackRequest>(
@@ -71,7 +74,10 @@ module cafe::ibc_transfer_tests_helpers {
     }
 
     public fun store_on_ack_request(
-        id: u64, expected_result: bool, sender: address, amount: u64
+        id: u64,
+        expected_result: bool,
+        sender: address,
+        amount: u64
     ) {
         let chain_signer = create_signer_for_test(@std);
         move_to<OnAckRequest>(

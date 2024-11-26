@@ -19,35 +19,6 @@ module initia_std::cosmos {
     const EINVALID_CALLBACK_ID: u64 = 1;
     const EINVALID_CALLBACK_FID: u64 = 2;
 
-    struct VoteRequest has copy, drop {
-        _type_: String,
-        proposal_id: u64,
-        voter: String,
-        option: u64,
-        metadata: String
-    }
-
-    public entry fun stargate_vote(
-        sender: &signer,
-        proposal_id: u64,
-        voter: String,
-        option: u64,
-        metadata: String
-    ) {
-        stargate(
-            sender,
-            json::marshal(
-                &VoteRequest {
-                    _type_: string::utf8(b"/cosmos.gov.v1.MsgVote"),
-                    proposal_id,
-                    voter,
-                    option,
-                    metadata
-                }
-            )
-        );
-    }
-
     public entry fun stargate(sender: &signer, data: vector<u8>) {
         stargate_internal(signer::address_of(sender), data, disallow_failure())
     }
@@ -70,6 +41,61 @@ module initia_std::cosmos {
         sender: &signer, data: vector<u8>, options: Options
     ) {
         stargate_internal(signer::address_of(sender), data, options)
+    }
+
+    struct VoteRequestV2 has copy, drop {
+        _type_: String,
+        proposal_id: u64,
+        voter: String,
+        option: u32,
+        metadata: String
+    }
+
+    public entry fun stargate_vote_v2(
+        sender: &signer,
+        proposal_id: u64,
+        voter: String,
+        option: u32,
+        metadata: String
+    ) {
+        stargate(
+            sender,
+            json::marshal(
+                &VoteRequestV2 {
+                    _type_: string::utf8(b"/cosmos.gov.v1.MsgVote"),
+                    proposal_id,
+                    voter,
+                    option,
+                    metadata
+                }
+            )
+        );
+    }
+
+    #[deprecated]
+    struct VoteRequest has copy, drop {
+        _type_: String,
+        proposal_id: u64,
+        voter: String,
+        option: u64,
+        metadata: String
+    }
+
+    #[deprecated]
+    public entry fun stargate_vote(
+        sender: &signer,
+        proposal_id: u64,
+        voter: String,
+        option: u64,
+        metadata: String
+    ) {
+        stargate_vote_v2(
+            sender,
+            proposal_id,
+            voter,
+            option as u32,
+            metadata
+        )
     }
 
     struct ExecuteRequest has copy, drop {
@@ -525,11 +551,11 @@ module initia_std::cosmos {
 
         let msg =
             json::marshal_to_string(
-                &VoteRequest {
+                &VoteRequestV2 {
                     _type_: utf8(b"/cosmos.gov.v1.MsgVote"),
                     proposal_id,
                     voter: voter,
-                    option,
+                    option: option as u32,
                     metadata: metadata
                 }
             );
@@ -547,11 +573,11 @@ module initia_std::cosmos {
         let metadata = utf8(b"metadata");
         let msg =
             json::marshal_to_string(
-                &VoteRequest {
+                &VoteRequestV2 {
                     _type_: utf8(b"/cosmos.gov.v1.MsgVote"),
                     proposal_id,
                     voter: voter,
-                    option,
+                    option: option as u32,
                     metadata: metadata
                 }
             );
