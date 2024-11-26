@@ -573,11 +573,11 @@ module initia_std::cosmos {
         let metadata = utf8(b"metadata");
         let msg =
             json::marshal_to_string(
-                &VoteRequest {
+                &VoteRequestV2 {
                     _type_: utf8(b"/cosmos.gov.v1.MsgVote"),
                     proposal_id,
                     voter: voter,
-                    option,
+                    option: option as u32,
                     metadata: metadata
                 }
             );
