@@ -82,7 +82,7 @@ module minitia_std::address {
         assert!(addr == from_sdk(addr_sdk), 0)
     }
 
-     // hex string <> address
+    // hex string <> address
     native public fun to_string(addr: address): String;
     native public fun from_string(addr_str: String): address;
 

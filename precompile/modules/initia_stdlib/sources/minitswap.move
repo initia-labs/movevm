@@ -2464,7 +2464,8 @@ module initia_std::minitswap {
         vector::append(&mut hex_input, table_key::encode_u256(0x60)); // start position of denom: padded(0x60)
         vector::append(&mut hex_input, table_key::encode_u256((amount as u256)));
         vector::append(
-            &mut hex_input, table_key::encode_u256((0x60 + 32 + denom_bytes_len as u256))
+            &mut hex_input,
+            table_key::encode_u256((0x60 + 32 + denom_bytes_len as u256))
         ); // start position of receiver
         vector::append(
             &mut hex_input,
