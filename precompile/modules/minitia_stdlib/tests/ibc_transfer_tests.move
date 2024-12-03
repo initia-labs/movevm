@@ -285,7 +285,7 @@ module cafe::ibc_transfer_tests {
             },
             timeout_timestamp: 0u64, // timeout timestamp is not used in this test
             memo: string::utf8(
-                b"{\"move\":{\"async_callback\":{\"id\": \"103\", \"module_address\": \"0xcafe\", \"module_name\": \"ibc_transfer_tests_helpers\"}}}"
+                b"{\"move\":{\"async_callback\":{\"id\": 103, \"module_address\": \"0xcafe\", \"module_name\": \"ibc_transfer_tests_helpers\"}}}"
             )
         };
 
@@ -362,7 +362,7 @@ module cafe::ibc_transfer_tests {
             },
             timeout_timestamp: 0u64, // timeout timestamp is not used in this test
             memo: string::utf8(
-                b"{\"move\":{\"async_callback\":{\"id\": \"103\", \"module_address\": \"0xcafe\", \"module_name\": \"ibc_transfer_tests_helpers\"}}}"
+                b"{\"move\":{\"async_callback\":{\"id\": 103, \"module_address\": \"0xcafe\", \"module_name\": \"ibc_transfer_tests_helpers\"}}}"
             )
         };
 
@@ -441,7 +441,7 @@ module cafe::ibc_transfer_tests {
             },
             timeout_timestamp: 0u64, // timeout timestamp is not used in this test
             memo: string::utf8(
-                b"{\"move\":{\"async_callback\":{\"id\": \"103\", \"module_address\": \"0xcafe\", \"module_name\": \"ibc_transfer_tests_helpers\"}}}"
+                b"{\"move\":{\"async_callback\":{\"id\": 103, \"module_address\": \"0xcafe\", \"module_name\": \"ibc_transfer_tests_helpers\"}}}"
             )
         };
 
