@@ -205,7 +205,7 @@ module minitia_std::ibctesting {
                     check_dispatch_type_compatibility_for_testing(
                         &dispatchable_ibc_timeout_function_info(), &function_info
                     );
-                    dispatchable_ibc_timeout(async_callback.id, &function_info);
+                    dispatchable_ibc_timeout((async_callback.id as u64), &function_info);
                 } else if (option::is_some(&result.async_callback)) {
                     let async_callback = option::destroy_some(result.async_callback);
                     let function_info =
@@ -218,7 +218,7 @@ module minitia_std::ibctesting {
                         &dispatchable_ibc_ack_function_info(), &function_info
                     );
                     dispatchable_ibc_ack(
-                        async_callback.id, result.success, &function_info
+                        (async_callback.id as u64), result.success, &function_info
                     );
                 };
             }
@@ -401,7 +401,7 @@ module minitia_std::ibctesting {
     }
 
     struct MoveAsyncCallback has copy, drop, store {
-        id: u64,
+        id: u32,
         module_address: address,
         module_name: String
     }
