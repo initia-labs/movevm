@@ -16,7 +16,7 @@ can do the cross-compilation.
 
 ## Usage
 
-Create a local docker image, capable of cross-compling linux and macos dynamic libs:
+Create a local docker image, capable of cross-compiling linux and macos dynamic libs:
 
 ```sh
 (cd builders && make docker-images)
