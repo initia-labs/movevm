@@ -1475,7 +1475,7 @@ module initia_std::minitswap {
 
         let uinit_pool_balance = coin::balance(pool_addr, init_metadata());
         assert!(
-            uinit_pool_balance > arb_info.ibc_op_init_sent,
+            uinit_pool_balance >= arb_info.ibc_op_init_sent,
             error::invalid_state(ENOT_ENOUGH_BALANCE)
         );
 
