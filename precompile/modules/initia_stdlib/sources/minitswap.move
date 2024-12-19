@@ -2506,38 +2506,6 @@ module initia_std::minitswap {
         amount: u64
     }
 
-    fun generate_finalize_token_withdrawal_msg(
-        bridge_id: u64,
-        output_index: u64,
-        withdrawal_proofs: vector<String>,
-        sender: address,
-        receiver: address,
-        sequence: u64,
-        denom: String,
-        amount: u64,
-        version: String,
-        state_root: String,
-        storage_root: String,
-        latest_block_hash: String
-    ): vector<u8> {
-        json::marshal(
-            &FinalizeTokenWithdrawalRequest {
-                _type_: string::utf8(b"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal"),
-                bridge_id,
-                output_index,
-                withdrawal_proofs,
-                sender: to_sdk(sender),
-                receiver: to_sdk(receiver),
-                sequence,
-                amount: CosmosCoin { denom, amount },
-                version,
-                state_root,
-                storage_root,
-                latest_block_hash
-            }
-        )
-    }
-
     fun init_metadata(): Object<Metadata> {
         let addr = object::create_object_address(&@initia_std, b"uinit");
         object::address_to_object<Metadata>(addr)
@@ -3114,28 +3082,6 @@ module initia_std::minitswap {
             arb_index,
             signer::address_of(account)
         );
-    }
-
-    #[test]
-    fun test_finalize_token_withdrawal_msg() {
-        let msg =
-            generate_finalize_token_withdrawal_msg(
-                1,
-                2,
-                vector[string::utf8(b"abc"), string::utf8(b"123")],
-                @0x1,
-                @0x2,
-                3,
-                string::utf8(b"uinit"),
-                100,
-                string::utf8(b"version"),
-                string::utf8(b"state_root"),
-                string::utf8(b"storage_root"),
-                string::utf8(b"latest_block_hash")
-            );
-        let json_str =
-            b"{\"@type\":\"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal\",\"amount\":{\"amount\":\"100\",\"denom\":\"uinit\"},\"bridge_id\":\"1\",\"latest_block_hash\":\"latest_block_hash\",\"output_index\":\"2\",\"receiver\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzwsp0lj\",\"sender\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqr5e3d\",\"sequence\":\"3\",\"state_root\":\"state_root\",\"storage_root\":\"storage_root\",\"version\":\"version\",\"withdrawal_proofs\":[\"abc\",\"123\"]}";
-        assert!(msg == json_str, 0);
     }
 
     #[test]
