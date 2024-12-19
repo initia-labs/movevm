@@ -42,6 +42,7 @@ module initia_std::minitswap {
     const EINVAILD_METADATA: u64 = 16;
     const ESMALL_ARB_PROFIT: u64 = 17;
     const EVIRTUAL_POOL_EXISTS: u64 = 18;
+    const EDEPRECATED: u64 = 19;
 
     const A_PRECISION: u256 = 100;
     const U64_MAX: u128 = 18_446_744_073_709_551_615;
@@ -1451,17 +1452,11 @@ module initia_std::minitswap {
         primary_fungible_store::deposit(signer::address_of(account), return_asset);
     }
 
-    public entry fun finalize_arb(
-        account: &signer,
-        arb_index: u64,
-        output_index: u64,
-        withdrawal_proofs: vector<String>,
-        sender: address,
-        sequence: u64,
-        version: String,
-        state_root: String,
-        storage_root: String,
-        latest_block_hash: String
+    // Since MsgFinalizeWithdrawal can now be executed by anyone,
+    // Make executor triggers MsgFinalizeWithdrawal by themselves
+    // and then calls `finalize_arb_v2`.
+    public entry fun finalize_arb_v2(
+        account: &signer, arb_index: u64
     ) acquires ModuleStore, VirtualPool {
         // check arb info
         let module_store = borrow_global<ModuleStore>(@initia_std);
@@ -1470,46 +1465,41 @@ module initia_std::minitswap {
                 &module_store.global_arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
-        let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
+        let pool_addr = object::object_address(&*pool_obj);
+        let pool = borrow_global<VirtualPool>(pool_addr);
         let arb_info =
             table::borrow(
                 &pool.arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
 
-        // execute finalize token withdrawal
-        let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
-        let withdrawal_msg =
-            generate_finalize_token_withdrawal_msg(
-                pool.op_bridge_id,
-                output_index,
-                withdrawal_proofs,
-                sender,
-                signer::address_of(&pool_signer),
-                sequence,
-                string::utf8(b"uinit"),
-                arb_info.ibc_op_init_sent,
-                version,
-                state_root,
-                storage_root,
-                latest_block_hash
-            );
-        cosmos::stargate(&pool_signer, withdrawal_msg);
+        let uinit_pool_balance = coin::balance(pool_addr, init_metadata());
+        assert!(
+            uinit_pool_balance > arb_info.ibc_op_init_sent,
+            error::invalid_state(ENOT_ENOUGH_BALANCE)
+        );
 
         // execute hook
         let module_signer =
             object::generate_signer_for_extending(&module_store.extend_ref);
-        cosmos::move_execute(
-            &module_signer,
-            @initia_std,
-            string::utf8(b"minitswap"),
-            string::utf8(b"finalize_arb_hook"),
-            vector[],
-            vector[
-                bcs::to_bytes(&arb_index),
-                bcs::to_bytes(&signer::address_of(account))
-            ]
-        );
+
+        finalize_arb_hook(&module_signer, arb_index, signer::address_of(account));
+    }
+
+    // deprecated
+    public entry fun finalize_arb(
+        _account: &signer,
+        _arb_index: u64,
+        _output_index: u64,
+        _withdrawal_proofs: vector<String>,
+        _sender: address,
+        _sequence: u64,
+        _version: String,
+        _state_root: String,
+        _storage_root: String,
+        _latest_block_hash: String
+    ) {
+        abort(error::unavailable(EDEPRECATED));
     }
 
     public entry fun finalize_arb_hook(
