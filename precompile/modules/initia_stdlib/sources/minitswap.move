@@ -42,6 +42,7 @@ module initia_std::minitswap {
     const EINVAILD_METADATA: u64 = 16;
     const ESMALL_ARB_PROFIT: u64 = 17;
     const EVIRTUAL_POOL_EXISTS: u64 = 18;
+    const EDEPRECATED: u64 = 19;
 
     const A_PRECISION: u256 = 100;
     const U64_MAX: u128 = 18_446_744_073_709_551_615;
@@ -1451,17 +1452,11 @@ module initia_std::minitswap {
         primary_fungible_store::deposit(signer::address_of(account), return_asset);
     }
 
-    public entry fun finalize_arb(
-        account: &signer,
-        arb_index: u64,
-        output_index: u64,
-        withdrawal_proofs: vector<String>,
-        sender: address,
-        sequence: u64,
-        version: String,
-        state_root: String,
-        storage_root: String,
-        latest_block_hash: String
+    // Since MsgFinalizeWithdrawal can now be executed by anyone,
+    // Make executor triggers MsgFinalizeWithdrawal by themselves
+    // and then calls `finalize_arb_v2`.
+    public entry fun finalize_arb_v2(
+        account: &signer, arb_index: u64
     ) acquires ModuleStore, VirtualPool {
         // check arb info
         let module_store = borrow_global<ModuleStore>(@initia_std);
@@ -1470,46 +1465,41 @@ module initia_std::minitswap {
                 &module_store.global_arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
-        let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
+        let pool_addr = object::object_address(&*pool_obj);
+        let pool = borrow_global<VirtualPool>(pool_addr);
         let arb_info =
             table::borrow(
                 &pool.arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
 
-        // execute finalize token withdrawal
-        let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
-        let withdrawal_msg =
-            generate_finalize_token_withdrawal_msg(
-                pool.op_bridge_id,
-                output_index,
-                withdrawal_proofs,
-                sender,
-                signer::address_of(&pool_signer),
-                sequence,
-                string::utf8(b"uinit"),
-                arb_info.ibc_op_init_sent,
-                version,
-                state_root,
-                storage_root,
-                latest_block_hash
-            );
-        cosmos::stargate(&pool_signer, withdrawal_msg);
+        let uinit_pool_balance = coin::balance(pool_addr, init_metadata());
+        assert!(
+            uinit_pool_balance >= arb_info.ibc_op_init_sent,
+            error::invalid_state(ENOT_ENOUGH_BALANCE)
+        );
 
         // execute hook
         let module_signer =
             object::generate_signer_for_extending(&module_store.extend_ref);
-        cosmos::move_execute(
-            &module_signer,
-            @initia_std,
-            string::utf8(b"minitswap"),
-            string::utf8(b"finalize_arb_hook"),
-            vector[],
-            vector[
-                bcs::to_bytes(&arb_index),
-                bcs::to_bytes(&signer::address_of(account))
-            ]
-        );
+
+        finalize_arb_hook(&module_signer, arb_index, signer::address_of(account));
+    }
+
+    // deprecated
+    public entry fun finalize_arb(
+        _account: &signer,
+        _arb_index: u64,
+        _output_index: u64,
+        _withdrawal_proofs: vector<String>,
+        _sender: address,
+        _sequence: u64,
+        _version: String,
+        _state_root: String,
+        _storage_root: String,
+        _latest_block_hash: String
+    ) {
+        abort(error::unavailable(EDEPRECATED));
     }
 
     public entry fun finalize_arb_hook(
@@ -2533,38 +2523,6 @@ module initia_std::minitswap {
         amount: u64
     }
 
-    fun generate_finalize_token_withdrawal_msg(
-        bridge_id: u64,
-        output_index: u64,
-        withdrawal_proofs: vector<String>,
-        sender: address,
-        receiver: address,
-        sequence: u64,
-        denom: String,
-        amount: u64,
-        version: String,
-        state_root: String,
-        storage_root: String,
-        latest_block_hash: String
-    ): vector<u8> {
-        json::marshal(
-            &FinalizeTokenWithdrawalRequest {
-                _type_: string::utf8(b"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal"),
-                bridge_id,
-                output_index,
-                withdrawal_proofs,
-                sender: to_sdk(sender),
-                receiver: to_sdk(receiver),
-                sequence,
-                amount: CosmosCoin { denom, amount },
-                version,
-                state_root,
-                storage_root,
-                latest_block_hash
-            }
-        )
-    }
-
     fun init_metadata(): Object<Metadata> {
         let addr = object::create_object_address(&@initia_std, b"uinit");
         object::address_to_object<Metadata>(addr)
@@ -3141,28 +3099,6 @@ module initia_std::minitswap {
             arb_index,
             signer::address_of(account)
         );
-    }
-
-    #[test]
-    fun test_finalize_token_withdrawal_msg() {
-        let msg =
-            generate_finalize_token_withdrawal_msg(
-                1,
-                2,
-                vector[string::utf8(b"abc"), string::utf8(b"123")],
-                @0x1,
-                @0x2,
-                3,
-                string::utf8(b"uinit"),
-                100,
-                string::utf8(b"version"),
-                string::utf8(b"state_root"),
-                string::utf8(b"storage_root"),
-                string::utf8(b"latest_block_hash")
-            );
-        let json_str =
-            b"{\"@type\":\"/opinit.ophost.v1.MsgFinalizeTokenWithdrawal\",\"amount\":{\"amount\":\"100\",\"denom\":\"uinit\"},\"bridge_id\":\"1\",\"latest_block_hash\":\"latest_block_hash\",\"output_index\":\"2\",\"receiver\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzwsp0lj\",\"sender\":\"init1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqr5e3d\",\"sequence\":\"3\",\"state_root\":\"state_root\",\"storage_root\":\"storage_root\",\"version\":\"version\",\"withdrawal_proofs\":[\"abc\",\"123\"]}";
-        assert!(msg == json_str, 0);
     }
 
     #[test]
