@@ -21,13 +21,16 @@ ifeq ($(OS),Windows_NT)
 	COMPILER_SHARED_LIB_DST = compiler.dll
 else
 	UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),)
+        $(error "Failed to detect operating system")
+    	endif
 	ifeq ($(UNAME_S),Linux)
 		SHARED_LIB_SRC = libmovevm.so
 		SHARED_LIB_DST = libmovevm.$(shell rustc --print cfg | grep target_arch | cut  -d '"' -f 2).so
 		COMPILER_SHARED_LIB_SRC = libcompiler.so
 		COMPILER_SHARED_LIB_DST = libcompiler.$(shell rustc --print cfg | grep target_arch | cut  -d '"' -f 2).so
 	endif
-	ifeq ($(UNAME_S),Darwin)
+ifeq ($(UNAME_S),Darwin)
 		SHARED_LIB_SRC = libmovevm.dylib
 		SHARED_LIB_DST = libmovevm.dylib
 		COMPILER_SHARED_LIB_SRC = libcompiler.dylib
