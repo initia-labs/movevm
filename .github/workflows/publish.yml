@@ -10,7 +10,7 @@ jobs:
   copy-files:
     name: Copy files to move-natives
     if: startsWith(github.event.workflow_run.head_branch, 'v') # Check if the run was triggered by a tag, adjust 'v' if needed
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout movevm repository
