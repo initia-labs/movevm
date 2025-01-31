@@ -813,9 +813,10 @@ module initia_std::stableswap {
         let fee_amounts: vector<u64> = vector[];
         let i = 0;
         while (i < n) {
-            let (amount, fee) = if (i == return_index) {
-                (return_amount, fee)
-            } else { (0, 0) };
+            let (amount, fee) =
+                if (i == return_index) {
+                    (return_amount, fee)
+                } else { (0, 0) };
             vector::push_back(&mut coin_amounts, amount);
             vector::push_back(&mut fee_amounts, fee);
             i = i + 1;
@@ -1019,8 +1020,9 @@ module initia_std::stableswap {
                 j = j + 1;
             };
 
-            d = (ann * sum / A_PRECISION + d_prod * n) * d
-                / ((ann - A_PRECISION) * d / A_PRECISION + (n + 1) * d_prod);
+            d =
+                (ann * sum / A_PRECISION + d_prod * n) * d
+                    / ((ann - A_PRECISION) * d / A_PRECISION + (n + 1) * d_prod);
             if (d > d_prev) {
                 if (d - d_prev <= 1) break
             } else {
@@ -1163,8 +1165,9 @@ module initia_std::stableswap {
                 };
 
             let pool_amount = vector::borrow_mut(&mut pool_amounts_reduced, i);
-            *pool_amount = *pool_amount
-                - bigdecimal::mul_by_u64_truncate(withdraw_fee_rate, amount_diff);
+            *pool_amount =
+                *pool_amount
+                    - bigdecimal::mul_by_u64_truncate(withdraw_fee_rate, amount_diff);
             i = i + 1;
         };
 

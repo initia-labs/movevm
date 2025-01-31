@@ -44,7 +44,7 @@ module minitia_std::ed25519 {
     public fun public_key_from_bytes(bytes: vector<u8>): PublicKey {
         assert!(
             std::vector::length(&bytes) == PUBLIC_KEY_SIZE,
-            std::error::invalid_argument(PUBLIC_KEY_SIZE)
+            std::error::invalid_argument(E_WRONG_PUBKEY_SIZE)
         );
         PublicKey { bytes }
     }

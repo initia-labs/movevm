@@ -449,11 +449,12 @@ module initia_std::minitswap {
         base_metadata: Object<Metadata>, quote_metadata: Object<Metadata>
     ): BigDecimal acquires ModuleStore, VirtualPool {
         let is_init_quote = is_init_metadata(quote_metadata);
-        let ibc_op_init_metadata = if (is_init_quote) {
-            base_metadata
-        } else {
-            quote_metadata
-        };
+        let ibc_op_init_metadata =
+            if (is_init_quote) {
+                base_metadata
+            } else {
+                quote_metadata
+            };
 
         let virtual_pool_exists = virtual_pool_exists(ibc_op_init_metadata);
 
@@ -1188,10 +1189,10 @@ module initia_std::minitswap {
                     - ibc_op_init_delta;
 
                 pool.virtual_init_balance = pool.virtual_init_balance + net_init_delta;
-                pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
-                    + net_ibc_op_init_delta;
-                pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance
-                    + net_ibc_op_init_delta;
+                pool.virtual_ibc_op_init_balance =
+                    pool.virtual_ibc_op_init_balance + net_ibc_op_init_delta;
+                pool.peg_keeper_owned_ibc_op_init_balance =
+                    pool.peg_keeper_owned_ibc_op_init_balance + net_ibc_op_init_delta;
                 0
             } else {
                 /*
@@ -1214,10 +1215,10 @@ module initia_std::minitswap {
                 // pool.ibc_op_init_pool_amount = pool.pool_size;
                 pool.virtual_init_balance = pool.virtual_init_balance
                     + init_swap_amount;
-                pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
-                    + ibc_op_init_swap_amount;
-                pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance
-                    + ibc_op_init_swap_amount;
+                pool.virtual_ibc_op_init_balance =
+                    pool.virtual_ibc_op_init_balance + ibc_op_init_swap_amount;
+                pool.peg_keeper_owned_ibc_op_init_balance =
+                    pool.peg_keeper_owned_ibc_op_init_balance + ibc_op_init_swap_amount;
 
                 // 2. change pool size
                 pool.init_pool_amount = new_pool_size;
@@ -1233,18 +1234,18 @@ module initia_std::minitswap {
                         pool.pool_size,
                         pool.ann
                     );
-                pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
-                    + ibc_op_init_swap_amount;
+                pool.ibc_op_init_pool_amount =
+                    pool.ibc_op_init_pool_amount + ibc_op_init_swap_amount;
                 pool.init_pool_amount = pool.init_pool_amount - return_amount;
-                pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
-                    - ibc_op_init_swap_amount;
-                pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance
-                    - ibc_op_init_swap_amount;
+                pool.virtual_ibc_op_init_balance =
+                    pool.virtual_ibc_op_init_balance - ibc_op_init_swap_amount;
+                pool.peg_keeper_owned_ibc_op_init_balance =
+                    pool.peg_keeper_owned_ibc_op_init_balance - ibc_op_init_swap_amount;
 
                 if (pool.virtual_init_balance < return_amount) {
                     let remain = return_amount - pool.virtual_init_balance;
-                    module_store.depositor_owned_init = module_store.depositor_owned_init
-                        + remain;
+                    module_store.depositor_owned_init =
+                        module_store.depositor_owned_init + remain;
                     pool.virtual_init_balance = 0;
                     remain
                 } else {
@@ -1529,8 +1530,8 @@ module initia_std::minitswap {
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
 
         // update pegkeeper owned balance
-        pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance
-            - ibc_op_init_sent;
+        pool.peg_keeper_owned_ibc_op_init_balance =
+            pool.peg_keeper_owned_ibc_op_init_balance - ibc_op_init_sent;
 
         // transfer trigger fee
         primary_fungible_store::transfer(
@@ -1551,8 +1552,8 @@ module initia_std::minitswap {
 
         // update depositor owned init
         let in_house_arb_profit = leftover_amount - init_used;
-        module_store.depositor_owned_init = module_store.depositor_owned_init
-            + in_house_arb_profit;
+        module_store.depositor_owned_init =
+            module_store.depositor_owned_init + in_house_arb_profit;
 
         // emit event
         event::emit(
@@ -1652,8 +1653,8 @@ module initia_std::minitswap {
             };
 
         // update depositor owned init
-        module_store.depositor_owned_init = module_store.depositor_owned_init
-            + provide_amount;
+        module_store.depositor_owned_init =
+            module_store.depositor_owned_init + provide_amount;
 
         // deposit token to module
         let module_addr = object::address_from_extend_ref(&module_store.extend_ref);
@@ -1695,8 +1696,8 @@ module initia_std::minitswap {
             );
 
         // decrease depositor owned init
-        module_store.depositor_owned_init = module_store.depositor_owned_init
-            - withdraw_amount;
+        module_store.depositor_owned_init =
+            module_store.depositor_owned_init - withdraw_amount;
 
         // burn share token
         coin::burn(&module_store.burn_cap, share_token);
@@ -1907,8 +1908,8 @@ module initia_std::minitswap {
                 table_key::encode_u64(callback_id)
             );
         pool.virtual_init_balance = pool.virtual_init_balance + init_used;
-        pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
-            + ibc_op_init_sent;
+        pool.virtual_ibc_op_init_balance =
+            pool.virtual_ibc_op_init_balance + ibc_op_init_sent;
 
         event::emit<RevertArbEvent>(
             RevertArbEvent {
@@ -2078,12 +2079,12 @@ module initia_std::minitswap {
                         pool.ann
                     );
                 pool.init_pool_amount = pool.init_pool_amount - depositor_return_amount;
-                pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
-                    + total_fee_amount;
+                pool.ibc_op_init_pool_amount =
+                    pool.ibc_op_init_pool_amount + total_fee_amount;
 
                 // increase depositor amount
-                module_store.depositor_owned_init = module_store.depositor_owned_init
-                    + depositor_return_amount;
+                module_store.depositor_owned_init =
+                    module_store.depositor_owned_init + depositor_return_amount;
 
                 (
                     primary_fungible_store::withdraw(
@@ -2116,8 +2117,8 @@ module initia_std::minitswap {
                 let return_amount = return_amount - swap_fee_amount;
 
                 // increase depositor amount
-                module_store.depositor_owned_init = module_store.depositor_owned_init
-                    + swap_fee_amount;
+                module_store.depositor_owned_init =
+                    module_store.depositor_owned_init + swap_fee_amount;
 
                 (
                     primary_fungible_store::withdraw(
@@ -2139,13 +2140,13 @@ module initia_std::minitswap {
         let (peg_keeper_offer_amount, peg_keeper_return_amount) =
             calc_peg_keeper_swap(pool);
         pool.init_pool_amount = pool.init_pool_amount + peg_keeper_offer_amount;
-        pool.ibc_op_init_pool_amount = pool.ibc_op_init_pool_amount
-            - peg_keeper_return_amount;
+        pool.ibc_op_init_pool_amount =
+            pool.ibc_op_init_pool_amount - peg_keeper_return_amount;
         pool.virtual_init_balance = pool.virtual_init_balance + peg_keeper_offer_amount;
-        pool.virtual_ibc_op_init_balance = pool.virtual_ibc_op_init_balance
-            + peg_keeper_return_amount;
-        pool.peg_keeper_owned_ibc_op_init_balance = pool.peg_keeper_owned_ibc_op_init_balance
-            + peg_keeper_return_amount;
+        pool.virtual_ibc_op_init_balance =
+            pool.virtual_ibc_op_init_balance + peg_keeper_return_amount;
+        pool.peg_keeper_owned_ibc_op_init_balance =
+            pool.peg_keeper_owned_ibc_op_init_balance + peg_keeper_return_amount;
         pool.last_recovered_timestamp = timestamp;
 
         (peg_keeper_offer_amount, peg_keeper_return_amount)
@@ -2631,8 +2632,9 @@ module initia_std::minitswap {
             // D ** (n + 1) / (n ** n * prod) in our case, always n = 2
             let d_prod = d * d * d / 4 / init_amount / ibc_op_init_amount;
 
-            d = (ann * sum / A_PRECISION + d_prod * 2) * d
-                / ((ann - A_PRECISION) * d / A_PRECISION + 3 * d_prod);
+            d =
+                (ann * sum / A_PRECISION + d_prod * 2) * d
+                    / ((ann - A_PRECISION) * d / A_PRECISION + 3 * d_prod);
             if (d > d_prev) {
                 if (d - d_prev <= 1) break
             } else {
@@ -2960,8 +2962,8 @@ module initia_std::minitswap {
                 // retry while actual return amount is equal to return amount
                 let i = 0;
                 while (return_amount > actual_return_amount && i < 255) {
-                    return_amount_before_swap_fee = return_amount_before_swap_fee
-                        + return_diff;
+                    return_amount_before_swap_fee =
+                        return_amount_before_swap_fee + return_diff;
 
                     if (ibc_op_init_pool_amount - return_amount_before_swap_fee
                         < pool_size) {
@@ -2982,14 +2984,17 @@ module initia_std::minitswap {
                     );
 
                     // calculate arb fee
-                    arb_profit = if (return_amount > offer_amount) {
-                        return_amount_before_swap_fee - swap_fee_amount - offer_amount
-                    } else { 0 };
+                    arb_profit =
+                        if (return_amount > offer_amount) {
+                            return_amount_before_swap_fee - swap_fee_amount
+                                - offer_amount
+                        } else { 0 };
                     arb_fee_amount = bigdecimal::mul_by_u64_ceil(
                         module_store.arb_fee_rate, arb_profit
                     );
-                    actual_return_amount = return_amount_before_swap_fee
-                        - swap_fee_amount - arb_fee_amount;
+                    actual_return_amount =
+                        return_amount_before_swap_fee - swap_fee_amount
+                            - arb_fee_amount;
                     if (actual_return_amount >= return_amount) break;
 
                     return_diff = return_amount - actual_return_amount;

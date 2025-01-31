@@ -487,13 +487,13 @@ module initia_std::multisig {
         let expired_height =
             if (option::is_some(&max_period.height)) {
                 let max_voting_period_height = *option::borrow(&max_period.height);
-                (max_voting_period_height + proposal_height) >= height
+                height >= (max_voting_period_height + proposal_height)
             } else { false };
 
         let expired_timestamp =
             if (option::is_some(&max_period.timestamp)) {
                 let max_voting_period_timestamp = *option::borrow(&max_period.timestamp);
-                (max_voting_period_timestamp + proposal_timestamp) >= timestamp
+                timestamp >= (max_voting_period_timestamp + proposal_timestamp)
             } else { false };
 
         expired_height || expired_timestamp

@@ -234,6 +234,19 @@ module minitia_std::table {
         (key, &mut box.val)
     }
 
+    public fun to_simple_map<K: store + copy + drop, V: store + copy>(
+        table: &Table<K, V>
+    ): std::simple_map::SimpleMap<K, V> {
+        let map = std::simple_map::new();
+        let iter = iter(table, option::none(), option::none(), 1);
+        while (prepare(iter)) {
+            let (key, value) = next(iter);
+            std::simple_map::add(&mut map, key, *value);
+        };
+
+        map
+    }
+
     // ======================================================================================================
     // Internal API
 

@@ -60,7 +60,7 @@ fn native_test_only_set_block_info(
     let height = safely_pop_arg!(arguments, u64);
 
     let block_context = context.extensions_mut().get_mut::<NativeBlockContext>();
-    NativeBlockContext::set_block_info(block_context, height, timestamp);
+    block_context.set_block_info(height, timestamp);
 
     Ok(smallvec![])
 }
