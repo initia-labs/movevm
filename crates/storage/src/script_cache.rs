@@ -12,12 +12,14 @@ use crate::{
 };
 
 pub struct InitiaScriptCache {
+    pub capacity: usize,
     pub(crate) script_cache: Mutex<CLruCache<Checksum, ScriptWrapper, RandomState, ScriptScale>>,
 }
 
 impl InitiaScriptCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaScriptCache> {
         Arc::new(InitiaScriptCache {
+            capacity: cache_capacity * 1024 * 1024,
             script_cache: Mutex::new(CLruCache::with_config(
                 CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
                     .with_scale(ScriptScale),
@@ -42,13 +44,15 @@ impl InitiaScriptCache {
                 let new_script = Code::from_deserialized(deserialized_script);
                 let deserialized_script = new_script.deserialized().clone();
 
-                // error occurs when the new script has a weight greater than the cache capacity
-                script_cache
-                    .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                    .unwrap_or_else(|_| {
-                        eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
-                        None
-                    });
+                if self.capacity >= allocated_size {
+                    script_cache
+                        .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
+                        .unwrap_or_else(|_| {
+                            // ignore cache errors
+                            eprintln!("WARNING: failed to insert script into cache");
+                            None
+                        });
+                }
 
                 Ok(deserialized_script)
             }
@@ -81,12 +85,15 @@ impl InitiaScriptCache {
         };
 
         if let Some(new_script) = new_script {
-            script_cache
-                .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                .unwrap_or_else(|_| {
-                    eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
-                    None
-                });
+            if self.capacity >= allocated_size {
+                script_cache
+                    .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
+                    .unwrap_or_else(|_| {
+                        // ignore cache errors
+                        eprintln!("WARNING: failed to insert script into cache");
+                        None
+                    });
+            }
         }
         Ok(verified_script)
     }
