@@ -81,6 +81,11 @@ impl InitiaModuleCache {
     ) -> VMResult<()> {
         // cache is too small to hold this module
         if self.capacity < allocated_size {
+            eprintln!(
+                "Module cache is too small to hold module with size {}",
+                allocated_size
+            );
+
             return Ok(());
         }
 
@@ -128,6 +133,11 @@ impl InitiaModuleCache {
                     module_cache
                         .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
                         .unwrap_or_else(|_| None);
+                } else {
+                    eprintln!(
+                        "Module cache is too small to hold module with size {}",
+                        allocated_size
+                    );
                 }
 
                 Ok(module)
@@ -170,6 +180,11 @@ impl InitiaModuleCache {
                             module_cache
                                 .put_with_weight(*checksum, code_wrapper.clone())
                                 .unwrap_or_else(|_| None);
+                        } else {
+                            eprintln!(
+                                "Module cache is too small to hold module with size {}",
+                                allocated_size
+                            );
                         }
 
                         Some(code_wrapper)

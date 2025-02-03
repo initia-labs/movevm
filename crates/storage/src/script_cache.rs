@@ -50,6 +50,11 @@ impl InitiaScriptCache {
                     let _ = script_cache
                         .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
                         .unwrap_or_else(|_| None);
+                } else {
+                    eprintln!(
+                        "Script cache is too small to hold module with size {}",
+                        allocated_size
+                    );
                 }
 
                 Ok(deserialized_script)
@@ -89,6 +94,11 @@ impl InitiaScriptCache {
                 let _ = script_cache
                     .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
                     .unwrap_or_else(|_| None);
+            } else {
+                eprintln!(
+                    "Script cache is too small to hold module with size {}",
+                    allocated_size
+                );
             }
         }
         Ok(verified_script)
