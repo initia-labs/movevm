@@ -18,9 +18,9 @@ use initia_move_types::metadata;
 
 use move_cli::base::test::{run_move_unit_tests_with_factory, UnitTestResult};
 use move_core_types::effects::ChangeSet;
+use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_unit_test::UnitTestingConfig;
 use move_vm_runtime::native_extensions::NativeContextExtensions;
-use move_model::metadata::{CompilerVersion, LanguageVersion};
 
 use once_cell::sync::Lazy;
 use std::path::PathBuf;

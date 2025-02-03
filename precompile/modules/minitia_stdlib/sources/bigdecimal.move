@@ -117,6 +117,11 @@ module minitia_std::bigdecimal {
     }
 
     public fun rev(num: BigDecimal): BigDecimal {
+        assert!(
+            !biguint::is_zero(num.scaled),
+            error::invalid_argument(EDIVISION_BY_ZERO)
+        );
+
         let fractional = f();
         BigDecimal {
             scaled: biguint::div(biguint::mul(fractional, fractional), num.scaled)
@@ -616,6 +621,13 @@ module minitia_std::bigdecimal {
         let num1 = from_ratio(biguint::from_u64(1), biguint::from_u64(2));
 
         div_by_u256(num1, 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0x10065, location = Self)]
+    fun test_bigdecimal_rev_zero() {
+        let num = zero();
+        rev(num);
     }
 
     #[test]

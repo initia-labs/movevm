@@ -51,16 +51,18 @@ impl WithHash for BytesWithHash {
 pub struct NoVersion;
 
 pub struct InitiaModuleCache {
+    pub capacity: usize,
     #[allow(clippy::type_complexity)]
     pub(crate) module_cache: Mutex<CLruCache<Checksum, ModuleWrapper, RandomState, ModuleScale>>,
 }
 
 impl InitiaModuleCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaModuleCache> {
-        let capacity = NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap();
+        let capacity = cache_capacity * 1024 * 1024;
         Arc::new(InitiaModuleCache {
+            capacity,
             module_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(capacity).with_scale(ModuleScale),
+                CLruCacheConfig::new(NonZeroUsize::new(capacity).unwrap()).with_scale(ModuleScale),
             )),
         })
     }
@@ -77,6 +79,16 @@ impl InitiaModuleCache {
         extension: Arc<BytesWithHash>,
         version: NoVersion,
     ) -> VMResult<()> {
+        // cache is too small to hold this module
+        if self.capacity < allocated_size {
+            eprintln!(
+                "Module cache is too small to hold module with size {}",
+                allocated_size
+            );
+
+            return Ok(());
+        }
+
         let mut module_cache = self.module_cache.lock();
 
         match module_cache.get(&key) {
@@ -89,12 +101,12 @@ impl InitiaModuleCache {
                     extension,
                     version,
                 ));
+
+                // NOTE: We are not handling the error here, because we are sure that the
+                // allocated size is less than the capacity.
                 module_cache
                     .put_with_weight(key, ModuleWrapper::new(module, allocated_size))
-                    .unwrap_or_else(|_| {
-                        eprintln!("WARNING: failed to insert module {:?} into cache; cache capacity might be too small", module_id.short_str_lossless().to_string());
-                        None
-                    });
+                    .unwrap_or_else(|_| None);
                 Ok(())
             }
         }
@@ -114,14 +126,20 @@ impl InitiaModuleCache {
                 Ok(module_wrapper.module_code.clone())
             }
             _ => {
-                let module_id = verified_code.self_id();
                 let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
-                module_cache
-                    .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
-                    .unwrap_or_else(|_| {
-                        eprintln!("WARNING: failed to insert module {:?} into cache; cache capacity might be too small", module_id.short_str_lossless().to_string());
-                        None
-                    });
+                if self.capacity >= allocated_size {
+                    // NOTE: We are not handling the error here, because we are sure that the
+                    // allocated size is less than the capacity.
+                    module_cache
+                        .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
+                        .unwrap_or_else(|_| None);
+                } else {
+                    eprintln!(
+                        "Module cache is too small to hold module with size {}",
+                        allocated_size
+                    );
+                }
+
                 Ok(module)
             }
         }
@@ -156,12 +174,19 @@ impl InitiaModuleCache {
                         }
 
                         let code_wrapper = ModuleWrapper::new(Arc::new(code), allocated_size);
-                        module_cache
-                            .put_with_weight(*checksum, code_wrapper.clone())
-                            .unwrap_or_else(|_| {
-                                eprintln!("WARNING: failed to insert module {:?} into cache; cache capacity might be too small", id.short_str_lossless().to_string());
-                                None
-                            });
+                        if self.capacity >= allocated_size {
+                            // NOTE: We are not handling the error here, because we are sure that the
+                            // allocated size is less than the capacity.
+                            module_cache
+                                .put_with_weight(*checksum, code_wrapper.clone())
+                                .unwrap_or_else(|_| None);
+                        } else {
+                            eprintln!(
+                                "Module cache is too small to hold module with size {}",
+                                allocated_size
+                            );
+                        }
+
                         Some(code_wrapper)
                     }
                     None => None,

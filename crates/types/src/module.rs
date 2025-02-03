@@ -58,7 +58,7 @@ impl ModuleBundle {
 
     pub fn singleton(code: Vec<u8>) -> Self {
         Self {
-            codes: vec![Module::new(code.clone())],
+            codes: vec![Module::new(code)],
         }
     }
 

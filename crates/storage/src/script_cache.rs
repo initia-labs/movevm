@@ -12,15 +12,17 @@ use crate::{
 };
 
 pub struct InitiaScriptCache {
+    pub capacity: usize,
     pub(crate) script_cache: Mutex<CLruCache<Checksum, ScriptWrapper, RandomState, ScriptScale>>,
 }
 
 impl InitiaScriptCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaScriptCache> {
+        let capacity = cache_capacity * 1024 * 1024;
         Arc::new(InitiaScriptCache {
+            capacity,
             script_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
-                    .with_scale(ScriptScale),
+                CLruCacheConfig::new(NonZeroUsize::new(capacity).unwrap()).with_scale(ScriptScale),
             )),
         })
     }
@@ -42,13 +44,18 @@ impl InitiaScriptCache {
                 let new_script = Code::from_deserialized(deserialized_script);
                 let deserialized_script = new_script.deserialized().clone();
 
-                // error occurs when the new script has a weight greater than the cache capacity
-                script_cache
-                    .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                    .unwrap_or_else(|_| {
-                        eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
-                        None
-                    });
+                if self.capacity >= allocated_size {
+                    // NOTE: We are not handling the error here, because we are sure that the
+                    // allocated size is less than the capacity.
+                    let _ = script_cache
+                        .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
+                        .unwrap_or_else(|_| None);
+                } else {
+                    eprintln!(
+                        "Script cache is too small to hold module with size {}",
+                        allocated_size
+                    );
+                }
 
                 Ok(deserialized_script)
             }
@@ -81,12 +88,18 @@ impl InitiaScriptCache {
         };
 
         if let Some(new_script) = new_script {
-            script_cache
-                .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                .unwrap_or_else(|_| {
-                    eprintln!("WARNING: failed to insert script into cache; cache capacity might be too small");
-                    None
-                });
+            if self.capacity >= allocated_size {
+                // NOTE: We are not handling the error here, because we are sure that the
+                // allocated size is less than the capacity.
+                let _ = script_cache
+                    .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
+                    .unwrap_or_else(|_| None);
+            } else {
+                eprintln!(
+                    "Script cache is too small to hold module with size {}",
+                    allocated_size
+                );
+            }
         }
         Ok(verified_script)
     }
