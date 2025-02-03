@@ -58,11 +58,11 @@ pub struct InitiaModuleCache {
 
 impl InitiaModuleCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaModuleCache> {
-        let capacity = NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap();
+        let capacity = cache_capacity * 1024 * 1024;
         Arc::new(InitiaModuleCache {
-            capacity: cache_capacity * 1024 * 1024,
+            capacity,
             module_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(capacity).with_scale(ModuleScale),
+                CLruCacheConfig::new(NonZeroUsize::new(capacity).unwrap()).with_scale(ModuleScale),
             )),
         })
     }
@@ -96,16 +96,12 @@ impl InitiaModuleCache {
                     extension,
                     version,
                 ));
+
+                // NOTE: We are not handling the error here, because we are sure that the
+                // allocated size is less than the capacity.
                 module_cache
                     .put_with_weight(key, ModuleWrapper::new(module, allocated_size))
-                    .unwrap_or_else(|_| {
-                        // ignore cache errors
-                        eprintln!(
-                            "WARNING: failed to insert module {:?} into cache",
-                            module_id.short_str_lossless().to_string()
-                        );
-                        None
-                    });
+                    .unwrap_or_else(|_| None);
                 Ok(())
             }
         }
@@ -125,19 +121,13 @@ impl InitiaModuleCache {
                 Ok(module_wrapper.module_code.clone())
             }
             _ => {
-                let module_id = verified_code.self_id();
                 let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
                 if self.capacity >= allocated_size {
+                    // NOTE: We are not handling the error here, because we are sure that the
+                    // allocated size is less than the capacity.
                     module_cache
                         .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
-                        .unwrap_or_else(|_| {
-                            // ignore cache errors
-                            eprintln!(
-                                "WARNING: failed to insert module {:?} into cache",
-                                module_id.short_str_lossless().to_string()
-                            );
-                            None
-                        });
+                        .unwrap_or_else(|_| None);
                 }
 
                 Ok(module)
@@ -175,16 +165,11 @@ impl InitiaModuleCache {
 
                         let code_wrapper = ModuleWrapper::new(Arc::new(code), allocated_size);
                         if self.capacity >= allocated_size {
+                            // NOTE: We are not handling the error here, because we are sure that the
+                            // allocated size is less than the capacity.
                             module_cache
                                 .put_with_weight(*checksum, code_wrapper.clone())
-                                .unwrap_or_else(|_| {
-                                    // ignore cache errors
-                                    eprintln!(
-                                        "WARNING: failed to insert module {:?} into cache",
-                                        id.short_str_lossless().to_string()
-                                    );
-                                    None
-                                });
+                                .unwrap_or_else(|_| None);
                         }
 
                         Some(code_wrapper)
