@@ -18,11 +18,11 @@ pub struct InitiaScriptCache {
 
 impl InitiaScriptCache {
     pub fn new(cache_capacity: usize) -> Arc<InitiaScriptCache> {
+        let capacity = cache_capacity * 1024 * 1024;
         Arc::new(InitiaScriptCache {
-            capacity: cache_capacity * 1024 * 1024,
+            capacity,
             script_cache: Mutex::new(CLruCache::with_config(
-                CLruCacheConfig::new(NonZeroUsize::new(cache_capacity * 1024 * 1024).unwrap())
-                    .with_scale(ScriptScale),
+                CLruCacheConfig::new(NonZeroUsize::new(capacity).unwrap()).with_scale(ScriptScale),
             )),
         })
     }
@@ -45,13 +45,11 @@ impl InitiaScriptCache {
                 let deserialized_script = new_script.deserialized().clone();
 
                 if self.capacity >= allocated_size {
-                    script_cache
+                    // NOTE: We are not handling the error here, because we are sure that the
+                    // allocated size is less than the capacity.
+                    let _ = script_cache
                         .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                        .unwrap_or_else(|_| {
-                            // ignore cache errors
-                            eprintln!("WARNING: failed to insert script into cache");
-                            None
-                        });
+                        .unwrap_or_else(|_| None);
                 }
 
                 Ok(deserialized_script)
@@ -86,13 +84,11 @@ impl InitiaScriptCache {
 
         if let Some(new_script) = new_script {
             if self.capacity >= allocated_size {
-                script_cache
+                // NOTE: We are not handling the error here, because we are sure that the
+                // allocated size is less than the capacity.
+                let _ = script_cache
                     .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
-                    .unwrap_or_else(|_| {
-                        // ignore cache errors
-                        eprintln!("WARNING: failed to insert script into cache");
-                        None
-                    });
+                    .unwrap_or_else(|_| None);
             }
         }
         Ok(verified_script)
