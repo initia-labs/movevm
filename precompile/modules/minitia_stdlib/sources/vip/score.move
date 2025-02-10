@@ -2,6 +2,7 @@
 module minitia_std::vip_score {
     use std::vector;
     use std::event;
+    use std::option::{Self, Option};
 
     use minitia_std::signer;
     use minitia_std::table;
@@ -19,6 +20,12 @@ module minitia_std::vip_score {
         is_finalized: bool,
         score: table::Table<address /* user */, u64>
     }
+
+    //
+    // Constants
+    //
+
+    const MAX_LIMIT: u16 = 1000;
 
     //
     // Errors
@@ -156,6 +163,52 @@ module minitia_std::vip_score {
     //
     // View functions
     //
+
+    struct GetScoresResponse {
+        stage: u64,
+        scores: vector<Score>
+    }
+
+    struct Score {
+        addr: address,
+        score: u64
+    }
+
+    #[view]
+    public fun get_scores(
+        stage: u64, limit: u16, start_after: Option<address>
+    ): GetScoresResponse acquires ModuleStore {
+        let module_store = borrow_global<ModuleStore>(@minitia_std);
+        let scores: vector<Score> = vector[];
+
+        // check stage exists
+        if (!table::contains(&module_store.scores, stage)) {
+            return GetScoresResponse { stage, scores }
+        };
+
+        // check max limit
+        if (limit > MAX_LIMIT) {
+            limit = MAX_LIMIT
+        };
+
+        // collect scores
+        let score = table::borrow(&module_store.scores, stage);
+        let iter = table::iter(
+            &score.score,
+            option::none(),
+            start_after, // exclusive
+            2
+        );
+
+        while (table::prepare<address, u64>(iter)
+            && vector::length(&scores) < (limit as u64)) {
+            let (addr, score) = table::next<address, u64>(iter);
+
+            vector::push_back(&mut scores, Score { addr, score: *score });
+        };
+
+        return GetScoresResponse { stage, scores }
+    }
 
     #[view]
     public fun get_score(account: address, stage: u64): u64 acquires ModuleStore {
