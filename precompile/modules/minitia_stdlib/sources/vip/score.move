@@ -176,7 +176,14 @@ module minitia_std::vip_score {
 
     #[view]
     public fun get_scores(
-        stage: u64, limit: u16, start_after: Option<address>
+        // The stage number
+        stage: u64,
+        // Number of results to return (Max: 1000)
+        limit: u16, 
+        // Pagination key. If None, start from the beginning.  
+        // If provided, return results after this key in descending order.  
+        // Use the last returned address to fetch the next page.
+        start_after: Option<address> 
     ): GetScoresResponse acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@minitia_std);
         let scores: vector<Score> = vector[];
