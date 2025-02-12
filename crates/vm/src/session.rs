@@ -1,7 +1,6 @@
 use std::{
     collections::BTreeMap,
     ops::{Deref, DerefMut},
-    sync::Arc,
 };
 
 use bytes::Bytes;
@@ -25,15 +24,14 @@ use initia_move_types::{
 
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
-    effects::Op,
-    language_storage::{ModuleId, TypeTag},
-    vm_status::StatusCode,
+    effects::Op, identifier::Identifier, language_storage::{ModuleId, TypeTag}, vm_status::StatusCode
 };
 use move_vm_runtime::{session::Session, ModuleStorage};
 use move_vm_types::{
-    loaded_data::runtime_types::{StructNameIndex, StructType, Type},
+    loaded_data::runtime_types::Type,
     sha3_256,
 };
+use initia_move_storage::module_storage::AsFunctionValueExtension;
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
@@ -64,7 +62,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
 
         let table_context: NativeTableContext = extensions.remove::<NativeTableContext>();
         let table_change_set = table_context
-            .into_change_set()
+            .into_change_set(Some(&module_storage.as_function_value_extension()))
             .map_err(|e| e.finish(Location::Undefined))?;
 
         let cosmos_context: NativeCosmosContext = extensions.remove::<NativeCosmosContext>();
@@ -128,12 +126,12 @@ impl<'r, 'l> SessionExt<'r, 'l> {
 }
 
 impl StructResolver for SessionExt<'_, '_> {
-    fn get_struct_type(
+    fn get_struct_name(
         &self,
-        index: StructNameIndex,
+        ty: &Type,
         module_storage: &impl ModuleStorage,
-    ) -> Option<Arc<StructType>> {
-        self.inner.fetch_struct_ty_by_idx(index, module_storage)
+    ) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
+        self.inner.get_struct_name(ty, module_storage)
     }
 
     fn type_to_type_tag(

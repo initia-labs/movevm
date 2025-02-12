@@ -188,7 +188,7 @@ fn native_format_impl(
             let addr = val
                 .value_as::<Struct>()?
                 .unpack()?
-                .next()
+                .nth(1)
                 .unwrap()
                 .value_as::<AccountAddress>()?;
 
@@ -386,7 +386,6 @@ fn native_format(
             abort_code: EUNABLE_TO_FORMAT_DELAYED_FIELD,
         });
     }
-
     let ty = context
         .deref()
         .type_to_fully_annotated_layout(&ty_args[0])?;

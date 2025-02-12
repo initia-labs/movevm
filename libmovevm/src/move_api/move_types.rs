@@ -5,11 +5,12 @@ use move_binary_format::{
     access::ModuleAccess,
     deserializer::DeserializerConfig,
     file_format::{
-        Ability, AbilitySet, CompiledModule, CompiledScript, StructTypeParameter, Visibility,
+        CompiledModule, CompiledScript, StructTypeParameter, Visibility,
     },
 };
 use move_core_types::{
     self,
+    ability::{Ability, AbilitySet},
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -1227,8 +1228,8 @@ pub fn verify_identifier(identifier: &str) -> anyhow::Result<()> {
 mod tests {
     use super::*;
 
-    use move_binary_format::file_format::AbilitySet;
     use move_core_types::{
+        ability::AbilitySet,
         account_address::AccountAddress,
         identifier::Identifier,
         language_storage::{StructTag, TypeTag},

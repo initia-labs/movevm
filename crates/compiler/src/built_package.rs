@@ -65,7 +65,7 @@ impl BuiltPackage {
         }
 
         let (mut package, model_opt) =
-            new_config.compile_package_no_exit(&package_path, &mut stderr())?;
+            new_config.compile_package_no_exit(&package_path, vec![], &mut stderr())?;
 
         // Run extended checks as well as derive runtime metadata
         let model = &model_opt.expect("move model");

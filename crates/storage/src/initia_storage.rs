@@ -13,9 +13,13 @@ use move_core_types::{account_address::AccountAddress, identifier::IdentStr, met
 use move_vm_runtime::{
     ambassador_impl_CodeStorage, ambassador_impl_ModuleStorage,
     ambassador_impl_WithRuntimeEnvironment, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
-    Script, WithRuntimeEnvironment,
+    Script, WithRuntimeEnvironment,Function,
 };
 use std::sync::Arc;
+use move_binary_format::errors::PartialVMResult;
+use move_vm_types::loaded_data::runtime_types::Type;
+use move_core_types::language_storage::TypeTag;
+use move_vm_types::loaded_data::runtime_types::StructType;
 
 #[derive(Delegate)]
 #[delegate(WithRuntimeEnvironment)]

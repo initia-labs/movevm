@@ -67,7 +67,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
 
         let staging_module_storage = StagingModuleStorage::create_with_compat_config(
             &publisher,
-            Compatibility::new(true, false),
+            Compatibility::new(true, false, false),
             code_storage,
             module_bundle.into_bytes(),
         )?;

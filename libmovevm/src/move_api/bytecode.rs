@@ -74,7 +74,7 @@ pub trait Bytecode {
             SignatureToken::Struct(v) => MoveType::Struct(self.new_move_struct_tag(v, &[])),
             SignatureToken::StructInstantiation(shi, type_params) => {
                 MoveType::Struct(self.new_move_struct_tag(shi, type_params))
-            }
+            },
             SignatureToken::TypeParameter(i) => MoveType::GenericTypeParam { index: *i },
             SignatureToken::Reference(t) => MoveType::Reference {
                 mutable: false,
@@ -83,6 +83,10 @@ pub trait Bytecode {
             SignatureToken::MutableReference(t) => MoveType::Reference {
                 mutable: true,
                 to: Box::new(self.new_move_type(t.borrow())),
+            },
+            SignatureToken::Function(..) => {
+                // TODO
+                unimplemented!("signature token function to API MoveType")
             },
         }
     }
