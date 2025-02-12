@@ -9,7 +9,7 @@ use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::PartialVMResult,
-    value_serde::serialized_size_allowing_delayed_values,
+    value_serde::ValueSerDeContext,
     values::{values_impl::Reference, Value},
 };
 use smallvec::{smallvec, SmallVec};
@@ -68,7 +68,12 @@ fn native_to_bytes(
 
     // serialize value
     let val = ref_to_val.read_ref()?;
-    let serialized_value = match val.simple_serialize(&layout) {
+
+    let serialized_value = match ValueSerDeContext::new()
+        .with_legacy_signer()
+        .with_func_args_deserialization(context.function_value_extension())
+        .serialize(&val, &layout)?
+    {
         Some(serialized_value) => serialized_value,
         None => {
             context.charge(gas_params.bcs_to_bytes_failure)?;
@@ -135,7 +140,12 @@ fn serialized_size_impl(
     //               implement it in a more efficient way.
     let value = reference.read_ref()?;
     let ty_layout = context.type_to_type_layout(ty)?;
-    serialized_size_allowing_delayed_values(&value, &ty_layout)
+
+    ValueSerDeContext::new()
+        .with_legacy_signer()
+        .with_func_args_deserialization(context.function_value_extension())
+        .with_delayed_fields_serde()
+        .serialized_size(&value, &ty_layout)
 }
 
 /***************************************************************************************************

@@ -77,7 +77,6 @@ impl InitiaModuleCache {
         deserialized_code: CompiledModule,
         allocated_size: usize,
         extension: Arc<BytesWithHash>,
-        version: NoVersion,
     ) -> VMResult<()> {
         // cache is too small to hold this module
         if self.capacity < allocated_size {
@@ -96,11 +95,7 @@ impl InitiaModuleCache {
             Some(_) => Ok(()),
             None => {
                 let module_id = deserialized_code.self_id();
-                let module = Arc::new(ModuleCode::from_deserialized(
-                    deserialized_code,
-                    extension,
-                    version,
-                ));
+                let module = Arc::new(ModuleCode::from_deserialized(deserialized_code, extension));
 
                 // NOTE: We are not handling the error here, because we are sure that the
                 // allocated size is less than the capacity.
@@ -118,15 +113,14 @@ impl InitiaModuleCache {
         verified_code: Module,
         allocated_size: usize,
         extension: Arc<BytesWithHash>,
-        version: NoVersion,
-    ) -> VMResult<Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>> {
+    ) -> VMResult<Arc<ModuleCode<CompiledModule, Module, BytesWithHash>>> {
         let mut module_cache = self.module_cache.lock();
         match module_cache.get(&key) {
             Some(module_wrapper) if module_wrapper.module_code.code().is_verified() => {
                 Ok(module_wrapper.module_code.clone())
             }
             _ => {
-                let module = Arc::new(ModuleCode::from_verified(verified_code, extension, version));
+                let module = Arc::new(ModuleCode::from_verified(verified_code, extension));
                 if self.capacity >= allocated_size {
                     // NOTE: We are not handling the error here, because we are sure that the
                     // allocated size is less than the capacity.
@@ -155,7 +149,6 @@ impl InitiaModuleCache {
             Deserialized = CompiledModule,
             Verified = Module,
             Extension = BytesWithHash,
-            Version = NoVersion,
         >,
     ) -> VMResult<Option<ModuleWrapper>> {
         let mut module_cache = self.module_cache.lock();

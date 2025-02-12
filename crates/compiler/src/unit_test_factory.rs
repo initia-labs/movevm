@@ -25,7 +25,7 @@ impl InitiaUnitTestFactory {
         table_context: NativeTableContext,
     ) -> VMResult<()> {
         let table_change_set = table_context
-            .into_change_set()
+            .into_change_set(None)
             .map_err(|e| e.finish(Location::Undefined))?;
         let write_set =
             WriteSet::new_with_change_set(changes.clone(), table_change_set).map_err(|e| {

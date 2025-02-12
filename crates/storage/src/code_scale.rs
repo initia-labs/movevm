@@ -8,7 +8,6 @@ use move_vm_runtime::Script;
 use move_vm_types::code::{Code, ModuleCode};
 
 use crate::module_cache::BytesWithHash;
-use crate::module_cache::NoVersion;
 use crate::state_view::Checksum;
 
 pub struct ScriptScale;
@@ -41,13 +40,13 @@ impl ScriptWrapper {
 
 #[derive(Clone)]
 pub struct ModuleWrapper {
-    pub module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+    pub module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash>>,
     pub size: usize,
 }
 
 impl ModuleWrapper {
     pub fn new(
-        module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash, NoVersion>>,
+        module_code: Arc<ModuleCode<CompiledModule, Module, BytesWithHash>>,
         size: usize,
     ) -> Self {
         Self { module_code, size }
