@@ -4,9 +4,7 @@ use initia_move_types::module::Module;
 use move_binary_format::{
     access::ModuleAccess,
     deserializer::DeserializerConfig,
-    file_format::{
-        CompiledModule, CompiledScript, StructTypeParameter, Visibility,
-    },
+    file_format::{CompiledModule, CompiledScript, StructTypeParameter, Visibility},
 };
 use move_core_types::{
     self,

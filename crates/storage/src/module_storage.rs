@@ -14,16 +14,22 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::{
-    account_address::AccountAddress, identifier::IdentStr, language_storage::{ModuleId, TypeTag},
-    metadata::Metadata, vm_status::StatusCode,
+    account_address::AccountAddress,
+    identifier::IdentStr,
+    language_storage::{ModuleId, TypeTag},
+    metadata::Metadata,
+    vm_status::StatusCode,
 };
 use move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, WithRuntimeEnvironment};
-use move_vm_types::{
-    code::{ModuleBytesStorage, ModuleCode, ModuleCodeBuilder, WithBytes, WithHash}, loaded_data::runtime_types::Type, module_cyclic_dependency_error, module_linker_error, value_serde::FunctionValueExtension
-};
-use std::{borrow::Borrow, collections::HashSet, ops::Deref, sync::Arc};
 use move_vm_types::code::WithSize;
 use move_vm_types::sha3_256;
+use move_vm_types::{
+    code::{ModuleBytesStorage, ModuleCode, ModuleCodeBuilder, WithBytes, WithHash},
+    loaded_data::runtime_types::Type,
+    module_cyclic_dependency_error, module_linker_error,
+    value_serde::FunctionValueExtension,
+};
+use std::{borrow::Borrow, collections::HashSet, ops::Deref, sync::Arc};
 
 /// Implementation of (not thread-safe) module storage used for Move unit tests, and externally.
 pub struct InitiaModuleStorage<'a, S> {
@@ -149,9 +155,7 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
     fn build(
         &self,
         key: &Self::Key,
-    ) -> VMResult<
-        Option<ModuleCode<Self::Deserialized, Self::Verified, Self::Extension>>,
-    > {
+    ) -> VMResult<Option<ModuleCode<Self::Deserialized, Self::Verified, Self::Extension>>> {
         let bytes = match self
             .base_storage
             .fetch_module_bytes(key.address(), key.name())?
@@ -461,7 +465,6 @@ impl<'a> FunctionValueExtension for FunctionValueExtensionAdapter<'a> {
             .collect::<PartialVMResult<Vec<_>>>()
     }
 }
-
 
 /// Represents owned or borrowed types, similar to [std::borrow::Cow] but without enforcing
 /// [ToOwned] trait bound on types it stores. We use it to be able to construct different storages

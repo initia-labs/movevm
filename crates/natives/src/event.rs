@@ -13,7 +13,9 @@ use move_binary_format::errors::PartialVMError;
 use move_core_types::{language_storage::TypeTag, value::MoveTypeLayout, vm_status::StatusCode};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
-    loaded_data::runtime_types::Type, value_serde::ValueSerDeContext, values::{Reference, Value}
+    loaded_data::runtime_types::Type,
+    value_serde::ValueSerDeContext,
+    values::{Reference, Value},
 };
 use smallvec::{smallvec, SmallVec};
 
@@ -121,9 +123,9 @@ fn native_emit_event(
     #[cfg(feature = "testing")]
     {
         let blob = match ValueSerDeContext::new()
-        .with_legacy_signer()
-        .with_func_args_deserialization(context.function_value_extension())
-        .serialize(&msg, &layout)?
+            .with_legacy_signer()
+            .with_func_args_deserialization(context.function_value_extension())
+            .serialize(&msg, &layout)?
         {
             Some(blob) => blob,
             None => {
@@ -132,13 +134,21 @@ fn native_emit_event(
                 )));
             }
         };
-        context.extensions_mut().get_mut::<NativeEventContext>().events_for_testing.push((blob, type_tag.clone()));
+        context
+            .extensions_mut()
+            .get_mut::<NativeEventContext>()
+            .events_for_testing
+            .push((blob, type_tag.clone()));
     }
 
-    context.extensions_mut().get_mut::<NativeEventContext>().events.push((
-        ContractEvent::new(type_tag, serde_value.to_string()),
-        annotated_layout,
-    ));
+    context
+        .extensions_mut()
+        .get_mut::<NativeEventContext>()
+        .events
+        .push((
+            ContractEvent::new(type_tag, serde_value.to_string()),
+            annotated_layout,
+        ));
 
     Ok(smallvec![])
 }
@@ -161,16 +171,14 @@ fn native_emitted_events(
         .into_iter()
         .map(|blob| {
             match ValueSerDeContext::new()
-            .with_legacy_signer()
-            .with_func_args_deserialization(context.function_value_extension())
-            .deserialize(blob, &ty_layout)
+                .with_legacy_signer()
+                .with_func_args_deserialization(context.function_value_extension())
+                .deserialize(blob, &ty_layout)
             {
                 Some(val) => Ok(val),
-                None => {
-                    Err(SafeNativeError::InvariantViolation(PartialVMError::new(
-                        StatusCode::VALUE_DESERIALIZATION_ERROR,
-                    )))
-                }
+                None => Err(SafeNativeError::InvariantViolation(PartialVMError::new(
+                    StatusCode::VALUE_DESERIALIZATION_ERROR,
+                ))),
             }
         })
         .collect::<SafeNativeResult<Vec<Value>>>()?;

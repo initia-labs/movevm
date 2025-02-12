@@ -95,10 +95,7 @@ impl InitiaModuleCache {
             Some(_) => Ok(()),
             None => {
                 let module_id = deserialized_code.self_id();
-                let module = Arc::new(ModuleCode::from_deserialized(
-                    deserialized_code,
-                    extension,
-                ));
+                let module = Arc::new(ModuleCode::from_deserialized(deserialized_code, extension));
 
                 // NOTE: We are not handling the error here, because we are sure that the
                 // allocated size is less than the capacity.

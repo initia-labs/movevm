@@ -1,6 +1,8 @@
 use move_core_types::gas_algebra::NumBytes;
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{loaded_data::runtime_types::Type, value_serde::ValueSerDeContext, values::Value};
+use move_vm_types::{
+    loaded_data::runtime_types::Type, value_serde::ValueSerDeContext, values::Value,
+};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 

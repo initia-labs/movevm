@@ -424,8 +424,12 @@ mod json_arg_testing {
         let result = deserialize_json_to_value(&module_id(), &layout, arg).unwrap();
 
         assert_eq!(
-            ValueSerDeContext::new().serialize(&result, &layout).unwrap(),
-            ValueSerDeContext::new().serialize(&Value::vector_u8(vec![0u8, 1u8, 2u8, 3u8]), &layout).unwrap()
+            ValueSerDeContext::new()
+                .serialize(&result, &layout)
+                .unwrap(),
+            ValueSerDeContext::new()
+                .serialize(&Value::vector_u8(vec![0u8, 1u8, 2u8, 3u8]), &layout)
+                .unwrap()
         );
 
         // hex string to vector<u8>
@@ -441,13 +445,21 @@ mod json_arg_testing {
         let layout = MoveTypeLayout::Vector(Box::new(MoveTypeLayout::Address));
         let arg = b"[\"0x1\", \"0x2\"]";
         let result = deserialize_json_to_value(&module_id(), &layout, arg).unwrap();
-        
 
         assert_eq!(
-            ValueSerDeContext::new().serialize(&result, &layout).unwrap(),
-            ValueSerDeContext::new().serialize(&Value::vector_address(vec![
-                "0x1".parse::<AccountAddress>().unwrap(),
-                "0x2".parse::<AccountAddress>().unwrap()]), &layout).unwrap());
+            ValueSerDeContext::new()
+                .serialize(&result, &layout)
+                .unwrap(),
+            ValueSerDeContext::new()
+                .serialize(
+                    &Value::vector_address(vec![
+                        "0x1".parse::<AccountAddress>().unwrap(),
+                        "0x2".parse::<AccountAddress>().unwrap()
+                    ]),
+                    &layout
+                )
+                .unwrap()
+        );
 
         // invalid inner address
         let arg = b"[\"0xgg\"]";

@@ -7,8 +7,8 @@ use move_binary_format::{errors::VMResult, file_format::CompiledScript, Compiled
 use move_core_types::{account_address::AccountAddress, identifier::IdentStr, metadata::Metadata};
 use move_vm_runtime::{
     ambassador_impl_ModuleStorage, ambassador_impl_WithRuntimeEnvironment,
-    logging::expect_no_verification_errors, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
-    Script, WithRuntimeEnvironment, Function,
+    logging::expect_no_verification_errors, CodeStorage, Function, Module, ModuleStorage,
+    RuntimeEnvironment, Script, WithRuntimeEnvironment,
 };
 use move_vm_types::{code::ModuleBytesStorage, module_linker_error, sha3_256};
 use std::sync::Arc;
@@ -22,9 +22,9 @@ use crate::{
 };
 
 use move_binary_format::errors::PartialVMResult;
-use move_vm_types::loaded_data::runtime_types::Type;
 use move_core_types::language_storage::TypeTag;
 use move_vm_types::loaded_data::runtime_types::StructType;
+use move_vm_types::loaded_data::runtime_types::Type;
 
 /// Code storage that stores both modules and scripts (not thread-safe).
 #[allow(clippy::duplicated_attributes)]

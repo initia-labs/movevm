@@ -68,7 +68,7 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                     let value = convert_move_value_to_json_value(mv, depth + 1)?;
                     let _ = fields_map.insert(id.to_string(), value);
                 }
-                
+
                 let mut json_value = JSONValue::Object(fields_map);
                 json_value.sort_all_objects();
 
