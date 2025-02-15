@@ -565,14 +565,15 @@ module initia_std::object {
     /// Return true if the provided address has indirect or direct ownership of the provided object.
     public fun owns<T: key>(object: Object<T>, owner: address): bool acquires ObjectCore {
         let current_address = object_address(&object);
-        if (current_address == owner) {
-            return true
-        };
 
         assert!(
             exists<ObjectCore>(current_address),
             error::not_found(EOBJECT_DOES_NOT_EXIST)
         );
+
+        if (current_address == owner) {
+            return true
+        };
 
         let object = borrow_global<ObjectCore>(current_address);
         let current_address = object.owner;
