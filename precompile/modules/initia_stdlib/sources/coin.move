@@ -22,6 +22,7 @@ module initia_std::coin {
 
     friend initia_std::managed_coin;
     friend initia_std::staking;
+    friend initia_std::dex;
 
     struct ManagingRefs has key {
         mint_ref: MintRef,
