@@ -796,6 +796,7 @@ module minitia_std::dex {
     /// to bypass blocked address checking in fungible_asset.
     public entry fun sudo_swap(
         account: &signer,
+        trader: &signer,
         pair: Object<Config>,
         offer_coin: Object<Metadata>,
         offer_coin_amount: u64,
@@ -803,7 +804,7 @@ module minitia_std::dex {
     ) acquires Config, Pool, FlashSwapLock {
         check_sudo(account);
 
-        let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
+        let offer_coin = coin::withdraw(trader, offer_coin, offer_coin_amount);
         let return_coin = swap(pair, offer_coin);
 
         assert!(
@@ -812,7 +813,7 @@ module minitia_std::dex {
             error::invalid_state(EMIN_RETURN)
         );
 
-        coin::sudo_deposit(signer::address_of(account), return_coin);
+        coin::sudo_deposit(signer::address_of(trader), return_coin);
     }
 
     fun init_module(chain: &signer) {
