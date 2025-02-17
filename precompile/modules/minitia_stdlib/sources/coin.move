@@ -21,6 +21,7 @@ module minitia_std::coin {
     use minitia_std::hex;
 
     friend minitia_std::managed_coin;
+    friend minitia_std::dex;
 
     struct ManagingRefs has key {
         mint_ref: MintRef,
