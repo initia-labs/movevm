@@ -16,6 +16,8 @@ module initia_std::stableswap {
 
     const A_PRECISION: u256 = 100;
 
+    const MAX_N_COINS: u64 = 5;
+
     struct ModuleStore has key {
         pools: Table<address, bool>,
         pool_count: u64
@@ -24,7 +26,8 @@ module initia_std::stableswap {
     struct Pool has key {
         /// Extend Reference
         extend_ref: ExtendRef,
-        /// ANN
+        /// ANN, calculated as A * n ** n * A_PRECISION, where A is the amplification factor.
+        /// All `ann` values remain consistent with this formula.
         ann: Ann,
         /// swap fee
         swap_fee_rate: BigDecimal,
@@ -562,7 +565,7 @@ module initia_std::stableswap {
         ann: u64
     ): FungibleAsset acquires Pool, ModuleStore {
         assert!(
-            vector::length(&coins) >= 2,
+            vector::length(&coins) >= 2 && vector::length(&coins) <= MAX_N_COINS,
             error::invalid_argument(EN_COINS)
         );
         let (_, timestamp) = block::get_block_info();
