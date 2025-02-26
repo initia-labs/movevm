@@ -2187,7 +2187,7 @@ module initia_std::staking {
 
     #[test]
     #[expected_failure(abort_code = 0x10008, location = Self)]
-    public fun test_staking_merge_delegation_validator_mistmatch() acquires ModuleStore {
+    public fun test_staking_merge_delegation_validator_mismatch() acquires ModuleStore {
         test_setup();
 
         let delegation1 = Delegation {
