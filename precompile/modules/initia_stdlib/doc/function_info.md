@@ -155,7 +155,7 @@ Creates a new function info from names.
 
 ## Function `check_dispatch_type_compatibility`
 
-Check if the dispatch target function meets the type requirements of the disptach entry point.
+Check if the dispatch target function meets the type requirements of the dispatch entry point.
 
 framework_function is the dispatch native function defined in the initia_std.
 dispatch_target is the function passed in by the user.
