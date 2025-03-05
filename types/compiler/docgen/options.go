@@ -1,6 +1,6 @@
 package docgen
 
-import "github.com/initia-labs/movevm/types"
+import "github.com/initia-labs/movevm/v1/types"
 
 // DefaultDocDefaultDocgenOptionsgenConfig returns DocgenOptions with default value
 func DefaultDocgenOptions() types.CompilerDocgenOptions {

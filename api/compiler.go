@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/initia-labs/movevm/types"
+	"github.com/initia-labs/movevm/v1/types"
 )
 
 func BuildContract(args types.CompilerArguments) ([]byte, error) {

@@ -13,10 +13,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	vm "github.com/initia-labs/movevm"
-	"github.com/initia-labs/movevm/api"
-	"github.com/initia-labs/movevm/precompile"
-	"github.com/initia-labs/movevm/types"
+	vm "github.com/initia-labs/movevm/v1"
+	"github.com/initia-labs/movevm/v1/api"
+	"github.com/initia-labs/movevm/v1/precompile"
+	"github.com/initia-labs/movevm/v1/types"
 )
 
 func generateRandomHash() [32]uint8 {

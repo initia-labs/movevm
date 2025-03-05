@@ -1,8 +1,8 @@
 package compiler
 
 import (
-	"github.com/initia-labs/movevm/types"
-	"github.com/initia-labs/movevm/types/compiler/build"
+	"github.com/initia-labs/movevm/v1/types"
+	"github.com/initia-labs/movevm/v1/types/compiler/build"
 )
 
 func NewCompilerArgument(packagePath string, verbose bool, buildConfig types.CompilerBuildConfig) types.CompilerArguments {

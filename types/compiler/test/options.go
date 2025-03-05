@@ -1,6 +1,6 @@
 package test
 
-import "github.com/initia-labs/movevm/types"
+import "github.com/initia-labs/movevm/v1/types"
 
 // DefaultTestOptions returns TestOptions with default value
 func DefaultTestOptions() types.CompilerTestOptions {

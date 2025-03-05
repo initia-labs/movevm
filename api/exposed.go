@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/initia-labs/movevm/types"
+	"github.com/initia-labs/movevm/v1/types"
 )
 
 // ModuleInfoResponse response from vmapi

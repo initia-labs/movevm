@@ -83,6 +83,7 @@ build-rust: build-rust-release
 precompile:
 	cargo run -p precompile
 
+generate-bcs-go: prebuild-go
 prebuild-go:
 	cargo run -p generate-bcs-go
 

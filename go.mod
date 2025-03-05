@@ -1,4 +1,4 @@
-module github.com/initia-labs/movevm
+module github.com/initia-labs/movevm/v1
 
 go 1.22
 

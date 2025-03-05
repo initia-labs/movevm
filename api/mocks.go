@@ -5,7 +5,7 @@ import (
 
 	"cosmossdk.io/math"
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/initia-labs/movevm/types"
+	"github.com/initia-labs/movevm/v1/types"
 )
 
 /*** Mock KVStore ****/

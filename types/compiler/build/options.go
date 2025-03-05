@@ -1,6 +1,6 @@
 package build
 
-import "github.com/initia-labs/movevm/types"
+import "github.com/initia-labs/movevm/v1/types"
 
 // DefaultBuildConfig returns with all-false set (except PackagePath which is set to current(.)) BuildConfig
 func DefaultCompilerBuildConfig() types.CompilerBuildConfig {
