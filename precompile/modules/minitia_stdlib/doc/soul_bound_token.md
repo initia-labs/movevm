@@ -3,7 +3,7 @@
 
 # Module `0x1::soul_bound_token`
 
-This defines a soul bound token (SBT) for no-code solutions akin the the original nft at
+This defines a soul bound token (SBT) for no-code solutions akin the original nft at
 minitia_std::nft module.
 
 

@@ -1,4 +1,4 @@
-/// This defines a soul bound token (SBT) for no-code solutions akin the the original nft at
+/// This defines a soul bound token (SBT) for no-code solutions akin the original nft at
 /// minitia_std::nft module.
 module minitia_std::soul_bound_token {
     use std::error;
