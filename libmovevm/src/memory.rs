@@ -167,7 +167,7 @@ impl U8SliceView {
 /// ### Transfer ownership from Rust to Go
 ///
 /// When an `UnmanagedVector` was created in Rust using [`UnmanagedVector::new`], [`UnmanagedVector::default`]
-/// or [`new_unmanaged_vector`], it can be passted to Go as a return value.
+/// or [`new_unmanaged_vector`], it can be passed to Go as a return value.
 /// Rust then has no chance to destroy the vector anymore, so ownership is transferred to Go.
 /// In Go, the data has to be copied to a garbage collected `[]byte`. Then the vector must be destroyed
 /// using [`destroy_unmanaged_vector`].
