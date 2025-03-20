@@ -45,7 +45,7 @@ module minitia_std::function_info {
         FunctionInfo { module_address, module_name, function_name }
     }
 
-    /// Check if the dispatch target function meets the type requirements of the disptach entry point.
+    /// Check if the dispatch target function meets the type requirements of the dispatch entry point.
     ///
     /// framework_function is the dispatch native function defined in the minitia_std.
     /// dispatch_target is the function passed in by the user.
