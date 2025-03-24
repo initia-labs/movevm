@@ -87,9 +87,13 @@ impl InitiaVM {
     pub fn new(initia_vm_config: InitiaVMConfig) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
+        
         let vm_config = VMConfig {
             verifier_config: verifier_config(),
             use_loader_v2: true,
+            type_max_cost: 5000,
+            type_base_cost: 100,
+            type_byte_cost: 1,
             ..Default::default()
         };
         let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(
