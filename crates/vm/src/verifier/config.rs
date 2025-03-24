@@ -28,6 +28,6 @@ pub fn verifier_config() -> VerifierConfig {
         sig_checker_v2_fix_script_ty_param_count: true,
 
         enable_enum_types: true,
-        enable_resource_access_control: true,
+        enable_resource_access_control: false,
     }
 }
