@@ -657,9 +657,9 @@ module initia_std::nft {
     }
 
     #[test_only]
-    fun create_collection_helper(
+    public fun create_collection_helper(
         creator: &signer, collection_name: String, max_supply: u64
-    ) {
+    ): ConstructorRef {
         collection::create_fixed_collection(
             creator,
             string::utf8(b"collection description"),
@@ -667,11 +667,11 @@ module initia_std::nft {
             collection_name,
             option::none(),
             string::utf8(b"collection uri")
-        );
+        )
     }
 
     #[test_only]
-    fun create_nft_helper(
+    public fun create_nft_helper(
         owner: &signer,
         creator: &signer,
         collection_name: String,

@@ -744,12 +744,76 @@ module minitia_std::dex {
         (current_weight_response.coin_a_weight, current_weight_response.coin_b_weight)
     }
 
+    //
+    // sudo functions
+    //
+
     /// Check signer is chain
-    fun check_chain_permission(chain: &signer) {
+    fun check_sudo(chain: &signer) {
         assert!(
             signer::address_of(chain) == @minitia_std,
             error::permission_denied(EUNAUTHORIZED)
         );
+    }
+
+    fun max_fee_rate(): BigDecimal {
+        bigdecimal::from_ratio_u64(5, 100)
+    }
+
+    /// update swap fee rate
+    public entry fun update_swap_fee_rate(
+        chain: &signer, pair: Object<Config>, swap_fee_rate: BigDecimal
+    ) acquires Config, Pool, ModuleStore {
+        check_sudo(chain);
+
+        let config = borrow_global_mut<Config>(object::object_address(&pair));
+        assert!(
+            bigdecimal::le(swap_fee_rate, max_fee_rate()),
+            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
+        );
+
+        config.swap_fee_rate = swap_fee_rate;
+        let pair_key = generate_pair_key(pair);
+
+        // update PairResponse
+        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let pair_response = table::borrow_mut(&mut module_store.pairs, pair_key);
+
+        pair_response.swap_fee_rate = swap_fee_rate;
+
+        // emit event
+        event::emit<SwapFeeUpdateEvent>(
+            SwapFeeUpdateEvent {
+                coin_a: pair_key.coin_a,
+                coin_b: pair_key.coin_b,
+                liquidity_token: pair_key.liquidity_token,
+                swap_fee_rate
+            }
+        );
+    }
+
+    /// sudo_swap is a function to swap token with sudo permission
+    /// to bypass blocked address checking in fungible_asset.
+    public entry fun sudo_swap(
+        account: &signer,
+        trader: &signer,
+        pair: Object<Config>,
+        offer_coin: Object<Metadata>,
+        offer_coin_amount: u64,
+        min_return: Option<u64>
+    ) acquires Config, Pool, FlashSwapLock {
+        check_sudo(account);
+
+        let offer_coin = coin::withdraw(trader, offer_coin, offer_coin_amount);
+        let return_coin = swap(pair, offer_coin);
+
+        assert!(
+            option::is_none(&min_return)
+                || *option::borrow(&min_return) <= fungible_asset::amount(&return_coin),
+            error::invalid_state(EMIN_RETURN)
+        );
+
+        coin::sudo_deposit(signer::address_of(trader), return_coin);
     }
 
     fun init_module(chain: &signer) {
@@ -851,42 +915,6 @@ module minitia_std::dex {
                 weights
             );
         coin::deposit(signer::address_of(creator), liquidity_token);
-    }
-
-    fun max_fee_rate(): BigDecimal {
-        bigdecimal::from_ratio_u64(5, 100)
-    }
-
-    /// update swap fee rate
-    public entry fun update_swap_fee_rate(
-        chain: &signer, pair: Object<Config>, swap_fee_rate: BigDecimal
-    ) acquires Config, Pool, ModuleStore {
-        check_chain_permission(chain);
-
-        let config = borrow_global_mut<Config>(object::object_address(&pair));
-        assert!(
-            bigdecimal::le(swap_fee_rate, max_fee_rate()),
-            error::invalid_argument(EOUT_OF_SWAP_FEE_RATE_RANGE)
-        );
-
-        config.swap_fee_rate = swap_fee_rate;
-        let pair_key = generate_pair_key(pair);
-
-        // update PairResponse
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        let pair_response = table::borrow_mut(&mut module_store.pairs, pair_key);
-
-        pair_response.swap_fee_rate = swap_fee_rate;
-
-        // emit event
-        event::emit<SwapFeeUpdateEvent>(
-            SwapFeeUpdateEvent {
-                coin_a: pair_key.coin_a,
-                coin_b: pair_key.coin_b,
-                liquidity_token: pair_key.liquidity_token,
-                swap_fee_rate
-            }
-        );
     }
 
     /// script of `provide_liquidity_from_coin_store`

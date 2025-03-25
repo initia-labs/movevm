@@ -1,4 +1,4 @@
-/// This defines a minimally viable nft for no-code solutions akin the the original nft at
+/// This defines a minimally viable nft for no-code solutions akin the original nft at
 /// initia_std::nft module.
 /// IBC transfer will only support nft that is created by initia_nft
 /// The key features are:

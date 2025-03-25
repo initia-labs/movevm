@@ -146,7 +146,7 @@ impl<'s, S: StateView> CompiledModuleView for StateViewImpl<'s, S> {
         let bytes = self.get_module(id)?;
         let module = match bytes {
             Some(bytes) => {
-                CompiledModule::deserialize(&bytes).map_err(|e| anyhow::anyhow!(e.to_string()))?
+                CompiledModule::deserialize_with_config(&bytes, &self.deserialize_config).map_err(|e| anyhow::anyhow!(e.to_string()))?
             }
             None => return Ok(None),
         };

@@ -1,4 +1,4 @@
-.PHONY: all build build-rust build-go test precompile
+.PHONY: all build build-rust build-go test precompile contracts-gen bcs-go-gen
 
 # Builds the Rust library libmovevm
 BUILDERS_PREFIX := initia/go-ext-builder:0001
@@ -80,9 +80,11 @@ build: precompile build-rust build-go
 
 build-rust: build-rust-release
 
+contracts-gen: precompile
 precompile:
 	cargo run -p precompile
 
+bcs-go-gen: prebuild-go
 prebuild-go:
 	cargo run -p generate-bcs-go
 

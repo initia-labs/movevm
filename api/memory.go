@@ -5,7 +5,9 @@ package api
 */
 import "C"
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // makeView creates a view into the given byte slice what allows Rust code to read it.
 // The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
@@ -15,16 +17,9 @@ func makeView(s []byte) C.ByteSliceView {
 		return C.ByteSliceView{is_nil: true, ptr: cu8_ptr(nil), len: cusize(0)}
 	}
 
-	// In Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
-	// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
-	// below with `&data[0]`. https://play.golang.org/p/xvDY3g9OqUk
-	if len(s) == 0 {
-		return C.ByteSliceView{is_nil: false, ptr: cu8_ptr(nil), len: cusize(0)}
-	}
-
 	return C.ByteSliceView{
 		is_nil: false,
-		ptr:    cu8_ptr(unsafe.Pointer(&s[0])),
+		ptr:    cu8_ptr(unsafe.SliceData(s)),
 		len:    cusize(len(s)),
 	}
 }
