@@ -19,7 +19,7 @@ func makeView(s []byte) C.ByteSliceView {
 
 	return C.ByteSliceView{
 		is_nil: false,
-		ptr:    cu8_ptr(unsafe.Pointer(unsafe.SliceData(s))),
+		ptr:    cu8_ptr(unsafe.SliceData(s)),
 		len:    cusize(len(s)),
 	}
 }
