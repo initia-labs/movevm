@@ -14,10 +14,12 @@ use move_core_types::{language_storage::TypeTag, value::MoveTypeLayout, vm_statu
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    value_serde::ValueSerDeContext,
     values::{Reference, Value},
 };
 use smallvec::{smallvec, SmallVec};
+
+#[cfg(feature = "testing")]
+use move_vm_types::value_serde::ValueSerDeContext;
 
 // See stdlib/error.move
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
