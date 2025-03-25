@@ -115,7 +115,7 @@ fn test_cosmos_delegate() {
         &delegator_address.into_bytes(),
     )
     .unwrap();
-    let expected_data = format!("{{\"@type\":\"/initia.mstaking.v1.MsgDelegate\",\"amount\":[{{\"amount\":\"{amount}\",\"denom\":\"{staking_denom}\"}}],\"delegator_address\":\"{delegator_cosmos_addr}\",\"validator_address\":\"{validator_address}\"}}");
+    let expected_data = format!("{{\"@type\":\"/initia.mstaking.v1.MsgDelegate\",\"delegator_address\":\"{delegator_cosmos_addr}\",\"validator_address\":\"{validator_address}\",\"amount\":[{{\"denom\":\"{staking_denom}\",\"amount\":\"{amount}\"}}]}}");
     let test_delegate = (
         delegator_address,
         "0x1::cosmos::delegate",
@@ -169,7 +169,7 @@ fn test_cosmos_fund_community_pool() {
     let depositor_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender_address.into_bytes())
             .unwrap();
-    let expected_data = format!("{{\"@type\":\"/cosmos.distribution.v1beta1.MsgFundCommunityPool\",\"amount\":[{{\"amount\":\"{amount}\",\"denom\":\"{denom}\"}}],\"depositor\":\"{depositor_cosmos_addr}\"}}");
+    let expected_data = format!("{{\"@type\":\"/cosmos.distribution.v1beta1.MsgFundCommunityPool\",\"depositor\":\"{depositor_cosmos_addr}\",\"amount\":[{{\"denom\":\"{denom}\",\"amount\":\"{amount}\"}}]}}");
 
     let test_fund_community_pool = (
         sender_address,
@@ -226,7 +226,7 @@ fn test_cosmos_transfer() {
     let denom = str::from_utf8(STAKING_SYMBOL).unwrap();
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/ibc.applications.transfer.v1.MsgTransfer\",\"memo\":\"{memo}\",\"receiver\":\"{receiver}\",\"sender\":\"{sender_cosmos_addr}\",\"source_channel\":\"{source_channel}\",\"source_port\":\"{source_port}\",\"timeout_height\":{{\"revision_height\":\"{revision_height}\",\"revision_number\":\"{revision_number}\"}},\"timeout_timestamp\":\"{timeout_timestamp}\",\"token\":{{\"amount\":\"{amount}\",\"denom\":\"{denom}\"}}}}");
+    let expected_data = format!("{{\"@type\":\"/ibc.applications.transfer.v1.MsgTransfer\",\"source_port\":\"{source_port}\",\"source_channel\":\"{source_channel}\",\"sender\":\"{sender_cosmos_addr}\",\"receiver\":\"{receiver}\",\"token\":{{\"denom\":\"{denom}\",\"amount\":\"{amount}\"}},\"timeout_height\":{{\"revision_number\":\"{revision_number}\",\"revision_height\":\"{revision_height}\"}},\"timeout_timestamp\":\"{timeout_timestamp}\",\"memo\":\"{memo}\"}}");
 
     let test_transfer = (
         sender,
@@ -298,7 +298,7 @@ fn test_cosmos_nft_transfer() {
     let class_id = str::from_utf8(COLLECTION_NAME).unwrap();
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/ibc.applications.nft_transfer.v1.MsgTransfer\",\"class_id\":\"{class_id}\",\"memo\":\"{memo}\",\"receiver\":\"{receiver}\",\"sender\":\"{sender_cosmos_addr}\",\"source_channel\":\"{source_channel}\",\"source_port\":\"{source_port}\",\"timeout_height\":{{\"revision_height\":\"{revision_height}\",\"revision_number\":\"{revision_number}\"}},\"timeout_timestamp\":\"{timeout_timestamp}\",\"token_ids\":[\"id1\",\"id2\"]}}");
+    let expected_data = format!("{{\"@type\":\"/ibc.applications.nft_transfer.v1.MsgTransfer\",\"sender\":\"{sender_cosmos_addr}\",\"receiver\":\"{receiver}\",\"class_id\":\"{class_id}\",\"token_ids\":[\"id1\",\"id2\"],\"source_port\":\"{source_port}\",\"source_channel\":\"{source_channel}\",\"timeout_height\":{{\"revision_number\":\"{revision_number}\",\"revision_height\":\"{revision_height}\"}},\"timeout_timestamp\":\"{timeout_timestamp}\",\"memo\":\"{memo}\"}}");
 
     let test_nft_transfer = (
         sender,
@@ -398,7 +398,7 @@ fn test_cosmos_pay_fee() {
     let timeout_fee_denom = str::from_utf8(FEE_B_SYMBOL).unwrap();
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/ibc.applications.fee.v1.MsgPayPacketFee\",\"fee\":{{\"ack_fee\":[{{\"amount\":\"{ack_fee_amount}\",\"denom\":\"{ack_fee_denom}\"}}],\"recv_fee\":[{{\"amount\":\"{recv_fee_amount}\",\"denom\":\"{recv_fee_denom}\"}}],\"timeout_fee\":[{{\"amount\":\"{timeout_fee_amount}\",\"denom\":\"{timeout_fee_denom}\"}}]}},\"relayers\":[],\"signer\":\"{sender_cosmos_addr}\",\"source_channel_id\":\"{source_channel}\",\"source_port_id\":\"{source_port}\"}}");
+    let expected_data = format!("{{\"@type\":\"/ibc.applications.fee.v1.MsgPayPacketFee\",\"signer\":\"{sender_cosmos_addr}\",\"source_port_id\":\"{source_port}\",\"source_channel_id\":\"{source_channel}\",\"fee\":{{\"recv_fee\":[{{\"denom\":\"{recv_fee_denom}\",\"amount\":\"{recv_fee_amount}\"}}],\"ack_fee\":[{{\"denom\":\"{ack_fee_denom}\",\"amount\":\"{ack_fee_amount}\"}}],\"timeout_fee\":[{{\"denom\":\"{timeout_fee_denom}\",\"amount\":\"{timeout_fee_amount}\"}}]}},\"relayers\":[]}}");
 
     let test_pay_fee = (
         sender,
@@ -449,7 +449,7 @@ fn test_cosmos_move_execute() {
     let module_addr_hex = module_address.to_hex_literal();
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecute\",\"args\":[\"{arg1_base64}\",\"{arg2_base64}\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecute\",\"sender\":\"{sender_cosmos_addr}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"function_name\":\"{function_name}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"],\"args\":[\"{arg1_base64}\",\"{arg2_base64}\"]}}");
 
     let test_move_execute = (
         sender,
@@ -494,7 +494,7 @@ fn test_cosmos_move_execute_with_json() {
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
     let module_addr_hex = module_address.to_hex_literal();
-    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecuteJSON\",\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"],\"function_name\":\"{function_name}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgExecuteJSON\",\"sender\":\"{sender_cosmos_addr}\",\"module_address\":\"{module_addr_hex}\",\"module_name\":\"{module_name}\",\"function_name\":\"{function_name}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"],\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"]}}");
 
     let test_move_execute = (
         sender,
@@ -540,7 +540,7 @@ fn test_cosmos_move_script() {
     let arg2_base64 = base64.encode(arg2.clone());
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgScript\",\"args\":[\"{arg1_base64}\",\"{arg2_base64}\"],\"code_bytes\":\"{code_bytes_base64}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgScript\",\"sender\":\"{sender_cosmos_addr}\",\"code_bytes\":\"{code_bytes_base64}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"],\"args\":[\"{arg1_base64}\",\"{arg2_base64}\"]}}");
 
     let test_move_script = (
         sender,
@@ -582,7 +582,7 @@ fn test_cosmos_move_script_with_json() {
     let code_bytes_base64 = base64.encode(code_bytes.clone());
     let sender_cosmos_addr =
         bech32::encode::<Bech32>(Hrp::parse_unchecked("init"), &sender.into_bytes()).unwrap();
-    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgScriptJSON\",\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"],\"code_bytes\":\"{code_bytes_base64}\",\"sender\":\"{sender_cosmos_addr}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"]}}");
+    let expected_data = format!("{{\"@type\":\"/initia.move.v1.MsgScriptJSON\",\"sender\":\"{sender_cosmos_addr}\",\"code_bytes\":\"{code_bytes_base64}\",\"type_args\":[\"{type_arg1}\",\"{type_arg2}\"],\"args\":[\"\\\"hello\\\"\",\"\\\"world\\\"\"]}}");
 
     let test_move_script = (
         sender,

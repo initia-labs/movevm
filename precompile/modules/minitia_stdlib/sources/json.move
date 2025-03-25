@@ -191,7 +191,7 @@ module minitia_std::json {
         let json = marshal(&obj);
         assert!(
             json
-                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"010203\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\",\"signer\":\"signer\"}",
+                == b"{\"a\":\"42\",\"b\":true,\"c\":\"010203\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"@type\":\"/cosmos.gov.v1.MsgVote\",\"move\":\"move\",\"signer\":\"signer\",\"biguint\":\"42\",\"bigdecimal\":\"0.0123\"}",
             1
         );
 
@@ -247,7 +247,7 @@ module minitia_std::json {
         let json5 = marshal(&json_obj);
         assert!(
             json5
-                == b"{\"@type\":\"/cosmos.gov.v1.MsgVote\",\"a\":\"42\",\"b\":true,\"bigdecimal\":\"0.0123\",\"biguint\":\"42\",\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"move\":\"move\",\"signer\":\"signer\"}",
+                == b"{\"a\":\"42\",\"b\":true,\"c\":\"hello\",\"d\":\"0x1\",\"e\":{\"a\":\"42\",\"b\":true,\"c\":\"010203\"},\"f\":null,\"@type\":\"/cosmos.gov.v1.MsgVote\",\"move\":\"move\",\"signer\":\"signer\",\"biguint\":\"42\",\"bigdecimal\":\"0.0123\"}",
             9
         );
     }
