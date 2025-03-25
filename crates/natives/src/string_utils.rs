@@ -6,7 +6,7 @@ use move_core_types::{
     account_address::AccountAddress,
     language_storage::TypeTag,
     u256,
-    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout},
+    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout, MASTER_ADDRESS_FIELD_OFFSET},
 };
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
@@ -188,7 +188,8 @@ fn native_format_impl(
             let addr = val
                 .value_as::<Struct>()?
                 .unpack()?
-                .nth(1)
+                // The second field of a signer is always the master address regardless of which variants.
+                .nth(MASTER_ADDRESS_FIELD_OFFSET)
                 .unwrap()
                 .value_as::<AccountAddress>()?;
 

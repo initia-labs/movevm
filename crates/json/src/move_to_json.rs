@@ -69,10 +69,7 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                     let _ = fields_map.insert(id.to_string(), value);
                 }
 
-                let mut json_value = JSONValue::Object(fields_map);
-                json_value.sort_all_objects();
-
-                Ok(json_value)
+                Ok(JSONValue::Object(fields_map))
             }
             MoveStruct::WithTypes { _type_, _fields } => {
                 // The move compiler inserts a dummy field with the value of false
@@ -114,10 +111,7 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                         let _ = fields_map.insert(field_name.to_string(), value);
                     }
 
-                    let mut json_value = JSONValue::Object(fields_map);
-                    json_value.sort_all_objects();
-
-                    Ok(json_value)
+                    Ok(JSONValue::Object(fields_map))
                 }
             }
         },

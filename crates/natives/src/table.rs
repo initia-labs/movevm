@@ -742,12 +742,8 @@ fn serialize(
     if let Some(fext) = function_extension {
         ctx = ctx.with_func_args_deserialization(fext)
     }
-    match ctx.serialize(val, layout)? {
-        Some(bytes) => Ok(bytes),
-        None => Err(partial_extension_error(
-            "cannot serialize table key or value",
-        )),
-    }
+    ctx.serialize(val, layout)?
+        .ok_or_else(|| partial_extension_error("cannot serialize table key or value"))
 }
 
 fn deserialize(
@@ -760,12 +756,8 @@ fn deserialize(
         ctx = ctx.with_func_args_deserialization(function_extension)
     }
 
-    match ctx.deserialize(bytes, layout) {
-        Some(val) => Ok(val),
-        None => Err(partial_extension_error(
-            "cannot deserialize table key or value",
-        )),
-    }
+    ctx.deserialize(bytes, layout)
+        .ok_or_else(|| partial_extension_error("cannot deserialize table key or value"))
 }
 
 fn partial_extension_error(msg: impl ToString) -> PartialVMError {
