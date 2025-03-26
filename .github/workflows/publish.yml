@@ -19,7 +19,7 @@ jobs:
       - name: Push files to move-natives
         uses: initia-labs/actions/push-to-repo@main
         env:
-          TOKEN_GITHUB: ${{ secrets.PUBLISH_TOKEN }}
+          TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
         with:
           sources: |
             precompile/modules/initia_stdlib
@@ -35,7 +35,7 @@ jobs:
       - name: Push shared dynamic libraries to builder.js
         uses: initia-labs/actions/push-to-repo@main
         env:
-          TOKEN_GITHUB: ${{ secrets.PUBLISH_TOKEN }}
+          TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
         with:
           sources: |
             api/libmovevm.dylib
