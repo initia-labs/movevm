@@ -215,11 +215,14 @@ pub(crate) fn is_valid_txn_arg(
     match ty {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
         Vector(inner) => is_valid_txn_arg(session, module_storage, inner, allowed_structs),
-        Struct { idx, .. } | StructInstantiation { idx, .. } => session
-            .fetch_struct_ty_by_idx(*idx, module_storage)
-            .is_some_and(|st| {
-                let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
-                allowed_structs.contains_key(&full_name)
+        Struct { .. } | StructInstantiation { .. } => session
+            .get_struct_name(ty, module_storage)
+            .is_ok_and(|st| match st {
+                Some(st) => {
+                    let full_name = format!("{}::{}", st.0.short_str_lossless(), st.1);
+                    allowed_structs.contains_key(&full_name)
+                }
+                None => false,
             }),
         Signer | Reference(_) | MutableReference(_) | TyParam(_) => false,
     }
@@ -375,12 +378,13 @@ pub(crate) fn recursively_construct_arg(
                 len -= 1;
             }
         }
-        Struct { idx, .. } | StructInstantiation { idx, .. } => {
+        Struct { .. } | StructInstantiation { .. } => {
             let st = session
-                .fetch_struct_ty_by_idx(*idx, module_storage)
+                .get_struct_name(ty, module_storage)
+                .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(invalid_signature)?;
 
-            let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
+            let full_name = format!("{}::{}", st.0.short_str_lossless(), st.1);
             let constructor = allowed_structs
                 .get(&full_name)
                 .ok_or_else(invalid_signature)?;

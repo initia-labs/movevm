@@ -1,6 +1,8 @@
 use move_core_types::gas_algebra::NumBytes;
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{loaded_data::runtime_types::Type, values::Value};
+use move_vm_types::{
+    loaded_data::runtime_types::Type, value_serde::ValueSerDeContext, values::Value,
+};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -42,7 +44,11 @@ fn native_from_bytes(
             + gas_params.from_bcs_from_bytes_unit * NumBytes::new(bytes.len() as u64),
     )?;
 
-    let val = match Value::simple_deserialize(&bytes, &layout) {
+    let val = match ValueSerDeContext::new()
+        .with_legacy_signer()
+        .with_func_args_deserialization(context.function_value_extension())
+        .deserialize(&bytes, &layout)
+    {
         Some(val) => val,
         None => {
             return Err(SafeNativeError::Abort {

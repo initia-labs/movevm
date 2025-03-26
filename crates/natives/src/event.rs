@@ -18,6 +18,9 @@ use move_vm_types::{
 };
 use smallvec::{smallvec, SmallVec};
 
+#[cfg(feature = "testing")]
+use move_vm_types::value_serde::ValueSerDeContext;
+
 // See stdlib/error.move
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 
@@ -118,24 +121,36 @@ fn native_emit_event(
         ))
     })?;
 
-    let ctx = context.extensions_mut().get_mut::<NativeEventContext>();
-
     // Cache the emitted event for testing.
     #[cfg(feature = "testing")]
     {
-        let blob = msg.simple_serialize(&layout).ok_or_else(|| {
-            SafeNativeError::InvariantViolation(PartialVMError::new(
-                StatusCode::VALUE_SERIALIZATION_ERROR,
-            ))
-        })?;
-
-        ctx.events_for_testing.push((blob, type_tag.clone()));
+        let blob = match ValueSerDeContext::new()
+            .with_legacy_signer()
+            .with_func_args_deserialization(context.function_value_extension())
+            .serialize(&msg, &layout)?
+        {
+            Some(blob) => blob,
+            None => {
+                return Err(SafeNativeError::InvariantViolation(PartialVMError::new(
+                    StatusCode::VALUE_SERIALIZATION_ERROR,
+                )));
+            }
+        };
+        context
+            .extensions_mut()
+            .get_mut::<NativeEventContext>()
+            .events_for_testing
+            .push((blob, type_tag.clone()));
     }
 
-    ctx.events.push((
-        ContractEvent::new(type_tag, serde_value.to_string()),
-        annotated_layout,
-    ));
+    context
+        .extensions_mut()
+        .get_mut::<NativeEventContext>()
+        .events
+        .push((
+            ContractEvent::new(type_tag, serde_value.to_string()),
+            annotated_layout,
+        ));
 
     Ok(smallvec![])
 }
@@ -152,16 +167,21 @@ fn native_emitted_events(
     let ty = &ty_args[0];
     let ty_tag = context.type_to_type_tag(ty)?;
     let ty_layout = context.type_to_type_layout(ty)?;
-    let ctx = context.extensions_mut().get_mut::<NativeEventContext>();
+    let ctx = context.extensions().get::<NativeEventContext>();
     let events = ctx
         .emitted_events(&ty_tag)
         .into_iter()
         .map(|blob| {
-            Value::simple_deserialize(blob, &ty_layout).ok_or_else(|| {
-                SafeNativeError::InvariantViolation(PartialVMError::new(
+            match ValueSerDeContext::new()
+                .with_legacy_signer()
+                .with_func_args_deserialization(context.function_value_extension())
+                .deserialize(blob, &ty_layout)
+            {
+                Some(val) => Ok(val),
+                None => Err(SafeNativeError::InvariantViolation(PartialVMError::new(
                     StatusCode::VALUE_DESERIALIZATION_ERROR,
-                ))
-            })
+                ))),
+            }
         })
         .collect::<SafeNativeResult<Vec<Value>>>()?;
 

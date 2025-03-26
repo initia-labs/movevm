@@ -49,7 +49,7 @@ fn test_view_output() {
                 type_args: vec![]
             }))
             .to_string(),
-            "{\"arg\":\"hello world\",\"type_arg\":\"u256\"}".to_string()
+            "{\"type_arg\":\"u256\",\"arg\":\"hello world\"}".to_string()
         )])
         .into_inner(),
     );

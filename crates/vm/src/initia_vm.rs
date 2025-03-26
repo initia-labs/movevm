@@ -87,7 +87,7 @@ impl InitiaVM {
     pub fn new(initia_vm_config: InitiaVMConfig) -> Self {
         let gas_params = NativeGasParameters::initial();
         let misc_params = MiscGasParameters::initial();
-        
+
         let vm_config = VMConfig {
             verifier_config: verifier_config(),
             use_loader_v2: true,

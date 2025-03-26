@@ -183,7 +183,7 @@ fn test_simple_staking() {
         ExpectedOutput::new(
             VMStatus::Executed,
             Some(
-                format!("{{\"metadata\":\"0x{}\",\"share\":\"500000\",\"unclaimed_reward\":\"0\",\"validator\":\"validator\"}}", staking_metadata.short_str_lossless())
+                format!("{{\"metadata\":\"0x{}\",\"validator\":\"validator\",\"share\":\"500000\",\"unclaimed_reward\":\"0\"}}", staking_metadata.short_str_lossless())
                     .to_string(),
             ),
             None,

@@ -4,23 +4,30 @@
 use crate::{
     allocator::get_size,
     code_scale::ModuleWrapper,
-    module_cache::{BytesWithHash, InitiaModuleCache, NoVersion},
+    module_cache::{BytesWithHash, InitiaModuleCache},
     state_view::{Checksum, ChecksumStorage},
 };
 use bytes::Bytes;
 
 use move_binary_format::{
-    errors::{Location, PartialVMError, VMResult},
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     CompiledModule,
 };
 use move_core_types::{
-    account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
-    metadata::Metadata, vm_status::StatusCode,
+    account_address::AccountAddress,
+    identifier::IdentStr,
+    language_storage::{ModuleId, TypeTag},
+    metadata::Metadata,
+    vm_status::StatusCode,
 };
 use move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, WithRuntimeEnvironment};
+use move_vm_types::code::WithSize;
+use move_vm_types::sha3_256;
 use move_vm_types::{
     code::{ModuleBytesStorage, ModuleCode, ModuleCodeBuilder, WithBytes, WithHash},
+    loaded_data::runtime_types::Type,
     module_cyclic_dependency_error, module_linker_error,
+    value_serde::FunctionValueExtension,
 };
 use std::{borrow::Borrow, collections::HashSet, ops::Deref, sync::Arc};
 
@@ -144,14 +151,11 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
     type Extension = BytesWithHash;
     type Key = ModuleId;
     type Verified = Module;
-    type Version = NoVersion;
 
     fn build(
         &self,
         key: &Self::Key,
-    ) -> VMResult<
-        Option<ModuleCode<Self::Deserialized, Self::Verified, Self::Extension, Self::Version>>,
-    > {
+    ) -> VMResult<Option<ModuleCode<Self::Deserialized, Self::Verified, Self::Extension>>> {
         let bytes = match self
             .base_storage
             .fetch_module_bytes(key.address(), key.name())?
@@ -168,9 +172,11 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
             None => return Ok(None),
         };
 
-        let (compiled_module, _, hash) = self
+        let compiled_module = self
             .runtime_environment()
             .deserialize_into_compiled_module(&bytes)?;
+
+        let hash = sha3_256(&bytes);
 
         if checksum != hash {
             return Err(
@@ -181,7 +187,7 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
         }
 
         let extension = Arc::new(BytesWithHash::new(bytes, hash));
-        let module = ModuleCode::from_deserialized(compiled_module, extension, NoVersion);
+        let module = ModuleCode::from_deserialized(compiled_module, extension);
         Ok(Some(module))
     }
 }
@@ -406,9 +412,58 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
             verified_code,
             allocated_size_for_verified + unverified_module_wrapper.size,
             module.extension().clone(),
-            module.version(),
         )?;
     Ok(module.code().verified().clone())
+}
+
+/// Avoids the orphan rule to implement external [FunctionValueExtension] for any generic type that
+/// implements [ModuleStorage].
+pub struct FunctionValueExtensionAdapter<'a> {
+    pub(crate) module_storage: &'a dyn ModuleStorage,
+}
+
+pub trait AsFunctionValueExtension {
+    fn as_function_value_extension(&self) -> FunctionValueExtensionAdapter;
+}
+
+impl<T: ModuleStorage> AsFunctionValueExtension for T {
+    fn as_function_value_extension(&self) -> FunctionValueExtensionAdapter {
+        FunctionValueExtensionAdapter {
+            module_storage: self,
+        }
+    }
+}
+
+impl<'a> FunctionValueExtension for FunctionValueExtensionAdapter<'a> {
+    fn get_function_arg_tys(
+        &self,
+        module_id: &ModuleId,
+        function_name: &IdentStr,
+        substitution_ty_arg_tags: Vec<TypeTag>,
+    ) -> PartialVMResult<Vec<Type>> {
+        let substitution_ty_args = substitution_ty_arg_tags
+            .into_iter()
+            .map(|tag| self.module_storage.fetch_ty(&tag))
+            .collect::<PartialVMResult<Vec<_>>>()?;
+
+        let (_, function) = self
+            .module_storage
+            .fetch_function_definition(module_id.address(), module_id.name(), function_name)
+            .map_err(|err| err.to_partial())?;
+
+        let ty_builder = &self
+            .module_storage
+            .runtime_environment()
+            .vm_config()
+            .ty_builder;
+        function
+            .param_tys()
+            .iter()
+            .map(|ty_to_substitute| {
+                ty_builder.create_ty_with_subst(ty_to_substitute, &substitution_ty_args)
+            })
+            .collect::<PartialVMResult<Vec<_>>>()
+    }
 }
 
 /// Represents owned or borrowed types, similar to [std::borrow::Cow] but without enforcing

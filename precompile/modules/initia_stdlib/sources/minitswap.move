@@ -3377,7 +3377,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"evm\":null,\"move\":{\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":{\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"],\"function_name\":\"minitswap_hook\",\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"type_args\":[]}},\"wasm\":null}"
+                    b"{\"move\":{\"message\":{\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"function_name\":\"minitswap_hook\",\"type_args\":[],\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"]},\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"}},\"wasm\":null,\"evm\":null}"
                 ),
             1
         );
@@ -3396,7 +3396,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"evm\":null,\"move\":{\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"},\"message\":null},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"amount\":\"1000000\",\"denom\":\"op_denom\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}}}"
+                    b"{\"move\":{\"message\":null,\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"}},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"denom\":\"op_denom\",\"amount\":\"1000000\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}},\"evm\":null}"
                 ),
             3
         );

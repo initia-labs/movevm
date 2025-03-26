@@ -247,7 +247,7 @@ fn native_create_signer(
     context.charge(gas_params.account_create_signer_base_cost)?;
 
     let address = safely_pop_arg!(arguments, AccountAddress);
-    Ok(smallvec![Value::signer(address)])
+    Ok(smallvec![Value::master_signer(address)])
 }
 
 /***************************************************************************************************

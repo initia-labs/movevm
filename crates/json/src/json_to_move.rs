@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use bigdecimal::{
     self,
@@ -7,21 +7,19 @@ use bigdecimal::{
 };
 use bytes::Bytes;
 use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
-use move_binary_format::errors::{PartialVMResult, VMResult};
+use move_binary_format::errors::{Location, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     ident_str,
-    language_storage::{StructTag, TypeTag},
+    identifier::Identifier,
+    language_storage::{ModuleId, StructTag, TypeTag},
     metadata::Metadata,
     u256::U256,
     value::{MoveTypeLayout, MoveValue},
 };
 use move_vm_runtime::ModuleStorage;
 use move_vm_types::{
-    loaded_data::runtime_types::{
-        StructNameIndex, StructType,
-        Type::{self, *},
-    },
+    loaded_data::runtime_types::Type::{self, *},
     resolver::ResourceResolver,
 };
 use serde_json::Value as JSONValue;
@@ -29,11 +27,11 @@ use serde_json::Value as JSONValue;
 use crate::errors::{deserialization_error, deserialization_error_with_msg};
 
 pub trait StructResolver {
-    fn get_struct_type(
+    fn get_struct_name(
         &self,
-        index: StructNameIndex,
+        ty: &Type,
         module_storage: &impl ModuleStorage,
-    ) -> Option<Arc<StructType>>;
+    ) -> PartialVMResult<Option<(ModuleId, Identifier)>>;
     fn type_to_type_tag(&self, ty: &Type, module_storage: &impl ModuleStorage)
         -> VMResult<TypeTag>;
 }
@@ -53,7 +51,6 @@ pub fn deserialize_json_args<S: StateView>(
             MAX_NUM_BYTES
         )));
     }
-
     let json_val: JSONValue =
         serde_json::from_slice(arg).map_err(deserialization_error_with_msg)?;
 
@@ -137,11 +134,13 @@ fn convert_json_value_to_move_value<S: StateView>(
             }
             MoveValue::Vector(vec)
         }
-        Struct { idx, .. } => {
+        Struct { .. } => {
             let st = struct_resolver
-                .get_struct_type(*idx, code_storage)
+                .get_struct_name(ty, code_storage)
+                .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(deserialization_error)?;
-            let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
+
+            let full_name = format!("{}::{}", st.0.short_str_lossless(), st.1);
             match full_name.as_str() {
                 // JSONValue and JSONObject are not supported as entry function arguments
                 //
@@ -214,7 +213,7 @@ fn convert_json_value_to_move_value<S: StateView>(
                 }
             }
         }
-        StructInstantiation { idx, ty_args, .. } => {
+        StructInstantiation { ty_args, .. } => {
             if ty_args.len() != 1 {
                 return Err(deserialization_error_with_msg(
                     "invalid type arguments length",
@@ -222,10 +221,12 @@ fn convert_json_value_to_move_value<S: StateView>(
             }
 
             let st = struct_resolver
-                .get_struct_type(*idx, code_storage)
+                .get_struct_name(ty, code_storage)
+                .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(deserialization_error)?;
+
             let ty = ty_args.first().ok_or_else(deserialization_error)?;
-            let full_name = format!("{}::{}", st.module.short_str_lossless(), st.name);
+            let full_name = format!("{}::{}", st.0.short_str_lossless(), st.1);
             match full_name.as_str() {
                 "0x1::option::Option" => {
                     if json_val.is_null() {
@@ -343,19 +344,19 @@ mod json_arg_testing {
         module_cache::InitiaModuleCache, script_cache::InitiaScriptCache, state_view::StateView,
     };
     use initia_move_types::access_path::{AccessPath, DataPath};
-    use move_binary_format::{
-        errors::{Location, PartialVMError},
-        file_format::{Ability, AbilitySet},
-    };
+    use move_binary_format::errors::{Location, PartialVMError};
     use move_core_types::{
+        ability::{Ability, AbilitySet},
         ident_str,
         identifier::Identifier,
         language_storage::{ModuleId, StructTag},
         vm_status::StatusCode,
     };
     use move_vm_runtime::RuntimeEnvironment;
-    use move_vm_types::loaded_data::runtime_types::AbilityInfo;
-    use smallbitvec::SmallBitVec;
+    use move_vm_types::loaded_data::{
+        runtime_types::{AbilityInfo, StructIdentifier},
+        struct_name_indexing::{StructNameIndex, StructNameIndexMap},
+    };
 
     use super::*;
 
@@ -363,7 +364,7 @@ mod json_arg_testing {
 
     struct MockState {
         pub map: BTreeMap<Vec<u8>, Vec<u8>>,
-        pub structs: BTreeMap<StructNameIndex, Arc<StructType>>,
+        pub structs: BTreeMap<StructNameIndex, (ModuleId, Identifier)>,
     }
 
     impl StateView for MockState {
@@ -376,29 +377,35 @@ mod json_arg_testing {
     }
 
     impl StructResolver for MockState {
-        fn get_struct_type(
+        fn get_struct_name(
             &self,
-            index: StructNameIndex,
+            ty: &Type,
             _module_storage: &impl ModuleStorage,
-        ) -> Option<Arc<StructType>> {
-            self.structs.get(&index).cloned()
+        ) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
+            match ty {
+                Type::Struct { idx, .. } | Type::StructInstantiation { idx, .. } => {
+                    Ok(self.structs.get(idx).cloned())
+                }
+                _ => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
+            }
         }
+
         fn type_to_type_tag(
             &self,
             ty: &Type,
             module_storage: &impl ModuleStorage,
         ) -> VMResult<TypeTag> {
             match ty {
-                Struct { idx, .. } => {
-                    let struct_ty =
-                        self.get_struct_type(*idx, module_storage).ok_or_else(|| {
-                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .finish(Location::Undefined)
-                        })?;
+                Struct { .. } => {
+                    let st = self
+                        .get_struct_name(ty, module_storage)
+                        .map_err(|e| e.finish(Location::Undefined))?
+                        .ok_or_else(deserialization_error)?;
+
                     Ok(TypeTag::Struct(Box::new(StructTag {
-                        address: struct_ty.module.address,
-                        module: struct_ty.module.name.clone(),
-                        name: struct_ty.name.clone(),
+                        address: st.0.address,
+                        module: st.0.name.clone(),
+                        name: st.1.clone(),
                         type_args: vec![],
                     })))
                 }
@@ -675,17 +682,29 @@ mod json_arg_testing {
         _ = deserialize_json_args(&code_storage, &mock_state, &ty, arg).unwrap_err();
     }
 
-    pub fn for_test(module_name: &str, name: &str) -> StructType {
-        use move_vm_types::loaded_data::runtime_types::StructLayout;
+    pub fn for_test(
+        struct_index_map: &StructNameIndexMap,
+        module_name: &str,
+        name: &str,
+    ) -> (Type, StructNameIndex, (ModuleId, Identifier)) {
+        let struct_identifier = for_test_struct_identifier(module_name, name);
+        let struct_name_index = struct_index_map
+            .struct_name_to_idx(&struct_identifier)
+            .unwrap();
+        (
+            Struct {
+                idx: struct_name_index,
+                ability: AbilityInfo::struct_(AbilitySet::ALL),
+            },
+            struct_name_index,
+            (struct_identifier.module, struct_identifier.name),
+        )
+    }
 
-        StructType {
-            idx: StructNameIndex(0),
-            layout: StructLayout::Single(vec![]),
-            phantom_ty_params_mask: SmallBitVec::new(),
-            abilities: AbilitySet::EMPTY,
-            ty_params: vec![],
-            name: Identifier::new(name).unwrap(),
+    pub fn for_test_struct_identifier(module_name: &str, name: &str) -> StructIdentifier {
+        StructIdentifier {
             module: ModuleId::new(AccountAddress::ONE, Identifier::new(module_name).unwrap()),
+            name: Identifier::new(name).unwrap(),
         }
     }
 
@@ -693,14 +712,11 @@ mod json_arg_testing {
     fn test_deserialize_json_args_string() {
         let mut mock_state = mock_state();
 
-        mock_state
-            .structs
-            .insert(StructNameIndex(0), Arc::new(for_test("string", "String")));
+        let struct_index_map = StructNameIndexMap::empty();
 
-        let ty = Type::Struct {
-            idx: StructNameIndex(0),
-            ability: AbilityInfo::struct_(AbilitySet::ALL),
-        };
+        let (ty, idx, (module_id, identifier)) = for_test(&struct_index_map, "string", "String");
+        mock_state.structs.insert(idx, (module_id, identifier));
+
         let arg = b"\"hello\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
         let script_cache = InitiaScriptCache::new(TEST_CACHE_CAPACITY);
@@ -719,18 +735,17 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_object() {
         let mut mock_state = mock_state();
+        let struct_index_map = StructNameIndexMap::empty();
+        let (_, idx, (module_id, identifier)) = for_test(&struct_index_map, "object", "Object");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
-        mock_state
-            .structs
-            .insert(StructNameIndex(0), Arc::new(for_test("object", "Object")));
-        mock_state.structs.insert(
-            StructNameIndex(1),
-            Arc::new(for_test("fungible_asset", "Metadata")),
-        );
-        mock_state.structs.insert(
-            StructNameIndex(2),
-            Arc::new(for_test("fungible_asset", "Metadata2")),
-        );
+        let (_, idx, (module_id, identifier)) =
+            for_test(&struct_index_map, "fungible_asset", "Metadata");
+        mock_state.structs.insert(idx, (module_id, identifier));
+
+        let (_, idx, (module_id, identifier)) =
+            for_test(&struct_index_map, "fungible_asset", "Metadata2");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
         // insert object core to object addr
         let obj_addr = AccountAddress::random();
@@ -766,10 +781,14 @@ mod json_arg_testing {
         );
 
         let ty = Type::StructInstantiation {
-            idx: StructNameIndex(0),
+            idx: struct_index_map
+                .struct_name_to_idx(&for_test_struct_identifier("object", "Object"))
+                .unwrap(),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
             ty_args: triomphe::Arc::new(vec![Type::Struct {
-                idx: StructNameIndex(1),
+                idx: struct_index_map
+                    .struct_name_to_idx(&for_test_struct_identifier("fungible_asset", "Metadata"))
+                    .unwrap(),
                 ability: AbilityInfo::struct_(AbilitySet::singleton(Ability::Key)),
             }]),
         };
@@ -798,10 +817,14 @@ mod json_arg_testing {
 
         // invalid inner type
         let wrong_inner_ty = Type::StructInstantiation {
-            idx: StructNameIndex(0),
+            idx: struct_index_map
+                .struct_name_to_idx(&for_test_struct_identifier("object", "Object"))
+                .unwrap(),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
             ty_args: triomphe::Arc::new(vec![Type::Struct {
-                idx: StructNameIndex(2),
+                idx: struct_index_map
+                    .struct_name_to_idx(&for_test_struct_identifier("fungible_asset", "Metadata2"))
+                    .unwrap(),
                 ability: AbilityInfo::struct_(AbilitySet::singleton(Ability::Key)),
             }]),
         };
@@ -815,12 +838,14 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_option_some() {
         let mut mock_state = mock_state();
-        mock_state
-            .structs
-            .insert(StructNameIndex(0), Arc::new(for_test("option", "Option")));
+        let struct_index_map = StructNameIndexMap::empty();
+        let (_, idx, (module_id, identifier)) = for_test(&struct_index_map, "option", "Option");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
         let ty = Type::StructInstantiation {
-            idx: StructNameIndex(0),
+            idx: struct_index_map
+                .struct_name_to_idx(&for_test_struct_identifier("option", "Option"))
+                .unwrap(),
             ty_args: triomphe::Arc::new(vec![Type::Address]),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
@@ -850,12 +875,14 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_option_none() {
         let mut mock_state = mock_state();
-        mock_state
-            .structs
-            .insert(StructNameIndex(0), Arc::new(for_test("option", "Option")));
+        let struct_index_map = StructNameIndexMap::empty();
+        let (_, idx, (module_id, identifier)) = for_test(&struct_index_map, "option", "Option");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
         let ty = Type::StructInstantiation {
-            idx: StructNameIndex(0),
+            idx: struct_index_map
+                .struct_name_to_idx(&for_test_struct_identifier("option", "Option"))
+                .unwrap(),
             ty_args: triomphe::Arc::new(vec![Type::Address]),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
@@ -881,13 +908,15 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_fixed_point32() {
         let mut mock_state = mock_state();
-        mock_state.structs.insert(
-            StructNameIndex(0),
-            Arc::new(for_test("fixed_point32", "FixedPoint32")),
-        );
+        let struct_index_map = StructNameIndexMap::empty();
+        let (_, idx, (module_id, identifier)) =
+            for_test(&struct_index_map, "fixed_point32", "FixedPoint32");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
         let ty = Type::Struct {
-            idx: StructNameIndex(0),
+            idx: struct_index_map
+                .struct_name_to_idx(&for_test_struct_identifier("fixed_point32", "FixedPoint32"))
+                .unwrap(),
             ability: AbilityInfo::struct_(AbilitySet::ALL),
         };
         let arg = b"\"123.4567\"";
@@ -916,15 +945,11 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_fixed_point64() {
         let mut mock_state = mock_state();
-        mock_state.structs.insert(
-            StructNameIndex(0),
-            Arc::new(for_test("fixed_point64", "FixedPoint64")),
-        );
+        let struct_index_map = StructNameIndexMap::empty();
+        let (ty, idx, (module_id, identifier)) =
+            for_test(&struct_index_map, "fixed_point64", "FixedPoint64");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
-        let ty = Type::Struct {
-            idx: StructNameIndex(0),
-            ability: AbilityInfo::struct_(AbilitySet::ALL),
-        };
         let arg = b"\"123.4567\"";
 
         let runtime_environment = RuntimeEnvironment::new(vec![]);
@@ -952,14 +977,10 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_big_uint() {
         let mut mock_state = mock_state();
-        mock_state
-            .structs
-            .insert(StructNameIndex(0), Arc::new(for_test("biguint", "BigUint")));
+        let struct_index_map = StructNameIndexMap::empty();
+        let (ty, idx, (module_id, identifier)) = for_test(&struct_index_map, "biguint", "BigUint");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
-        let ty = Type::Struct {
-            idx: StructNameIndex(0),
-            ability: AbilityInfo::struct_(AbilitySet::ALL),
-        };
         let arg = b"\"1234567\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
         let script_cache = InitiaScriptCache::new(TEST_CACHE_CAPACITY);
@@ -986,15 +1007,11 @@ mod json_arg_testing {
     #[test]
     fn test_deserialize_json_args_big_decimal() {
         let mut mock_state = mock_state();
-        mock_state.structs.insert(
-            StructNameIndex(0),
-            Arc::new(for_test("bigdecimal", "BigDecimal")),
-        );
+        let struct_index_map = StructNameIndexMap::empty();
+        let (ty, idx, (module_id, identifier)) =
+            for_test(&struct_index_map, "bigdecimal", "BigDecimal");
+        mock_state.structs.insert(idx, (module_id, identifier));
 
-        let ty = Type::Struct {
-            idx: StructNameIndex(0),
-            ability: AbilityInfo::struct_(AbilitySet::ALL),
-        };
         let arg = b"\"123.4567\"";
         let runtime_environment = RuntimeEnvironment::new(vec![]);
         let script_cache = InitiaScriptCache::new(TEST_CACHE_CAPACITY);

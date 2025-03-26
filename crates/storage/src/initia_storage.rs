@@ -8,13 +8,17 @@ use crate::{
 };
 use ambassador::Delegate;
 use bytes::Bytes;
+use move_binary_format::errors::PartialVMResult;
 use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
+use move_core_types::language_storage::TypeTag;
 use move_core_types::{account_address::AccountAddress, identifier::IdentStr, metadata::Metadata};
 use move_vm_runtime::{
     ambassador_impl_CodeStorage, ambassador_impl_ModuleStorage,
-    ambassador_impl_WithRuntimeEnvironment, CodeStorage, Module, ModuleStorage, RuntimeEnvironment,
-    Script, WithRuntimeEnvironment,
+    ambassador_impl_WithRuntimeEnvironment, CodeStorage, Function, Module, ModuleStorage,
+    RuntimeEnvironment, Script, WithRuntimeEnvironment,
 };
+use move_vm_types::loaded_data::runtime_types::StructType;
+use move_vm_types::loaded_data::runtime_types::Type;
 use std::sync::Arc;
 
 #[derive(Delegate)]
