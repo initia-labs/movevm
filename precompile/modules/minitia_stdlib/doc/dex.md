@@ -1154,7 +1154,7 @@ Result Precision of <code>pow</code> and <code>ln</code> function
 ## Function `get_spot_price`
 
 Calculate spot price
-https://balancer.fi/whitepaper.pdf (2)
+https://docs.balancer.fi/whitepaper.pdf (2)
 
 
 <pre><code>#[view]
@@ -2998,7 +2998,7 @@ get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
 ## Function `swap_simulation`
 
 Calculate out amount
-https://balancer.fi/whitepaper.pdf (15)
+https://docs.balancer.fi/whitepaper.pdf (15)
 return (return_amount, fee_amount)
 
 
