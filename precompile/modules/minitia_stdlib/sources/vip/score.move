@@ -348,7 +348,6 @@ module minitia_std::vip_score {
         );
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -369,6 +368,8 @@ module minitia_std::vip_score {
     public entry fun finalize_script(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        check_previous_stage_finalized(module_store, stage);
+
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -399,7 +400,6 @@ module minitia_std::vip_score {
         prepare_stage(deployer, stage);
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
