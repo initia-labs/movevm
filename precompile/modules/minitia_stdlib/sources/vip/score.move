@@ -348,7 +348,6 @@ module minitia_std::vip_score {
         );
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -369,6 +368,8 @@ module minitia_std::vip_score {
     public entry fun finalize_script(deployer: &signer, stage: u64) acquires ModuleStore {
         check_deployer_permission(deployer);
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        check_previous_stage_finalized(module_store, stage);
+
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -399,7 +400,6 @@ module minitia_std::vip_score {
         prepare_stage(deployer, stage);
 
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
-        check_previous_stage_finalized(module_store, stage);
         assert!(
             table::contains(&module_store.scores, stage),
             error::invalid_argument(EINVALID_STAGE)
@@ -652,22 +652,24 @@ module minitia_std::vip_score {
 
     #[test(chain = @0x1, deployer = @0x2)]
     #[expected_failure(abort_code = 0x10009, location = Self)]
-    fun failed_update_score_script_by_skip_finalize_previous_stage(
+    fun failed_finalize_script_by_skip_finalize_previous_stage(
         chain: &signer, deployer: &signer
     ) acquires ModuleStore {
         init_module_for_test();
-        let init_stage = 1;
+        let init_stage = 5;
         let scores = vector::empty<u64>();
         let addrs = vector::empty<address>();
         add_deployer_script(chain, signer::address_of(deployer));
         vector::push_back(&mut scores, 100);
         vector::push_back(&mut addrs, @0x123);
 
-        update_score_script(deployer, init_stage, addrs, scores);
+        set_init_stage(deployer, init_stage);
 
-        let next_stage = 2;
+        // skip stages
+
+        let next_stage = 10;
         update_score_script(deployer, next_stage, addrs, scores);
-
+        finalize_script(deployer, next_stage);
     }
 
     #[test(chain = @0x1, deployer = @0x2)]
