@@ -273,7 +273,7 @@ module initia_std::dex {
 
     #[view]
     /// Calculate spot price
-    /// https://balancer.fi/whitepaper.pdf (2)
+    /// https://docs.balancer.fi/whitepaper.pdf (2)
     public fun get_spot_price(
         pair: Object<Config>, base_coin: Object<Metadata>
     ): BigDecimal acquires Config, Pool, FlashSwapLock {
@@ -1785,7 +1785,7 @@ module initia_std::dex {
     }
 
     /// Calculate out amount
-    /// https://balancer.fi/whitepaper.pdf (15)
+    /// https://docs.balancer.fi/whitepaper.pdf (15)
     /// return (return_amount, fee_amount)
     public fun swap_simulation(
         pool_amount_in: u64,
