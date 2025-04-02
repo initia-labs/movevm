@@ -139,11 +139,11 @@ module initia_std::table {
     ///
     /// let iter = table::iter(&t, start, end, order);
     /// loop {
-    ///     if (!table::prepare<K, V>(&mut iter)) {
+    ///     if (!table::prepare(iter)) {
     ///         break;
     ///     }
     ///
-    ///     let (key, value) = table::next<K, V>(&mut iter);
+    ///     let (key, value) = table::next(iter);
     /// }
     ///
     /// NOTE: The default BCS number encoding follows the Little Endian method.

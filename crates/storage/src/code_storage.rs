@@ -42,14 +42,14 @@ pub trait AsInitiaCodeStorage<'a, S> {
         env: &'a RuntimeEnvironment,
         script_cache: Arc<InitiaScriptCache>,
         module_cache: Arc<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<InitiaModuleStorage<S>>;
+    ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
 
     fn into_initia_code_storage(
         self,
         env: &'a RuntimeEnvironment,
         script_cache: Arc<InitiaScriptCache>,
         module_cache: Arc<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<InitiaModuleStorage<S>>;
+    ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
 }
 
 impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for S {
