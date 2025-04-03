@@ -29,6 +29,7 @@ fn byte_slice_view_to_owned_works() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn unmanaged_vector_new_works() {
     // With data
     let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
@@ -59,6 +60,7 @@ fn unmanaged_vector_new_works() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn unmanaged_vector_is_some_works() {
     let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
     assert!(x.is_some());
@@ -69,6 +71,7 @@ fn unmanaged_vector_is_some_works() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn unmanaged_vector_is_none_works() {
     let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
     assert!(!x.is_none());
