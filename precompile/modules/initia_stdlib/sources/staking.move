@@ -829,14 +829,14 @@ module initia_std::staking {
             let reward_coin_store_address =
                 object::address_from_constructor_ref(reward_coin_store_ref);
             let reward_coin_store =
-                primary_fungible_store::create_primary_store(
+                primary_fungible_store::ensure_primary_store_exists(
                     reward_coin_store_address, reward_metadata()
                 );
 
             let unbonding_coin_store_address =
                 object::address_from_constructor_ref(unbonding_coin_store_ref);
             let unbonding_coin_store =
-                primary_fungible_store::create_primary_store(
+                primary_fungible_store::ensure_primary_store_exists(
                     unbonding_coin_store_address, metadata
                 );
 
