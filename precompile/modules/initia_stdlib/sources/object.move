@@ -255,7 +255,6 @@ module initia_std::object {
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.
-    /// Derivde objects, similar to named objects, cannot be deleted.
     public(friend) fun create_user_derived_object(
         creator_address: address, derive_ref: &DeriveRef, can_delete: bool
     ): ConstructorRef acquires Tombstone {
