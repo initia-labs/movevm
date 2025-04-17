@@ -9,7 +9,13 @@ use move_core_types::{
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
-    check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas, config::VMConfig, module_traversal::{TraversalContext, TraversalStorage}, move_vm::MoveVM, native_extensions::NativeContextExtensions, session::SerializedReturnValues, CodeStorage, ModuleStorage, RuntimeEnvironment
+    check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas,
+    config::VMConfig,
+    module_traversal::{TraversalContext, TraversalStorage},
+    move_vm::MoveVM,
+    native_extensions::NativeContextExtensions,
+    session::SerializedReturnValues,
+    CodeStorage, ModuleStorage, RuntimeEnvironment,
 };
 use move_vm_types::resolver::ResourceResolver;
 
@@ -366,8 +372,7 @@ impl InitiaVM {
 
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
-                let function =
-                code_storage.load_script(script.code(), script.ty_args())?;
+                let function = code_storage.load_script(script.code(), script.ty_args())?;
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),

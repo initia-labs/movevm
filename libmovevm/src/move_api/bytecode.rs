@@ -17,7 +17,9 @@ use crate::move_api::move_types::{
     MoveStructGenericTypeParam, MoveStructTag, MoveType,
 };
 
-use super::metadata::{get_metadata_from_compiled_module, get_metadata_from_compiled_script, is_view_function};
+use super::metadata::{
+    get_metadata_from_compiled_module, get_metadata_from_compiled_script, is_view_function,
+};
 
 pub trait Bytecode {
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle;
@@ -91,7 +93,7 @@ pub trait Bytecode {
             SignatureToken::Struct(v) => MoveType::Struct(self.new_move_struct_tag(v, &[])),
             SignatureToken::StructInstantiation(shi, type_params) => {
                 MoveType::Struct(self.new_move_struct_tag(shi, type_params))
-            },
+            }
             SignatureToken::TypeParameter(i) => MoveType::GenericTypeParam { index: *i },
             SignatureToken::Reference(t) => MoveType::Reference {
                 mutable: false,
@@ -104,7 +106,7 @@ pub trait Bytecode {
             SignatureToken::Function(..) => {
                 // TODO
                 unimplemented!("signature token function to API MoveType")
-            },
+            }
         }
     }
 
@@ -122,7 +124,7 @@ pub trait Bytecode {
             StructFieldInformation::DeclaredVariants(..) => {
                 // TODO(#13806): implement for enums. Currently we pretend they don't have fields
                 (false, vec![])
-            },
+            }
         };
         let name = self.identifier_at(handle.name).to_owned();
         let is_event = self.struct_is_event(&name);

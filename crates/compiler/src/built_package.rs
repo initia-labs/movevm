@@ -15,7 +15,9 @@ use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::{
-    compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout}, resolution::resolution_graph::ResolvedGraph, BuildConfig
+    compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
+    resolution::resolution_graph::ResolvedGraph,
+    BuildConfig,
 };
 use std::{
     collections::BTreeMap,
@@ -127,7 +129,7 @@ impl BuiltPackage {
     }
 
     pub fn prepare_resolution_graph(
-        package_path: &PathBuf,
+        package_path: &Path,
         build_config: BuildConfig,
     ) -> anyhow::Result<ResolvedGraph> {
         eprintln!("Compiling, may take a little while to download git dependencies...");

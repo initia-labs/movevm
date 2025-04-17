@@ -22,7 +22,10 @@ use move_core_types::{
     account_address::AccountAddress, ident_str, identifier::Identifier, language_storage::ModuleId,
     value::MoveValue,
 };
-use move_vm_runtime::{check_dependencies_and_charge_gas, module_traversal::TraversalContext, ModuleStorage, StagingModuleStorage};
+use move_vm_runtime::{
+    check_dependencies_and_charge_gas, module_traversal::TraversalContext, ModuleStorage,
+    StagingModuleStorage,
+};
 use move_vm_types::gas::GasMeter;
 
 use crate::verifier::module_init::verify_module_init_function;
