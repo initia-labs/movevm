@@ -1142,7 +1142,13 @@ module initia_std::staking {
                 validator
             );
 
-        merge_delegation(dst_delegation, delegation)
+        let rewards = merge_delegation(dst_delegation, delegation);
+
+        // deposit claimed rewards to account
+        coin::deposit(account_addr, rewards);
+
+        // return empty fungible asset for backward compatibility
+        fungible_asset::zero(metadata)
     }
 
     /// Withdraw specified `share` from delegation.
