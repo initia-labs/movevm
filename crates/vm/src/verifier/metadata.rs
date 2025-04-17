@@ -25,7 +25,7 @@ pub(crate) fn get_vm_metadata(
 }
 
 /// Extract metadata from a compiled module, upgrading V0 to V1 representation as needed.
-pub(crate) fn get_metadata_from_compiled_module(
+pub fn get_metadata_from_compiled_module(
     module: &CompiledModule,
 ) -> Option<RuntimeModuleMetadataV0> {
     if let Some(data) = find_metadata(module, INITIA_METADATA_KEY_V0) {

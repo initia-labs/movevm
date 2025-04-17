@@ -4,13 +4,19 @@
 use ambassador::Delegate;
 use bytes::Bytes;
 use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
-use move_core_types::{account_address::AccountAddress, identifier::IdentStr, metadata::Metadata};
+use move_core_types::{
+    account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
+    metadata::Metadata,
+};
 use move_vm_runtime::{
     ambassador_impl_ModuleStorage, ambassador_impl_WithRuntimeEnvironment,
-    logging::expect_no_verification_errors, CodeStorage, Function, Module, ModuleStorage,
-    RuntimeEnvironment, Script, WithRuntimeEnvironment,
+    logging::expect_no_verification_errors, CodeStorage, Function, LoadedFunction, Module,
+    ModuleStorage, RuntimeEnvironment, Script, WithRuntimeEnvironment,
 };
-use move_vm_types::{code::ModuleBytesStorage, module_linker_error, sha3_256};
+use move_vm_types::{
+    code::ModuleBytesStorage, loaded_data::struct_name_indexing::StructNameIndex,
+    module_linker_error, sha3_256,
+};
 use std::sync::Arc;
 
 use crate::{

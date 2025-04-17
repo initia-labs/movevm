@@ -10,6 +10,7 @@ use move_core_types::vm_status::VMStatus;
 use move_core_types::{account_address::AccountAddress, value::MoveValue, vm_status::StatusCode};
 use move_vm_runtime::module_traversal::{TraversalContext, TraversalStorage};
 use move_vm_runtime::session::Session;
+use move_vm_runtime::WithRuntimeEnvironment;
 use move_vm_runtime::{LoadedFunction, ModuleStorage};
 use move_vm_types::gas::{GasMeter, UnmeteredGasMeter};
 use move_vm_types::loaded_data::runtime_types::Type;
@@ -143,7 +144,7 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
     }
 
     let allowed_structs = &ALLOWED_STRUCTS;
-    let ty_builder = session.get_ty_builder();
+    let ty_builder = &code_storage.runtime_environment().vm_config().ty_builder;
 
     // Need to keep this here to ensure we return the historic correct error code for replay
     for ty in func.param_tys()[signer_param_cnt..].iter() {
@@ -224,7 +225,7 @@ pub(crate) fn is_valid_txn_arg(
                 }
                 None => false,
             }),
-        Signer | Reference(_) | MutableReference(_) | TyParam(_) => false,
+        Signer | Reference(_) | MutableReference(_) | TyParam(_) | Function { .. } => false,
     }
 }
 
@@ -249,7 +250,7 @@ pub(crate) fn construct_args<S: StateView>(
         return Err(invalid_signature());
     }
 
-    let ty_builder = session.get_ty_builder();
+    let ty_builder = &code_storage.runtime_environment().vm_config().ty_builder;
     for (ty, arg) in types.iter().zip(args) {
         let subst_res = ty_builder.create_ty_with_subst(ty, ty_args);
         let ty = subst_res.map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
@@ -328,7 +329,9 @@ fn construct_arg<S: StateView>(
                 Err(invalid_signature())
             }
         }
-        Reference(_) | MutableReference(_) | TyParam(_) => Err(invalid_signature()),
+        Reference(_) | MutableReference(_) | TyParam(_) | Function { .. } => {
+            Err(invalid_signature())
+        }
     }
 }
 
@@ -336,9 +339,9 @@ fn construct_arg<S: StateView>(
 // A Cursor is used to recursively walk the serialized arg manually and correctly. In effect we
 // are parsing the BCS serialized implicit constructor invocation tree, while serializing the
 // constructed types into the output parameter arg.
-pub(crate) fn recursively_construct_arg(
+pub(crate) fn recursively_construct_arg<S: StateView>(
     session: &mut Session,
-    module_storage: &impl ModuleStorage,
+    code_storage: &InitiaStorage<S>,
     ty: &Type,
     allowed_structs: &ConstructorMap,
     cursor: &mut Cursor<&[u8]>,
@@ -365,7 +368,7 @@ pub(crate) fn recursively_construct_arg(
             while len > 0 {
                 recursively_construct_arg(
                     session,
-                    module_storage,
+                    code_storage,
                     inner,
                     allowed_structs,
                     cursor,
@@ -380,7 +383,7 @@ pub(crate) fn recursively_construct_arg(
         }
         Struct { .. } | StructInstantiation { .. } => {
             let st = session
-                .get_struct_name(ty, module_storage)
+                .get_struct_name(ty, code_storage)
                 .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(invalid_signature)?;
 
@@ -392,7 +395,7 @@ pub(crate) fn recursively_construct_arg(
             // of the argument.
             arg.append(&mut validate_and_construct(
                 session,
-                module_storage,
+                code_storage,
                 ty,
                 constructor,
                 allowed_structs,
@@ -409,7 +412,9 @@ pub(crate) fn recursively_construct_arg(
         U64 => read_n_bytes(8, cursor, arg)?,
         U128 => read_n_bytes(16, cursor, arg)?,
         U256 | Address => read_n_bytes(32, cursor, arg)?,
-        Signer | Reference(_) | MutableReference(_) | TyParam(_) => return Err(invalid_signature()),
+        Signer | Reference(_) | MutableReference(_) | TyParam(_) | Function { .. } => {
+            return Err(invalid_signature())
+        }
     };
     Ok(())
 }
@@ -419,9 +424,9 @@ pub(crate) fn recursively_construct_arg(
 // constructed value. This is the correct data to pass as the argument to a function taking
 // said struct as a parameter. In this function we execute the constructor constructing the
 // value and returning the BCS serialized representation.
-fn validate_and_construct(
+fn validate_and_construct<S: StateView>(
     session: &mut Session,
-    module_storage: &impl ModuleStorage,
+    code_storage: &InitiaStorage<S>,
     expected_type: &Type,
     constructor: &FunctionId,
     allowed_structs: &ConstructorMap,
@@ -481,14 +486,13 @@ fn validate_and_construct(
         *max_invocations -= 1;
     }
 
-    let function = session.load_function_with_type_arg_inference(
-        module_storage,
+    let function = code_storage.load_function_with_type_arg_inference(
         &constructor.module_id,
         constructor.func_name,
         expected_type,
     )?;
     let mut args = vec![];
-    let ty_builder = session.get_ty_builder();
+    let ty_builder = &code_storage.runtime_environment().vm_config().ty_builder;
     for param_ty in function.param_tys() {
         let mut arg = vec![];
         let arg_ty = ty_builder
@@ -497,7 +501,7 @@ fn validate_and_construct(
 
         recursively_construct_arg(
             session,
-            module_storage,
+            code_storage,
             &arg_ty,
             allowed_structs,
             cursor,
@@ -515,7 +519,7 @@ fn validate_and_construct(
         args,
         gas_meter,
         &mut TraversalContext::new(&storage),
-        module_storage,
+        code_storage,
     )?;
     let mut ret_vals = serialized_result.return_values;
     // We know ret_vals.len() == 1

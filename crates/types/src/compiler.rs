@@ -11,7 +11,7 @@ use move_core_types::account_address::AccountAddress;
 use move_coverage::source_coverage::{ColorChoice, TextIndicator};
 use move_docgen::DocgenOptions;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
-use move_package::{Architecture, BuildConfig, CompilerConfig};
+use move_package::{BuildConfig, CompilerConfig};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -78,7 +78,6 @@ impl From<CompilerBuildConfig> for BuildConfig {
             generate_abis: val.generate_abis,
             install_dir: val.install_dir.map(|s| Path::new(&s).to_path_buf()),
             force_recompilation: val.force_recompilation,
-            architecture: Some(Architecture::Move),
             fetch_deps_only: val.fetch_deps_only,
             skip_fetch_latest_git_deps: val.skip_fetch_latest_git_deps,
             compiler_config: CompilerConfig {

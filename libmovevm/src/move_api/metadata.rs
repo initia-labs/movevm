@@ -1,5 +1,5 @@
 use initia_move_types::metadata::{RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0};
-use move_binary_format::CompiledModule;
+use move_binary_format::{file_format::CompiledScript, CompiledModule};
 use move_core_types::{identifier::IdentStr, metadata::Metadata};
 
 /// Extract metadata from a compiled module, upgrading V0 to V1 representation as needed.
@@ -13,8 +13,22 @@ pub(crate) fn get_metadata_from_compiled_module(
     }
 }
 
+pub(crate) fn get_metadata_from_compiled_script(
+    script: &CompiledScript,
+) -> Option<RuntimeModuleMetadataV0> {
+    if let Some(data) = find_metadata_in_script(script, INITIA_METADATA_KEY_V0) {
+        bcs::from_bytes::<RuntimeModuleMetadataV0>(&data.value).ok()
+    } else {
+        None
+    }
+}
+
 fn find_metadata<'a>(module: &'a CompiledModule, key: &[u8]) -> Option<&'a Metadata> {
     module.metadata.iter().find(|md| md.key == key)
+}
+
+fn find_metadata_in_script<'a>(script: &'a CompiledScript, key: &[u8]) -> Option<&'a Metadata> {
+    script.metadata.iter().find(|md| md.key == key)
 }
 
 pub(crate) fn is_view_function(

@@ -29,5 +29,6 @@ pub fn verifier_config() -> VerifierConfig {
 
         enable_enum_types: true,
         enable_resource_access_control: false,
+        enable_function_values: false,
     }
 }

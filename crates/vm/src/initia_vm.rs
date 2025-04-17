@@ -9,14 +9,9 @@ use move_core_types::{
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
-    config::VMConfig,
-    module_traversal::{TraversalContext, TraversalStorage},
-    move_vm::MoveVM,
-    native_extensions::NativeContextExtensions,
-    session::SerializedReturnValues,
-    RuntimeEnvironment,
+    check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas, config::VMConfig, module_traversal::{TraversalContext, TraversalStorage}, move_vm::MoveVM, native_extensions::NativeContextExtensions, session::SerializedReturnValues, CodeStorage, ModuleStorage, RuntimeEnvironment
 };
-use move_vm_types::resolver::MoveResolver;
+use move_vm_types::resolver::ResourceResolver;
 
 use std::sync::Arc;
 
@@ -90,7 +85,6 @@ impl InitiaVM {
 
         let vm_config = VMConfig {
             verifier_config: verifier_config(),
-            use_loader_v2: true,
             type_max_cost: 5000,
             type_base_cost: 100,
             type_byte_cost: 1,
@@ -100,7 +94,7 @@ impl InitiaVM {
             all_natives(gas_params, misc_params),
             vm_config,
         ));
-        let move_vm = MoveVM::new_with_runtime_environment(&runtime_environment);
+        let move_vm = MoveVM::new();
         let script_cache = InitiaScriptCache::new(initia_vm_config.script_cache_capacity);
         let module_cache = InitiaModuleCache::new(initia_vm_config.module_cache_capacity);
 
@@ -125,7 +119,7 @@ impl InitiaVM {
 
     #[inline(always)]
     pub fn deserializer_config(&self) -> &DeserializerConfig {
-        &self.move_vm.vm_config().deserializer_config
+        &self.runtime_environment.vm_config().deserializer_config
     }
 
     #[inline(always)]
@@ -136,7 +130,7 @@ impl InitiaVM {
     fn create_session<
         'r,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
-        S: MoveResolver,
+        S: ResourceResolver,
         T: TableResolver,
     >(
         &self,
@@ -294,12 +288,8 @@ impl InitiaVM {
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
-        let function = session.load_function(
-            &code_storage,
-            view_fn.module(),
-            view_fn.function(),
-            view_fn.ty_args(),
-        )?;
+        let function =
+            code_storage.load_function(view_fn.module(), view_fn.function(), view_fn.ty_args())?;
         let metadata = get_vm_metadata(&code_storage, view_fn.module());
 
         let args = validate_view_function_and_construct(
@@ -367,7 +357,7 @@ impl InitiaVM {
 
         match payload {
             MessagePayload::Script(script) => {
-                session.check_script_dependencies_and_check_gas(
+                check_script_dependencies_and_check_gas(
                     code_storage,
                     gas_meter,
                     traversal_context,
@@ -377,7 +367,7 @@ impl InitiaVM {
                 // we only use the ok path, let move vm handle the wrong path.
                 // let Ok(s) = CompiledScript::deserialize(script.code());
                 let function =
-                    session.load_script(code_storage, script.code(), script.ty_args())?;
+                code_storage.load_script(script.code(), script.ty_args())?;
 
                 let compiled_script = match CompiledScript::deserialize_with_config(
                     script.code(),
@@ -422,15 +412,14 @@ impl InitiaVM {
                 let module_id = traversal_context
                     .referenced_module_ids
                     .alloc(entry_fn.module().clone());
-                session.check_dependencies_and_charge_gas(
+                check_dependencies_and_charge_gas(
                     code_storage,
                     gas_meter,
                     traversal_context,
                     [(module_id.address(), module_id.name())],
                 )?;
 
-                let function = session.load_function(
-                    code_storage,
+                let function = code_storage.load_function(
                     entry_fn.module(),
                     entry_fn.function(),
                     entry_fn.ty_args(),

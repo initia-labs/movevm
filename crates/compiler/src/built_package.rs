@@ -15,8 +15,7 @@ use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::{
-    compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
-    BuildConfig,
+    compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout}, resolution::resolution_graph::ResolvedGraph, BuildConfig
 };
 use std::{
     collections::BTreeMap,
@@ -48,7 +47,6 @@ impl BuiltPackage {
 
         // customize config
         let mut new_config = config.clone();
-        new_config.architecture = None;
         new_config.generate_docs = false;
         new_config.generate_move_model = true;
         new_config
@@ -64,8 +62,9 @@ impl BuiltPackage {
             new_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
         }
 
+        let resolved_graph = Self::prepare_resolution_graph(&package_path, new_config.clone())?;
         let (mut package, model_opt) =
-            new_config.compile_package_no_exit(&package_path, vec![], &mut stderr())?;
+            new_config.compile_package_no_exit(resolved_graph, vec![], &mut stderr())?;
 
         // Run extended checks as well as derive runtime metadata
         let model = &model_opt.expect("move model");
@@ -125,6 +124,14 @@ impl BuiltPackage {
             package_path,
             package,
         })
+    }
+
+    pub fn prepare_resolution_graph(
+        package_path: &PathBuf,
+        build_config: BuildConfig,
+    ) -> anyhow::Result<ResolvedGraph> {
+        eprintln!("Compiling, may take a little while to download git dependencies...");
+        build_config.resolution_graph_for_package(package_path, &mut stderr())
     }
 
     /// Returns the name of this package.
