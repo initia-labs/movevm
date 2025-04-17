@@ -48,7 +48,9 @@ module initia_std::table {
     /// Add a new entry to the table. Aborts if an entry for this
     /// key already exists. The entry itself is not stored in the
     /// table, and cannot be discovered from it.
-    public fun add<K: copy + drop, V>(table: &mut Table<K, V>, key: K, val: V) {
+    public fun add<K: copy + drop, V>(
+        table: &mut Table<K, V>, key: K, val: V
+    ) {
         add_box<K, V, Box<V>>(table, key, Box { val });
         table.length = table.length + 1
     }

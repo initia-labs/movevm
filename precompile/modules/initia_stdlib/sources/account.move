@@ -140,7 +140,10 @@ module initia_std::account {
         let (found, account_number, sequence_number, account_type, is_blocked) =
             account_info(addr);
 
-        (found, AccountInfo { account_number, sequence_number, account_type, is_blocked })
+        (
+            found,
+            AccountInfo { account_number, sequence_number, account_type, is_blocked }
+        )
     }
 
     public fun is_module_account_with_info(info: &AccountInfo): bool {
@@ -174,8 +177,7 @@ module initia_std::account {
     native fun request_create_account(
         addr: address, account_number: u64, account_type: u8
     ): u64;
-    native public fun account_info(addr: address):
-        (
+    native public fun account_info(addr: address): (
         bool /* found */,
         u64 /* account_number */,
         u64 /* sequence_number */,

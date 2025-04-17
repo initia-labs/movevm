@@ -23,7 +23,9 @@ module minitia_std::simple_map {
         value: Value
     }
 
-    public fun length<Key: store, Value: store>(self: &SimpleMap<Key, Value>): u64 {
+    public fun length<Key: store, Value: store>(
+        self: &SimpleMap<Key, Value>
+    ): u64 {
         vector::length(&self.data)
     }
 

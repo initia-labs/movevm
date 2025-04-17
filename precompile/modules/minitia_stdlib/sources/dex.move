@@ -710,7 +710,9 @@ module minitia_std::dex {
         res.weights.weights_before
     }
 
-    public fun get_weight_after_from_config_response(res: &ConfigResponse): Weight {
+    public fun get_weight_after_from_config_response(
+        res: &ConfigResponse
+    ): Weight {
         res.weights.weights_after
     }
 
