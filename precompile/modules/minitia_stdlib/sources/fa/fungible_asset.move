@@ -697,8 +697,7 @@ module minitia_std::fungible_asset {
     public fun remove_store(delete_ref: &DeleteRef) acquires FungibleStore {
         object::assert_deletable(delete_ref);
 
-        let store = object::object_from_delete_ref<FungibleStore>(delete_ref);
-        let addr = object::object_address(&store);
+        let addr = object::address_from_delete_ref(delete_ref);
         let FungibleStore { metadata: _, balance, frozen: _ } =
             move_from<FungibleStore>(addr);
         assert!(
