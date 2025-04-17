@@ -358,6 +358,16 @@ module initia_std::object {
         address_to_object<T>(ref.self)
     }
 
+    /// Asserts that the DeleteRef can be used to delete the object.
+    /// This function will abort if the object is not deletable.
+    public fun assert_deletable(ref: &DeleteRef) acquires ObjectCore {
+        let object_core = borrow_global<ObjectCore>(ref.self);
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
+    }
+
     /// Removes from the specified Object from global storage.
     public fun delete(ref: DeleteRef) acquires ObjectCore {
         let object_core = move_from<ObjectCore>(ref.self);

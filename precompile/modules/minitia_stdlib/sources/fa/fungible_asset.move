@@ -695,6 +695,8 @@ module minitia_std::fungible_asset {
 
     /// Used to delete a store.  Requires the store to be completely empty prior to removing it
     public fun remove_store(delete_ref: &DeleteRef) acquires FungibleStore {
+        object::assert_deletable(delete_ref);
+
         let store = object::object_from_delete_ref<FungibleStore>(delete_ref);
         let addr = object::object_address(&store);
         let FungibleStore { metadata: _, balance, frozen: _ } =
