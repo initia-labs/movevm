@@ -1,5 +1,4 @@
 use crate::{access_path::AccessPath, table::TableChangeSet};
-use anyhow::ensure;
 use move_core_types::effects::{ChangeSet, Op};
 use std::collections::{btree_map, BTreeMap};
 
@@ -19,17 +18,11 @@ impl WriteSet {
     ) -> anyhow::Result<Self> {
         let mut write_set: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
         for (addr, account_changeset) in change_set.into_inner() {
-            let (modules, resources) = account_changeset.into_inner();
+            let resources = account_changeset.into_resources();
             for (struct_tag, blob_opt) in resources {
                 let ap = AccessPath::resource_access_path(addr, struct_tag);
                 write_set.insert(ap, blob_opt.map(|v| v.into()));
             }
-
-            // unused in loader v2
-            ensure!(
-                modules.is_empty(),
-                "Modules should not be present in the account change set in Loader v2"
-            );
         }
 
         for (handle, changes) in table_change_set.changes.into_iter() {

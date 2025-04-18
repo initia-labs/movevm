@@ -3,7 +3,6 @@ use bigdecimal::{num_bigint::BigUint, BigDecimal};
 use initia_move_types::module::Module;
 use move_binary_format::{
     access::ModuleAccess,
-    deserializer::DeserializerConfig,
     file_format::{CompiledModule, CompiledScript, StructTypeParameter, Visibility},
 };
 use move_core_types::{
@@ -11,11 +10,13 @@ use move_core_types::{
     ability::{Ability, AbilitySet},
     account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{ModuleId, StructTag, TypeTag},
+    language_storage::{FunctionTag, ModuleId, StructTag, TypeTag},
     parser::{parse_struct_tag, parse_type_tag},
     transaction_argument::TransactionArgument,
 };
-use move_resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue};
+use move_resource_viewer::{
+    AnnotatedMoveClosure, AnnotatedMoveStruct, AnnotatedMoveValue, RawMoveStruct,
+};
 
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -29,8 +30,8 @@ use std::{
 };
 
 use crate::move_api::{
-    address::Address, bytecode::Bytecode, metadata::get_metadata_from_compiled_module,
-    wrappers::IdentifierWrapper, VerifyInput, VerifyInputWithRecursion,
+    address::Address, bytecode::Bytecode, wrappers::IdentifierWrapper, VerifyInput,
+    VerifyInputWithRecursion,
 };
 
 /// A parsed Move resource
@@ -53,7 +54,7 @@ impl TryFrom<AnnotatedMoveStruct> for MoveResource {
 }
 
 macro_rules! define_integer_type {
-    ($n: ident, $t: ty, $d: literal) => {
+    ($n:ident, $t:ty, $d:literal) => {
         #[doc = $d]
         #[doc = "Encoded as a string to encode into JSON."]
         #[derive(Clone, Debug, Default, Eq, PartialEq, Copy)]
@@ -124,7 +125,6 @@ macro_rules! define_integer_type {
     };
 }
 
-// convert huge numbers to string
 define_integer_type!(U64, u64, "A string encoded U64.");
 define_integer_type!(U128, u128, "A string encoded U128.");
 define_integer_type!(U256, move_core_types::u256::U256, "A string encoded U256.");
@@ -209,16 +209,98 @@ impl HexEncodedBytes {
     }
 }
 
-/// A JSON map representation of a Move struct's inner types
+/// A JSON map representation of a Move struct's or closure's inner values
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MoveStructValue(pub BTreeMap<IdentifierWrapper, serde_json::Value>);
 
 impl TryFrom<AnnotatedMoveStruct> for MoveStructValue {
     type Error = anyhow::Error;
+
     fn try_from(s: AnnotatedMoveStruct) -> anyhow::Result<Self> {
         let mut map = BTreeMap::new();
+        if let Some((_, name)) = s.variant_info {
+            map.insert(
+                IdentifierWrapper::from_str("__variant__")?,
+                MoveValue::String(name.to_string()).json()?,
+            );
+        }
         for (id, val) in s.value {
             map.insert(id.into(), MoveValue::try_from(val)?.json()?);
+        }
+        Ok(Self(map))
+    }
+}
+
+impl TryFrom<RawMoveStruct> for MoveStructValue {
+    type Error = anyhow::Error;
+
+    fn try_from(s: RawMoveStruct) -> anyhow::Result<Self> {
+        let mut map = BTreeMap::new();
+        if let Some(tag) = s.variant_info {
+            map.insert(
+                IdentifierWrapper::from_str("__variant_tag__")?,
+                MoveValue::U16(tag).json()?,
+            );
+        }
+        for (pos, val) in s.field_values.into_iter().enumerate() {
+            map.insert(
+                IdentifierWrapper::from_str(&pos.to_string())?,
+                MoveValue::try_from(val)?.json()?,
+            );
+        }
+        Ok(Self(map))
+    }
+}
+
+impl TryFrom<AnnotatedMoveClosure> for MoveStructValue {
+    type Error = anyhow::Error;
+
+    fn try_from(s: AnnotatedMoveClosure) -> anyhow::Result<Self> {
+        let mut map = BTreeMap::new();
+        let AnnotatedMoveClosure {
+            module_id,
+            fun_id,
+            ty_args,
+            mask,
+            captured,
+        } = s;
+        map.insert(
+            IdentifierWrapper::from_str("__fun_name__")?,
+            MoveValue::String(format!(
+                "0x{}::{}::{}",
+                module_id.address.short_str_lossless(),
+                module_id.name,
+                fun_id
+            ))
+            .json()?,
+        );
+        if !ty_args.is_empty() {
+            map.insert(
+                IdentifierWrapper::from_str("__ty_args__")?,
+                MoveValue::Vector(
+                    ty_args
+                        .iter()
+                        .map(|ty| MoveValue::String(ty.to_canonical_string()))
+                        .collect(),
+                )
+                .json()?,
+            );
+        }
+        map.insert(
+            IdentifierWrapper::from_str("__mask__")?,
+            MoveValue::String(mask.to_string()).json()?,
+        );
+        if !captured.is_empty() {
+            map.insert(
+                IdentifierWrapper::from_str("__captured__")?,
+                MoveValue::Vector(
+                    captured
+                        .into_iter()
+                        .map(MoveValue::try_from)
+                        .collect::<anyhow::Result<Vec<_>>>()?,
+                )
+                .json()?,
+            );
         }
         Ok(Self(map))
     }
@@ -350,6 +432,8 @@ impl TryFrom<AnnotatedMoveValue> for MoveValue {
                     MoveValue::Struct(v.try_into()?)
                 }
             }
+            AnnotatedMoveValue::RawStruct(v) => MoveValue::Struct(v.try_into()?),
+            AnnotatedMoveValue::Closure(c) => MoveValue::Struct(c.try_into()?),
         })
     }
 }
@@ -458,7 +542,7 @@ impl From<StructTag> for MoveStructTag {
             address: tag.address.into(),
             module: tag.module.into(),
             name: tag.name.into(),
-            generic_type_params: tag.type_args.into_iter().map(MoveType::from).collect(),
+            generic_type_params: tag.type_args.iter().map(MoveType::from).collect(),
         }
     }
 }
@@ -505,16 +589,17 @@ impl<'de> Deserialize<'de> for MoveStructTag {
     }
 }
 
-impl TryFrom<MoveStructTag> for StructTag {
+impl TryFrom<&MoveStructTag> for StructTag {
     type Error = anyhow::Error;
-    fn try_from(tag: MoveStructTag) -> anyhow::Result<Self> {
+
+    fn try_from(tag: &MoveStructTag) -> anyhow::Result<Self> {
         Ok(Self {
-            address: tag.address.into(),
-            module: tag.module.into(),
-            name: tag.name.into(),
+            address: (&tag.address).into(),
+            module: (&tag.module).into(),
+            name: (&tag.name).into(),
             type_args: tag
                 .generic_type_params
-                .into_iter()
+                .iter()
                 .map(|p| p.try_into())
                 .collect::<anyhow::Result<Vec<TypeTag>>>()?,
         })
@@ -546,6 +631,12 @@ pub enum MoveType {
     Vector { items: Box<MoveType> },
     /// A struct of [`MoveStructTag`]
     Struct(MoveStructTag),
+    /// A function
+    Function {
+        args: Vec<MoveType>,
+        results: Vec<MoveType>,
+        abilities: AbilitySet,
+    },
     /// A generic type param with index
     GenericTypeParam { index: u16 },
     /// A reference
@@ -557,11 +648,9 @@ pub enum MoveType {
     Unparsable(String),
 }
 
-/// Maximum number of recursive types
-/// Currently, this is allowed up to the serde limit of 128
-///
-/// TODO: Should this number be re-evaluated
-const MAX_RECURSIVE_TYPES_ALLOWED: u8 = 128;
+/// Maximum number of recursive types - Same as (non-public)
+/// move_core_types::safe_serialize::MAX_TYPE_TAG_NESTING
+pub const MAX_RECURSIVE_TYPES_ALLOWED: u8 = 8;
 
 impl VerifyInputWithRecursion for MoveType {
     fn verify(&self, recursion_count: u8) -> anyhow::Result<()> {
@@ -575,6 +664,12 @@ impl VerifyInputWithRecursion for MoveType {
         match self {
             MoveType::Vector { items } => items.verify(recursion_count + 1),
             MoveType::Struct(struct_tag) => struct_tag.verify(recursion_count + 1),
+            MoveType::Function { args, results, .. } => {
+                for ty in args.iter().chain(results) {
+                    ty.verify(recursion_count + 1)?
+                }
+                Ok(())
+            }
             MoveType::GenericTypeParam { .. } => Ok(()),
             MoveType::Reference { to, .. } => to.verify(recursion_count + 1),
             MoveType::Unparsable(inner) => bail!("Unable to parse move type {}", inner),
@@ -584,15 +679,20 @@ impl VerifyInputWithRecursion for MoveType {
 }
 
 impl MoveType {
-    // Returns corresponding JSON data type for the value of `MoveType`
+    /// Returns corresponding JSON data type for the value of `MoveType`
+    ///
+    /// This type notation here, is just to explain to the user in error messages the type that needs
+    /// to be passed in to represent the value.  So it is represented as `JsonType<MoveType>`, where
+    /// `JsonType` is the value to be passed in as JSON, and `MoveType` is the move type it is converting
+    /// into.
     pub fn json_type_name(&self) -> String {
         match self {
-            MoveType::U8 => "integer".to_owned(),
-            MoveType::U16 => "integer".to_owned(),
-            MoveType::U32 => "integer".to_owned(),
+            MoveType::U8 => "integer<u8>".to_owned(),
+            MoveType::U16 => "integer<u16>".to_owned(),
+            MoveType::U32 => "integer<u32>".to_owned(),
             MoveType::U64 => "string<u64>".to_owned(),
             MoveType::U128 => "string<u128>".to_owned(),
-            MoveType::U256 => "string<u256>".to_owned(), // TODO: is it string?
+            MoveType::U256 => "string<u256>".to_owned(),
             MoveType::Signer | MoveType::Address => "string<address>".to_owned(),
             MoveType::Bool => "boolean".to_owned(),
             MoveType::Vector { items } => {
@@ -604,6 +704,10 @@ impl MoveType {
             }
             MoveType::Struct(_) | MoveType::GenericTypeParam { index: _ } => {
                 "string<move_struct_tag_id>".to_owned()
+            }
+            MoveType::Function { .. } => {
+                // TODO(#15664): what to put here for functions?
+                "string<move_function_id>".to_owned()
             }
             MoveType::Reference { mutable: _, to } => to.json_type_name(),
             MoveType::Unparsable(string) => string.to_string(),
@@ -632,6 +736,21 @@ impl fmt::Display for MoveType {
                 } else {
                     write!(f, "&{}", to)
                 }
+            }
+            MoveType::Function { args, results, .. } => {
+                write!(
+                    f,
+                    "|{}|{}",
+                    args.iter()
+                        .map(|ty| ty.to_string())
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    results
+                        .iter()
+                        .map(|ty| ty.to_string())
+                        .collect::<Vec<_>>()
+                        .join(",")
+                )
             }
             MoveType::Unparsable(string) => write!(f, "unparsable<{}>", string),
         }
@@ -662,7 +781,7 @@ impl FromStr for MoveType {
         // return a serialized version of an object and not be able to
         // deserialize it using that same object.
         let inner = match parse_type_tag(s) {
-            Ok(inner) => inner.into(),
+            Ok(inner) => (&inner).into(),
             Err(_e) => MoveType::Unparsable(s.to_string()),
         };
         if is_ref {
@@ -704,26 +823,6 @@ impl MoveType {
     }
 }
 
-impl From<TypeTag> for MoveType {
-    fn from(tag: TypeTag) -> Self {
-        match tag {
-            TypeTag::Bool => MoveType::Bool,
-            TypeTag::U8 => MoveType::U8,
-            TypeTag::U16 => MoveType::U16,
-            TypeTag::U32 => MoveType::U32,
-            TypeTag::U64 => MoveType::U64,
-            TypeTag::U128 => MoveType::U128,
-            TypeTag::U256 => MoveType::U256,
-            TypeTag::Address => MoveType::Address,
-            TypeTag::Signer => MoveType::Signer,
-            TypeTag::Vector(v) => MoveType::Vector {
-                items: Box::new(MoveType::from(*v)),
-            },
-            TypeTag::Struct(v) => MoveType::Struct((*v).into()),
-        }
-    }
-}
-
 impl From<&TypeTag> for MoveType {
     fn from(tag: &TypeTag) -> Self {
         match tag {
@@ -739,28 +838,64 @@ impl From<&TypeTag> for MoveType {
             TypeTag::Vector(v) => MoveType::Vector {
                 items: Box::new(MoveType::from(v.as_ref())),
             },
-            TypeTag::Struct(v) => MoveType::Struct((&**v).into()),
+            TypeTag::Struct(v) => MoveType::Struct(v.as_ref().into()),
+            TypeTag::Function(f) => from_function_tag(f),
         }
     }
 }
 
-impl TryFrom<MoveType> for TypeTag {
+fn from_function_tag(f: &FunctionTag) -> MoveType {
+    let FunctionTag {
+        args,
+        results,
+        abilities,
+    } = f;
+    let from_vec = |tys: &[TypeTag]| tys.iter().map(MoveType::from).collect::<Vec<_>>();
+    MoveType::Function {
+        args: from_vec(args),
+        results: from_vec(results),
+        abilities: *abilities,
+    }
+}
+
+impl TryFrom<&MoveType> for TypeTag {
     type Error = anyhow::Error;
-    fn try_from(tag: MoveType) -> anyhow::Result<Self> {
+
+    fn try_from(tag: &MoveType) -> anyhow::Result<Self> {
         let ret = match tag {
             MoveType::Bool => TypeTag::Bool,
             MoveType::U8 => TypeTag::U8,
+            MoveType::U16 => TypeTag::U16,
+            MoveType::U32 => TypeTag::U32,
             MoveType::U64 => TypeTag::U64,
             MoveType::U128 => TypeTag::U128,
+            MoveType::U256 => TypeTag::U256,
             MoveType::Address => TypeTag::Address,
             MoveType::Signer => TypeTag::Signer,
-            MoveType::Vector { items } => TypeTag::Vector(Box::new((*items).try_into()?)),
+            MoveType::Vector { items } => TypeTag::Vector(Box::new(items.as_ref().try_into()?)),
             MoveType::Struct(v) => TypeTag::Struct(Box::new(v.try_into()?)),
+            MoveType::Function {
+                args,
+                results,
+                abilities,
+            } => {
+                let try_vec = |tys: &[MoveType]| {
+                    tys.iter()
+                        .map(Self::try_from)
+                        .collect::<anyhow::Result<_>>()
+                };
+                TypeTag::Function(Box::new(FunctionTag {
+                    args: try_vec(args)?,
+                    results: try_vec(results)?,
+                    abilities: *abilities,
+                }))
+            }
+            MoveType::GenericTypeParam { index: _ } => TypeTag::Address, // Dummy type, allows for Object<T>
             _ => {
                 return Err(anyhow::anyhow!(
                     "Invalid move type for converting into `TypeTag`: {:?}",
                     &tag
-                ));
+                ))
             }
         };
         Ok(ret)
@@ -782,8 +917,6 @@ pub struct MoveModule {
 
 impl From<CompiledModule> for MoveModule {
     fn from(m: CompiledModule) -> Self {
-        let module_metadata = get_metadata_from_compiled_module(&m);
-
         let (address, name) = <(AccountAddress, Identifier)>::from(m.self_id());
         Self {
             address: address.into(),
@@ -796,16 +929,17 @@ impl From<CompiledModule> for MoveModule {
             exposed_functions: m
                 .function_defs
                 .iter()
-                .map(|def| m.new_move_function(def, &module_metadata))
-                .filter(|func| {
-                    // do filter later to check view function
-                    func.is_entry
-                        || func.is_view
-                        || match func.visibility {
-                            MoveFunctionVisibility::Public | MoveFunctionVisibility::Friend => true,
-                            MoveFunctionVisibility::Private => false,
+                // Return all entry or public functions.
+                // Private entry functions are still callable by entry function transactions so
+                // they should be included.
+                .filter(|def| {
+                    def.is_entry
+                        || match def.visibility {
+                            Visibility::Public | Visibility::Friend => true,
+                            Visibility::Private => false,
                         }
                 })
+                .map(|def| m.new_move_function(def))
                 .collect(),
             structs: m
                 .struct_defs
@@ -892,6 +1026,8 @@ pub struct MoveStruct {
     pub name: IdentifierWrapper,
     /// Whether the struct is a native struct of Move
     pub is_native: bool,
+    /// Whether the struct is marked with the #[event] annotation
+    pub is_event: bool,
     /// Abilities associated with the struct
     pub abilities: Vec<MoveAbility>,
     /// Generic types associated with the struct
@@ -966,6 +1102,7 @@ impl<'de> Deserialize<'de> for MoveAbility {
 pub struct MoveStructGenericTypeParam {
     /// Move abilities tied to the generic type param and associated with the type that uses it
     pub constraints: Vec<MoveAbility>,
+    /// Whether the type is a phantom type
     pub is_phantom: bool,
 }
 
@@ -997,7 +1134,7 @@ pub struct MoveFunction {
     pub visibility: MoveFunctionVisibility,
     /// Whether the function can be called as an entry function directly in a transaction
     pub is_entry: bool,
-    /// Whether the function can be called as an view function directly from a query request
+    /// Whether the function is a view function or not
     pub is_view: bool,
     /// Generic type params associated with the Move function
     pub generic_type_params: Vec<MoveFunctionGenericTypeParam>,
@@ -1102,10 +1239,7 @@ impl MoveModuleBytecode {
     }
 
     pub fn try_parse_abi(self) -> anyhow::Result<MoveModule> {
-        let module = CompiledModule::deserialize_with_config(
-            self.bytecode.inner(),
-            &DeserializerConfig::default(),
-        )?;
+        let module = CompiledModule::deserialize(self.bytecode.inner())?;
         Ok(module.into())
     }
 }
@@ -1140,10 +1274,7 @@ impl MoveScriptBytecode {
     }
 
     pub fn try_parse_abi(self) -> anyhow::Result<MoveFunction> {
-        let script = CompiledScript::deserialize_with_config(
-            self.bytecode.inner(),
-            &DeserializerConfig::default(),
-        )?;
+        let script = CompiledScript::deserialize(self.bytecode.inner())?;
         Ok((&script).into())
     }
 }
@@ -1242,7 +1373,7 @@ mod tests {
     fn test_serialize_move_type_tag() {
         use TypeTag::*;
         fn assert_serialize(t: TypeTag, expected: Value) {
-            let value = to_value(MoveType::from(t)).unwrap();
+            let value = to_value(MoveType::from(&t)).unwrap();
             assert_json(value, expected)
         }
         assert_serialize(Bool, json!("bool"));

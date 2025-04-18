@@ -22,7 +22,10 @@ use move_core_types::{
     account_address::AccountAddress, ident_str, identifier::Identifier, language_storage::ModuleId,
     value::MoveValue,
 };
-use move_vm_runtime::{module_traversal::TraversalContext, ModuleStorage, StagingModuleStorage};
+use move_vm_runtime::{
+    check_dependencies_and_charge_gas, module_traversal::TraversalContext, ModuleStorage,
+    StagingModuleStorage,
+};
 use move_vm_types::gas::GasMeter;
 
 use crate::verifier::module_init::verify_module_init_function;
@@ -120,9 +123,8 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             }
 
             let module_id = module.self_id();
-            let init_function_exists = self
-                .inner
-                .load_function(staging_module_storage, &module_id, init_func_name, &[])
+            let init_function_exists = staging_module_storage
+                .load_function(&module_id, init_func_name, &[])
                 .is_ok();
 
             if init_function_exists {
@@ -243,7 +245,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                 .map(|module| (module.self_addr(), module.self_name()))
                 .collect::<BTreeSet<_>>();
 
-            self.check_dependencies_and_charge_gas(
+            check_dependencies_and_charge_gas(
                 code_storage,
                 gas_meter,
                 traversal_context,

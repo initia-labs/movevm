@@ -22,7 +22,6 @@ use initia_move_types::{
     write_set::{WriteOp, WriteSet},
 };
 
-use initia_move_storage::module_storage::AsFunctionValueExtension;
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     effects::Op,
@@ -30,7 +29,7 @@ use move_core_types::{
     language_storage::{ModuleId, TypeTag},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{session::Session, ModuleStorage};
+use move_vm_runtime::{session::Session, AsFunctionValueExtension, ModuleStorage};
 use move_vm_types::{loaded_data::runtime_types::Type, sha3_256};
 
 pub type SessionOutput<'r> = (

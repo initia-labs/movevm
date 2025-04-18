@@ -21,7 +21,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     code::ModuleBytesStorage,
-    resolver::{resource_size, ModuleResolver, ResourceResolver},
+    resolver::{resource_size, ResourceResolver},
     sha3_256,
 };
 use std::{
@@ -63,16 +63,6 @@ impl ChecksumStorage for BlankStorage {
         _address: &AccountAddress,
         _module_name: &IdentStr,
     ) -> VMResult<Option<Checksum>> {
-        Ok(None)
-    }
-}
-
-impl ModuleResolver for BlankStorage {
-    fn get_module_metadata(&self, _module_id: &ModuleId) -> Vec<Metadata> {
-        vec![]
-    }
-
-    fn get_module(&self, _module_id: &ModuleId) -> PartialVMResult<Option<Bytes>> {
         Ok(None)
     }
 }
@@ -174,32 +164,9 @@ where
 
 impl InMemoryAccountStorage {
     fn apply(&mut self, account_changeset: AccountChangeSet) -> PartialVMResult<()> {
-        let (modules, resources) = account_changeset.into_inner();
-        apply_changes(&mut self.modules, modules.clone())?;
-        apply_changes(
-            &mut self.checksums,
-            Self::modules_to_checksum_changes(modules),
-        )?;
+        let resources = account_changeset.into_resources();
         apply_changes(&mut self.resources, resources)?;
         Ok(())
-    }
-
-    fn modules_to_checksum_changes(
-        modules: BTreeMap<Identifier, Op<Bytes>>,
-    ) -> BTreeMap<Identifier, Op<Checksum>> {
-        modules
-            .into_iter()
-            .map(|(k, v)| {
-                (
-                    k,
-                    match v {
-                        Op::New(bytes) => Op::New(sha3_256(&bytes)),
-                        Op::Modify(bytes) => Op::Modify(sha3_256(&bytes)),
-                        Op::Delete => Op::Delete,
-                    },
-                )
-            })
-            .collect()
     }
 
     fn new() -> Self {
@@ -265,6 +232,13 @@ impl InMemoryStorage {
         let account = get_or_insert(&mut self.accounts, addr, InMemoryAccountStorage::new);
         account.resources.insert(struct_tag, blob.into());
     }
+
+    fn get_module(&self, module_id: &ModuleId) -> PartialVMResult<Option<Bytes>> {
+        Ok(self
+            .accounts
+            .get(module_id.address())
+            .and_then(|account_storage| account_storage.modules.get(module_id.name()).cloned()))
+    }
 }
 
 impl ModuleBytesStorage for InMemoryStorage {
@@ -291,19 +265,6 @@ impl ChecksumStorage for InMemoryStorage {
             .get(address)
             .and_then(|account_storage| account_storage.checksums.get(module_name))
             .cloned())
-    }
-}
-
-impl ModuleResolver for InMemoryStorage {
-    fn get_module_metadata(&self, _module_id: &ModuleId) -> Vec<Metadata> {
-        vec![]
-    }
-
-    fn get_module(&self, module_id: &ModuleId) -> PartialVMResult<Option<Bytes>> {
-        Ok(self
-            .accounts
-            .get(module_id.address())
-            .and_then(|account_storage| account_storage.modules.get(module_id.name()).cloned()))
     }
 }
 

@@ -17,7 +17,9 @@ use crate::move_api::move_types::{
     MoveStructGenericTypeParam, MoveStructTag, MoveType,
 };
 
-use super::metadata::is_view_function;
+use super::metadata::{
+    get_metadata_from_compiled_module, get_metadata_from_compiled_script, is_view_function,
+};
 
 pub trait Bytecode {
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle;
@@ -34,6 +36,23 @@ pub trait Bytecode {
 
     #[allow(dead_code)]
     fn find_entry_function(&self, name: &IdentStr) -> Option<MoveFunction>;
+
+    #[allow(dead_code)]
+    fn find_function(&self, name: &IdentStr) -> Option<MoveFunction>;
+
+    fn metadata(&self) -> Option<RuntimeModuleMetadataV0>;
+
+    fn function_is_view(&self, name: &IdentStr) -> bool;
+
+    fn struct_is_event(&self, name: &IdentStr) -> bool {
+        match self.metadata() {
+            Some(m) => match m.struct_attributes.get(name.as_str()) {
+                Some(attrs) => attrs.iter().any(|attr| attr.is_event()),
+                None => false,
+            },
+            None => false,
+        }
+    }
 
     fn new_move_struct_field(&self, def: &FieldDefinition) -> MoveStructField {
         MoveStructField {
@@ -108,6 +127,7 @@ pub trait Bytecode {
             }
         };
         let name = self.identifier_at(handle.name).to_owned();
+        let is_event = self.struct_is_event(&name);
         let abilities = handle
             .abilities
             .into_iter()
@@ -121,25 +141,22 @@ pub trait Bytecode {
         MoveStruct {
             name: name.into(),
             is_native,
+            is_event,
             abilities,
             generic_type_params,
             fields,
         }
     }
 
-    fn new_move_function(
-        &self,
-        def: &FunctionDefinition,
-        module_metadata: &Option<RuntimeModuleMetadataV0>,
-    ) -> MoveFunction {
+    fn new_move_function(&self, def: &FunctionDefinition) -> MoveFunction {
         let fhandle = self.function_handle_at(def.function);
         let name = self.identifier_at(fhandle.name).to_owned();
-
+        let is_view = self.function_is_view(&name);
         MoveFunction {
-            name: name.clone().into(),
+            name: name.into(),
             visibility: def.visibility.into(),
             is_entry: def.is_entry,
-            is_view: is_view_function(name.as_ident_str(), module_metadata),
+            is_view,
             generic_type_params: fhandle
                 .type_parameters
                 .iter()
@@ -194,7 +211,25 @@ impl Bytecode for CompiledModule {
                 let fhandle = ModuleAccess::function_handle_at(self, def.function);
                 ModuleAccess::identifier_at(self, fhandle.name) == name
             })
-            .map(|def| self.new_move_function(def, &None))
+            .map(|def| self.new_move_function(def))
+    }
+
+    fn find_function(&self, name: &IdentStr) -> Option<MoveFunction> {
+        self.function_defs
+            .iter()
+            .find(|def| {
+                let fhandle = ModuleAccess::function_handle_at(self, def.function);
+                ModuleAccess::identifier_at(self, fhandle.name) == name
+            })
+            .map(|def| self.new_move_function(def))
+    }
+
+    fn metadata(&self) -> Option<RuntimeModuleMetadataV0> {
+        get_metadata_from_compiled_module(self)
+    }
+
+    fn function_is_view(&self, name: &IdentStr) -> bool {
+        is_view_function(name, &self.metadata())
     }
 }
 
@@ -229,5 +264,21 @@ impl Bytecode for CompiledScript {
         } else {
             None
         }
+    }
+
+    fn find_function(&self, name: &IdentStr) -> Option<MoveFunction> {
+        if name.as_str() == "main" {
+            Some(MoveFunction::from(self))
+        } else {
+            None
+        }
+    }
+
+    fn metadata(&self) -> Option<RuntimeModuleMetadataV0> {
+        get_metadata_from_compiled_script(self)
+    }
+
+    fn function_is_view(&self, _name: &IdentStr) -> bool {
+        false
     }
 }
