@@ -255,7 +255,6 @@ module initia_std::object {
     }
 
     /// Create a new object whose address is derived based on the creator account address and another object.
-    /// Derivde objects, similar to named objects, cannot be deleted.
     public(friend) fun create_user_derived_object(
         creator_address: address, derive_ref: &DeriveRef, can_delete: bool
     ): ConstructorRef acquires Tombstone {
@@ -356,6 +355,16 @@ module initia_std::object {
     /// Returns an Object<T> from within a DeleteRef.
     public fun object_from_delete_ref<T: key>(ref: &DeleteRef): Object<T> {
         address_to_object<T>(ref.self)
+    }
+
+    /// Asserts that the DeleteRef can be used to delete the object.
+    /// This function will abort if the object is not deletable.
+    public fun assert_deletable(ref: &DeleteRef) acquires ObjectCore {
+        let object_core = borrow_global<ObjectCore>(ref.self);
+        assert!(
+            ref.version == object_core.version,
+            error::permission_denied(EVERSION_MISMATCH)
+        );
     }
 
     /// Removes from the specified Object from global storage.

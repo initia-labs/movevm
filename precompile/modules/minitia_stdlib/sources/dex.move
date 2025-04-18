@@ -710,7 +710,9 @@ module minitia_std::dex {
         res.weights.weights_before
     }
 
-    public fun get_weight_after_from_config_response(res: &ConfigResponse): Weight {
+    public fun get_weight_after_from_config_response(
+        res: &ConfigResponse
+    ): Weight {
         res.weights.weights_after
     }
 
@@ -1416,12 +1418,12 @@ module minitia_std::dex {
         object::transfer_raw(creator, pair_addr, @minitia_std);
 
         let coin_a_store =
-            primary_fungible_store::create_primary_store(
+            primary_fungible_store::ensure_primary_store_exists(
                 pair_addr,
                 fungible_asset::asset_metadata(&coin_a)
             );
         let coin_b_store =
-            primary_fungible_store::create_primary_store(
+            primary_fungible_store::ensure_primary_store_exists(
                 pair_addr,
                 fungible_asset::asset_metadata(&coin_b)
             );

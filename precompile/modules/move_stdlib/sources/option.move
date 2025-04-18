@@ -365,7 +365,9 @@ module std::option {
     }
 
     /// Returns true if the option contains an element which satisfies predicate.
-    public inline fun any<Element>(o: &Option<Element>, p: |&Element| bool): bool {
+    public inline fun any<Element>(
+        o: &Option<Element>, p: |&Element| bool
+    ): bool {
         is_some(o) && p(borrow(o))
     }
 

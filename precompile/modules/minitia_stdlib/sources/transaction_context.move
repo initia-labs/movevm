@@ -23,7 +23,9 @@ module minitia_std::transaction_context {
     }
 
     #[test_only]
-    native fun set_transaction_hash_internal(transaction_hash: vector<u8>);
+    native fun set_transaction_hash_internal(
+        transaction_hash: vector<u8>
+    );
 
     #[test]
     fun test_address_uniquess() {

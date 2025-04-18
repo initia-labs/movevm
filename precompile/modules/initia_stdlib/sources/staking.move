@@ -829,14 +829,14 @@ module initia_std::staking {
             let reward_coin_store_address =
                 object::address_from_constructor_ref(reward_coin_store_ref);
             let reward_coin_store =
-                primary_fungible_store::create_primary_store(
+                primary_fungible_store::ensure_primary_store_exists(
                     reward_coin_store_address, reward_metadata()
                 );
 
             let unbonding_coin_store_address =
                 object::address_from_constructor_ref(unbonding_coin_store_ref);
             let unbonding_coin_store =
-                primary_fungible_store::create_primary_store(
+                primary_fungible_store::ensure_primary_store_exists(
                     unbonding_coin_store_address, metadata
                 );
 
@@ -1142,7 +1142,13 @@ module initia_std::staking {
                 validator
             );
 
-        merge_delegation(dst_delegation, delegation)
+        let rewards = merge_delegation(dst_delegation, delegation);
+
+        // deposit claimed rewards to account
+        coin::deposit(account_addr, rewards);
+
+        // return empty fungible asset for backward compatibility
+        fungible_asset::zero(metadata)
     }
 
     /// Withdraw specified `share` from delegation.
@@ -1722,15 +1728,19 @@ module initia_std::staking {
                 bigdecimal::from_ratio_u64(5000000, 1)
             );
         let reward = deposit_delegation(user2_addr, withdrawn_delegation);
-        assert!(fungible_asset::amount(&reward) == 500000, 5);
+        assert!(fungible_asset::amount(&reward) == 0, 5);
         coin::deposit(user1_addr, reward);
+        assert!(
+            coin::balance(user2_addr, reward_metadata) == 500000,
+            51
+        );
 
         let delegation = get_delegation(user1_addr, metadata, validator);
         assert!(delegation.unclaimed_reward == 500000, 6);
 
         claim_reward_script(user1, metadata, validator);
         assert!(
-            coin::balance(user1_addr, reward_metadata) == 1000000,
+            coin::balance(user1_addr, reward_metadata) == 500000,
             8
         );
         let delegation = get_delegation(user1_addr, metadata, validator);
@@ -1748,7 +1758,7 @@ module initia_std::staking {
 
         undelegate_script(user1, metadata, validator, 5000000);
         assert!(
-            coin::balance(user1_addr, reward_metadata) == 1500000,
+            coin::balance(user1_addr, reward_metadata) == 1000000,
             10
         );
 
@@ -1877,7 +1887,7 @@ module initia_std::staking {
 
         // deposit delegation
         let reward = deposit_delegation(user_addr, delegation0);
-        assert!(fungible_asset::amount(&reward) == 66666, 5);
+        assert!(fungible_asset::amount(&reward) == 0, 5);
 
         let delegation = get_delegation(user_addr, metadata, validator);
         assert!(bigdecimal::truncate_u64(delegation.share) == 100000, 6);

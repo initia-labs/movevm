@@ -702,8 +702,9 @@ module initia_std::fungible_asset {
 
     /// Used to delete a store.  Requires the store to be completely empty prior to removing it
     public fun remove_store(delete_ref: &DeleteRef) acquires FungibleStore {
-        let store = object::object_from_delete_ref<FungibleStore>(delete_ref);
-        let addr = object::object_address(&store);
+        object::assert_deletable(delete_ref);
+
+        let addr = object::address_from_delete_ref(delete_ref);
         let FungibleStore { metadata: _, balance, frozen: _ } =
             move_from<FungibleStore>(addr);
         assert!(

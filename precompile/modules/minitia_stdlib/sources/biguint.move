@@ -180,10 +180,18 @@ module minitia_std::biguint {
     ): vector<u8>;
     native fun new_internal<T>(num: T): vector<u8>;
     native fun cast_internal<T>(num_bytes: vector<u8>): T;
-    native fun lt_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
-    native fun le_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
-    native fun gt_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
-    native fun ge_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
+    native fun lt_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
+    native fun le_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
+    native fun gt_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
+    native fun ge_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
 
     #[test]
     fun test_biguint_u64() {
