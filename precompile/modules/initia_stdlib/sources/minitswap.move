@@ -2343,11 +2343,18 @@ module initia_std::minitswap {
     }
 
     struct MemoWasm has copy, drop {
-        message: MemoWasmMessage
+        message: MemoWasmMessageV2
     }
 
+    #[deprecated]
     struct MemoWasmMessage has copy, drop {
         contracts: String,
+        funds: vector<MemoWasmFunds>,
+        msg: MemoWasmMinitswapHook
+    }
+
+    struct MemoWasmMessageV2 has copy, drop {
+        contract: String,
         funds: vector<MemoWasmFunds>,
         msg: MemoWasmMinitswapHook
     }
@@ -2394,7 +2401,7 @@ module initia_std::minitswap {
                 message: option::none(),
                 async_callback: MemoAsyncCallbackV2 {
                     id: (batch_index as u32),
-                    module_address: @initia_std,
+                    module_address: @initia_hooks,
                     module_name: string::utf8(b"minitswap")
                 }
             },
@@ -2428,8 +2435,8 @@ module initia_std::minitswap {
             } else if (vm_type == COSMWASM) {
                 memo.wasm = option::some(
                     MemoWasm {
-                        message: MemoWasmMessage {
-                            contracts: hook_contract,
+                        message: MemoWasmMessageV2 {
+                            contract: hook_contract,
                             funds: vector[MemoWasmFunds {
                                 denom: op_denom,
                                 amount: to_string(&amount)
@@ -3377,7 +3384,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"message\":{\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"function_name\":\"minitswap_hook\",\"type_args\":[],\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"]},\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"}},\"wasm\":null,\"evm\":null}"
+                    b"{\"move\":{\"message\":{\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"function_name\":\"minitswap_hook\",\"type_args\":[],\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"]},\"async_callback\":{\"id\":1,\"module_address\":\"0x2\",\"module_name\":\"minitswap\"}},\"wasm\":null,\"evm\":null}"
                 ),
             1
         );
@@ -3396,7 +3403,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"message\":null,\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"}},\"wasm\":{\"message\":{\"contracts\":\"cosmwasm_contract_addr\",\"funds\":[{\"denom\":\"op_denom\",\"amount\":\"1000000\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}},\"evm\":null}"
+                    b"{\"move\":{\"message\":null,\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"}},\"wasm\":{\"message\":{\"contract\":\"cosmwasm_contract_addr\",\"funds\":[{\"denom\":\"op_denom\",\"amount\":\"1000000\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}},\"evm\":null}"
                 ),
             3
         );
