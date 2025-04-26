@@ -2300,15 +2300,23 @@ module initia_std::minitswap {
         )
     }
 
+    #[deprecated]
     struct IBCMemo has copy, drop {
         _move_: MemoMove,
         wasm: Option<MemoWasm>,
         evm: Option<MemoEvm>
     }
 
+    #[deprecated]
     struct IBCMemoV2 has copy, drop {
         _move_: MemoMoveV2,
         wasm: Option<MemoWasm>,
+        evm: Option<MemoEvm>
+    }
+
+    struct IBCMemoV3 has copy, drop {
+        _move_: MemoMoveV2,
+        wasm: Option<MemoWasmV2>,
         evm: Option<MemoEvm>
     }
 
@@ -2342,8 +2350,12 @@ module initia_std::minitswap {
         args: vector<String>
     }
 
-    struct MemoWasm has copy, drop {
+    struct MemoWasmV2 has copy, drop {
         message: MemoWasmMessageV2
+    }
+
+    struct MemoWasm has copy, drop {
+        message: MemoWasmMessage
     }
 
     #[deprecated]
@@ -2396,7 +2408,7 @@ module initia_std::minitswap {
         op_denom: String,
         amount: u64
     ): (String, String) {
-        let memo = IBCMemoV2 {
+        let memo = IBCMemoV3 {
             _move_: MemoMoveV2 {
                 message: option::none(),
                 async_callback: MemoAsyncCallbackV2 {
@@ -2434,7 +2446,7 @@ module initia_std::minitswap {
                 ibc_receiver
             } else if (vm_type == COSMWASM) {
                 memo.wasm = option::some(
-                    MemoWasm {
+                    MemoWasmV2 {
                         message: MemoWasmMessageV2 {
                             contract: hook_contract,
                             funds: vector[MemoWasmFunds {
