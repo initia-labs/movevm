@@ -2402,7 +2402,7 @@ module initia_std::minitswap {
                 async_callback: MemoAsyncCallbackV2 {
                     id: (batch_index as u32),
                     module_address: @initia_hooks,
-                    module_name: string::utf8(b"minitswap")
+                    module_name: string::utf8(b"minitswap_callback")
                 }
             },
             wasm: option::none(),
@@ -3384,7 +3384,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"message\":{\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"function_name\":\"minitswap_hook\",\"type_args\":[],\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"]},\"async_callback\":{\"id\":1,\"module_address\":\"0x2\",\"module_name\":\"minitswap\"}},\"wasm\":null,\"evm\":null}"
+                    b"{\"move\":{\"message\":{\"module_address\":\"0x1\",\"module_name\":\"minitswap_hook\",\"function_name\":\"minitswap_hook\",\"type_args\":[],\"args\":[\"CG9wX2Rlbm9t\",\"QEIPAAAAAAA=\",\"CHJlY2VpdmVy\"]},\"async_callback\":{\"id\":1,\"module_address\":\"0x2\",\"module_name\":\"minitswap_callback\"}},\"wasm\":null,\"evm\":null}"
                 ),
             1
         );
@@ -3403,7 +3403,7 @@ module initia_std::minitswap {
         assert!(
             memo
                 == string::utf8(
-                    b"{\"move\":{\"message\":null,\"async_callback\":{\"id\":1,\"module_address\":\"0x1\",\"module_name\":\"minitswap\"}},\"wasm\":{\"message\":{\"contract\":\"cosmwasm_contract_addr\",\"funds\":[{\"denom\":\"op_denom\",\"amount\":\"1000000\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}},\"evm\":null}"
+                    b"{\"move\":{\"message\":null,\"async_callback\":{\"id\":1,\"module_address\":\"0x2\",\"module_name\":\"minitswap_callback\"}},\"wasm\":{\"message\":{\"contract\":\"cosmwasm_contract_addr\",\"funds\":[{\"denom\":\"op_denom\",\"amount\":\"1000000\"}],\"msg\":{\"minitswap_hook\":{\"receiver\":\"receiver\"}}}},\"evm\":null}"
                 ),
             3
         );

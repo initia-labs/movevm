@@ -8,9 +8,9 @@ fn main() {
     let stdlib_bin_dir = bin_dir.join("stdlib");
     let minlib_bin_dir = bin_dir.join("minlib");
     let tests_bin_dir = bin_dir.join("tests");
+    let hooks_bin_dir = bin_dir.join("hooks");
 
     let modules = vec![
-        // stdlib
         [
             "move_stdlib",
             "MoveStdlib",
@@ -26,7 +26,6 @@ fn main() {
             "InitiaStdlib",
             stdlib_bin_dir.to_str().unwrap(),
         ],
-        // minlib
         [
             "move_stdlib",
             "MoveStdlib",
@@ -42,6 +41,11 @@ fn main() {
             "MinitiaStdlib",
             minlib_bin_dir.to_str().unwrap(),
         ],
+        [
+            "initia_hooks",
+            "InitiaHooks",
+            hooks_bin_dir.to_str().unwrap(),
+        ],
         ["tests", "tests", tests_bin_dir.to_str().unwrap()],
     ];
 
@@ -49,6 +53,7 @@ fn main() {
     fs::create_dir_all(stdlib_bin_dir.clone()).expect("failed to create binaries/stdlib dir");
     fs::create_dir_all(minlib_bin_dir.clone()).expect("failed to create binaries/minlib dir");
     fs::create_dir_all(tests_bin_dir.clone()).expect("failed to create binaries/tests dir");
+    fs::create_dir_all(hooks_bin_dir.clone()).expect("failed to create binaries/hooks dir");
 
     for [p, m, d] in modules {
         // compile modules & scripts
