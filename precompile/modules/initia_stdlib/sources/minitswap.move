@@ -2300,40 +2300,15 @@ module initia_std::minitswap {
         )
     }
 
-    #[deprecated]
-    struct IBCMemo has copy, drop {
-        _move_: MemoMove,
-        wasm: Option<MemoWasm>,
-        evm: Option<MemoEvm>
-    }
-
-    #[deprecated]
-    struct IBCMemoV2 has copy, drop {
-        _move_: MemoMoveV2,
-        wasm: Option<MemoWasm>,
-        evm: Option<MemoEvm>
-    }
-
     struct IBCMemoV3 has copy, drop {
         _move_: MemoMoveV2,
         wasm: Option<MemoWasmV2>,
         evm: Option<MemoEvm>
     }
 
-    struct MemoMove has copy, drop {
-        message: Option<MemoMoveMessage>,
-        async_callback: MemoAsyncCallback
-    }
-
     struct MemoMoveV2 has copy, drop {
         message: Option<MemoMoveMessage>,
         async_callback: MemoAsyncCallbackV2
-    }
-
-    struct MemoAsyncCallback has copy, drop {
-        id: u64,
-        module_address: address,
-        module_name: String
     }
 
     struct MemoAsyncCallbackV2 has copy, drop {
@@ -2352,17 +2327,6 @@ module initia_std::minitswap {
 
     struct MemoWasmV2 has copy, drop {
         message: MemoWasmMessageV2
-    }
-
-    struct MemoWasm has copy, drop {
-        message: MemoWasmMessage
-    }
-
-    #[deprecated]
-    struct MemoWasmMessage has copy, drop {
-        contracts: String,
-        funds: vector<MemoWasmFunds>,
-        msg: MemoWasmMinitswapHook
     }
 
     struct MemoWasmMessageV2 has copy, drop {
@@ -3047,6 +3011,45 @@ module initia_std::minitswap {
             };
 
         (offer_amount, fee_amount)
+    }
+
+    #[deprecated]
+    struct MemoMove has copy, drop {
+        message: Option<MemoMoveMessage>,
+        async_callback: MemoAsyncCallback
+    }
+
+    #[deprecated]
+    struct MemoAsyncCallback has copy, drop {
+        id: u64,
+        module_address: address,
+        module_name: String
+    }
+
+    #[deprecated]
+    struct IBCMemo has copy, drop {
+        _move_: MemoMove,
+        wasm: Option<MemoWasm>,
+        evm: Option<MemoEvm>
+    }
+
+    #[deprecated]
+    struct IBCMemoV2 has copy, drop {
+        _move_: MemoMoveV2,
+        wasm: Option<MemoWasm>,
+        evm: Option<MemoEvm>
+    }
+
+    #[deprecated]
+    struct MemoWasm has copy, drop {
+        message: MemoWasmMessage
+    }
+
+    #[deprecated]
+    struct MemoWasmMessage has copy, drop {
+        contracts: String,
+        funds: vector<MemoWasmFunds>,
+        msg: MemoWasmMinitswapHook
     }
 
     #[test_only]
