@@ -275,6 +275,8 @@ module minitia_std::coin {
         primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, false)
     }
 
+    /// Mutate the metadata information of the fungible asset.
+    /// @dev - this interface only exists in minitia_stdlib.
     public fun mutate_metadata(
         mint_cap: &MintCapability,
         name: Option<String>,

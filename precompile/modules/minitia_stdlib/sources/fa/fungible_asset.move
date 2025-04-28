@@ -444,6 +444,7 @@ module minitia_std::fungible_asset {
 
     /// Creates a mutate metadata ref that can be used to change the metadata information of fungible assets from the
     /// given mint ref.
+    /// @dev - this interface only exists in minitia_stdlib.
     public fun generate_mutate_metadata_ref_from_mint_ref(
         mint_ref: &MintRef
     ): MutateMetadataRef {

@@ -159,6 +159,8 @@ module minitia_std::managed_coin {
         coin::deposit(dst_addr, fa);
     }
 
+    /// Mutate the metadata information of the fungible asset.
+    /// @dev - this interface only exists in minitia_stdlib.
     public entry fun mutate_metadata(
         account: &signer,
         metadata: Object<Metadata>,
