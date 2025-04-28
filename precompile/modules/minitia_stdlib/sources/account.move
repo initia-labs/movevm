@@ -8,6 +8,7 @@ module minitia_std::account {
 
     friend minitia_std::object;
     friend minitia_std::table;
+    friend minitia_std::fungible_asset;
 
     /// Account Types
     const ACCOUNT_TYPE_BASE: u8 = 0;

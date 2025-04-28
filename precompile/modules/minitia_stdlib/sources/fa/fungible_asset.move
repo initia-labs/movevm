@@ -118,6 +118,25 @@ module minitia_std::fungible_asset {
         project_uri: String
     }
 
+    /// Extra metadata of a Fungible asset
+    /// @dev - this interface only exists in minitia_stdlib.
+    struct ExtraMetadata has key, copy, drop {
+        /// Name of the fungible metadata, i.e., "USDT".
+        name: String,
+        /// Symbol of the fungible metadata, usually a shorter version of the name.
+        /// For example, Singapore Dollar is SGD.
+        symbol: String,
+        /// Number of decimals used for display purposes.
+        /// For example, if `decimals` equals `2`, a balance of `505` coins should
+        /// be displayed to a user as `5.05` (`505 / 10 ** 2`).
+        decimals: u8,
+        /// The Uniform Resource Identifier (uri) pointing to an image that can be used as the icon for this fungible
+        /// asset.
+        icon_uri: String,
+        /// The Uniform Resource Identifier (uri) pointing to the website for the fungible asset.
+        project_uri: String
+    }
+
     /// The store object that holds fungible assets of a specific type associated with an account.
     struct FungibleStore has key {
         /// The address of the base metadata object.
@@ -483,37 +502,69 @@ module minitia_std::fungible_asset {
 
     #[view]
     /// Get the name of the fungible asset from the `metadata` object.
-    public fun name<T: key>(metadata: Object<T>): String acquires Metadata {
+    public fun name<T: key>(metadata: Object<T>): String acquires Metadata, ExtraMetadata {
+        if (exists<ExtraMetadata>(object::object_address(&metadata))) {
+            return borrow_global<ExtraMetadata>(object::object_address(&metadata)).name
+        };
+
         borrow_fungible_metadata(&metadata).name
     }
 
     #[view]
     /// Get the symbol of the fungible asset from the `metadata` object.
-    public fun symbol<T: key>(metadata: Object<T>): String acquires Metadata {
+    public fun symbol<T: key>(metadata: Object<T>): String acquires Metadata, ExtraMetadata {
+        if (exists<ExtraMetadata>(object::object_address(&metadata))) {
+            return borrow_global<ExtraMetadata>(object::object_address(&metadata)).symbol
+        };
+
         borrow_fungible_metadata(&metadata).symbol
     }
 
     #[view]
     /// Get the icon uri from the `metadata` object.
-    public fun icon_uri<T: key>(metadata: Object<T>): String acquires Metadata {
+    public fun icon_uri<T: key>(metadata: Object<T>): String acquires Metadata, ExtraMetadata {
+        if (exists<ExtraMetadata>(object::object_address(&metadata))) {
+            return borrow_global<ExtraMetadata>(object::object_address(&metadata)).icon_uri
+        };
+
         borrow_fungible_metadata(&metadata).icon_uri
     }
 
     #[view]
     /// Get the project uri from the `metadata` object.
-    public fun project_uri<T: key>(metadata: Object<T>): String acquires Metadata {
+    public fun project_uri<T: key>(metadata: Object<T>): String acquires Metadata, ExtraMetadata {
+        if (exists<ExtraMetadata>(object::object_address(&metadata))) {
+            return borrow_global<ExtraMetadata>(object::object_address(&metadata)).project_uri
+        };
+
         borrow_fungible_metadata(&metadata).project_uri
     }
 
     #[view]
     /// Get the metadata struct from the `metadata` object.
-    public fun metadata<T: key>(metadata: Object<T>): Metadata acquires Metadata {
+    public fun metadata<T: key>(metadata: Object<T>): Metadata acquires Metadata, ExtraMetadata {
+        if (exists<ExtraMetadata>(object::object_address(&metadata))) {
+            let extra_metadata =
+                borrow_global<ExtraMetadata>(object::object_address(&metadata));
+            return Metadata {
+                name: extra_metadata.name,
+                symbol: extra_metadata.symbol,
+                decimals: extra_metadata.decimals,
+                icon_uri: extra_metadata.icon_uri,
+                project_uri: extra_metadata.project_uri
+            }
+        };
+
         *borrow_fungible_metadata(&metadata)
     }
 
     #[view]
     /// Get the decimals from the `metadata` object.
-    public fun decimals<T: key>(metadata: Object<T>): u8 acquires Metadata {
+    public fun decimals<T: key>(metadata: Object<T>): u8 acquires Metadata, ExtraMetadata {
+        if (exists<ExtraMetadata>(object::object_address(&metadata))) {
+            return borrow_global<ExtraMetadata>(object::object_address(&metadata)).decimals
+        };
+
         borrow_fungible_metadata(&metadata).decimals
     }
 
@@ -905,10 +956,23 @@ module minitia_std::fungible_asset {
         decimals: Option<u8>,
         icon_uri: Option<String>,
         project_uri: Option<String>
-    ) acquires Metadata {
+    ) acquires Metadata, ExtraMetadata {
         let metadata_address = object::object_address(&metadata_ref.metadata);
-        let mutable_metadata = borrow_global_mut<Metadata>(metadata_address);
+        if (!exists<ExtraMetadata>(metadata_address)) {
+            let metadata = borrow_global_mut<Metadata>(metadata_address);
+            move_to(
+                &account::create_signer(metadata_address),
+                ExtraMetadata {
+                    name: metadata.name,
+                    symbol: metadata.symbol,
+                    decimals: metadata.decimals,
+                    icon_uri: metadata.icon_uri,
+                    project_uri: metadata.project_uri
+                }
+            );
+        };
 
+        let mutable_metadata = borrow_global_mut<ExtraMetadata>(metadata_address);
         if (option::is_some(&name)) {
             let name = option::extract(&mut name);
             assert!(
@@ -1181,7 +1245,7 @@ module minitia_std::fungible_asset {
     }
 
     #[test(creator = @0xcafe)]
-    fun test_metadata_basic_flow(creator: &signer) acquires Metadata, Supply {
+    fun test_metadata_basic_flow(creator: &signer) acquires Metadata, Supply, ExtraMetadata {
         let (creator_ref, metadata) = create_test_token(creator);
         init_test_metadata(&creator_ref);
         assert!(supply(metadata) == option::some(0), 1);
@@ -1216,7 +1280,7 @@ module minitia_std::fungible_asset {
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_e2e_basic_flow(
         creator: &signer, aaron: &signer
-    ) acquires FungibleStore, Supply, DispatchFunctionStore, Metadata {
+    ) acquires FungibleStore, Supply, DispatchFunctionStore, Metadata, ExtraMetadata {
         let (mint_ref, transfer_ref, burn_ref, mutate_metadata_ref, test_token) =
             create_fungible_asset(creator);
         let metadata = mint_ref.metadata;

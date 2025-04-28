@@ -318,7 +318,7 @@ module minitia_std::managed_coin {
 
     #[test(source = @0xa11ce, mod_account = @0x1)]
     public entry fun test_mutate_metadata(
-        source: signer, mod_account: signer
+        mod_account: signer
     ) acquires Capabilities {
         primary_fungible_store::init_module_for_test();
 
