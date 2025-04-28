@@ -442,6 +442,14 @@ module minitia_std::fungible_asset {
         MutateMetadataRef { metadata }
     }
 
+    /// Creates a mutate metadata ref that can be used to change the metadata information of fungible assets from the
+    /// given mint ref.
+    public fun generate_mutate_metadata_ref_from_mint_ref(
+        mint_ref: &MintRef
+    ): MutateMetadataRef {
+        MutateMetadataRef { metadata: mint_ref.metadata }
+    }
+
     #[view]
     /// Return true if given address has Metadata else return false
     public fun is_fungible_asset(metadata_addr: address): bool {

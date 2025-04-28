@@ -159,6 +159,39 @@ module minitia_std::managed_coin {
         coin::deposit(dst_addr, fa);
     }
 
+    public entry fun mutate_metadata(
+        account: &signer,
+        metadata: Object<Metadata>,
+        name: Option<String>,
+        symbol: Option<String>,
+        decimals: Option<u8>,
+        icon_uri: Option<String>,
+        project_uri: Option<String>
+    ) acquires Capabilities {
+        let account_addr = signer::address_of(account);
+
+        assert!(
+            object::is_owner(metadata, account_addr),
+            error::not_found(EUNAUTHORIZED)
+        );
+
+        let object_addr = object::object_address(&metadata);
+        assert!(
+            exists<Capabilities>(object_addr),
+            error::not_found(ENO_CAPABILITIES)
+        );
+
+        let capabilities = borrow_global<Capabilities>(object_addr);
+        coin::mutate_metadata(
+            &capabilities.mint_cap,
+            name,
+            symbol,
+            decimals,
+            icon_uri,
+            project_uri
+        )
+    }
+
     //
     // Tests
     //
@@ -279,5 +312,49 @@ module minitia_std::managed_coin {
         let metadata = test_metadata();
         mint_to(&mod_account, source_addr, metadata, 100);
         burn(&destination, metadata, 10);
+    }
+
+    #[test(source = @0xa11ce, mod_account = @0x1)]
+    public entry fun test_mutate_metadata(
+        source: signer, mod_account: signer
+    ) acquires Capabilities {
+        primary_fungible_store::init_module_for_test();
+
+        initialize(
+            &mod_account,
+            option::none(),
+            string::utf8(b"Fake Money"),
+            string::utf8(TEST_SYMBOL),
+            10,
+            string::utf8(b""),
+            string::utf8(b"")
+        );
+
+        // update name
+        let metadata = test_metadata();
+        mutate_metadata(
+            &mod_account,
+            metadata,
+            option::some(string::utf8(b"New Fake Money")),
+            option::none(),
+            option::none(),
+            option::none(),
+            option::none()
+        );
+
+        assert!(coin::name(metadata) == string::utf8(b"New Fake Money"), 0);
+
+        // update decimals
+        mutate_metadata(
+            &mod_account,
+            metadata,
+            option::none(),
+            option::none(),
+            option::some(11),
+            option::none(),
+            option::none()
+        );
+
+        assert!(coin::decimals(metadata) == 11, 0);
     }
 }
