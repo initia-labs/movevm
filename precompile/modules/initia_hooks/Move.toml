@@ -1,14 +1,12 @@
 [package]
-name = "InitiaStdlib"
+name = "InitiaHooks"
 version = "1.0.0"
 
 [dependencies]
 MoveStdlib = { local = "../move_stdlib" }
 MoveNursery = { local = "../move_nursery" }
+InitiaStdlib = { local = "../initia_stdlib" }
 
 [addresses]
 std = "0x1"
-initia_std = "0x1"
-initia_hooks = "0x2"
-relayer = "0x3d18d54532fc42e567090852db6eb21fa528f952"
-cafe = "0xcafe"
+initia_hook = "0x2"
