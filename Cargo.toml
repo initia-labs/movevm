@@ -15,9 +15,9 @@ members = [
     "crates/e2e-move-tests",
     "tools/generate-bcs-go",
     "tools/precompile",
-    "tools/compiler-cli",
+    "tools/initia-move-cli",
 ]
-
+    
 [profile.release]
 opt-level = 3
 debug = false

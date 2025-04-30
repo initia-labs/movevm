@@ -1,0 +1,24 @@
+[package]
+name = "initia-move-cli"
+version.workspace = true
+publish = true
+description = "Initia Move Compiler CLI"
+homepage = "https://initia.xyz/"
+repository = "https://github.com/initia-labs/movevm"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+include = [
+    "src/**/*",
+    "Cargo.toml",
+    "README.md",
+]
+
+[[bin]]
+name = "initia-move"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+initia-move-compiler = { path = "../../crates/compiler"}
