@@ -83,15 +83,10 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.target }} --bin initia-move
 
-      - name: Write version
-        run: |
-          TAG=${{ github.event.release.tag_name }}
-          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
-
       - name: Create tar.gz
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../initia-move-cli-${{ env.VERSION }}-${{ matrix.suffix }}.tar.gz initia-move
+          tar -czvf ../../../initia-move-cli-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz initia-move
 
       - name: Upload binary to release
         uses: softprops/action-gh-release@v2
@@ -100,7 +95,7 @@ jobs:
           name: ${{ github.ref_name }}
           draft: false
           token: ${{ secrets.GH_RELEASE_TOKEN }}
-          files: initia-move-cli-${{ env.VERSION }}-${{ matrix.suffix }}.tar.gz
+          files: target/${{ matrix.target }}/release/initia-move-cli-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz
 
   homebrew-release:
     name: homebrew-release
@@ -113,7 +108,7 @@ jobs:
           homebrew_owner: initia-labs
           homebrew_tap: homebrew-tap
           formula_folder: Formula
-          version: ${{ github.event.release.tag_name }}
+          version: ${{ github.ref_name }}
           github_token: ${{ secrets.GH_RELEASE_TOKEN }}
           commit_owner: github-actions[bot]
           commit_email: github-actions[bot]@users.noreply.github.com
