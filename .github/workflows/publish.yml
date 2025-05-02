@@ -1,4 +1,4 @@
-name: Publish changed files to move-natives and builder.js on tag creation. And publish the new version of initia-move-cli
+name: Publish changed files to move-natives and builder.js on tag creation.
 
 on:
   workflow_run:
@@ -50,78 +50,3 @@ jobs:
           destination-dir: "library"
           email: "infra@initia.xyz"
           commit-msg: "bump movevm ${{ github.event.workflow_run.head_branch }}"
-
-  build-and-upload:
-    if: startsWith(github.event.workflow_run.head_branch, 'v')
-    name: Release build initia-move-cli and upload release
-    runs-on: ubuntu-22.04
-
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            suffix: linux-amd64
-          - os: ubuntu-22.04
-            target: aarch64-unknown-linux-gnu
-            suffix: linux-arm64
-          - os: macos-12
-            target: x86_64-apple-darwin
-            suffix: darwin-amd64
-          - os: macos-12
-            target: aarch64-apple-darwin
-            suffix: darwin-arm64
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Build binary
-        run: |
-          cargo build --release --target ${{ matrix.target }} --bin initia-move
-
-      - name: Create tar.gz
-        run: |
-          cd target/${{ matrix.target }}/release
-          tar -czvf ../../../initia-move-cli-${{ github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move
-
-      - name: Upload binary to release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          name: ${{ github.event.workflow_run.head_branch }}
-          draft: false
-          token: ${{ secrets.GH_RELEASE_TOKEN }}
-          files: initia-move-cli-${{ github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz
-
-  homebrew-release:
-    if: startsWith(github.event.workflow_run.head_branch, 'v')
-    name: homebrew-release
-    runs-on: ubuntu-22.04
-    needs: build-and-upload
-    steps:
-      - name: Release project to Homebrew tap
-        uses: Justintime50/homebrew-releaser@v2
-        with:
-          homebrew_owner: initia-labs
-          homebrew_tap: homebrew-tap
-          formula_folder: Formula
-          version: ${{ github.event.workflow_run.head_branch }}
-          github_token: ${{ secrets.GH_RELEASE_TOKEN }}
-          commit_owner: github-actions[bot]
-          commit_email: github-actions[bot]@users.noreply.github.com
-          install: | 
-              bin.install "initia-move" => "initia-move"
-          test: 'assert_match version.to_s, shell_output("#{bin}/initia-move version")'
-          target_darwin_amd64: true
-          target_darwin_arm64: true
-          target_linux_amd64: false
-          target_linux_arm64: false
-          update_readme_table: false
-          skip_commit: false
-          debug: false
-
