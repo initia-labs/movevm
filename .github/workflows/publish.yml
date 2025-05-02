@@ -52,6 +52,7 @@ jobs:
           commit-msg: "bump movevm ${{ github.event.workflow_run.head_branch }}"
 
   build-and-upload:
+    if: startsWith(github.event.workflow_run.head_branch, 'v')
     name: Release build initia-move-cli and upload release
     runs-on: ubuntu-22.04
 
@@ -86,18 +87,19 @@ jobs:
       - name: Create tar.gz
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../initia-move-cli-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz initia-move
+          tar -czvf ../../../initia-move-cli-${{ github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move
 
       - name: Upload binary to release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: ${{ github.ref_name }}
+          name: ${{ github.event.workflow_run.head_branch }}
           draft: false
           token: ${{ secrets.GH_RELEASE_TOKEN }}
-          files: target/${{ matrix.target }}/release/initia-move-cli-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz
+          files: target/${{ matrix.target }}/release/initia-move-cli-${{ github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz
 
   homebrew-release:
+    if: startsWith(github.event.workflow_run.head_branch, 'v')
     name: homebrew-release
     runs-on: ubuntu-22.04
     needs: build-and-upload
@@ -108,12 +110,12 @@ jobs:
           homebrew_owner: initia-labs
           homebrew_tap: homebrew-tap
           formula_folder: Formula
-          version: ${{ github.ref_name }}
+          version: ${{ github.event.workflow_run.head_branch }}
           github_token: ${{ secrets.GH_RELEASE_TOKEN }}
           commit_owner: github-actions[bot]
           commit_email: github-actions[bot]@users.noreply.github.com
           install: | 
-              bin.install "initia-move-cli" => "initia-move"
+              bin.install "initia-move" => "initia-move"
           test: 'assert_match version.to_s, shell_output("#{bin}/initia-move version")'
           target_darwin_amd64: true
           target_darwin_arm64: true
