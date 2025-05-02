@@ -90,6 +90,7 @@ jobs:
 
   create-release:
     needs: [linux-build, macos-build]
+    if: ${{github.event.workflow_run.head_branch}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

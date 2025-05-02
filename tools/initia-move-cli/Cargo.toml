@@ -19,6 +19,6 @@ name = "initia-move-cli"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0"
-clap = { version = "4.0", features = ["derive"] }
-initia-move-compiler = { path = "../../crates/compiler"}
+anyhow.workspace = true
+clap.workspace = true
+initia-move-compiler.workspace = true
