@@ -4,26 +4,59 @@ A Light version CLI tool only for the Initia Move compiler.
 
 ## Installation
 
-### On macOS
+Install _Initia Move CLI_ by downloading the appropriate binary for your architecture using `wget` or `curl`:
 
-Install _Initia Move CLI_ via [Homebrew](https://brew.sh/):
+### On Macos
+
+### For macOS arm64 (Apple Silicon)
 
 ```bash
-brew install initia-labs/tap/initia-move-cli
+
+VERSION=$(curl -s https://api.github.com/repos/initia-labs/movevm/releases/latest | grep '"tag_name":' | cut -d'"' -f4 | cut -c 2-)
+curl -L https://github.com/initia-labs/movevm/releases/download/v$VERSION/initia-move-cli-v$VERSION-darwin-arm64.tar.gz -o initia-move-cli-$VERSION-darwin-arm64.tar.gz
+tar -xvf initia-move-cli-$VERSION-darwin-arm64.tar.gz
+
+# Install to system path
+sudo mkdir -p /usr/local/bin
+sudo mv initia-move-cli /usr/local/bin/
+sudo chmod +x /usr/local/bin/initia-move
+
+# Clean up
+rm initia-move-cli-$VERSION-darwin-arm64.tar.gz
+```
+
+### For macOS x86_64 (amd64)
+
+```bash
+
+VERSION=$(curl -s https://api.github.com/repos/initia-labs/movevm/releases/latest | grep '"tag_name":' | cut -d'"' -f4 | cut -c 2-)
+curl -L https://github.com/initia-labs/movevm/releases/download/v$VERSION/initia-move-cli-v$VERSION-darwin-amd64.tar.gz -o initia-move-cli-$VERSION-darwin-amd64.tar.gz
+tar -xvf initia-move-cli-$VERSION-darwin-amd64.tar.gz
+
+# Install to system path
+sudo mkdir -p /usr/local/bin
+sudo mv initia-move-cli /usr/local/bin/
+sudo chmod +x /usr/local/bin/initia-move
+
+# Clean up
+rm initia-move-cli-$VERSION-darwin-amd64.tar.gz
 ```
 
 ### On Linux (ubuntu-22.04)
-
-Install _Initia Move CLI_ by downloading the appropriate binary for your architecture using `wget`:
 
 #### **For x86_64 (amd64)**
 
 ```bash
 
 VERSION=$(curl -s https://api.github.com/repos/initia-labs/movevm/releases/latest | grep '"tag_name":' | cut -d'"' -f4 | cut -c 2-)
-wget https://github.com/initia-labs/movevm/releases/download/v$VERSION/initia-move-cli-$VERSION-linux-amd64.tar.gz
+wget https://github.com/initia-labs/movevm/releases/download/v$VERSION/initia-move-cli-v$VERSION-linux-amd64.tar.gz
 tar -xvf initia-move-cli-$VERSION-linux-amd64.tar.gz
 
+# Install to system path
+sudo install -m 755 initia-move-cli /usr/local/bin/initia-move
+
+# Clean up
+rm initia-move-cli-$VERSION-linux-amd64.tar.gz
 ```
 
 #### **For arm64**
@@ -31,9 +64,12 @@ tar -xvf initia-move-cli-$VERSION-linux-amd64.tar.gz
 ```bash
 
 VERSION=$(curl -s https://api.github.com/repos/initia-labs/movevm/releases/latest | grep '"tag_name":' | cut -d'"' -f4 | cut -c 2-)
-wget https://github.com/initia-labs/movevm/releases/download/v$VERSION/initia-move-cli-$VERSION-linux-arm64.tar.gz
+wget https://github.com/initia-labs/movevm/releases/download/v$VERSION/initia-move-cli-v$VERSION-linux-arm64.tar.gz
 tar -xvf initia-move-cli-$VERSION-linux-arm64.tar.gz
 
+sudo install -m 755 initia-move-cli /usr/local/bin/initia-move
+
+rm initia-move-cli-$VERSION-linux-arm64.tar.gz
 ```
 
 ### How to use it
@@ -71,4 +107,3 @@ Options:
       --experiments <EXPERIMENTS>            Experiments for v2 compiler to set to true
 
 ```
-

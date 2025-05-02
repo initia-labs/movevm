@@ -12,30 +12,62 @@ on:
         required: true
 
 jobs:
-  build-and-upload:
-    if: startsWith(github.event.workflow_run.head_branch, 'v')
-    name: Release build initia-move-cli and upload release
+  linux-build:
+    if: |
+      (github.event_name == 'workflow_run' && startsWith(github.event.workflow_run.head_branch, 'v')) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
+    name: Build on Linux (cross)
     runs-on: ubuntu-22.04
-    
     strategy:
       matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-gnu
             suffix: linux-amd64
-          - os: ubuntu-22.04
-            target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-gnu
             suffix: linux-arm64
-          - os: macos-12
-            target: x86_64-apple-darwin
-            suffix: darwin-amd64
-          - os: macos-12
-            target: aarch64-apple-darwin
-            suffix: darwin-arm64
-            
     steps:
       - uses: actions/checkout@v4
-        
+
+      - name: Install cross
+        run: cargo install cross
+
+      - name: Build binary
+        run: |
+          cross build --release --target ${{ matrix.target }}
+
+      - name: Create tar.gz
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czvf ../../../initia-move-cli-${{ github.event.inputs.version || github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move-cli
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4 
+        with:
+          name: ${{ matrix.target }}-build
+          path: initia-move-cli-*-${{ matrix.suffix }}.tar.gz
+
+  macos-build:
+    if: |
+      (github.event_name == 'workflow_run' && startsWith(github.event.workflow_run.head_branch, 'v')) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
+    name: Build on macOS (native)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+        include:
+          - target: x86_64-apple-darwin
+            suffix: darwin-amd64
+          - target: aarch64-apple-darwin
+            suffix: darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -43,47 +75,30 @@ jobs:
 
       - name: Build binary
         run: |
-          cargo build --release --target ${{ matrix.target }} --bin initia-move
+          cargo build --release --target ${{ matrix.target }} --bin initia-move-cli
 
       - name: Create tar.gz
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../initia-move-cli-${{ github.event.inputs.version || github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move
+          tar -czvf ../../../initia-move-cli-${{ github.event.inputs.version || github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move-cli
 
-      - name: Upload binary to release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4 
         with:
-          name: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
-          draft: false
-          token: ${{ secrets.GH_RELEASE_TOKEN }}
-          files: initia-move-cli-${VERSION}-${{ matrix.suffix }}.tar.gz
+          name: ${{ matrix.target }}-build
+          path: initia-move-cli-*-${{ matrix.suffix }}.tar.gz
 
-
-  homebrew-release:
-    if: startsWith(github.event.workflow_run.head_branch, 'v')
-    name: homebrew-release
-    runs-on: ubuntu-22.04
-    needs: build-and-upload
+  create-release:
+    needs: [linux-build, macos-build]
+    runs-on: ubuntu-latest
     steps:
-      - name: Release project to Homebrew tap
-        uses: Justintime50/homebrew-releaser@v2
+      - uses: actions/download-artifact@v4
         with:
-          homebrew_owner: initia-labs
-          homebrew_tap: homebrew-tap
-          formula_folder: Formula
-          version: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
-          github_token: ${{ secrets.GH_RELEASE_TOKEN }}
-          commit_owner: github-actions[bot]
-          commit_email: github-actions[bot]@users.noreply.github.com
-          install: | 
-              bin.install "initia-move" => "initia-move"
-          test: 'assert_match version.to_s, shell_output("#{bin}/initia-move version")'
-          target_darwin_amd64: true
-          target_darwin_arm64: true
-          target_linux_amd64: false
-          target_linux_arm64: false
-          update_readme_table: false
-          skip_commit: false
-          debug: false
+          pattern: '*-build'
+          merge-multiple: true
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
+          files: initia-move-cli-*.tar.gz
 

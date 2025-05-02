@@ -2,7 +2,9 @@ mod execute;
 
 use clap::Parser;
 use execute::Execute;
-use initia_move_compiler::{ base::{build::Build, coverage::Coverage, test::Test}, Move, New };
+use initia_move_compiler::{ base::{ build::Build, coverage::Coverage, test::Test }, Move, New };
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser)]
 pub enum InitiaCommand {
@@ -23,8 +25,8 @@ pub enum InitiaCommand {
 #[command(
     name = "initia-move",
     about = "Initia Move CLI",
-    disable_version_flag = true,
-    disable_help_flag = true
+    disable_help_flag = true,
+    version = VERSION
 )]
 pub struct InitiaCLI {
     #[clap(flatten)]

@@ -15,7 +15,7 @@ include = [
 ]
 
 [[bin]]
-name = "initia-move"
+name = "initia-move-cli"
 path = "src/main.rs"
 
 [dependencies]
