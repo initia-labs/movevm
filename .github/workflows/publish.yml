@@ -96,7 +96,7 @@ jobs:
           name: ${{ github.event.workflow_run.head_branch }}
           draft: false
           token: ${{ secrets.GH_RELEASE_TOKEN }}
-          files: target/${{ matrix.target }}/release/initia-move-cli-${{ github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz
+          files: initia-move-cli-${{ github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz
 
   homebrew-release:
     if: startsWith(github.event.workflow_run.head_branch, 'v')
