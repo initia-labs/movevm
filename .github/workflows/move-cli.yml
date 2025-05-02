@@ -36,7 +36,7 @@ jobs:
 
       - name: Build binary
         run: |
-          cross build --release --target ${{ matrix.target }}
+          CARGO_PKG_VERSION=${{ github.event.inputs.version || github.event.workflow_run.head_branch }} cross build --release --target ${{ matrix.target }}
 
       - name: Create tar.gz
         run: |
@@ -75,7 +75,7 @@ jobs:
 
       - name: Build binary
         run: |
-          cargo build --release --target ${{ matrix.target }} --bin initia-move-cli
+          CARGO_PKG_VERSION=${{ github.event.inputs.version || github.event.workflow_run.head_branch }} cargo build --release --target ${{ matrix.target }} --bin initia-move-cli
 
       - name: Create tar.gz
         run: |
