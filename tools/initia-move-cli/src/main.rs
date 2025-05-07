@@ -25,7 +25,6 @@ pub enum InitiaCommand {
 #[command(
     name = "initia-move",
     about = "Initia Move CLI",
-    disable_help_flag = true,
     version = VERSION
 )]
 pub struct InitiaCLI {
