@@ -46,3 +46,7 @@ There are two parts to this code - go and rust. The first step is to ensure that
 If this is present, then `make test` will run the Go test suite and you can import this code freely. If it is not present you will have to build it for your system, and ideally add it to this repo with a PR (on your fork). We will set up a proper CI system for building these binaries, but we are not there yet.
 
 To build the rust side, try make `build-rust` and wait for it to compile. This depends on `cargo` being installed with rustc version 1.80+. Generally, you can just use rustup to install all this with no problems.
+
+### How to use inita-move-cli
+
+To use the `initia-move-cli`, refer to the [initia-move-cli README](../../../tools/initia-move-cli/README.md) for detailed instructions and examples. This document provides guidance on installation, usage, and available commands for interacting with Move Smart Contracts.

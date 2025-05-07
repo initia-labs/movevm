@@ -20,3 +20,6 @@ pub use new::New;
 
 #[cfg(test)]
 mod tests;
+
+// re-export move-cli
+pub use move_cli::*;

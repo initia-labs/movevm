@@ -1,4 +1,4 @@
-name: Publish changed files to move-natives on tag creation
+name: Publish changed files to move-natives and builder.js on tag creation.
 
 on:
   workflow_run:

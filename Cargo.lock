@@ -1415,6 +1415,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "initia-move-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 4.5.15",
+ "initia-move-compiler",
+]
+
+[[package]]
 name = "initia-move-compiler"
 version = "0.1.0"
 dependencies = [

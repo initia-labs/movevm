@@ -48,14 +48,14 @@ pub trait AsInitiaCodeStorage<'a, S> {
         env: &'a RuntimeEnvironment,
         script_cache: Arc<InitiaScriptCache>,
         module_cache: Arc<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<InitiaModuleStorage<S>>;
+    ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
 
     fn into_initia_code_storage(
         self,
         env: &'a RuntimeEnvironment,
         script_cache: Arc<InitiaScriptCache>,
         module_cache: Arc<InitiaModuleCache>,
-    ) -> InitiaCodeStorage<InitiaModuleStorage<S>>;
+    ) -> InitiaCodeStorage<InitiaModuleStorage<'a, S>>;
 }
 
 impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaCodeStorage<'a, S> for S {
@@ -190,11 +190,11 @@ impl<M: ModuleStorage> InitiaCodeStorage<M> {
         );
         for hash in deserialized {
             let script = claims::assert_some!(self.script_cache.get_script(hash));
-            assert!(!script.code.is_verified())
+            assert!(!script.code.is_verified());
         }
         for hash in verified {
             let script = claims::assert_some!(self.script_cache.get_script(hash));
-            assert!(script.code.is_verified())
+            assert!(script.code.is_verified());
         }
     }
 }
