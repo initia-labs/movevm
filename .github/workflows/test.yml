@@ -46,7 +46,7 @@ jobs:
       - name: Install latest rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.80.1
+          toolchain: 1.86.0
       - name: Build Rust
         run: make build-rust
       - uses: actions/setup-go@v4

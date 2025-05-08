@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test precompile contracts-gen bcs-go-gen
 
 # Builds the Rust library libmovevm
-BUILDERS_PREFIX := initia/go-ext-builder:0001
+BUILDERS_PREFIX := initia/go-ext-builder:0002
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := initia/go-ext-builder:0001-alpine
+ALPINE_TESTER := initia/go-ext-builder:0002-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
