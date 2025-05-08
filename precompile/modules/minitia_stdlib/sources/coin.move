@@ -275,6 +275,37 @@ module minitia_std::coin {
         primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, false)
     }
 
+    /// Mutate the metadata information of the fungible asset.
+    /// @dev - this interface only exists in minitia_stdlib.
+    public fun mutate_metadata(
+        mint_cap: &MintCapability,
+        name: Option<String>,
+        symbol: Option<String>,
+        decimals: Option<u8>,
+        icon_uri: Option<String>,
+        project_uri: Option<String>
+    ) acquires ManagingRefs {
+        let metadata = mint_cap.metadata;
+        let metadata_addr = object::object_address(&metadata);
+
+        assert!(
+            exists<ManagingRefs>(metadata_addr),
+            ERR_MANAGING_REFS_NOT_FOUND
+        );
+
+        let refs = borrow_global<ManagingRefs>(metadata_addr);
+        let mutate_metadata_ref =
+            fungible_asset::generate_mutate_metadata_ref_from_mint_ref(&refs.mint_ref);
+        fungible_asset::mutate_metadata(
+            &mutate_metadata_ref,
+            name,
+            symbol,
+            decimals,
+            icon_uri,
+            project_uri
+        );
+    }
+
     //
     // Query interfaces
     //
