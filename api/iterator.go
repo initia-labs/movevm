@@ -56,16 +56,16 @@ func storeIterator(callID uint64, it dbm.Iterator, frameLenLimit int) (uint64, e
 	iteratorFramesMutex.Lock()
 	defer iteratorFramesMutex.Unlock()
 
-	old_frame_len := len(iteratorFrames[callID])
-	if old_frame_len >= frameLenLimit {
+	oldFrameLen := len(iteratorFrames[callID])
+	if oldFrameLen >= frameLenLimit {
 		return 0, fmt.Errorf("reached iterator limit (%d)", frameLenLimit)
 	}
 
-	// store at array position `old_frame_len`
+	// store at array position `oldFrameLen`
 	iteratorFrames[callID] = append(iteratorFrames[callID], it)
-	new_index := old_frame_len + 1
+	newIndex := oldFrameLen + 1
 
-	return uint64(new_index), nil
+	return uint64(newIndex), nil
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
