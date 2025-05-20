@@ -220,8 +220,9 @@ impl Table {
                         partial_extension_error(format!("remote table resolver failure: {}", err))
                     })? {
                     Some(val_bytes) => {
+                        let function_value_extension = context.function_value_extension();
                         let val = deserialize(
-                            Some(context.function_value_extension()),
+                            Some(&function_value_extension),
                             &self.value_layout,
                             &val_bytes,
                         )?;
@@ -367,8 +368,9 @@ fn native_add_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
+    let function_value_extension = context.function_value_extension();
     let key_bytes = serialize(
-        Some(context.function_value_extension()),
+        Some(&function_value_extension),
         &table.key_layout,
         &key,
     )?;
@@ -412,8 +414,9 @@ fn native_borrow_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
+    let function_value_extension = context.function_value_extension();
     let key_bytes = serialize(
-        Some(context.function_value_extension()),
+        Some(&function_value_extension),
         &table.key_layout,
         &key,
     )?;
@@ -458,8 +461,9 @@ fn native_contains_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
+    let function_value_extension = context.function_value_extension();
     let key_bytes = serialize(
-        Some(context.function_value_extension()),
+        Some(&function_value_extension),
         &table.key_layout,
         &key,
     )?;
@@ -499,8 +503,9 @@ fn native_remove_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
+    let function_value_extension = context.function_value_extension();
     let key_bytes = serialize(
-        Some(context.function_value_extension()),
+        Some(&function_value_extension),
         &table.key_layout,
         &key,
     )?;
@@ -855,8 +860,9 @@ fn load_table_entry(
 
     let (gv, loaded) = table.get_or_create_global_value(context, key_bytes.clone())?;
     let (key_value, serialized) = if gv.exists()? {
+        let function_value_extension = context.function_value_extension();
         let key = deserialize(
-            Some(context.function_value_extension()),
+            Some(&function_value_extension),    
             &key_layout,
             &key_bytes,
         )?;

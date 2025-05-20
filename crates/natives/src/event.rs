@@ -124,9 +124,10 @@ fn native_emit_event(
     // Cache the emitted event for testing.
     #[cfg(feature = "testing")]
     {
+        let function_value_extension = context.function_value_extension();
         let blob = match ValueSerDeContext::new()
             .with_legacy_signer()
-            .with_func_args_deserialization(context.function_value_extension())
+            .with_func_args_deserialization(&function_value_extension)
             .serialize(&msg, &layout)?
         {
             Some(blob) => blob,
@@ -172,9 +173,10 @@ fn native_emitted_events(
         .emitted_events(&ty_tag)
         .into_iter()
         .map(|blob| {
+            let function_value_extension = context.function_value_extension();
             match ValueSerDeContext::new()
                 .with_legacy_signer()
-                .with_func_args_deserialization(context.function_value_extension())
+                .with_func_args_deserialization(&function_value_extension)
                 .deserialize(blob, &ty_layout)
             {
                 Some(val) => Ok(val),

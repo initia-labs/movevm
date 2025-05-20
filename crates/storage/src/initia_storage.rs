@@ -4,7 +4,7 @@ use crate::{
     module_storage::InitiaModuleStorage,
     script_cache::InitiaScriptCache,
     state_view::StateView,
-    state_view_impl::StateViewImpl,
+    state_view_impl::StateViewImpl, struct_resolver::StructResolverImpl,
 };
 use ambassador::Delegate;
 use bytes::Bytes;
@@ -56,6 +56,14 @@ impl<'s, S: StateView> InitiaStorage<'s, S> {
             module_cache,
         );
         Self { storage }
+    }
+
+    pub fn runtime_environment(&self) -> &RuntimeEnvironment {
+        self.storage.runtime_environment()
+    }
+
+    pub fn struct_resolver(&self) -> StructResolverImpl {
+        StructResolverImpl::new(self.runtime_environment())
     }
 
     pub fn state_view_impl(&self) -> &StateViewImpl<'s, S> {

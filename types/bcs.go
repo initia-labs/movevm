@@ -13,6 +13,45 @@ import (
 )
 
 
+type AbilitySet uint8
+
+func (obj *AbilitySet) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeU8(((uint8)(*obj))); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *AbilitySet) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeAbilitySet(deserializer serde.Deserializer) (AbilitySet, error) {
+	var obj uint8
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return (AbilitySet)(obj), err }
+	if val, err := deserializer.DeserializeU8(); err == nil { obj = val } else { return ((AbilitySet)(obj)), err }
+	deserializer.DecreaseContainerDepth()
+	return (AbilitySet)(obj), nil
+}
+
+func BcsDeserializeAbilitySet(input []byte) (AbilitySet, error) {
+	if input == nil {
+		var obj AbilitySet
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeAbilitySet(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type Account struct {
 	Address AccountAddress
 	AccountNumber uint64
@@ -717,6 +756,53 @@ func BcsDeserializeExecutionResult(input []byte) (ExecutionResult, error) {
 	return obj, err
 }
 
+type FunctionTag struct {
+	Args []TypeTag
+	Results []TypeTag
+	Abilities AbilitySet
+}
+
+func (obj *FunctionTag) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serialize_vector_TypeTag(obj.Args, serializer); err != nil { return err }
+	if err := serialize_vector_TypeTag(obj.Results, serializer); err != nil { return err }
+	if err := obj.Abilities.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *FunctionTag) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeFunctionTag(deserializer serde.Deserializer) (FunctionTag, error) {
+	var obj FunctionTag
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_vector_TypeTag(deserializer); err == nil { obj.Args = val } else { return obj, err }
+	if val, err := deserialize_vector_TypeTag(deserializer); err == nil { obj.Results = val } else { return obj, err }
+	if val, err := DeserializeAbilitySet(deserializer); err == nil { obj.Abilities = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeFunctionTag(input []byte) (FunctionTag, error) {
+	if input == nil {
+		var obj FunctionTag
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeFunctionTag(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type GasUsage struct {
 	ModuleId ModuleId
 	GasUsed uint64
@@ -1343,6 +1429,13 @@ func DeserializeTypeTag(deserializer serde.Deserializer) (TypeTag, error) {
 			return nil, err
 		}
 
+	case 11:
+		if val, err := load_TypeTag__Function(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("Unknown variant index for TypeTag: %d", index)
 	}
@@ -1671,6 +1764,37 @@ func (obj *TypeTag__U256) BcsSerialize() ([]byte, error) {
 func load_TypeTag__U256(deserializer serde.Deserializer) (TypeTag__U256, error) {
 	var obj TypeTag__U256
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+type TypeTag__Function struct {
+	Value FunctionTag
+}
+
+func (*TypeTag__Function) isTypeTag() {}
+
+func (obj *TypeTag__Function) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(11)
+	if err := obj.Value.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *TypeTag__Function) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_TypeTag__Function(deserializer serde.Deserializer) (TypeTag__Function, error) {
+	var obj TypeTag__Function
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeFunctionTag(deserializer); err == nil { obj.Value = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

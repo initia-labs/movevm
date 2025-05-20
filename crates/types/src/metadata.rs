@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use move_compiler::shared::known_attributes;
+use legacy_move_compiler::shared::known_attributes;
 use move_core_types::errmap::ErrorDescription;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};

@@ -10,7 +10,7 @@ use initia_move_types::metadata::{
 use itertools::Itertools;
 use move_binary_format::CompiledModule;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
-use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
+use legacy_move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
 use move_model::metadata::{CompilerVersion, LanguageVersion};

@@ -6,6 +6,7 @@ use move_core_types::{
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::LoadedFunction;
+use move_vm_types::resolver::ResourceResolver;
 
 use super::transaction_arg_validation::ALLOWED_STRUCTS;
 
@@ -28,7 +29,7 @@ pub fn determine_is_view(
 /// Validate view function call. This checks whether the function is marked as a view
 /// function, and validates the arguments.
 pub(crate) fn validate_view_function_and_construct<S: StateView>(
-    session: &mut SessionExt,
+    session: &mut SessionExt<impl ResourceResolver>,
     code_storage: &InitiaStorage<S>,
     args: Vec<Vec<u8>>,
     fun_name: &IdentStr,

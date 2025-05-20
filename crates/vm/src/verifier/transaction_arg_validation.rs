@@ -9,12 +9,11 @@ use move_core_types::language_storage::ModuleId;
 use move_core_types::vm_status::VMStatus;
 use move_core_types::{account_address::AccountAddress, value::MoveValue, vm_status::StatusCode};
 use move_vm_runtime::module_traversal::{TraversalContext, TraversalStorage};
-use move_vm_runtime::session::Session;
-use move_vm_runtime::WithRuntimeEnvironment;
 use move_vm_runtime::{LoadedFunction, ModuleStorage};
 use move_vm_types::gas::{GasMeter, UnmeteredGasMeter};
 use move_vm_types::loaded_data::runtime_types::Type;
 
+use move_vm_types::resolver::ResourceResolver;
 use once_cell::sync::Lazy;
 use std::io::Read;
 use std::{collections::BTreeMap, io::Cursor};
@@ -115,7 +114,7 @@ pub(crate) static ALLOWED_STRUCTS: ConstructorMap = Lazy::new(|| {
 ///
 /// after validation, add senders and non-signer arguments to generate the final args
 pub fn validate_combine_signer_and_txn_args<S: StateView>(
-    session: &mut SessionExt,
+    session: &mut SessionExt<impl ResourceResolver>,
     code_storage: &InitiaStorage<S>,
     senders: Vec<AccountAddress>,
     args: Vec<Vec<u8>>,
@@ -150,7 +149,7 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
     for ty in func.param_tys()[signer_param_cnt..].iter() {
         let subst_res = ty_builder.create_ty_with_subst(ty, func.ty_args());
         let ty = subst_res.map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
-        let valid = is_valid_txn_arg(session, code_storage, &ty, allowed_structs);
+        let valid = is_valid_txn_arg(code_storage, &ty, allowed_structs);
         if !valid {
             return Err(VMStatus::error(
                 StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
@@ -206,7 +205,6 @@ pub fn validate_combine_signer_and_txn_args<S: StateView>(
 
 // Return whether the argument is valid/allowed and whether it needs construction.
 pub(crate) fn is_valid_txn_arg(
-    session: &Session,
     module_storage: &impl ModuleStorage,
     ty: &Type,
     allowed_structs: &ConstructorMap,
@@ -215,9 +213,9 @@ pub(crate) fn is_valid_txn_arg(
 
     match ty {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
-        Vector(inner) => is_valid_txn_arg(session, module_storage, inner, allowed_structs),
-        Struct { .. } | StructInstantiation { .. } => session
-            .get_struct_name(ty, module_storage)
+        Vector(inner) => is_valid_txn_arg(module_storage, inner, allowed_structs),
+        Struct { .. } | StructInstantiation { .. } => module_storage.runtime_environment()
+            .get_struct_name(ty)
             .is_ok_and(|st| match st {
                 Some(st) => {
                     let full_name = format!("{}::{}", st.0.short_str_lossless(), st.1);
@@ -234,7 +232,7 @@ pub(crate) fn is_valid_txn_arg(
 // construct arguments that require so.
 // TODO: This needs a more solid story and a tighter integration with the VM.
 pub(crate) fn construct_args<S: StateView>(
-    session: &mut SessionExt,
+    session: &mut SessionExt<impl ResourceResolver>,
     code_storage: &InitiaStorage<S>,
     types: &[Type],
     args: Vec<Vec<u8>>,
@@ -275,7 +273,7 @@ fn invalid_signature() -> VMStatus {
 
 #[allow(clippy::too_many_arguments)]
 fn construct_arg<S: StateView>(
-    session: &mut SessionExt,
+    session: &mut SessionExt<impl ResourceResolver>,
     code_storage: &InitiaStorage<S>,
     ty: &Type,
     allowed_structs: &ConstructorMap,
@@ -285,7 +283,7 @@ fn construct_arg<S: StateView>(
     is_json: bool,
 ) -> Result<Vec<u8>, VMStatus> {
     if is_json {
-        return deserialize_json_args(code_storage, session, ty, &arg)
+        return deserialize_json_args(code_storage, &code_storage.struct_resolver(), ty, &arg)
             .map_err(|e| e.into_vm_status());
     }
 
@@ -340,7 +338,7 @@ fn construct_arg<S: StateView>(
 // are parsing the BCS serialized implicit constructor invocation tree, while serializing the
 // constructed types into the output parameter arg.
 pub(crate) fn recursively_construct_arg<S: StateView>(
-    session: &mut Session,
+    session: &mut SessionExt<impl ResourceResolver>,
     code_storage: &InitiaStorage<S>,
     ty: &Type,
     allowed_structs: &ConstructorMap,
@@ -382,8 +380,8 @@ pub(crate) fn recursively_construct_arg<S: StateView>(
             }
         }
         Struct { .. } | StructInstantiation { .. } => {
-            let st = session
-                .get_struct_name(ty, code_storage)
+            let st = code_storage.runtime_environment()
+                .get_struct_name(ty)
                 .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(invalid_signature)?;
 
@@ -425,7 +423,7 @@ pub(crate) fn recursively_construct_arg<S: StateView>(
 // said struct as a parameter. In this function we execute the constructor constructing the
 // value and returning the BCS serialized representation.
 fn validate_and_construct<S: StateView>(
-    session: &mut Session,
+    session: &mut SessionExt<impl ResourceResolver>,
     code_storage: &InitiaStorage<S>,
     expected_type: &Type,
     constructor: &FunctionId,

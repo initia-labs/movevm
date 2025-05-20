@@ -6,18 +6,16 @@ use bigdecimal::{
     BigDecimal, Signed,
 };
 use bytes::Bytes;
-use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView};
+use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView, struct_resolver::StructResolver};
 use move_binary_format::errors::{Location, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     ident_str,
-    identifier::Identifier,
-    language_storage::{ModuleId, StructTag, TypeTag},
+    language_storage::{StructTag, TypeTag},
     metadata::Metadata,
     u256::U256,
     value::{MoveTypeLayout, MoveValue},
 };
-use move_vm_runtime::ModuleStorage;
 use move_vm_types::{
     loaded_data::runtime_types::Type::{self, *},
     resolver::ResourceResolver,
@@ -25,16 +23,6 @@ use move_vm_types::{
 use serde_json::Value as JSONValue;
 
 use crate::errors::{deserialization_error, deserialization_error_with_msg};
-
-pub trait StructResolver {
-    fn get_struct_name(
-        &self,
-        ty: &Type,
-        module_storage: &impl ModuleStorage,
-    ) -> PartialVMResult<Option<(ModuleId, Identifier)>>;
-    fn type_to_type_tag(&self, ty: &Type, module_storage: &impl ModuleStorage)
-        -> VMResult<TypeTag>;
-}
 
 // deserialize json argument to JSONValue and convert to MoveValue,
 // and then do bcs serialization.
@@ -136,7 +124,7 @@ fn convert_json_value_to_move_value<S: StateView>(
         }
         Struct { .. } => {
             let st = struct_resolver
-                .get_struct_name(ty, code_storage)
+                .get_struct_name(ty)
                 .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(deserialization_error)?;
 
@@ -221,7 +209,7 @@ fn convert_json_value_to_move_value<S: StateView>(
             }
 
             let st = struct_resolver
-                .get_struct_name(ty, code_storage)
+                .get_struct_name(ty)
                 .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(deserialization_error)?;
 
@@ -295,7 +283,7 @@ fn verify_object<S: StateView>(
 
     // verify a object hold inner type
     let inner_type_tag = struct_resolver
-        .type_to_type_tag(inner_type, code_storage)
+        .type_to_type_tag(inner_type)
         .map_err(deserialization_error_with_msg)?;
 
     let inner_type_st = if let TypeTag::Struct(inner_type_st) = inner_type_tag {
@@ -380,7 +368,6 @@ mod json_arg_testing {
         fn get_struct_name(
             &self,
             ty: &Type,
-            _module_storage: &impl ModuleStorage,
         ) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
             match ty {
                 Type::Struct { idx, .. } | Type::StructInstantiation { idx, .. } => {
@@ -393,12 +380,11 @@ mod json_arg_testing {
         fn type_to_type_tag(
             &self,
             ty: &Type,
-            module_storage: &impl ModuleStorage,
         ) -> VMResult<TypeTag> {
             match ty {
                 Struct { .. } => {
                     let st = self
-                        .get_struct_name(ty, module_storage)
+                        .get_struct_name(ty)
                         .map_err(|e| e.finish(Location::Undefined))?
                         .ok_or_else(deserialization_error)?;
 

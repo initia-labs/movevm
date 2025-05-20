@@ -12,6 +12,7 @@ use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{Closure, Reference, Struct, Value, Vector, VectorRef},
+    value_serde::FunctionValueExtension,
 };
 use smallvec::{smallvec, SmallVec};
 use std::{collections::VecDeque, fmt::Write, ops::Deref};
@@ -28,8 +29,8 @@ const EARGS_MISMATCH: u64 = 1;
 const EINVALID_FORMAT: u64 = 2;
 const EUNABLE_TO_FORMAT_DELAYED_FIELD: u64 = 3;
 
-struct FormatContext<'a, 'b, 'c, 'd, 'e> {
-    context: &'d mut SafeNativeContext<'a, 'b, 'c, 'e>,
+struct FormatContext<'a, 'b, 'c, 'd> {
+    context: &'d mut SafeNativeContext<'a, 'b, 'c>,
     should_charge_gas: bool,
     max_depth: usize,
     max_len: usize,
@@ -359,10 +360,8 @@ fn native_format_impl(
             // avoiding potential loading of the function to get full
             // decorated type information.
             let (fun, args) = val.value_as::<Closure>()?.unpack();
-            let data = context
-                .context
-                .function_value_extension()
-                .get_serialization_data(fun.as_ref())?;
+
+            let data = context.context.function_value_extension().get_serialization_data(fun.as_ref())?;
             out.push_str(&fun.to_stable_string());
             format_vector(
                 gas_params,
