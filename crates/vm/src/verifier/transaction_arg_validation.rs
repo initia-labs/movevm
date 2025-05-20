@@ -214,7 +214,8 @@ pub(crate) fn is_valid_txn_arg(
     match ty {
         Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
         Vector(inner) => is_valid_txn_arg(module_storage, inner, allowed_structs),
-        Struct { .. } | StructInstantiation { .. } => module_storage.runtime_environment()
+        Struct { .. } | StructInstantiation { .. } => module_storage
+            .runtime_environment()
             .get_struct_name(ty)
             .is_ok_and(|st| match st {
                 Some(st) => {
@@ -380,7 +381,8 @@ pub(crate) fn recursively_construct_arg<S: StateView>(
             }
         }
         Struct { .. } | StructInstantiation { .. } => {
-            let st = code_storage.runtime_environment()
+            let st = code_storage
+                .runtime_environment()
                 .get_struct_name(ty)
                 .map_err(|e| e.finish(Location::Undefined))?
                 .ok_or_else(invalid_signature)?;

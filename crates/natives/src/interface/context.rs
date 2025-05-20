@@ -25,7 +25,7 @@ pub struct SafeNativeContext<'a, 'b, 'c> {
     pub(crate) gas_used: InternalGas,
 }
 
-impl<'a, 'b, 'c, 'd> Deref for SafeNativeContext<'a, 'b, 'c> {
+impl<'a, 'b, 'c> Deref for SafeNativeContext<'a, 'b, 'c> {
     type Target = NativeContext<'a, 'b>;
 
     fn deref(&self) -> &Self::Target {
@@ -33,7 +33,7 @@ impl<'a, 'b, 'c, 'd> Deref for SafeNativeContext<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c, 'd> DerefMut for SafeNativeContext<'a, 'b, 'c> {
+impl<'a, 'b, 'c> DerefMut for SafeNativeContext<'a, 'b, 'c> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner
     }

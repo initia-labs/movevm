@@ -9,7 +9,12 @@ use move_core_types::{
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
-    check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas, config::VMConfig, module_traversal::{TraversalContext, TraversalStorage}, move_vm::SerializedReturnValues, native_extensions::NativeContextExtensions, CodeStorage, LayoutConverter, ModuleStorage, RuntimeEnvironment, StorageLayoutConverter
+    check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas,
+    config::VMConfig,
+    module_traversal::{TraversalContext, TraversalStorage},
+    move_vm::SerializedReturnValues,
+    native_extensions::NativeContextExtensions,
+    CodeStorage, LayoutConverter, ModuleStorage, RuntimeEnvironment, StorageLayoutConverter,
 };
 use move_vm_types::resolver::ResourceResolver;
 
@@ -315,7 +320,12 @@ impl InitiaVM {
             .return_tys()
             .iter()
             .map(|ty| {
-                StorageLayoutConverter::new(&code_storage).type_to_fully_annotated_layout(ty).map_err(|_| PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).finish(Location::Undefined))
+                StorageLayoutConverter::new(&code_storage)
+                    .type_to_fully_annotated_layout(ty)
+                    .map_err(|_| {
+                        PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                            .finish(Location::Undefined)
+                    })
             })
             .collect::<VMResult<Vec<_>>>()?;
 
@@ -390,7 +400,13 @@ impl InitiaVM {
                     script.is_json(),
                 )?;
 
-                session.execute_loaded_function(function, args, gas_meter, traversal_context, code_storage)
+                session.execute_loaded_function(
+                    function,
+                    args,
+                    gas_meter,
+                    traversal_context,
+                    code_storage,
+                )
             }
             MessagePayload::Execute(entry_fn) => {
                 let module_id = traversal_context
@@ -436,7 +452,13 @@ impl InitiaVM {
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
 
-                session.execute_entry_function(function, args, gas_meter, traversal_context, code_storage)
+                session.execute_entry_function(
+                    function,
+                    args,
+                    gas_meter,
+                    traversal_context,
+                    code_storage,
+                )
             }
         }?;
 

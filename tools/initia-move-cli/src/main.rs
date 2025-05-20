@@ -2,7 +2,10 @@ mod execute;
 
 use clap::Parser;
 use execute::Execute;
-use initia_move_compiler::{ base::{ build::Build, coverage::Coverage, test::Test }, Move, New };
+use initia_move_compiler::{
+    base::{build::Build, coverage::Coverage, test::Test},
+    Move, New,
+};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

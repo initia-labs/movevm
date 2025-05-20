@@ -6,7 +6,9 @@ use bigdecimal::{
     BigDecimal, Signed,
 };
 use bytes::Bytes;
-use initia_move_storage::{initia_storage::InitiaStorage, state_view::StateView, struct_resolver::StructResolver};
+use initia_move_storage::{
+    initia_storage::InitiaStorage, state_view::StateView, struct_resolver::StructResolver,
+};
 use move_binary_format::errors::{Location, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -365,10 +367,7 @@ mod json_arg_testing {
     }
 
     impl StructResolver for MockState {
-        fn get_struct_name(
-            &self,
-            ty: &Type,
-        ) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
+        fn get_struct_name(&self, ty: &Type) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
             match ty {
                 Type::Struct { idx, .. } | Type::StructInstantiation { idx, .. } => {
                     Ok(self.structs.get(idx).cloned())
@@ -377,10 +376,7 @@ mod json_arg_testing {
             }
         }
 
-        fn type_to_type_tag(
-            &self,
-            ty: &Type,
-        ) -> VMResult<TypeTag> {
+        fn type_to_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
             match ty {
                 Struct { .. } => {
                     let st = self

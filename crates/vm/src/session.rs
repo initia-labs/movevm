@@ -1,6 +1,4 @@
-use std::{
-    borrow::Borrow, collections::BTreeMap
-};
+use std::{borrow::Borrow, collections::BTreeMap};
 
 use bytes::Bytes;
 use initia_move_natives::{
@@ -22,9 +20,18 @@ use initia_move_types::{
 
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
-    effects::Op, identifier::IdentStr, language_storage::{ModuleId, TypeTag}, vm_status::StatusCode
+    effects::Op,
+    identifier::IdentStr,
+    language_storage::{ModuleId, TypeTag},
+    vm_status::StatusCode,
 };
-use move_vm_runtime::{data_cache::TransactionDataCache, module_traversal::TraversalContext, move_vm::{MoveVM, SerializedReturnValues}, native_extensions::NativeContextExtensions, AsFunctionValueExtension, LoadedFunction, ModuleStorage};
+use move_vm_runtime::{
+    data_cache::TransactionDataCache,
+    module_traversal::TraversalContext,
+    move_vm::{MoveVM, SerializedReturnValues},
+    native_extensions::NativeContextExtensions,
+    AsFunctionValueExtension, LoadedFunction, ModuleStorage,
+};
 use move_vm_types::{gas::GasMeter, resolver::ResourceResolver, sha3_256};
 
 pub type SessionOutput<'r> = (
@@ -43,7 +50,11 @@ pub struct SessionExt<'r, R> {
 
 impl<'r, R: ResourceResolver> SessionExt<'r, R> {
     pub fn new(extensions: NativeContextExtensions<'r>, resolver: &'r R) -> Self {
-        Self { data_cache: TransactionDataCache::empty(), extensions, resolver }
+        Self {
+            data_cache: TransactionDataCache::empty(),
+            extensions,
+            resolver,
+        }
     }
 
     pub fn execute_entry_function(
@@ -82,6 +93,7 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_function_bypass_visibility(
         &mut self,
         module_id: &ModuleId,
@@ -155,7 +167,11 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         //     })
         // };
 
-        let Self { data_cache, mut extensions, resolver: _ } = self;
+        let Self {
+            data_cache,
+            mut extensions,
+            resolver: _,
+        } = self;
 
         let change_set = data_cache
             .into_effects(module_storage)

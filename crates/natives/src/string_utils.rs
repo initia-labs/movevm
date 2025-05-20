@@ -11,8 +11,8 @@ use move_core_types::{
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
-    values::{Closure, Reference, Struct, Value, Vector, VectorRef},
     value_serde::FunctionValueExtension,
+    values::{Closure, Reference, Struct, Value, Vector, VectorRef},
 };
 use smallvec::{smallvec, SmallVec};
 use std::{collections::VecDeque, fmt::Write, ops::Deref};
@@ -361,7 +361,10 @@ fn native_format_impl(
             // decorated type information.
             let (fun, args) = val.value_as::<Closure>()?.unpack();
 
-            let data = context.context.function_value_extension().get_serialization_data(fun.as_ref())?;
+            let data = context
+                .context
+                .function_value_extension()
+                .get_serialization_data(fun.as_ref())?;
             out.push_str(&fun.to_stable_string());
             format_vector(
                 gas_params,

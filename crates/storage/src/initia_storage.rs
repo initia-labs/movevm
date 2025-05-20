@@ -4,7 +4,8 @@ use crate::{
     module_storage::InitiaModuleStorage,
     script_cache::InitiaScriptCache,
     state_view::StateView,
-    state_view_impl::StateViewImpl, struct_resolver::StructResolverImpl,
+    state_view_impl::StateViewImpl,
+    struct_resolver::StructResolverImpl,
 };
 use ambassador::Delegate;
 use bytes::Bytes;
