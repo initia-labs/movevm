@@ -1,4 +1,4 @@
-BUILDERS_PREFIX := initia/go-ext-builder:0001
+BUILDERS_PREFIX := initia/go-ext-builder:0002
 
 .PHONY: docker-image-debian
 docker-image-debian:
