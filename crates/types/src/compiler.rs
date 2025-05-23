@@ -108,7 +108,13 @@ impl From<CompilerBuildConfig> for BuildConfig {
                     _ => None,
                 },
                 experiments: if val.enable_lint_checks {
-                    vec![Experiment::LINT_CHECKS.to_string()]
+                    vec![
+                        Experiment::LINT_CHECKS.to_string(),
+                        Experiment::SPEC_CHECK.to_string(),
+                        Experiment::SEQS_IN_BINOPS_CHECK.to_string(),
+                        Experiment::ACCESS_CHECK.to_string(),
+                        Experiment::STOP_AFTER_EXTENDED_CHECKS.to_string(),
+                    ]
                 } else {
                     vec![]
                 },
