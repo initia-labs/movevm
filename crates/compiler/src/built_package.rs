@@ -58,7 +58,6 @@ impl BuiltPackage {
     ) -> anyhow::Result<Self> {
         eprintln!("Compiling, may take a little while to download git dependencies...");
         let generate_docs = config.generate_docs || docgen_options.is_some();
-        let bytecode_version = config.compiler_config.bytecode_version;
 
         // customize config
         let mut new_config = config.clone();
@@ -82,6 +81,13 @@ impl BuiltPackage {
             &new_config.compiler_config.compiler_version,
             &new_config.compiler_config.language_version,
         )?;
+
+        // infer bytecode version
+        let bytecode_version = inferred_bytecode_version(
+            new_config.compiler_config.language_version,
+            new_config.compiler_config.bytecode_version,
+        );
+        new_config.compiler_config.bytecode_version = bytecode_version;
 
         let resolved_graph = Self::prepare_resolution_graph(&package_path, new_config.clone())?;
         let (mut package, model_opt) =
@@ -296,4 +302,15 @@ pub fn check_versions(
     }
     effective_compiler_version.check_language_support(effective_language_version)?;
     Ok(())
+}
+
+pub fn inferred_bytecode_version(
+    language_version: Option<LanguageVersion>,
+    bytecode_version: Option<u32>,
+) -> Option<u32> {
+    Some(
+        language_version
+            .unwrap_or_default()
+            .infer_bytecode_version(bytecode_version),
+    )
 }

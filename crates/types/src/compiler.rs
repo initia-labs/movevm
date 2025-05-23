@@ -98,6 +98,8 @@ impl From<CompilerBuildConfig> for BuildConfig {
                     "1" | "1.0" => Some(LanguageVersion::V1),
                     "2" | "2.0" => Some(LanguageVersion::V2_0),
                     "2.1" => Some(LanguageVersion::V2_1),
+                    "2.2" => Some(LanguageVersion::V2_2),
+                    "2.3" => Some(LanguageVersion::V2_3),
                     "latest" => Some(LanguageVersion::latest()),
                     "latest_stable" => Some(LanguageVersion::latest_stable()),
                     _ => None,

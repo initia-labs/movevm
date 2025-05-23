@@ -17,7 +17,8 @@ use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
 use crate::{
-    built_package::check_versions, extensions::configure_for_unit_test,
+    built_package::{check_versions, inferred_bytecode_version},
+    extensions::configure_for_unit_test,
     unit_test_factory::InitiaUnitTestFactory,
 };
 
@@ -53,6 +54,13 @@ impl TestPackage {
             &new_build_config.compiler_config.compiler_version,
             &new_build_config.compiler_config.language_version,
         )?;
+
+        // infer bytecode version
+        let bytecode_version = inferred_bytecode_version(
+            new_build_config.compiler_config.language_version,
+            new_build_config.compiler_config.bytecode_version,
+        );
+        new_build_config.compiler_config.bytecode_version = bytecode_version;
 
         configure_for_unit_test();
 
