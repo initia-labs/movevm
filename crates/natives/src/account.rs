@@ -100,6 +100,7 @@ impl<'a> NativeAccountContext<'a> {
  *
  **************************************************************************************************/
 
+#[allow(clippy::result_large_err)]
 fn native_get_account_info(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -161,6 +162,7 @@ fn native_get_account_info(
  *
  **************************************************************************************************/
 
+#[allow(clippy::result_large_err)]
 fn native_create_account(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -204,6 +206,7 @@ fn native_create_account(
  *
  **************************************************************************************************/
 
+#[allow(clippy::result_large_err)]
 fn native_create_address(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -234,6 +237,7 @@ fn native_create_address(
  *
  **************************************************************************************************/
 
+#[allow(clippy::result_large_err)]
 fn native_create_signer(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -275,6 +279,7 @@ pub fn make_all(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_set_account_info(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

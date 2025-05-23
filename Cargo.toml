@@ -126,6 +126,7 @@ move-bytecode-utils = { git = "https://github.com/aptos-labs/aptos-core.git", re
 move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 legacy-move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
+move-compiler-v2 = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-coverage = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-docgen = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }

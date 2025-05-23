@@ -23,6 +23,7 @@ use crate::{
  *
  **************************************************************************************************/
 
+#[allow(clippy::result_large_err)]
 fn native_keccak256(
     context: &mut SafeNativeContext,
     mut _ty_args: Vec<Type>,

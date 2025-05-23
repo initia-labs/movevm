@@ -90,12 +90,16 @@ impl From<CompilerBuildConfig> for BuildConfig {
                     "1" | "1.0" => Some(CompilerVersion::V1),
                     "2" | "2.0" => Some(CompilerVersion::V2_0),
                     "2.1" => Some(CompilerVersion::V2_1),
+                    "latest" => Some(CompilerVersion::latest()),
+                    "latest_stable" => Some(CompilerVersion::latest_stable()),
                     _ => None,
                 },
                 language_version: match val.language_version.as_str() {
                     "1" | "1.0" => Some(LanguageVersion::V1),
                     "2" | "2.0" => Some(LanguageVersion::V2_0),
                     "2.1" => Some(LanguageVersion::V2_1),
+                    "latest" => Some(LanguageVersion::latest()),
+                    "latest_stable" => Some(LanguageVersion::latest_stable()),
                     _ => None,
                 },
                 ..Default::default()

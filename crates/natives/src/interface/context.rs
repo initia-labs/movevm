@@ -45,6 +45,7 @@ impl<'a, 'b, 'c> SafeNativeContext<'a, 'b, 'c> {
     /// In other words, this function **MUST** always be called **BEFORE** executing **any**
     /// gas-metered operation or library call within a native function.
     #[must_use = "must always propagate the error returned by this function to the native function that called it using the ? operator"]
+    #[allow(clippy::result_large_err)]
     pub fn charge(&mut self, amount: InternalGas) -> SafeNativeResult<()> {
         self.gas_used += amount;
 

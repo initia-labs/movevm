@@ -1443,6 +1443,7 @@ dependencies = [
  "move-binary-format",
  "move-cli",
  "move-command-line-common",
+ "move-compiler-v2",
  "move-core-types",
  "move-coverage",
  "move-docgen",

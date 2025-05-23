@@ -24,6 +24,7 @@ use crate::{
  *
  **************************************************************************************************/
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_borrow_address(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

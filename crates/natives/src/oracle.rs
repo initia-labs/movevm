@@ -62,6 +62,7 @@ fn partial_extension_error(msg: impl ToString) -> PartialVMError {
 // =========================================================================================
 // Implementations
 
+#[allow(clippy::result_large_err)]
 fn native_get_price(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -100,6 +101,7 @@ fn native_get_price(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_set_price(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

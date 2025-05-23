@@ -20,6 +20,7 @@ use crate::{
 };
 
 // Extract Identifier from a move value of type &String
+#[allow(clippy::result_large_err)]
 fn identifier_from_ref(v: Value) -> SafeNativeResult<Identifier> {
     let bytes = v
         .value_as::<StructRef>()
@@ -31,6 +32,7 @@ fn identifier_from_ref(v: Value) -> SafeNativeResult<Identifier> {
     Identifier::from_utf8(bytes).map_err(|_| SafeNativeError::Abort { abort_code: 1 })
 }
 
+#[allow(clippy::result_large_err)]
 pub(crate) fn extract_function_info(
     arguments: &mut VecDeque<Value>,
 ) -> SafeNativeResult<(ModuleId, Identifier)> {
@@ -70,6 +72,7 @@ pub(crate) fn extract_function_info(
  *   gas cost: base_cost + unit_cost * type_size
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_check_dispatch_type_compatibility_impl(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -130,6 +133,7 @@ fn native_check_dispatch_type_compatibility_impl(
  *   gas cost: base_cost + unit_cost * num_of_bytes
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_is_identifier(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -163,6 +167,7 @@ fn native_is_identifier(
  *   gas cost: base_cost + transitive deps size of the function.
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_load_function_impl(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

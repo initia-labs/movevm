@@ -27,6 +27,7 @@ const EUNABLE_TO_UNMARSHAL_DELAYED_FIELD: u64 = (ECATEGORY_INVALID_ARGUMENT << 1
 const EUNABLE_TO_MARSHAL_SERIALIZATION_ERROR: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 5;
 const EUNABLE_TO_UNMARSHAL_DESERIALIZATION_ERROR: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 6;
 
+#[allow(clippy::result_large_err)]
 fn native_marshal_internal(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -68,6 +69,7 @@ fn native_marshal_internal(
     Ok(serde_bytes)
 }
 
+#[allow(clippy::result_large_err)]
 fn native_marshal(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -77,6 +79,7 @@ fn native_marshal(
         .map(|serde_bytes| smallvec![Value::vector_u8(serde_bytes)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_marshal_to_string(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -95,6 +98,7 @@ fn invariant_violation() -> SafeNativeError {
     ))
 }
 
+#[allow(clippy::result_large_err)]
 fn native_unmarshal(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

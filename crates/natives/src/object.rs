@@ -16,6 +16,7 @@ use crate::{
  *   gas cost: base_cost + per_byte_loaded * num_bytes + per_item_loaded
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_exists_at(
     context: &mut SafeNativeContext,
     mut ty_args: Vec<Type>,

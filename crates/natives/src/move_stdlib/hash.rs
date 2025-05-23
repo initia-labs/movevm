@@ -24,6 +24,7 @@ use crate::{
  *
  **************************************************************************************************/
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_sha2_256(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -52,6 +53,7 @@ fn native_sha2_256(
  *
  **************************************************************************************************/
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_sha3_256(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -80,6 +82,7 @@ fn native_sha3_256(
  *
  **************************************************************************************************/
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_ripemd160(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

@@ -41,6 +41,7 @@ const BCS_SERIALIZATION_FAILURE: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
  **************************************************************************************************/
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_to_bytes(
     context: &mut SafeNativeContext,
     mut ty_args: Vec<Type>,
@@ -99,6 +100,7 @@ fn native_to_bytes(
  *   cost is charged.
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_serialized_size(
     context: &mut SafeNativeContext,
     mut ty_args: Vec<Type>,

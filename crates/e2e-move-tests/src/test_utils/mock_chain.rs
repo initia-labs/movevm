@@ -481,8 +481,8 @@ impl MockOracleAPI {
     }
 }
 
-////////////////////////////////////////////////
-/// Blank resolver & API for Unit Tests
+///////////////////////////////////////////////
+// Blank resolver & API for Unit Tests
 
 /// A dummy storage containing no modules or resources.
 /// only used for unit test
