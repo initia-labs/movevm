@@ -63,6 +63,7 @@ initia-move-gas = { path = "crates/gas" }
 initia-move-compiler = { path = "crates/compiler" }
 initia-move-json = { path = "crates/json" }
 initia-move-resource-viewer = { path = "crates/resource-viewer" }
+movevm = { path = "libmovevm" }
 
 # External crate dependencies.
 # Please do not add any test features here: they should be declared by the individual crate.
