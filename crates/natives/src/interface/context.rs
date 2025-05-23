@@ -25,7 +25,7 @@ pub struct SafeNativeContext<'a, 'b, 'c> {
     pub(crate) gas_used: InternalGas,
 }
 
-impl<'a, 'b, 'c> Deref for SafeNativeContext<'a, 'b, 'c> {
+impl<'a, 'b> Deref for SafeNativeContext<'a, 'b, '_> {
     type Target = NativeContext<'a, 'b>;
 
     fn deref(&self) -> &Self::Target {
@@ -33,13 +33,13 @@ impl<'a, 'b, 'c> Deref for SafeNativeContext<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> DerefMut for SafeNativeContext<'a, 'b, 'c> {
+impl<'a, 'b> DerefMut for SafeNativeContext<'a, 'b, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner
     }
 }
 
-impl<'a, 'b, 'c> SafeNativeContext<'a, 'b, 'c> {
+impl<'a, 'b> SafeNativeContext<'a, 'b, '_> {
     /// Always remember: first charge gas, then execute!
     ///
     /// In other words, this function **MUST** always be called **BEFORE** executing **any**
