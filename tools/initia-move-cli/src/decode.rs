@@ -23,9 +23,10 @@ pub enum DecodeCommands {
         long_about = "Read and display basic information about a Move module from its bytecode file.\n\
         Example: initia-move decode read ./build/package/bytecode_modules/my_module.mv"
     )] Read {
-        /// Path to the Move module bytecode file
-        #[arg(value_name = "FILE")]
-        path: String,
+        #[arg(value_name = "PACKAGE_NAME")]
+        package_name: String,
+        #[arg(value_name = "MODULE_NAME")]
+        module_name: String,
     },
 
     #[command(
@@ -34,9 +35,10 @@ pub enum DecodeCommands {
         long_about = "Decode Move script bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move decode script ./build/package/scripts/my_script.mv"
     )] Script {
-        /// Path to the Move script bytecode file
-        #[arg(value_name = "FILE")]
-        path: String,
+        #[arg(value_name = "PACKAGE_NAME")]
+        package_name: String,
+        #[arg(value_name = "SCRIPT_NAME")]
+        script_name: String,
     },
 
     #[command(
@@ -45,9 +47,10 @@ pub enum DecodeCommands {
         long_about = "Decode Move module bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move decode module ./build/package/bytecode_modules/my_module.mv"
     )] Module {
-        /// Path to the Move module bytecode file
-        #[arg(value_name = "FILE")]
-        path: String,
+        #[arg(value_name = "PACKAGE_NAME")]
+        package_name: String,
+        #[arg(value_name = "MODULE_NAME")]
+        module_name: String,
     },
 }
 
@@ -66,30 +69,45 @@ impl Decoder for InitiaCLI {
         match &self.cmd {
             InitiaCommand::Decode(cmd) => {
                 match &cmd.command {
-                    DecodeCommands::Read { path } => {
-                        let bytes = read_file(path)?;
+                    DecodeCommands::Read { package_name, module_name } => {
+                        let path = format!(
+                            "build/{}/bytecode_modules/{}.mv",
+                            package_name,
+                            module_name
+                        );
+                        let bytes = read_file(&path)?;
                         let result = read_module_info(&bytes)?;
                         let mut json: serde_json::Value = serde_json::from_slice(&result)?;
 
                         if let Some(address) = json.get_mut("address") {
                             if let serde_json::Value::Array(bytes) = address {
-                                let hex = format!("0x{}", bytes.iter()
-                                    .filter_map(|b| b.as_u64())
-                                    .map(|b| format!("{:02x}", b))
-                                    .collect::<String>());
+                                let hex = format!(
+                                    "0x{}",
+                                    bytes
+                                        .iter()
+                                        .filter_map(|b| b.as_u64())
+                                        .map(|b| format!("{:02x}", b))
+                                        .collect::<String>()
+                                );
                                 *address = serde_json::json!(hex);
                             }
                         }
                         println!("{}", serde_json::to_string_pretty(&json)?);
                     }
-                    DecodeCommands::Script { path } => {
-                        let bytes = read_file(path)?;
+                    DecodeCommands::Script { package_name, script_name } => {
+                        let path = format!("build/{}/scripts/bytecode_scripts/{}.mv", package_name, script_name);
+                        let bytes = read_file(&path)?;
                         let result = decode_script_bytes(bytes)?;
                         let json: serde_json::Value = serde_json::from_slice(&result)?;
                         println!("{}", serde_json::to_string_pretty(&json)?);
                     }
-                    DecodeCommands::Module { path } => {
-                        let bytes = read_file(path)?;
+                    DecodeCommands::Module { package_name, module_name } => {
+                        let path = format!(
+                            "build/{}/bytecode_modules/{}.mv",
+                            package_name,
+                            module_name
+                        );
+                        let bytes = read_file(&path)?;
                         let result = decode_module_bytes(bytes)?;
                         let json: serde_json::Value = serde_json::from_slice(&result)?;
                         println!("{}", serde_json::to_string_pretty(&json)?);
