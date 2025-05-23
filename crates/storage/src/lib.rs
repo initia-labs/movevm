@@ -11,3 +11,4 @@ pub mod script_cache;
 
 mod allocator;
 pub mod code_scale;
+pub mod struct_resolver;

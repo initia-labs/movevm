@@ -42,7 +42,7 @@ move-vm-types = { workspace = true }
 move-vm-test-utils = { workspace = true }
 move-binary-format = { workspace = true }
 move-model = { workspace = true }
-move-compiler = { workspace = true }
+legacy-move-compiler = { workspace = true }
 move-docgen = { workspace = true }
 move-prover = { workspace = true }
 move-prover-boogie-backend = { workspace = true }

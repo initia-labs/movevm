@@ -12,10 +12,9 @@ use move_vm_runtime::{
     check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas,
     config::VMConfig,
     module_traversal::{TraversalContext, TraversalStorage},
-    move_vm::MoveVM,
+    move_vm::SerializedReturnValues,
     native_extensions::NativeContextExtensions,
-    session::SerializedReturnValues,
-    CodeStorage, ModuleStorage, RuntimeEnvironment,
+    CodeStorage, LayoutConverter, ModuleStorage, RuntimeEnvironment, StorageLayoutConverter,
 };
 use move_vm_types::resolver::ResourceResolver;
 
@@ -70,7 +69,6 @@ use crate::{
 
 #[allow(clippy::upper_case_acronyms)]
 pub struct InitiaVM {
-    move_vm: Arc<MoveVM>,
     gas_params: InitiaGasParameters,
     initia_vm_config: InitiaVMConfig,
     runtime_environment: Arc<RuntimeEnvironment>,
@@ -100,12 +98,10 @@ impl InitiaVM {
             all_natives(gas_params, misc_params),
             vm_config,
         ));
-        let move_vm = MoveVM::new();
         let script_cache = InitiaScriptCache::new(initia_vm_config.script_cache_capacity);
         let module_cache = InitiaModuleCache::new(initia_vm_config.module_cache_capacity);
 
         Self {
-            move_vm: Arc::new(move_vm),
             gas_params: InitiaGasParameters::initial(),
             initia_vm_config,
             runtime_environment,
@@ -136,15 +132,15 @@ impl InitiaVM {
     fn create_session<
         'r,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
-        S: ResourceResolver,
+        R: ResourceResolver,
         T: TableResolver,
     >(
         &self,
         api: &'r A,
         env: &Env,
-        resolver: &'r S,
+        resolver: &'r R,
         table_resolver: &'r mut T,
-    ) -> SessionExt<'r, '_> {
+    ) -> SessionExt<'r, R> {
         let mut extensions = NativeContextExtensions::default();
         let tx_hash: [u8; 32] = env
             .tx_hash()
@@ -169,10 +165,7 @@ impl InitiaVM {
         extensions.add(NativeEventContext::default());
         extensions.add(NativeOracleContext::new(api));
 
-        SessionExt::new(
-            self.move_vm
-                .new_session_with_extensions(resolver, extensions),
-        )
+        SessionExt::new(extensions, resolver)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -327,9 +320,12 @@ impl InitiaVM {
             .return_tys()
             .iter()
             .map(|ty| {
-                session
-                    .inner
-                    .get_fully_annotated_type_layout_from_ty(ty, &code_storage)
+                StorageLayoutConverter::new(&code_storage)
+                    .type_to_fully_annotated_layout(ty)
+                    .map_err(|_| {
+                        PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                            .finish(Location::Undefined)
+                    })
             })
             .collect::<VMResult<Vec<_>>>()?;
 
@@ -404,9 +400,8 @@ impl InitiaVM {
                     script.is_json(),
                 )?;
 
-                session.execute_script(
-                    script.code().to_vec(),
-                    script.ty_args().to_vec(),
+                session.execute_loaded_function(
+                    function,
                     args,
                     gas_meter,
                     traversal_context,

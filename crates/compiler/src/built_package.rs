@@ -8,9 +8,9 @@ use initia_move_types::metadata::{
     self, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0, METADATA_V0_MIN_FILE_FORMAT_VERSION,
 };
 use itertools::Itertools;
+use legacy_move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_binary_format::CompiledModule;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
-use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
 use move_model::metadata::{CompilerVersion, LanguageVersion};

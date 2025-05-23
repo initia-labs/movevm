@@ -26,7 +26,7 @@ use move_vm_runtime::{
     check_dependencies_and_charge_gas, module_traversal::TraversalContext, ModuleStorage,
     StagingModuleStorage,
 };
-use move_vm_types::gas::GasMeter;
+use move_vm_types::{gas::GasMeter, resolver::ResourceResolver};
 
 use crate::verifier::module_init::verify_module_init_function;
 use crate::{
@@ -34,7 +34,7 @@ use crate::{
     verifier::module_metadata::validate_publish_request,
 };
 
-impl<'r, 'l> SessionExt<'r, 'l> {
+impl<'r, R: ResourceResolver> SessionExt<'r, R> {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn finish_with_module_publish<S: StateView>(
         mut self,
@@ -131,7 +131,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
                 // We need to check that init_module function we found is well-formed.
                 verify_module_init_function(module).map_err(|e| e.finish(Location::Undefined))?;
 
-                self.inner.execute_function_bypass_visibility(
+                self.execute_function_bypass_visibility(
                     &module_id,
                     init_func_name,
                     vec![],
@@ -162,7 +162,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             .collect();
 
         // ignore the output
-        self.inner.execute_function_bypass_visibility(
+        self.execute_function_bypass_visibility(
             &ModuleId::new(
                 AccountAddress::ONE,
                 Identifier::new(CODE_MODULE_NAME).unwrap(),
@@ -309,7 +309,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             dependency_module_ids.push(deps_module_ids);
         }
 
-        let _ = self.inner.execute_function_bypass_visibility(
+        let _ = self.execute_function_bypass_visibility(
             &ModuleId::new(AccountAddress::ONE, ident_str!(CODE_MODULE_NAME).into()),
             ident_str!(VERIFY_PUBLISH_REQUEST),
             vec![],

@@ -1,10 +1,6 @@
-use std::{
-    collections::BTreeMap,
-    ops::{Deref, DerefMut},
-};
+use std::{borrow::Borrow, collections::BTreeMap};
 
 use bytes::Bytes;
-use initia_move_json::StructResolver;
 use initia_move_natives::{
     account::NativeAccountContext,
     code::{NativeCodeContext, PublishRequest},
@@ -25,12 +21,18 @@ use initia_move_types::{
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     effects::Op,
-    identifier::Identifier,
+    identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{session::Session, AsFunctionValueExtension, ModuleStorage};
-use move_vm_types::{loaded_data::runtime_types::Type, sha3_256};
+use move_vm_runtime::{
+    data_cache::TransactionDataCache,
+    module_traversal::TraversalContext,
+    move_vm::{MoveVM, SerializedReturnValues},
+    native_extensions::NativeContextExtensions,
+    AsFunctionValueExtension, LoadedFunction, ModuleStorage,
+};
+use move_vm_types::{gas::GasMeter, resolver::ResourceResolver, sha3_256};
 
 pub type SessionOutput<'r> = (
     Vec<ContractEvent>,
@@ -40,19 +42,141 @@ pub type SessionOutput<'r> = (
     Accounts,
 );
 
-pub struct SessionExt<'r, 'l> {
-    pub(crate) inner: Session<'r, 'l>,
+pub struct SessionExt<'r, R> {
+    data_cache: TransactionDataCache,
+    extensions: NativeContextExtensions<'r>,
+    resolver: &'r R,
 }
 
-impl<'r, 'l> SessionExt<'r, 'l> {
-    pub fn new(inner: Session<'r, 'l>) -> Self {
-        Self { inner }
+impl<'r, R: ResourceResolver> SessionExt<'r, R> {
+    pub fn new(extensions: NativeContextExtensions<'r>, resolver: &'r R) -> Self {
+        Self {
+            data_cache: TransactionDataCache::empty(),
+            extensions,
+            resolver,
+        }
+    }
+
+    pub fn execute_entry_function(
+        &mut self,
+        func: LoadedFunction,
+        args: Vec<impl Borrow<[u8]>>,
+        gas_meter: &mut impl GasMeter,
+        traversal_context: &mut TraversalContext,
+        module_storage: &impl ModuleStorage,
+    ) -> VMResult<SerializedReturnValues> {
+        if !func.is_entry() {
+            let module_id = func
+                .module_id()
+                .ok_or_else(|| {
+                    let msg = "Entry function always has module id".to_string();
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(msg)
+                        .finish(Location::Undefined)
+                })?
+                .clone();
+            return Err(PartialVMError::new(
+                StatusCode::EXECUTE_ENTRY_FUNCTION_CALLED_ON_NON_ENTRY_FUNCTION,
+            )
+            .finish(Location::Module(module_id)));
+        }
+
+        MoveVM::execute_loaded_function(
+            func,
+            args,
+            &mut self.data_cache,
+            gas_meter,
+            traversal_context,
+            &mut self.extensions,
+            module_storage,
+            self.resolver,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn execute_function_bypass_visibility(
+        &mut self,
+        module_id: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        args: Vec<impl Borrow<[u8]>>,
+        gas_meter: &mut impl GasMeter,
+        traversal_context: &mut TraversalContext,
+        module_storage: &impl ModuleStorage,
+    ) -> VMResult<SerializedReturnValues> {
+        let func = module_storage.load_function(module_id, function_name, &ty_args)?;
+        MoveVM::execute_loaded_function(
+            func,
+            args,
+            &mut self.data_cache,
+            gas_meter,
+            traversal_context,
+            &mut self.extensions,
+            module_storage,
+            self.resolver,
+        )
+    }
+
+    pub fn execute_loaded_function(
+        &mut self,
+        func: LoadedFunction,
+        args: Vec<impl Borrow<[u8]>>,
+        gas_meter: &mut impl GasMeter,
+        traversal_context: &mut TraversalContext,
+        module_storage: &impl ModuleStorage,
+    ) -> VMResult<SerializedReturnValues> {
+        MoveVM::execute_loaded_function(
+            func,
+            args,
+            &mut self.data_cache,
+            gas_meter,
+            traversal_context,
+            &mut self.extensions,
+            module_storage,
+            self.resolver,
+        )
     }
 
     pub fn finish(self, module_storage: &impl ModuleStorage) -> VMResult<SessionOutput> {
-        let Self { inner } = self;
+        // let function_extension = module_storage.as_function_value_extension();
 
-        let (change_set, mut extensions) = inner.finish_with_extensions(module_storage)?;
+        // let resource_converter = |value: Value,
+        //                           layout: MoveTypeLayout,
+        //                           has_aggregator_lifting: bool|
+        //  -> PartialVMResult<BytesWithResourceLayout> {
+        //     let serialization_result = if has_aggregator_lifting {
+        //         // We allow serialization of native values here because we want to
+        //         // temporarily store native values (via encoding to ensure deterministic
+        //         // gas charging) in block storage.
+        //         ValueSerDeContext::new()
+        //             .with_delayed_fields_serde()
+        //             .with_func_args_deserialization(&function_extension)
+        //             .serialize(&value, &layout)?
+        //             .map(|bytes| (bytes.into(), Some(Arc::new(layout))))
+        //     } else {
+        //         // Otherwise, there should be no native values so ensure
+        //         // serialization fails here if there are any.
+        //         ValueSerDeContext::new()
+        //             .with_func_args_deserialization(&function_extension)
+        //             .serialize(&value, &layout)?
+        //             .map(|bytes| (bytes.into(), None))
+        //     };
+        //     serialization_result.ok_or_else(|| {
+        //         PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+        //             .with_message(format!("Error when serializing resource {}.", value))
+        //     })
+        // };
+
+        let Self {
+            data_cache,
+            mut extensions,
+            resolver: _,
+        } = self;
+
+        let change_set = data_cache
+            .into_effects(module_storage)
+            .map_err(|e| e.finish(Location::Undefined))?;
+
         let event_context: NativeEventContext = extensions.remove::<NativeEventContext>();
         let events = event_context.into_events();
 
@@ -88,7 +212,7 @@ impl<'r, 'l> SessionExt<'r, 'l> {
     }
 
     pub fn extract_publish_request(&mut self) -> Option<PublishRequest> {
-        let ctx = self.get_native_extensions().get_mut::<NativeCodeContext>();
+        let ctx = self.extensions.get_mut::<NativeCodeContext>();
         ctx.requested_module_bundle.take()
     }
 
@@ -121,37 +245,5 @@ impl<'r, 'l> SessionExt<'r, 'l> {
             );
         }
         Ok(WriteSet::new_with_write_set(module_write_set))
-    }
-}
-
-impl StructResolver for SessionExt<'_, '_> {
-    fn get_struct_name(
-        &self,
-        ty: &Type,
-        module_storage: &impl ModuleStorage,
-    ) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
-        self.inner.get_struct_name(ty, module_storage)
-    }
-
-    fn type_to_type_tag(
-        &self,
-        ty: &Type,
-        module_storage: &impl ModuleStorage,
-    ) -> VMResult<TypeTag> {
-        self.inner.get_type_tag(ty, module_storage)
-    }
-}
-
-impl<'r, 'l> Deref for SessionExt<'r, 'l> {
-    type Target = Session<'r, 'l>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<'r, 'l> DerefMut for SessionExt<'r, 'l> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
     }
 }

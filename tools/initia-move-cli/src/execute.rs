@@ -1,7 +1,7 @@
 use anyhow::Error;
-use initia_move_compiler::{ execute, Command };
+use initia_move_compiler::{execute, Command};
 
-use crate::{ InitiaCLI, InitiaCommand };
+use crate::{InitiaCLI, InitiaCommand};
 
 pub trait Execute {
     fn execute(self) -> anyhow::Result<()>;
