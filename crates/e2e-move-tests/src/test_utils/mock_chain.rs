@@ -101,7 +101,7 @@ impl<'r> MockTableState<'r> {
     }
 }
 
-impl<'r> TableResolver for MockTableState<'r> {
+impl TableResolver for MockTableState<'_> {
     fn resolve_table_entry(
         &self,
         handle: &TableHandle,

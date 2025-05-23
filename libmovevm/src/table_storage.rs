@@ -26,7 +26,7 @@ impl<'r> GoTableStorage<'r> {
     }
 }
 
-impl<'r> TableResolver for GoTableStorage<'r> {
+impl TableResolver for GoTableStorage<'_> {
     fn resolve_table_entry(
         &self,
         handle: &TableHandle,

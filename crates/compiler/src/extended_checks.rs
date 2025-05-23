@@ -71,7 +71,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Module Initialization
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_init_module(&self, module: &ModuleEnv) {
         // TODO: also enable init_module by attribute, perhaps deprecate by name
         let init_module_sym = self.env.symbol_pool().make(INIT_MODULE_FUNCTION_NAME);
@@ -121,7 +121,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Entry Functions
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_entry_functions(&self, module: &ModuleEnv) {
         for ref fun in module.get_functions() {
             if !fun.is_entry() {
@@ -209,7 +209,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // View Functions
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_and_record_view_functions(&mut self, module: &ModuleEnv) {
         for ref fun in module.get_functions() {
             if !self.has_attribute(fun, VIEW_FUN_ATTRIBUTE) {
@@ -268,7 +268,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Events
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_and_record_events(&mut self, module: &ModuleEnv) {
         for ref struct_ in module.get_structs() {
             if self.has_attribute_iter(struct_.get_attributes().iter(), EVENT_STRUCT_ATTRIBUTE) {
@@ -349,7 +349,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Error Map
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn build_error_map(&mut self, module: &ModuleEnv<'_>) {
         // Compute the error map, we are using the `ErrorMapping` type from Move which
         // is more general as we need as it works for multiple modules.
