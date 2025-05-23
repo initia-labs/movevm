@@ -33,13 +33,13 @@ impl<'a, 'b> Deref for SafeNativeContext<'a, 'b, '_> {
     }
 }
 
-impl<'a, 'b> DerefMut for SafeNativeContext<'a, 'b, '_> {
+impl DerefMut for SafeNativeContext<'_, '_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner
     }
 }
 
-impl<'a, 'b> SafeNativeContext<'a, 'b, '_> {
+impl SafeNativeContext<'_, '_, '_> {
     /// Always remember: first charge gas, then execute!
     ///
     /// In other words, this function **MUST** always be called **BEFORE** executing **any**
