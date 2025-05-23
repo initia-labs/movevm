@@ -71,14 +71,16 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Module Initialization
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_init_module(&self, module: &ModuleEnv) {
         // TODO: also enable init_module by attribute, perhaps deprecate by name
         let init_module_sym = self.env.symbol_pool().make(INIT_MODULE_FUNCTION_NAME);
         if let Some(ref fun) = module.find_function(init_module_sym) {
             if fun.visibility() != Visibility::Private {
-                self.env
-                    .error(&fun.get_loc(), "`init_module` function must be private")
+                self.env.error(
+                    &fun.get_id_loc(),
+                    &format!("`{}` function must be private", INIT_MODULE_FUNCTION_NAME),
+                )
             }
             for Parameter(_, ty, _) in fun.get_parameters() {
                 let ok = match ty {
@@ -89,20 +91,27 @@ impl<'a> ExtendedChecker<'a> {
                 if !ok {
                     self.env.error(
                         &fun.get_loc(),
-                        "`init_module` function can only take signers as parameters",
+                        &format!("`{}` function can only take values of type `signer` or `&signer` as parameters",
+                                 INIT_MODULE_FUNCTION_NAME),
                     );
                 }
             }
             if fun.get_parameters().len() != 1 {
                 self.env.error(
                     &fun.get_loc(),
-                    "`init_module` function must take exactly one parameter",
+                    &format!(
+                        "`{}` function must take exactly one parameter",
+                        INIT_MODULE_FUNCTION_NAME
+                    ),
                 );
             }
             if fun.get_return_count() > 0 {
                 self.env.error(
                     &fun.get_loc(),
-                    "`init_module` function cannot return values",
+                    &format!(
+                        "`{}` function cannot return values",
+                        INIT_MODULE_FUNCTION_NAME
+                    ),
                 )
             }
         }
@@ -112,13 +121,14 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Entry Functions
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_entry_functions(&self, module: &ModuleEnv) {
         for ref fun in module.get_functions() {
             if !fun.is_entry() {
                 continue;
             }
             self.check_transaction_args(&fun.get_loc(), &fun.get_parameter_types());
+            self.check_signer_args(&fun.get_parameters());
             if fun.get_return_count() > 0 {
                 self.env
                     .error(&fun.get_loc(), "entry function cannot return values")
@@ -129,6 +139,26 @@ impl<'a> ExtendedChecker<'a> {
     fn check_transaction_args(&self, loc: &Loc, arg_tys: &[Type]) {
         for ty in arg_tys {
             self.check_transaction_input_type(loc, ty)
+        }
+    }
+
+    fn check_signer_args(&self, arg_tys: &[Parameter]) {
+        // All signer args should precede non-signer args, for an entry function to be
+        // used as an entry function.
+        let mut seen_non_signer = false;
+        for Parameter(_, ty, loc) in arg_tys {
+            // We assume `&mut signer` are disallowed by checks elsewhere, so it is okay
+            // for `skip_reference()` below to skip both kinds of reference.
+            let ty_is_signer = ty.skip_reference().is_signer();
+            if seen_non_signer && ty_is_signer {
+                self.env.warning(
+                    loc,
+                    "to be used as an entry function, all signers should precede non-signers",
+                );
+            }
+            if !ty_is_signer {
+                seen_non_signer = true;
+            }
         }
     }
 
@@ -179,7 +209,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // View Functions
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_and_record_view_functions(&mut self, module: &ModuleEnv) {
         for ref fun in module.get_functions() {
             if !self.has_attribute(fun, VIEW_FUN_ATTRIBUTE) {
@@ -190,6 +220,38 @@ impl<'a> ExtendedChecker<'a> {
                 self.env
                     .error(&fun.get_loc(), "view function must return values")
             }
+
+            fun.get_parameters()
+                .iter()
+                .for_each(
+                    |Parameter(_sym, parameter_type, param_loc)| match parameter_type {
+                        Type::Primitive(inner) => {
+                            if inner == &PrimitiveType::Signer {
+                                self.env.error(
+                                    param_loc,
+                                    "`#[view]` function cannot use a `signer` parameter",
+                                )
+                            }
+                        }
+                        Type::Reference(mutability, inner) => {
+                            if let Type::Primitive(inner) = inner.as_ref() {
+                                if inner == &PrimitiveType::Signer
+                            // Avoid a redundant error message for `&mut signer`, which is
+                            // always disallowed for transaction entries, not just for
+                            // `#[view]`.
+                                && mutability == &ReferenceKind::Immutable
+                                {
+                                    self.env.error(
+                                        param_loc,
+                                        "`#[view]` function cannot use the `&signer` parameter",
+                                    )
+                                }
+                            }
+                        }
+                        _ => (),
+                    },
+                );
+
             // Remember the runtime info that this is a view function
             let module_id = self.get_runtime_module_id(module);
             self.output
@@ -206,7 +268,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Events
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn check_and_record_events(&mut self, module: &ModuleEnv) {
         for ref struct_ in module.get_structs() {
             if self.has_attribute_iter(struct_.get_attributes().iter(), EVENT_STRUCT_ATTRIBUTE) {
@@ -287,7 +349,7 @@ impl<'a> ExtendedChecker<'a> {
 // ----------------------------------------------------------------------------------
 // Error Map
 
-impl<'a> ExtendedChecker<'a> {
+impl ExtendedChecker<'_> {
     fn build_error_map(&mut self, module: &ModuleEnv<'_>) {
         // Compute the error map, we are using the `ErrorMapping` type from Move which
         // is more general as we need as it works for multiple modules.

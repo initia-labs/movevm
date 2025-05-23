@@ -48,6 +48,7 @@ fn type_of_internal(struct_tag: &StructTag) -> Result<SmallVec<[Value; 1]>, std:
  *   gas cost: base_cost + unit_cost * type_size
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_type_of(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -81,6 +82,7 @@ fn native_type_of(
  *   gas cost: base_cost + unit_cost * type_size
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_type_name(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

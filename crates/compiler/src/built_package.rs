@@ -2,7 +2,7 @@ use crate::{docgen::DocgenPackage, extended_checks};
 use anyhow::bail;
 use codespan_reporting::{
     diagnostic::Severity,
-    term::termcolor::{ColorChoice, StandardStream},
+    term::termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor},
 };
 use initia_move_types::metadata::{
     self, RuntimeModuleMetadataV0, INITIA_METADATA_KEY_V0, METADATA_V0_MIN_FILE_FORMAT_VERSION,
@@ -11,8 +11,10 @@ use itertools::Itertools;
 use legacy_move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_binary_format::CompiledModule;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
+use move_compiler_v2::{options::Options, Experiment};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
+use move_linter::MoveLintChecks;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
@@ -21,7 +23,7 @@ use move_package::{
 };
 use std::{
     collections::BTreeMap,
-    io::stderr,
+    io::{stderr, Write},
     path::{Path, PathBuf},
 };
 
@@ -45,7 +47,7 @@ impl BuiltPackage {
     ) -> anyhow::Result<Self> {
         eprintln!("Compiling, may take a little while to download git dependencies...");
         let generate_docs = config.generate_docs || docgen_options.is_some();
-        let bytecode_version = config.compiler_config.bytecode_version;
+        let external_checks = vec![MoveLintChecks::make()];
 
         // customize config
         let mut new_config = config.clone();
@@ -56,26 +58,53 @@ impl BuiltPackage {
             .known_attributes
             .clone_from(metadata::get_all_attribute_names());
 
-        // use v2 as default
+        // use latest stable version as default
         if new_config.compiler_config.compiler_version.is_none() {
-            new_config.compiler_config.compiler_version = Some(CompilerVersion::V2_0);
+            new_config.compiler_config.compiler_version = Some(CompilerVersion::latest_stable());
         }
         if new_config.compiler_config.language_version.is_none() {
-            new_config.compiler_config.language_version = Some(LanguageVersion::V2_0);
+            new_config.compiler_config.language_version = Some(LanguageVersion::latest_stable());
         }
+
+        // check versions
+        check_versions(
+            &new_config.compiler_config.compiler_version,
+            &new_config.compiler_config.language_version,
+        )?;
+
+        // infer bytecode version
+        let bytecode_version = inferred_bytecode_version(
+            new_config.compiler_config.language_version,
+            new_config.compiler_config.bytecode_version,
+        );
+        new_config.compiler_config.bytecode_version = bytecode_version;
 
         let resolved_graph = Self::prepare_resolution_graph(&package_path, new_config.clone())?;
         let (mut package, model_opt) =
-            new_config.compile_package_no_exit(resolved_graph, vec![], &mut stderr())?;
+            new_config.compile_package_no_exit(resolved_graph, external_checks, &mut stderr())?;
 
         // Run extended checks as well as derive runtime metadata
         let model = &model_opt.expect("move model");
+        if let Some(model_options) = model.get_extension::<Options>() {
+            if model_options.experiment_on(Experiment::STOP_BEFORE_EXTENDED_CHECKS) {
+                std::process::exit(if model.has_warnings() { 1 } else { 0 })
+            }
+        }
+
         let runtime_metadata = extended_checks::run_extended_checks(model);
         if model.diag_count(Severity::Warning) > 0 {
             let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
             model.report_diag(&mut error_writer, Severity::Warning);
             if model.has_errors() {
                 bail!("extended checks failed")
+            }
+        }
+
+        if let Some(model_options) = model.get_extension::<Options>() {
+            if model_options.experiment_on(Experiment::FAIL_ON_WARNING) && model.has_warnings() {
+                bail!("found warning(s), and `--fail-on-warning` is set")
+            } else if model_options.experiment_on(Experiment::STOP_AFTER_EXTENDED_CHECKS) {
+                std::process::exit(if model.has_warnings() { 1 } else { 0 })
             }
         }
 
@@ -231,4 +260,47 @@ fn inject_runtime_metadata(
         }
     }
     Ok(())
+}
+
+// Check versions and warn user if using unstable ones.
+pub fn check_versions(
+    compiler_version: &Option<CompilerVersion>,
+    language_version: &Option<LanguageVersion>,
+) -> anyhow::Result<()> {
+    let effective_compiler_version = compiler_version.unwrap_or_default();
+    let effective_language_version = language_version.unwrap_or_default();
+    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+    if effective_compiler_version.unstable() {
+        error_writer.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
+        writeln!(
+            &mut error_writer,
+            "Warning: compiler version `{}` is experimental \
+            and should not be used in production",
+            effective_compiler_version
+        )?;
+        error_writer.reset()?;
+    }
+    if effective_language_version.unstable() {
+        error_writer.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
+        writeln!(
+            &mut error_writer,
+            "Warning: language version `{}` is experimental \
+            and should not be used in production",
+            effective_language_version
+        )?;
+        error_writer.reset()?;
+    }
+    effective_compiler_version.check_language_support(effective_language_version)?;
+    Ok(())
+}
+
+pub fn inferred_bytecode_version(
+    language_version: Option<LanguageVersion>,
+    bytecode_version: Option<u32>,
+) -> Option<u32> {
+    Some(
+        language_version
+            .unwrap_or_default()
+            .infer_bytecode_version(bytecode_version),
+    )
 }

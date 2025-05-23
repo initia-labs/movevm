@@ -59,6 +59,7 @@ impl NativeEventContext {
  *
  **************************************************************************************************/
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_emit_event(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -157,6 +158,7 @@ fn native_emit_event(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_emitted_events(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

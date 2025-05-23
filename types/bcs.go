@@ -190,6 +190,7 @@ type CompilerBuildConfig struct {
 	TestMode bool
 	GenerateDocs bool
 	GenerateAbis bool
+	EnableLintChecks bool
 	InstallDir *string
 	ForceRecompilation bool
 	FetchDepsOnly bool
@@ -206,6 +207,7 @@ func (obj *CompilerBuildConfig) Serialize(serializer serde.Serializer) error {
 	if err := serializer.SerializeBool(obj.TestMode); err != nil { return err }
 	if err := serializer.SerializeBool(obj.GenerateDocs); err != nil { return err }
 	if err := serializer.SerializeBool(obj.GenerateAbis); err != nil { return err }
+	if err := serializer.SerializeBool(obj.EnableLintChecks); err != nil { return err }
 	if err := serialize_option_str(obj.InstallDir, serializer); err != nil { return err }
 	if err := serializer.SerializeBool(obj.ForceRecompilation); err != nil { return err }
 	if err := serializer.SerializeBool(obj.FetchDepsOnly); err != nil { return err }
@@ -234,6 +236,7 @@ func DeserializeCompilerBuildConfig(deserializer serde.Deserializer) (CompilerBu
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.TestMode = val } else { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.GenerateDocs = val } else { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.GenerateAbis = val } else { return obj, err }
+	if val, err := deserializer.DeserializeBool(); err == nil { obj.EnableLintChecks = val } else { return obj, err }
 	if val, err := deserialize_option_str(deserializer); err == nil { obj.InstallDir = val } else { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.ForceRecompilation = val } else { return obj, err }
 	if val, err := deserializer.DeserializeBool(); err == nil { obj.FetchDepsOnly = val } else { return obj, err }

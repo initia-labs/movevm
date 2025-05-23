@@ -9,6 +9,7 @@ rust-version = { workspace = true }
 move-binary-format = { workspace = true }
 move-core-types = { workspace = true }
 legacy-move-compiler = { workspace = true }
+move-compiler-v2 = { workspace = true }
 move-cli = { workspace = true }
 move-docgen = { workspace = true }
 move-package = { workspace = true }

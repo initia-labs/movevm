@@ -27,6 +27,7 @@ fn to_le_bytes(i: u64) -> [u8; AccountAddress::LENGTH] {
     result
 }
 
+#[allow(clippy::result_large_err)]
 fn native_create_signers_for_testing(
     _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

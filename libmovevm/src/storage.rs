@@ -39,7 +39,7 @@ impl<'r> GoStorage<'r> {
     }
 }
 
-impl<'r> StateView for GoStorage<'r> {
+impl StateView for GoStorage<'_> {
     fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Bytes>> {
         let key = access_path.to_bytes()?;
         let mut output = UnmanagedVector::default();
@@ -66,7 +66,7 @@ impl<'r> StateView for GoStorage<'r> {
     }
 }
 
-impl<'r> Storage for GoStorage<'r> {
+impl Storage for GoStorage<'_> {
     fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, BackendError> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();

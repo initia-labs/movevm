@@ -496,7 +496,7 @@ module initia_std::stableswap {
         let i = 0;
         while (i < n) {
             let coin_metadata = *vector::borrow(&pool.coin_metadata, i);
-            let amount = *vector::borrow(&mut coin_amounts, i);
+            let amount = *vector::borrow(&coin_amounts, i);
             let coin =
                 primary_fungible_store::withdraw(&pool_signer, coin_metadata, amount);
             primary_fungible_store::deposit(signer::address_of(account), coin);
@@ -987,7 +987,7 @@ module initia_std::stableswap {
         let len = vector::length(&coin_metadata);
         let i = 0;
         while (i < len) {
-            let addr = object::object_address(&*vector::borrow(&coin_metadata, i));
+            let addr = object::object_address(vector::borrow(&coin_metadata, i));
             vector::push_back(&mut addresses, addr);
             i = i + 1;
         };
@@ -1377,7 +1377,7 @@ module initia_std::stableswap {
         is_offer_amount: bool
     ): (u64, u64) acquires Pool {
         assert!(
-            offer_coin_metadata != return_coin_metadata,
+            &offer_coin_metadata != &return_coin_metadata,
             error::invalid_argument(ESAME_COIN_TYPE)
         );
         let pool = borrow_pool(pool_obj);
@@ -1389,10 +1389,10 @@ module initia_std::stableswap {
         let i = 0;
         while (i < n) {
             let metadata = *vector::borrow(&pool.coin_metadata, i);
-            if (metadata == offer_coin_metadata) {
+            if (&metadata == &offer_coin_metadata) {
                 offer_index = i
             };
-            if (metadata == return_coin_metadata) {
+            if (&metadata == &return_coin_metadata) {
                 return_index = i
             };
             if (offer_index != n && return_index != n) { break };

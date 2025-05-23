@@ -70,8 +70,8 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         .compiler_config
         .known_attributes
         .clone_from(metadata::get_all_attribute_names());
-    build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_1);
-    build_config.compiler_config.language_version = Some(LanguageVersion::V2_1);
+    build_config.compiler_config.compiler_version = Some(CompilerVersion::latest_stable());
+    build_config.compiler_config.language_version = Some(LanguageVersion::latest_stable());
 
     let res = run_move_unit_tests_with_factory(
         &pkg_path,

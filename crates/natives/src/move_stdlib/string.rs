@@ -36,6 +36,7 @@ use crate::{
  *   gas cost: base_cost + unit_cost * length_in_bytes
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_check_utf8(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -64,6 +65,7 @@ fn native_check_utf8(
  *   gas cost: base_cost
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_is_char_boundary(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -92,6 +94,7 @@ fn native_is_char_boundary(
  *   gas cost: base_cost + unit_cost * sub_string_length_in_bytes
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_sub_string(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -119,7 +122,7 @@ fn native_sub_string(
         // This is safe because we guarantee the bytes to be utf8.
         std::str::from_utf8_unchecked(s_ref.as_slice())
     };
-    let v = Value::vector_u8(s_str[i..j].as_bytes().iter().cloned());
+    let v = Value::vector_u8(s_str.as_bytes()[i..j].iter().cloned());
 
     Ok(smallvec![v])
 }
@@ -130,6 +133,7 @@ fn native_sub_string(
  *   gas cost: base_cost + unit_cost * bytes_searched
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_index_of(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

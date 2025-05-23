@@ -24,6 +24,7 @@ const UNABLE_TO_DECODE: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_encode(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -50,6 +51,7 @@ fn native_encode(
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_decode(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

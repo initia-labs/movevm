@@ -15,6 +15,7 @@ use std::collections::VecDeque;
  *   gas cost: a flat fee because we charged the loading of those modules previously.
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 pub(crate) fn native_dispatch(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

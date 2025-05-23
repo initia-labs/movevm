@@ -16,7 +16,11 @@ use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
 
-use crate::{extensions::configure_for_unit_test, unit_test_factory::InitiaUnitTestFactory};
+use crate::{
+    built_package::{check_versions, inferred_bytecode_version},
+    extensions::configure_for_unit_test,
+    unit_test_factory::InitiaUnitTestFactory,
+};
 
 pub struct TestPackage {
     pub package_path: PathBuf,
@@ -35,13 +39,28 @@ impl TestPackage {
             .known_attributes
             .clone_from(metadata::get_all_attribute_names());
 
-        // use v2.1 as default
+        // use stable version as default
         if new_build_config.compiler_config.compiler_version.is_none() {
-            new_build_config.compiler_config.compiler_version = Some(CompilerVersion::V2_1);
+            new_build_config.compiler_config.compiler_version =
+                Some(CompilerVersion::latest_stable());
         }
         if new_build_config.compiler_config.language_version.is_none() {
-            new_build_config.compiler_config.language_version = Some(LanguageVersion::V2_1);
+            new_build_config.compiler_config.language_version =
+                Some(LanguageVersion::latest_stable());
         }
+
+        // check versions
+        check_versions(
+            &new_build_config.compiler_config.compiler_version,
+            &new_build_config.compiler_config.language_version,
+        )?;
+
+        // infer bytecode version
+        let bytecode_version = inferred_bytecode_version(
+            new_build_config.compiler_config.language_version,
+            new_build_config.compiler_config.bytecode_version,
+        );
+        new_build_config.compiler_config.bytecode_version = bytecode_version;
 
         configure_for_unit_test();
 

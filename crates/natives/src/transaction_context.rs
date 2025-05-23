@@ -42,6 +42,7 @@ impl NativeTransactionContext {
  *   gas cost: base_cost
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_get_transaction_hash(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -63,6 +64,7 @@ fn native_get_transaction_hash(
  *   gas cost: base_cost
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_generate_unique_address(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -94,6 +96,7 @@ fn native_generate_unique_address(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_get_session_id(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -107,6 +110,7 @@ fn native_test_only_get_session_id(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_set_transaction_hash(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

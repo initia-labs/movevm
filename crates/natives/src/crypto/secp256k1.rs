@@ -39,6 +39,7 @@ fn read_pubkey(data: &[u8]) -> Result<[u8; COMPRESSED_PUBLIC_KEY_SIZE], TryFromS
     data.try_into()
 }
 
+#[allow(clippy::result_large_err)]
 pub fn native_verify(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -85,6 +86,7 @@ pub fn native_verify(
     Ok(smallvec![Value::bool(verify(&msg, &sig, &pk))])
 }
 
+#[allow(clippy::result_large_err)]
 pub fn native_recover_public_key(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -157,6 +159,7 @@ use rand_core::OsRng;
 use libsecp256k1::{sign, SecretKey};
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 pub fn native_test_only_generate_keys(
     _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -181,6 +184,7 @@ pub fn native_test_only_generate_keys(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 pub fn native_test_only_sign(
     _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

@@ -252,7 +252,7 @@ module minitia_std::code {
         assert_no_duplication(&module_ids);
 
         // Check whether arbitrary publish is allowed or not.
-        let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
+        let module_store = borrow_global<ModuleStore>(@minitia_std);
         assert!(
             upgrade_policy == UPGRADE_POLICY_COMPATIBLE
                 || upgrade_policy == UPGRADE_POLICY_IMMUTABLE,

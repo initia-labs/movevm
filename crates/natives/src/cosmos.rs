@@ -39,6 +39,7 @@ impl NativeCosmosContext {
 // =========================================================================================
 // Implementations
 
+#[allow(clippy::result_large_err)]
 fn native_stargate(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -81,6 +82,7 @@ fn native_stargate(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_requested_messages(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

@@ -28,6 +28,7 @@ const INVALID_NUMERIC_TYPE: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 103;
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_add(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -59,6 +60,7 @@ fn native_add(
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_sub(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -96,6 +98,7 @@ fn native_sub(
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_mul(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -127,6 +130,7 @@ fn native_mul(
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_div(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -158,6 +162,7 @@ fn native_div(
     Ok(smallvec![Value::vector_u8(result.to_bytes_le())])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_new(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -207,6 +212,7 @@ fn native_new(
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn native_cast(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -308,6 +314,7 @@ fn native_cast(
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn native_lt(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -332,6 +339,7 @@ fn native_lt(
     Ok(smallvec![Value::bool(num1 < num2)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_le(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -356,6 +364,7 @@ fn native_le(
     Ok(smallvec![Value::bool(num1 <= num2)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_gt(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -380,6 +389,7 @@ fn native_gt(
     Ok(smallvec![Value::bool(num1 > num2)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_ge(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

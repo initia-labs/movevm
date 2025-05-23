@@ -1015,7 +1015,7 @@ module initia_std::staking {
 
     /// Claim staking reward from the specified validator.
     public fun claim_reward(delegation: &mut Delegation): FungibleAsset acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
 
         let metadata = delegation.metadata;
         let validator = delegation.validator;
@@ -1178,7 +1178,7 @@ module initia_std::staking {
         );
 
         // If withdraw all, remove delegation
-        if (delegation.share == share) {
+        if (&delegation.share == &share) {
             let delegations =
                 table::borrow_mut(&mut delegation_store.delegations, metadata);
             table::remove(delegations, validator)
@@ -1240,7 +1240,7 @@ module initia_std::staking {
         let metadata = delegation.metadata;
         let validator = delegation.validator;
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
@@ -1275,7 +1275,7 @@ module initia_std::staking {
     fun unbonding_share_from_amount(
         metadata: Object<Metadata>, validator: String, unbonding_amount: u64
     ): BigDecimal acquires ModuleStore {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
             &module_store.staking_states,
             metadata,
@@ -1453,7 +1453,7 @@ module initia_std::staking {
         );
 
         let share = unbonding_share_from_amount(metadata, validator, amount);
-        if (unbonding.unbonding_share == share) {
+        if (&unbonding.unbonding_share == &share) {
             // If withdraw all, remove unbonding
             let unbondings = table::borrow_mut(
                 &mut delegation_store.unbondings, metadata
