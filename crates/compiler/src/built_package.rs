@@ -11,9 +11,10 @@ use itertools::Itertools;
 use legacy_move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
 use move_binary_format::CompiledModule;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
-use move_compiler_v2::{external_checks::ExternalChecks, options::Options, Experiment};
+use move_compiler_v2::{options::Options, Experiment};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_docgen::DocgenOptions;
+use move_linter::MoveLintChecks;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_package::{
     compilation::{compiled_package::CompiledPackage, package_layout::CompiledPackageLayout},
@@ -24,7 +25,6 @@ use std::{
     collections::BTreeMap,
     io::{stderr, Write},
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 /// Represents a built package.  It allows to extract `PackageMetadata`. Can also be used to
@@ -45,19 +45,9 @@ impl BuiltPackage {
         config: BuildConfig,
         docgen_options: Option<DocgenOptions>,
     ) -> anyhow::Result<Self> {
-        Self::build_with_external_checks(package_path, config, docgen_options, vec![])
-    }
-
-    /// Same as `build` but allows to provide external checks to be made on Move code.
-    /// The `external_checks` are only run when compiler v2 is used.
-    pub fn build_with_external_checks(
-        package_path: PathBuf,
-        config: BuildConfig,
-        docgen_options: Option<DocgenOptions>,
-        external_checks: Vec<Arc<dyn ExternalChecks>>,
-    ) -> anyhow::Result<Self> {
         eprintln!("Compiling, may take a little while to download git dependencies...");
         let generate_docs = config.generate_docs || docgen_options.is_some();
+        let external_checks = vec![MoveLintChecks::make()];
 
         // customize config
         let mut new_config = config.clone();

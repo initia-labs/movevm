@@ -99,3 +99,9 @@ func WithNamedAddresses(addresses map[string]types.AccountAddress) func(*types.C
 		}
 	}
 }
+
+func WithLintChecks() func(*types.CompilerBuildConfig) {
+	return func(bc *types.CompilerBuildConfig) {
+		bc.EnableLintChecks = true
+	}
+}

@@ -1447,6 +1447,7 @@ dependencies = [
  "move-core-types",
  "move-coverage",
  "move-docgen",
+ "move-linter",
  "move-model",
  "move-package",
  "move-prover",
@@ -1580,6 +1581,7 @@ dependencies = [
  "log",
  "move-binary-format",
  "move-cli",
+ "move-compiler-v2",
  "move-core-types",
  "move-coverage",
  "move-docgen",
@@ -2162,6 +2164,20 @@ dependencies = [
  "move-symbol-pool",
  "once_cell",
  "serde",
+]
+
+[[package]]
+name = "move-linter"
+version = "0.1.0"
+source = "git+https://github.com/aptos-labs/aptos-core.git?rev=46ff583f7c392d9a34cc445f7b279c2d7930a374#46ff583f7c392d9a34cc445f7b279c2d7930a374"
+dependencies = [
+ "codespan-reporting",
+ "legacy-move-compiler",
+ "move-binary-format",
+ "move-compiler-v2",
+ "move-model",
+ "move-stackless-bytecode",
+ "num",
 ]
 
 [[package]]

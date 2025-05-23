@@ -718,7 +718,7 @@ module minitia_std::multisig_v2 {
                     &tiers,
                     |t| {
                         let tt: &Tier = t;
-                        tt.name == tier_name
+                        &tt.name == &tier_name
                     }
                 );
 

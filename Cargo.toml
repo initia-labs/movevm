@@ -127,6 +127,7 @@ move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff58
 move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 legacy-move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-compiler-v2 = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
+move-linter = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-coverage = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
 move-docgen = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "46ff583f7c392d9a34cc445f7b279c2d7930a374" }
@@ -147,25 +148,27 @@ move-vm-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "4
 # END MOVE DEPENDENCIES
 
 # FOR LOCAL DEVELOPMENNT
-# move-binary-format = { path = "../move/move-binary-format" }
-# move-bytecode-verifier = { path = "../move/move-bytecode-verifier" }
-# move-bytecode-utils = { path = "../move/tools/move-bytecode-utils" }
-# move-cli = { path = "../move/tools/move-cli" }
-# move-command-line-common = { path = "../move/move-command-line-common" }
-# move-compiler = { path = "../move/move-compiler" }
-# move-coverage ={ path = "../move/tools/move-coverage" }
-# move-core-types = { path = "../move/move-core/types" }
-# move-docgen = { path = "../move/move-prover/move-docgen" }
-# move-model = { path = "../move/move-model" }
-# move-package = { path = "../move/tools/move-package" }
-# move-prover = { path = "../move/move-prover" }
-# move-prover-boogie-backend = { path = "../move/move-prover/boogie-backend" }
-# move-prover-bytecode-pipeline = { path = "../move/move-prover/bytecode-pipeline" }
-# move-resource-viewer = { path = "../move/tools/move-resource-viewer" }
-# move-stackless-bytecode = { path = "../move/move-model/bytecode" }
-# move-stdlib = { path = "../move/move-stdlib" }
-# move-symbol-pool = { path = "../move/move-symbol-pool" }
-# move-unit-test = { path = "../move/tools/move-unit-test" }
-# move-vm-runtime = { path = "../move/move-vm/runtime" }
-# move-vm-test-utils = { path = "../move/move-vm/test-utils" }
-# move-vm-types = { path = "../move/move-vm/types" }
+# move-binary-format = { path = "../aptos-core/third_party/move/move-binary-format" }
+# move-bytecode-verifier = { path = "../aptos-core/third_party/move/move-bytecode-verifier" }
+# move-bytecode-utils = { path = "../aptos-core/third_party/move/tools/move-bytecode-utils" }
+# move-cli = { path = "../aptos-core/third_party/move/tools/move-cli" }
+# move-command-line-common = { path = "../aptos-core/third_party/move/move-command-line-common" }
+# legacy-move-compiler = { path = "../aptos-core/third_party/move/move-compiler-v2/legacy-move-compiler" }
+# move-compiler-v2 = { path = "../aptos-core/third_party/move/move-compiler-v2" }
+# move-linter = { path = "../aptos-core/third_party/move/tools/move-linter" }
+# move-coverage ={ path = "../aptos-core/third_party/move/tools/move-coverage" }
+# move-core-types = { path = "../aptos-core/third_party/move/move-core/types" }
+# move-docgen = { path = "../aptos-core/third_party/move/move-prover/move-docgen" }
+# move-model = { path = "../aptos-core/third_party/move/move-model" }
+# move-package = { path = "../aptos-core/third_party/move/tools/move-package" }
+# move-prover = { path = "../aptos-core/third_party/move/move-prover" }
+# move-prover-boogie-backend = { path = "../aptos-core/third_party/move/move-prover/boogie-backend" }
+# move-prover-bytecode-pipeline = { path = "../aptos-core/third_party/move/move-prover/bytecode-pipeline" }
+# move-resource-viewer = { path = "../aptos-core/third_party/move/tools/move-resource-viewer" }
+# move-stackless-bytecode = { path = "../aptos-core/third_party/move/move-model/bytecode" }
+# move-stdlib = { path = "../aptos-core/third_party/move/move-stdlib" }
+# move-symbol-pool = { path = "../aptos-core/third_party/move/move-symbol-pool" }
+# move-unit-test = { path = "../aptos-core/third_party/move/tools/move-unit-test" }
+# move-vm-runtime = { path = "../aptos-core/third_party/move/move-vm/runtime" }
+# move-vm-test-utils = { path = "../aptos-core/third_party/move/move-vm/test-utils" }
+# move-vm-types = { path = "../aptos-core/third_party/move/move-vm/types" }

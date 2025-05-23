@@ -136,24 +136,12 @@ module initia_std::simple_map {
 
     /// Return all keys in the map. This requires keys to be copyable.
     public fun keys<Key: copy, Value>(self: &SimpleMap<Key, Value>): vector<Key> {
-        vector::map_ref(
-            &self.data,
-            |e| {
-                let e: &Element<Key, Value> = e;
-                e.key
-            }
-        )
+        vector::map_ref(&self.data, |e| { e.key })
     }
 
     /// Return all values in the map. This requires values to be copyable.
     public fun values<Key, Value: copy>(self: &SimpleMap<Key, Value>): vector<Value> {
-        vector::map_ref(
-            &self.data,
-            |e| {
-                let e: &Element<Key, Value> = e;
-                e.value
-            }
-        )
+        vector::map_ref(&self.data, |e| { e.value })
     }
 
     /// Transform the map into two vectors with the keys and values respectively

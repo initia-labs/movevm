@@ -351,11 +351,11 @@ module initia_std::minitswap {
             error::invalid_argument(EPOOL_NOT_FOUND)
         );
 
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
         let pool =
-            borrow_global_mut<VirtualPool>(
-                object::object_address(&*option::borrow(&pools.virtual_pool))
+            borrow_global<VirtualPool>(
+                object::object_address(option::borrow(&pools.virtual_pool))
             );
         assert!(pool.active, error::invalid_state(EINACTIVE));
         let (swap_amount, return_amount) =
@@ -550,7 +550,7 @@ module initia_std::minitswap {
                 &module_store.global_arb_batch_map,
                 table_key::encode_u64(id)
             );
-        let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
+        let pool = borrow_global<VirtualPool>(object::object_address(pool_obj));
         let arb_info = table::borrow(
             &pool.arb_batch_map,
             table_key::encode_u64(id)
@@ -695,7 +695,7 @@ module initia_std::minitswap {
             if (option::is_some(&pools.virtual_pool)) {
                 let vp =
                     borrow_global<VirtualPool>(
-                        object::object_address(&*option::borrow(&pools.virtual_pool))
+                        object::object_address(option::borrow(&pools.virtual_pool))
                     );
                 option::some(
                     VirtualPoolDetail {
@@ -762,9 +762,7 @@ module initia_std::minitswap {
                 if (option::is_some(&pools.virtual_pool)) {
                     let vp =
                         borrow_global<VirtualPool>(
-                            object::object_address(
-                                &*option::borrow(&pools.virtual_pool)
-                            )
+                            object::object_address(option::borrow(&pools.virtual_pool))
                         );
                     option::some(
                         VirtualPoolDetail {
@@ -1104,10 +1102,10 @@ module initia_std::minitswap {
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, true);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
+        let pools = table::borrow_mut(&mut module_store.pools, ibc_op_init_metadata);
         let pool =
             borrow_global_mut<VirtualPool>(
-                object::object_address(&*option::borrow(&pools.virtual_pool))
+                object::object_address(option::borrow(&pools.virtual_pool))
             );
         pool.active = false
     }
@@ -1117,11 +1115,11 @@ module initia_std::minitswap {
         chain: &signer, ibc_op_init_metadata: Object<Metadata>
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, true);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
         let pool =
             borrow_global_mut<VirtualPool>(
-                object::object_address(&*option::borrow(&pools.virtual_pool))
+                object::object_address(option::borrow(&pools.virtual_pool))
             );
         pool.active = true
     }
@@ -1139,7 +1137,7 @@ module initia_std::minitswap {
         let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
         let pool =
             borrow_global_mut<VirtualPool>(
-                object::object_address(&*option::borrow(&pools.virtual_pool))
+                object::object_address(option::borrow(&pools.virtual_pool))
             );
 
         let change_rate =
@@ -1336,11 +1334,11 @@ module initia_std::minitswap {
         hook_contract: Option<String>
     ) acquires ModuleStore, VirtualPool {
         assert_is_chain(chain, false);
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
         let pool =
             borrow_global_mut<VirtualPool>(
-                object::object_address(&*option::borrow(&pools.virtual_pool))
+                object::object_address(option::borrow(&pools.virtual_pool))
             );
 
         if (option::is_some(&recover_velocity)) {
@@ -1466,7 +1464,7 @@ module initia_std::minitswap {
                 &module_store.global_arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
-        let pool_addr = object::object_address(&*pool_obj);
+        let pool_addr = object::object_address(pool_obj);
         let pool = borrow_global<VirtualPool>(pool_addr);
         let arb_info =
             table::borrow(
@@ -1856,13 +1854,13 @@ module initia_std::minitswap {
     public entry fun ibc_ack(
         pool_signer: &signer, callback_id: u64, success: bool
     ) acquires ModuleStore, VirtualPool {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_obj =
             table::borrow(
-                &mut module_store.global_arb_batch_map,
+                &module_store.global_arb_batch_map,
                 table_key::encode_u64(callback_id)
             );
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(&*pool_obj));
+        let pool = borrow_global<VirtualPool>(object::object_address(pool_obj));
         assert!(
             signer::address_of(pool_signer)
                 == object::address_from_extend_ref(&pool.extend_ref),
@@ -1878,13 +1876,13 @@ module initia_std::minitswap {
     public entry fun ibc_timeout(
         pool_signer: &signer, callback_id: u64
     ) acquires ModuleStore, VirtualPool {
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_obj =
             table::borrow(
-                &mut module_store.global_arb_batch_map,
+                &module_store.global_arb_batch_map,
                 table_key::encode_u64(callback_id)
             );
-        let pool = borrow_global_mut<VirtualPool>(object::object_address(&*pool_obj));
+        let pool = borrow_global<VirtualPool>(object::object_address(pool_obj));
         assert!(
             signer::address_of(pool_signer)
                 == object::address_from_extend_ref(&pool.extend_ref),
@@ -1935,7 +1933,7 @@ module initia_std::minitswap {
             object::generate_signer_for_extending(&module_store.extend_ref);
         let pool_addr =
             object::object_address(
-                &*option::borrow(
+                option::borrow(
                     &table::borrow(&module_store.pools, metadata).virtual_pool
                 )
             );
@@ -1950,7 +1948,7 @@ module initia_std::minitswap {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let pool_addr =
             object::object_address(
-                &*option::borrow(
+                option::borrow(
                     &table::borrow(&module_store.pools, metadata).virtual_pool
                 )
             );
@@ -2262,7 +2260,7 @@ module initia_std::minitswap {
 
     fun send_ibc_message(
         module_store: &ModuleStore,
-        pool: &mut VirtualPool,
+        pool: &VirtualPool,
         batch_index: u64,
         ibc_op_init_metadata: Object<Metadata>,
         amount: u64
@@ -3098,7 +3096,7 @@ module initia_std::minitswap {
                 &module_store.global_arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
-        let pool = borrow_global<VirtualPool>(object::object_address(&*pool_obj));
+        let pool = borrow_global<VirtualPool>(object::object_address(pool_obj));
         let arb_info =
             table::borrow(
                 &pool.arb_batch_map,

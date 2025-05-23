@@ -815,7 +815,7 @@ module initia_std::fungible_asset {
     public fun burn(ref: &BurnRef, fa: FungibleAsset) acquires Supply {
         let FungibleAsset { metadata, amount } = fa;
         assert!(
-            ref.metadata == metadata,
+            &ref.metadata == &metadata,
             error::invalid_argument(EBURN_REF_AND_FUNGIBLE_ASSET_MISMATCH)
         );
         decrease_supply(metadata, amount);

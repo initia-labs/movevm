@@ -7,6 +7,7 @@ use move_cli::{
     },
     Move,
 };
+use move_compiler_v2::Experiment;
 use move_core_types::account_address::AccountAddress;
 use move_coverage::source_coverage::{ColorChoice, TextIndicator};
 use move_docgen::DocgenOptions;
@@ -50,6 +51,8 @@ pub struct CompilerBuildConfig {
     pub generate_docs: bool,
     /// Generate ABIs for packages
     pub generate_abis: bool,
+    /// Enable lint checks
+    pub enable_lint_checks: bool,
     /// Installation directory for compiled artifacts. Defaults to current directory.
     pub install_dir: Option<String>,
     /// Force recompilation of all packages
@@ -103,6 +106,11 @@ impl From<CompilerBuildConfig> for BuildConfig {
                     "latest" => Some(LanguageVersion::latest()),
                     "latest_stable" => Some(LanguageVersion::latest_stable()),
                     _ => None,
+                },
+                experiments: if val.enable_lint_checks {
+                    vec![Experiment::LINT_CHECKS.to_string()]
+                } else {
+                    vec![]
                 },
                 ..Default::default()
             },
