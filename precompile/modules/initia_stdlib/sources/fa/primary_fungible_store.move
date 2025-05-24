@@ -244,7 +244,7 @@ module initia_std::primary_fungible_store {
     ) acquires DeriveRefPod, ModuleStore {
         let metadata = fungible_asset::asset_metadata(&fa);
         let store = ensure_primary_store_exists(owner, metadata);
-        fungible_asset::sudo_deposit(store, fa);
+        dispatchable_fungible_asset::sudo_deposit(store, fa);
 
         // create cosmos side account
         if (!account::exists_at(owner)) {
@@ -264,7 +264,9 @@ module initia_std::primary_fungible_store {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
-        fungible_asset::sudo_transfer(sender, sender_store, recipient_store, amount);
+        dispatchable_fungible_asset::sudo_transfer(
+            sender, sender_store, recipient_store, amount
+        );
     }
 
     /// Withdraw `amount` of fungible asset from the given account's primary store.
