@@ -729,7 +729,7 @@ module initia_std::fungible_asset {
         assert!(!fa_store.frozen, error::permission_denied(ESTORE_IS_FROZEN));
     }
 
-    /// Deposit `amount` of the fungible asset to `store`.
+    /// sanity check for deposit operation.
     public fun deposit_sanity_check<T: key>(
         store: Object<T>, abort_on_dispatch: bool
     ) acquires FungibleStore, DispatchFunctionStore {
@@ -747,6 +747,19 @@ module initia_std::fungible_asset {
             !is_blocked_store_addr(store_addr),
             error::invalid_argument(ECANNOT_DEPOSIT_TO_BLOCKED_ACCOUNT)
         );
+    }
+
+    /// sanity check for sudo deposit operation.
+    public(friend) fun sudo_deposit_sanity_check<T: key>(
+        store: Object<T>, abort_on_dispatch: bool
+    ) acquires FungibleStore, DispatchFunctionStore {
+        let fa_store = borrow_store_resource(&store);
+        assert!(
+            !abort_on_dispatch || !has_deposit_dispatch_function(fa_store.metadata),
+            error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS)
+        );
+
+        assert!(!fa_store.frozen, error::permission_denied(ESTORE_IS_FROZEN));
     }
 
     /// Withdraw `amount` of the fungible asset from `store` by the owner.
@@ -965,12 +978,8 @@ module initia_std::fungible_asset {
     /// This function is only callable by the chain.
     public(friend) fun sudo_deposit<T: key>(
         store: Object<T>, fa: FungibleAsset
-    ) acquires FungibleStore {
-        assert!(
-            !is_frozen(store),
-            error::invalid_argument(ESTORE_IS_FROZEN)
-        );
-
+    ) acquires FungibleStore, DispatchFunctionStore {
+        sudo_deposit_sanity_check(store, true);
         deposit_internal(object::object_address(&store), fa);
     }
 
