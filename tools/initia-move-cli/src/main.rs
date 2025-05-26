@@ -1,8 +1,8 @@
-mod execute;
 mod decode;
+mod execute;
 
 use clap::Parser;
-use decode::{ Decode, Decoder };
+use decode::{Decode, Decoder};
 use execute::Execute;
 use initia_move_compiler::{
     base::{build::Build, coverage::Coverage, test::Test},
@@ -48,7 +48,7 @@ fn main() -> anyhow::Result<()> {
     let cli = InitiaCLI::parse();
     match cli.cmd {
         InitiaCommand::Decode(_) => cli.decode()?,
-        | InitiaCommand::Build(_)
+        InitiaCommand::Build(_)
         | InitiaCommand::Coverage(_)
         | InitiaCommand::New(_)
         | InitiaCommand::Test(_) => cli.execute()?,

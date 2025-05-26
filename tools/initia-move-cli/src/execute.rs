@@ -1,4 +1,4 @@
-use initia_move_compiler::{ execute, Command };
+use initia_move_compiler::{execute, Command};
 
 use crate::{InitiaCLI, InitiaCommand};
 
