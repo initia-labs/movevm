@@ -101,7 +101,7 @@ impl<'r> MockTableState<'r> {
     }
 }
 
-impl<'r> TableResolver for MockTableState<'r> {
+impl TableResolver for MockTableState<'_> {
     fn resolve_table_entry(
         &self,
         handle: &TableHandle,
@@ -481,8 +481,8 @@ impl MockOracleAPI {
     }
 }
 
-////////////////////////////////////////////////
-/// Blank resolver & API for Unit Tests
+///////////////////////////////////////////////
+// Blank resolver & API for Unit Tests
 
 /// A dummy storage containing no modules or resources.
 /// only used for unit test

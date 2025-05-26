@@ -881,7 +881,7 @@ module minitia_std::fungible_asset {
     public fun burn(ref: &BurnRef, fa: FungibleAsset) acquires Supply {
         let FungibleAsset { metadata, amount } = fa;
         assert!(
-            ref.metadata == metadata,
+            &ref.metadata == &metadata,
             error::invalid_argument(EBURN_REF_AND_FUNGIBLE_ASSET_MISMATCH)
         );
         decrease_supply(metadata, amount);
@@ -972,7 +972,7 @@ module minitia_std::fungible_asset {
     ) acquires Metadata, ExtraMetadata {
         let metadata_address = object::object_address(&metadata_ref.metadata);
         if (!exists<ExtraMetadata>(metadata_address)) {
-            let metadata = borrow_global_mut<Metadata>(metadata_address);
+            let metadata = borrow_global<Metadata>(metadata_address);
             move_to(
                 &account::create_signer(metadata_address),
                 ExtraMetadata {

@@ -43,7 +43,7 @@ impl<'s, S: StateView> StateViewImpl<'s, S> {
     }
 }
 
-impl<'s, S: StateView> StateViewImpl<'s, S> {
+impl<S: StateView> StateViewImpl<'_, S> {
     pub(crate) fn get(&self, access_path: &AccessPath) -> PartialVMResult<Option<Bytes>> {
         self.state_view.get(access_path).map_err(|err| {
             PartialVMError::new(StatusCode::STORAGE_ERROR).with_message(err.to_string())
@@ -56,7 +56,7 @@ impl<'s, S: StateView> StateViewImpl<'s, S> {
     }
 }
 
-impl<'s, S: StateView> ChecksumStorage for StateViewImpl<'s, S> {
+impl<S: StateView> ChecksumStorage for StateViewImpl<'_, S> {
     fn fetch_checksum(
         &self,
         address: &AccountAddress,
@@ -87,7 +87,7 @@ impl<'s, S: StateView> ChecksumStorage for StateViewImpl<'s, S> {
     }
 }
 
-impl<'s, S: StateView> ModuleBytesStorage for StateViewImpl<'s, S> {
+impl<S: StateView> ModuleBytesStorage for StateViewImpl<'_, S> {
     fn fetch_module_bytes(
         &self,
         address: &AccountAddress,
@@ -107,7 +107,7 @@ impl<'s, S: StateView> ModuleBytesStorage for StateViewImpl<'s, S> {
     }
 }
 
-impl<'s, S: StateView> ResourceResolver for StateViewImpl<'s, S> {
+impl<S: StateView> ResourceResolver for StateViewImpl<'_, S> {
     fn get_resource_bytes_with_metadata_and_layout(
         &self,
         address: &AccountAddress,
@@ -122,7 +122,7 @@ impl<'s, S: StateView> ResourceResolver for StateViewImpl<'s, S> {
     }
 }
 
-impl<'s, S: StateView> CompiledModuleView for StateViewImpl<'s, S> {
+impl<S: StateView> CompiledModuleView for StateViewImpl<'_, S> {
     type Item = CompiledModule;
 
     fn view_compiled_module(&self, id: &ModuleId) -> anyhow::Result<Option<Self::Item>> {

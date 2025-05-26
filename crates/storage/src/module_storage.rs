@@ -68,8 +68,8 @@ impl<'a, S: ModuleBytesStorage + ChecksumStorage> AsInitiaModuleStorage<'a, S> f
     }
 }
 
-impl<'s, S: ModuleBytesStorage + ChecksumStorage> WithRuntimeEnvironment
-    for InitiaModuleStorage<'s, S>
+impl<S: ModuleBytesStorage + ChecksumStorage> WithRuntimeEnvironment
+    for InitiaModuleStorage<'_, S>
 {
     fn runtime_environment(&self) -> &RuntimeEnvironment {
         self.runtime_environment
@@ -141,7 +141,7 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'s, S> {
     }
 }
 
-impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaModuleStorage<'s, S> {
+impl<S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaModuleStorage<'_, S> {
     type Deserialized = CompiledModule;
     type Extension = BytesWithHash;
     type Key = ModuleId;
@@ -187,7 +187,7 @@ impl<'s, S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaMo
     }
 }
 
-impl<'a, S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStorage<'a, S> {
+impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStorage<'_, S> {
     fn check_module_exists(
         &self,
         address: &AccountAddress,
@@ -419,7 +419,7 @@ enum BorrowedOrOwned<'a, T> {
     Owned(T),
 }
 
-impl<'a, T> Deref for BorrowedOrOwned<'a, T> {
+impl<T> Deref for BorrowedOrOwned<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {

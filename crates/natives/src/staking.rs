@@ -148,6 +148,7 @@ impl<'a> NativeStakingContext<'a> {
 // =========================================================================================
 // Implementations
 
+#[allow(clippy::result_large_err)]
 fn native_delegate(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -203,6 +204,7 @@ fn native_delegate(
     Ok(smallvec![write_big_decimal(string_to_big_decimal(share)?)?])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_undelegate(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -274,6 +276,7 @@ fn native_undelegate(
     Ok(smallvec![Value::u64(amount), Value::u64(unbond_timestamp)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_share_to_amount(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -317,6 +320,7 @@ fn native_share_to_amount(
     Ok(smallvec![Value::u64(amount),])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_amount_to_share(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -382,6 +386,7 @@ pub fn make_all(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_set_staking_share_ratio(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -408,6 +413,7 @@ fn partial_extension_error(msg: impl ToString) -> PartialVMError {
     PartialVMError::new(StatusCode::VM_EXTENSION_ERROR).with_message(msg.to_string())
 }
 
+#[allow(clippy::result_large_err)]
 fn string_to_big_decimal(s: String) -> SafeNativeResult<BigDecimal> {
     Ok(BigDecimal::from_str(&s)
         .map_err(|_| partial_extension_error("failed to convert string to BigDecimal"))?)
@@ -417,6 +423,7 @@ fn big_decimal_to_string(v: BigDecimal) -> String {
     v.normalized().to_string()
 }
 
+#[allow(clippy::result_large_err)]
 fn write_big_decimal(v: BigDecimal) -> SafeNativeResult<Value> {
     const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
     let bigint = (v * DECIMAL_SCALE)
@@ -433,6 +440,7 @@ fn write_big_decimal(v: BigDecimal) -> SafeNativeResult<Value> {
     )])))
 }
 
+#[allow(clippy::result_large_err)]
 fn read_big_decimal(v: StructRef) -> SafeNativeResult<BigDecimal> {
     let scaled_le_bytes = v
         .borrow_field(0)?

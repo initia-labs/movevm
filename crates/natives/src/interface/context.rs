@@ -25,7 +25,7 @@ pub struct SafeNativeContext<'a, 'b, 'c> {
     pub(crate) gas_used: InternalGas,
 }
 
-impl<'a, 'b, 'c> Deref for SafeNativeContext<'a, 'b, 'c> {
+impl<'a, 'b> Deref for SafeNativeContext<'a, 'b, '_> {
     type Target = NativeContext<'a, 'b>;
 
     fn deref(&self) -> &Self::Target {
@@ -33,18 +33,19 @@ impl<'a, 'b, 'c> Deref for SafeNativeContext<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> DerefMut for SafeNativeContext<'a, 'b, 'c> {
+impl DerefMut for SafeNativeContext<'_, '_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner
     }
 }
 
-impl<'a, 'b, 'c> SafeNativeContext<'a, 'b, 'c> {
+impl SafeNativeContext<'_, '_, '_> {
     /// Always remember: first charge gas, then execute!
     ///
     /// In other words, this function **MUST** always be called **BEFORE** executing **any**
     /// gas-metered operation or library call within a native function.
     #[must_use = "must always propagate the error returned by this function to the native function that called it using the ? operator"]
+    #[allow(clippy::result_large_err)]
     pub fn charge(&mut self, amount: InternalGas) -> SafeNativeResult<()> {
         self.gas_used += amount;
 

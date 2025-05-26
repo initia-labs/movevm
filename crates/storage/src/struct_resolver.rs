@@ -23,7 +23,7 @@ impl<'a> StructResolverImpl<'a> {
     }
 }
 
-impl<'a> StructResolver for StructResolverImpl<'a> {
+impl StructResolver for StructResolverImpl<'_> {
     fn get_struct_name(&self, ty: &Type) -> PartialVMResult<Option<(ModuleId, Identifier)>> {
         self.runtime_environment.get_struct_name(ty)
     }

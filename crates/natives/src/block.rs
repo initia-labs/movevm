@@ -30,6 +30,7 @@ impl NativeBlockContext {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn native_get_block_info(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -46,6 +47,7 @@ fn native_get_block_info(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_set_block_info(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

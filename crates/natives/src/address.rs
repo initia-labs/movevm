@@ -16,6 +16,7 @@ use smallvec::{smallvec, SmallVec};
 const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 const EINVALID_ADDRESS: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 
+#[allow(clippy::result_large_err)]
 fn native_to_string(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -34,6 +35,7 @@ fn native_to_string(
     ]))])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_from_string(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

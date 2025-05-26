@@ -24,6 +24,7 @@ use crate::{
  *
  **************************************************************************************************/
 #[inline]
+#[allow(clippy::result_large_err)]
 fn native_print(
     _: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -49,8 +50,9 @@ fn native_print(
  * native fun print_stack_trace
  *
  **************************************************************************************************/
-#[allow(unused_variables)]
 #[inline]
+#[allow(unused_variables)]
+#[allow(clippy::result_large_err)]
 fn native_stack_trace(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

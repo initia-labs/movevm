@@ -7,6 +7,7 @@ use move_cli::{
     },
     Move,
 };
+use move_compiler_v2::Experiment;
 use move_core_types::account_address::AccountAddress;
 use move_coverage::source_coverage::{ColorChoice, TextIndicator};
 use move_docgen::DocgenOptions;
@@ -50,6 +51,8 @@ pub struct CompilerBuildConfig {
     pub generate_docs: bool,
     /// Generate ABIs for packages
     pub generate_abis: bool,
+    /// Enable lint checks
+    pub enable_lint_checks: bool,
     /// Installation directory for compiled artifacts. Defaults to current directory.
     pub install_dir: Option<String>,
     /// Force recompilation of all packages
@@ -90,13 +93,30 @@ impl From<CompilerBuildConfig> for BuildConfig {
                     "1" | "1.0" => Some(CompilerVersion::V1),
                     "2" | "2.0" => Some(CompilerVersion::V2_0),
                     "2.1" => Some(CompilerVersion::V2_1),
+                    "latest" => Some(CompilerVersion::latest()),
+                    "latest_stable" => Some(CompilerVersion::latest_stable()),
                     _ => None,
                 },
                 language_version: match val.language_version.as_str() {
                     "1" | "1.0" => Some(LanguageVersion::V1),
                     "2" | "2.0" => Some(LanguageVersion::V2_0),
                     "2.1" => Some(LanguageVersion::V2_1),
+                    "2.2" => Some(LanguageVersion::V2_2),
+                    "2.3" => Some(LanguageVersion::V2_3),
+                    "latest" => Some(LanguageVersion::latest()),
+                    "latest_stable" => Some(LanguageVersion::latest_stable()),
                     _ => None,
+                },
+                experiments: if val.enable_lint_checks {
+                    vec![
+                        Experiment::LINT_CHECKS.to_string(),
+                        Experiment::SPEC_CHECK.to_string(),
+                        Experiment::SEQS_IN_BINOPS_CHECK.to_string(),
+                        Experiment::ACCESS_CHECK.to_string(),
+                        Experiment::STOP_AFTER_EXTENDED_CHECKS.to_string(),
+                    ]
+                } else {
+                    vec![]
                 },
                 ..Default::default()
             },

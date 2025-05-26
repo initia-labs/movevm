@@ -61,6 +61,7 @@ impl<'a> NativeQueryContext<'a> {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn native_query_custom(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -139,6 +140,7 @@ fn native_query_custom(
     Ok(smallvec![Value::vector_u8(res)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_query_stargate(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -272,6 +274,7 @@ struct FromSDKAddressResponse {
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn to_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let req: ToSDKAddressRequest =
         serde_json::from_slice(data).map_err(|_| SafeNativeError::Abort {
@@ -292,6 +295,7 @@ fn to_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn from_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
     let req: FromSDKAddressRequest =
         serde_json::from_slice(data).map_err(|_| SafeNativeError::Abort {
@@ -318,6 +322,7 @@ fn from_sdk_address(data: &[u8]) -> SafeNativeResult<SmallVec<[Value; 1]>> {
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_set_query_response(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -347,6 +352,7 @@ fn native_test_only_set_query_response(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 fn native_test_only_unset_query_response(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

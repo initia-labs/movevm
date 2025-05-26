@@ -94,6 +94,7 @@ impl MoveLayout for MoveTypeLayout {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn format_vector<'a>(
     gas_params: &InitiaStdlibGasParameters,
     context: &mut FormatContext,
@@ -127,6 +128,7 @@ fn format_vector<'a>(
     Ok(())
 }
 
+#[allow(clippy::result_large_err)]
 fn native_format_impl(
     gas_params: &InitiaStdlibGasParameters,
     context: &mut FormatContext,
@@ -212,7 +214,7 @@ fn native_format_impl(
             format_vector(
                 gas_params,
                 context,
-                std::iter::repeat(ty.as_ref()).take(values.len()),
+                std::iter::repeat_n(ty.as_ref(), values.len()),
                 values,
                 depth,
                 !context.single_line && !primitive_type(ty.as_ref()),
@@ -391,6 +393,7 @@ fn native_format_impl(
     Ok(())
 }
 
+#[allow(clippy::result_large_err)]
 fn native_format(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -434,6 +437,7 @@ fn native_format(
     Ok(smallvec![move_str])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_format_list(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

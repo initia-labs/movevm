@@ -311,6 +311,7 @@ pub fn all_natives(
         .collect()
 }
 
+#[allow(clippy::result_large_err)]
 fn native_new_table_handle(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -347,6 +348,7 @@ fn native_new_table_handle(
     Ok(smallvec![Value::address(handle)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_add_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -390,6 +392,7 @@ fn native_add_box(
     res
 }
 
+#[allow(clippy::result_large_err)]
 fn native_borrow_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -433,6 +436,7 @@ fn native_borrow_box(
     res
 }
 
+#[allow(clippy::result_large_err)]
 fn native_contains_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -471,6 +475,7 @@ fn native_contains_box(
     Ok(smallvec![exists])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_remove_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -514,6 +519,7 @@ fn native_remove_box(
     res
 }
 
+#[allow(clippy::result_large_err)]
 fn native_destroy_empty_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -538,6 +544,7 @@ fn native_destroy_empty_box(
     Ok(smallvec![])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_drop_unchecked_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -553,6 +560,7 @@ fn native_drop_unchecked_box(
     Ok(smallvec![])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_new_table_iter(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -635,6 +643,7 @@ fn native_new_table_iter(
 /// Check the `next_key` exist or not and store
 /// the computed `next` to the `table_context.next`
 /// for the function `next_box`.
+#[allow(clippy::result_large_err)]
 fn native_prepare_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -674,6 +683,7 @@ fn native_prepare_box(
 
 /// Return `iterator.next` which was computed from
 /// the function `prepare_box`.
+#[allow(clippy::result_large_err)]
 fn native_next_box(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -865,6 +875,7 @@ fn range_bounds(start: Option<&[u8]>, end: Option<&[u8]>) -> impl RangeBounds<Ve
     )
 }
 
+#[allow(clippy::result_large_err)]
 fn charge_load_cost(
     context: &mut SafeNativeContext,
     loaded: Option<Option<NumBytes>>,

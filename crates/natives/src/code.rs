@@ -117,6 +117,7 @@ pub struct PublishRequest {
  *   gas cost: base_cost + unit_cost * bytes_len
  *
  **************************************************************************************************/
+#[allow(clippy::result_large_err)]
 fn native_request_publish(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

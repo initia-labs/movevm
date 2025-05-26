@@ -36,6 +36,7 @@ const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
 // native errors always start from 100
 const NUMBER_OF_ARGUMENTS_MISMATCH: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 
+#[allow(clippy::result_large_err)]
 pub fn native_verify(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -87,6 +88,7 @@ fn read_pubkey(data: &[u8]) -> Result<[u8; ED25519_PUBLIC_KEY_LENGTH], TryFromSl
 
 /// Pops a Vec<T> off the argument stack and converts it to a Vec<Vec<u8>> by reading the first
 /// field of T, which is a Vec<u8> field named `bytes`.
+#[allow(clippy::result_large_err)]
 fn pop_vec_of_vec_u8(arguments: &mut VecDeque<Value>) -> SafeNativeResult<Vec<Vec<u8>>> {
     let structs: Vec<Struct> = safely_pop_vec_arg!(arguments, Struct);
     let mut v = Vec::with_capacity(structs.len());
@@ -153,6 +155,7 @@ fn repeats_vec_of_vec_u8(item: Vec<u8>, n: usize) -> Vec<Vec<u8>> {
 ///  - The "one-public key, with zero messages and zero signatures" case, is considered the empty
 ///    case.
 ///  - The empty case (no messages, no signatures and no public keys) returns true.
+#[allow(clippy::result_large_err)]
 pub fn native_batch_verify(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -221,6 +224,7 @@ pub fn native_batch_verify(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 pub fn native_test_only_generate_keys(
     _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -235,6 +239,7 @@ pub fn native_test_only_generate_keys(
 }
 
 #[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
 pub fn native_test_only_sign(
     _context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
