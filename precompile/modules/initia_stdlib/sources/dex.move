@@ -1869,8 +1869,8 @@ module initia_std::dex {
     }
 
     public fun pool_amounts(pool: &Pool, pair_addr: address): (u64, u64) acquires FlashSwapLock {
-        let amount_a = fungible_asset::balance(pool.coin_a_store);
-        let amount_b = fungible_asset::balance(pool.coin_b_store);
+        let amount_a = dispatchable_fungible_asset::derived_balance(pool.coin_a_store);
+        let amount_b = dispatchable_fungible_asset::derived_balance(pool.coin_b_store);
 
         if (exists<FlashSwapLock>(pair_addr)) {
             let flash_swap = borrow_global<FlashSwapLock>(pair_addr);

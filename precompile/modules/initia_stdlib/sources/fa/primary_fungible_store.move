@@ -204,7 +204,9 @@ module initia_std::primary_fungible_store {
     /// Get the balance of `account`'s primary store.
     public fun balance<T: key>(account: address, metadata: Object<T>): u64 {
         if (primary_store_exists(account, metadata)) {
-            fungible_asset::balance(primary_store(account, metadata))
+            dispatchable_fungible_asset::derived_balance(
+                primary_store(account, metadata)
+            )
         } else { 0 }
     }
 
@@ -229,7 +231,7 @@ module initia_std::primary_fungible_store {
             vector::push_back(&mut metadata_vec, metadata);
             vector::push_back(
                 &mut balance_vec,
-                fungible_asset::balance(store)
+                dispatchable_fungible_asset::derived_balance(store)
             );
         };
 

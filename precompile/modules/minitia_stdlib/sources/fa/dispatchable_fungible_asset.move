@@ -75,21 +75,14 @@ module minitia_std::dispatchable_fungible_asset {
         fungible_asset::withdraw_sanity_check(owner, store, false);
         let func_opt = fungible_asset::withdraw_dispatch_function(store);
         if (option::is_some(&func_opt)) {
-            let start_balance = fungible_asset::balance(store);
             let func = option::borrow(&func_opt);
             function_info::load_module_from_function(func);
-            let fa = dispatchable_withdraw(
+            dispatchable_withdraw(
                 store,
                 amount,
                 borrow_transfer_ref(store),
                 func
-            );
-            let end_balance = fungible_asset::balance(store);
-            assert!(
-                amount <= start_balance - end_balance,
-                error::aborted(EAMOUNT_MISMATCH)
-            );
-            fa
+            )
         } else {
             fungible_asset::withdraw_internal(object::object_address(&store), amount)
         }
