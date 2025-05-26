@@ -28,6 +28,13 @@ pub enum DecodeCommands {
         package_name: String,
         #[arg(value_name = "MODULE_NAME")]
         module_name: String,
+        #[clap(
+            long = "path",
+            short = 'p',
+            value_name = "PACKAGE_PATH",
+            help = "Path to the package directory"
+        )]
+        package_path: Option<PathBuf>,
     },
 
     #[command(
@@ -41,6 +48,13 @@ pub enum DecodeCommands {
         package_name: String,
         #[arg(value_name = "SCRIPT_NAME")]
         script_name: String,
+        #[clap(
+            long = "path",
+            short = 'p',
+            value_name = "PACKAGE_PATH",
+            help = "Path to the package directory"
+        )]
+        package_path: Option<PathBuf>,
     },
 
     #[command(
@@ -54,6 +68,13 @@ pub enum DecodeCommands {
         package_name: String,
         #[arg(value_name = "MODULE_NAME")]
         module_name: String,
+        #[clap(
+            long = "path",
+            short = 'p',
+            value_name = "PACKAGE_PATH",
+            help = "Path to the package directory"
+        )]
+        package_path: Option<PathBuf>,
     },
 }
 
@@ -61,8 +82,10 @@ pub trait Decoder {
     fn decode(self) -> anyhow::Result<()>;
 }
 
-fn read_file(path: &str) -> anyhow::Result<Vec<u8>> {
-    let current_dir = std::env::current_dir()?;
+fn read_file(package_path: &Option<PathBuf>, path: &str) -> anyhow::Result<Vec<u8>> {
+    let current_dir = package_path
+        .clone()
+        .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current directory"));
     let file_path = current_dir.join(PathBuf::from(path));
     fs::read(&file_path).with_context(|| format!("Failed to read file: {}", file_path.display()))
 }
@@ -75,10 +98,11 @@ impl Decoder for InitiaCLI {
                     DecodeCommands::Read {
                         package_name,
                         module_name,
+                        package_path,
                     } => {
                         let path =
                             format!("build/{}/bytecode_modules/{}.mv", package_name, module_name);
-                        let bytes = read_file(&path)?;
+                        let bytes = read_file(package_path, &path)?;
                         let result = read_module_info(&bytes)?;
                         let mut json: serde_json::Value = serde_json::from_slice(&result)?;
 
@@ -100,12 +124,13 @@ impl Decoder for InitiaCLI {
                     DecodeCommands::Script {
                         package_name,
                         script_name,
+                        package_path,
                     } => {
                         let path = format!(
                             "build/{}/scripts/bytecode_scripts/{}.mv",
                             package_name, script_name
                         );
-                        let bytes = read_file(&path)?;
+                        let bytes = read_file(package_path, &path)?;
                         let result = decode_script_bytes(bytes)?;
                         let json: serde_json::Value = serde_json::from_slice(&result)?;
                         println!("{}", serde_json::to_string_pretty(&json)?);
@@ -113,10 +138,11 @@ impl Decoder for InitiaCLI {
                     DecodeCommands::Module {
                         package_name,
                         module_name,
+                        package_path,
                     } => {
                         let path =
                             format!("build/{}/bytecode_modules/{}.mv", package_name, module_name);
-                        let bytes = read_file(&path)?;
+                        let bytes = read_file(package_path, &path)?;
                         let result = decode_module_bytes(bytes)?;
                         let json: serde_json::Value = serde_json::from_slice(&result)?;
                         println!("{}", serde_json::to_string_pretty(&json)?);
