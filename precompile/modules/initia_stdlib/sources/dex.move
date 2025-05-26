@@ -7,6 +7,7 @@ module initia_std::dex {
 
     use initia_std::object::{Self, Object, ExtendRef};
     use initia_std::block::get_block_info;
+    use initia_std::dispatchable_fungible_asset;
     use initia_std::fungible_asset::{Self, Metadata, FungibleAsset, FungibleStore};
     use initia_std::primary_fungible_store;
     use initia_std::string::{Self, String};
@@ -1133,8 +1134,12 @@ module initia_std::dex {
         // withdraw and return the coins
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         (
-            fungible_asset::withdraw(pair_signer, coin_a_store, coin_a_amount_out),
-            fungible_asset::withdraw(pair_signer, coin_b_store, coin_b_amount_out)
+            dispatchable_fungible_asset::withdraw(
+                pair_signer, coin_a_store, coin_a_amount_out
+            ),
+            dispatchable_fungible_asset::withdraw(
+                pair_signer, coin_b_store, coin_b_amount_out
+            )
         )
     }
 
@@ -1163,9 +1168,9 @@ module initia_std::dex {
 
         // deposit token
         if (is_provide_a) {
-            fungible_asset::deposit(pool.coin_a_store, provide_coin);
+            dispatchable_fungible_asset::deposit(pool.coin_a_store, provide_coin);
         } else {
-            fungible_asset::deposit(pool.coin_b_store, provide_coin);
+            dispatchable_fungible_asset::deposit(pool.coin_b_store, provide_coin);
         };
 
         let pair_key = generate_pair_key(pair);
@@ -1247,11 +1252,15 @@ module initia_std::dex {
         let pair_signer = &object::generate_signer_for_extending(&config.extend_ref);
         let return_coin =
             if (is_offer_a) {
-                fungible_asset::deposit(pool.coin_a_store, offer_coin);
-                fungible_asset::withdraw(pair_signer, pool.coin_b_store, return_amount)
+                dispatchable_fungible_asset::deposit(pool.coin_a_store, offer_coin);
+                dispatchable_fungible_asset::withdraw(
+                    pair_signer, pool.coin_b_store, return_amount
+                )
             } else {
-                fungible_asset::deposit(pool.coin_b_store, offer_coin);
-                fungible_asset::withdraw(pair_signer, pool.coin_a_store, return_amount)
+                dispatchable_fungible_asset::deposit(pool.coin_b_store, offer_coin);
+                dispatchable_fungible_asset::withdraw(
+                    pair_signer, pool.coin_a_store, return_amount
+                )
             };
 
         // emit events
@@ -1309,7 +1318,9 @@ module initia_std::dex {
         move_to(pair_signer, FlashSwapLock { coin_a_borrow_amount, coin_b_borrow_amount });
 
         let return_coin =
-            fungible_asset::withdraw(pair_signer, return_coin_store, return_amount);
+            dispatchable_fungible_asset::withdraw(
+                pair_signer, return_coin_store, return_amount
+            );
 
         // emit events
         event::emit<FlashSwapEvent>(
@@ -1346,7 +1357,7 @@ module initia_std::dex {
             error::invalid_argument(EFAILED_TO_REPAY_FLASH_SWAP)
         );
 
-        fungible_asset::deposit(repay_store, repay_fa);
+        dispatchable_fungible_asset::deposit(repay_store, repay_fa);
     }
 
     /// Sum of weights must be 1
@@ -1552,8 +1563,8 @@ module initia_std::dex {
             }
         );
 
-        fungible_asset::deposit(pool.coin_a_store, coin_a);
-        fungible_asset::deposit(pool.coin_b_store, coin_b);
+        dispatchable_fungible_asset::deposit(pool.coin_a_store, coin_a);
+        dispatchable_fungible_asset::deposit(pool.coin_b_store, coin_b);
 
         let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
         coin::mint(
@@ -1858,8 +1869,8 @@ module initia_std::dex {
     }
 
     public fun pool_amounts(pool: &Pool, pair_addr: address): (u64, u64) acquires FlashSwapLock {
-        let amount_a = fungible_asset::balance(pool.coin_a_store);
-        let amount_b = fungible_asset::balance(pool.coin_b_store);
+        let amount_a = dispatchable_fungible_asset::derived_balance(pool.coin_a_store);
+        let amount_b = dispatchable_fungible_asset::derived_balance(pool.coin_b_store);
 
         if (exists<FlashSwapLock>(pair_addr)) {
             let flash_swap = borrow_global<FlashSwapLock>(pair_addr);

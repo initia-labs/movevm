@@ -203,7 +203,9 @@ module minitia_std::primary_fungible_store {
     /// Get the balance of `account`'s primary store.
     public fun balance<T: key>(account: address, metadata: Object<T>): u64 {
         if (primary_store_exists(account, metadata)) {
-            fungible_asset::balance(primary_store(account, metadata))
+            dispatchable_fungible_asset::derived_balance(
+                primary_store(account, metadata)
+            )
         } else { 0 }
     }
 
@@ -228,7 +230,7 @@ module minitia_std::primary_fungible_store {
             vector::push_back(&mut metadata_vec, metadata);
             vector::push_back(
                 &mut balance_vec,
-                fungible_asset::balance(store)
+                dispatchable_fungible_asset::derived_balance(store)
             );
         };
 
@@ -243,7 +245,7 @@ module minitia_std::primary_fungible_store {
     ) acquires DeriveRefPod, ModuleStore {
         let metadata = fungible_asset::asset_metadata(&fa);
         let store = ensure_primary_store_exists(owner, metadata);
-        fungible_asset::sudo_deposit(store, fa);
+        dispatchable_fungible_asset::sudo_deposit(store, fa);
 
         // create cosmos side account
         if (!account::exists_at(owner)) {
@@ -263,7 +265,9 @@ module minitia_std::primary_fungible_store {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
-        fungible_asset::sudo_transfer(sender, sender_store, recipient_store, amount);
+        dispatchable_fungible_asset::sudo_transfer(
+            sender, sender_store, recipient_store, amount
+        );
     }
 
     /// Withdraw `amount` of fungible asset from the given account's primary store.

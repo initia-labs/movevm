@@ -22,6 +22,8 @@ module minitia_std::dispatchable_fungible_asset {
     use std::error;
     use std::option::{Self, Option};
 
+    friend minitia_std::primary_fungible_store;
+
     /// TransferRefStore doesn't exist on the fungible asset type.
     const ESTORE_NOT_FOUND: u64 = 1;
     /// Recipient is not getting the guaranteed value;
@@ -73,21 +75,14 @@ module minitia_std::dispatchable_fungible_asset {
         fungible_asset::withdraw_sanity_check(owner, store, false);
         let func_opt = fungible_asset::withdraw_dispatch_function(store);
         if (option::is_some(&func_opt)) {
-            let start_balance = fungible_asset::balance(store);
             let func = option::borrow(&func_opt);
             function_info::load_module_from_function(func);
-            let fa = dispatchable_withdraw(
+            dispatchable_withdraw(
                 store,
                 amount,
                 borrow_transfer_ref(store),
                 func
-            );
-            let end_balance = fungible_asset::balance(store);
-            assert!(
-                amount <= start_balance - end_balance,
-                error::aborted(EAMOUNT_MISMATCH)
-            );
-            fa
+            )
         } else {
             fungible_asset::withdraw_internal(object::object_address(&store), amount)
         }
@@ -138,6 +133,37 @@ module minitia_std::dispatchable_fungible_asset {
             end - start >= expected,
             error::aborted(EAMOUNT_MISMATCH)
         );
+    }
+
+    /// Transfer `amount` of fungible asset from `from_store`, which should be owned by `sender`, to `receiver`.
+    /// Note: it does not move the underlying object.
+    ///
+    /// This function is only callable by the chain.
+    public(friend) fun sudo_transfer<T: key>(
+        sender: &signer,
+        from: Object<T>,
+        to: Object<T>,
+        amount: u64
+    ) acquires TransferRefStore {
+        let fa = withdraw(sender, from, amount);
+        sudo_deposit(to, fa);
+    }
+
+    /// Deposit `amount` of the fungible asset to `store`.
+    ///
+    /// This function is only callable by the chain.
+    public(friend) fun sudo_deposit<T: key>(
+        store: Object<T>, fa: FungibleAsset
+    ) acquires TransferRefStore {
+        fungible_asset::sudo_deposit_sanity_check(store, false);
+        let func_opt = fungible_asset::deposit_dispatch_function(store);
+        if (option::is_some(&func_opt)) {
+            let func = option::borrow(&func_opt);
+            function_info::load_module_from_function(func);
+            dispatchable_deposit(store, fa, borrow_transfer_ref(store), func)
+        } else {
+            fungible_asset::deposit_internal(object::object_address(&store), fa)
+        }
     }
 
     #[view]
