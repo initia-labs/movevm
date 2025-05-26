@@ -90,6 +90,7 @@ jobs:
 
   create-release:
     needs: [linux-build, macos-build]
+    if: ${{github.event.workflow_run.head_branch}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -128,7 +129,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.CONTAINER_TOKEN }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
