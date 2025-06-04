@@ -450,7 +450,26 @@ module initia_std::fungible_asset {
 
     #[view]
     /// Get the current supply from the `metadata` object.
+    ///
+    /// Note: This function will abort on FAs with `derived_supply` hook set up.
+    ///       Use `dispatchable_fungible_asset::supply` instead if you intend to work with those FAs.
     public fun supply<T: key>(metadata: Object<T>): Option<u128> acquires Supply {
+        let metadata_address = object::object_address(&metadata);
+        assert!(
+            !has_supply_dispatch_function(metadata_address),
+            error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS)
+        );
+        if (exists<Supply>(metadata_address)) {
+            let supply = borrow_global<Supply>(metadata_address);
+            option::some(supply.current)
+        } else {
+            option::none()
+        }
+    }
+
+    #[view]
+    /// Get the current supply from the `metadata` object without sanity check.
+    public fun supply_without_sanity_check<T: key>(metadata: Object<T>): Option<u128> acquires Supply {
         let metadata_address = object::object_address(&metadata);
         if (exists<Supply>(metadata_address)) {
             let supply = borrow_global<Supply>(metadata_address);
@@ -539,7 +558,23 @@ module initia_std::fungible_asset {
 
     #[view]
     /// Get the balance of a given store.
-    public fun balance<T: key>(store: Object<T>): u64 acquires FungibleStore {
+    ///
+    /// Note: This function will abort on FAs with `derived_balance` hook set up.
+    ///       Use `dispatchable_fungible_asset::derived_balance` instead if you intend to work with those FAs.
+    public fun balance<T: key>(store: Object<T>): u64 acquires FungibleStore, DispatchFunctionStore {
+        if (store_exists(object::object_address(&store))) {
+            let fa_store = borrow_store_resource(&store);
+            assert!(
+                !has_balance_dispatch_function(fa_store.metadata),
+                error::invalid_argument(EINVALID_DISPATCHABLE_OPERATIONS)
+            );
+            fa_store.balance
+        } else { 0 }
+    }
+
+    #[view]
+    /// Get the balance of a given store without sanity check.
+    public fun balance_without_sanity_check<T: key>(store: Object<T>): u64 acquires FungibleStore {
         if (store_exists(object::object_address(&store))) {
             borrow_store_resource(&store).balance
         } else { 0 }
@@ -578,9 +613,8 @@ module initia_std::fungible_asset {
         metadata: Object<Metadata>
     ): bool acquires DispatchFunctionStore {
         let metadata_addr = object::object_address(&metadata);
-        // Short circuit on APT for better perf
-        if (metadata_addr != @initia_std
-            && exists<DispatchFunctionStore>(metadata_addr)) {
+        // Short circuit on INIT for better perf
+        if (metadata_addr != @init_fa && exists<DispatchFunctionStore>(metadata_addr)) {
             option::is_some(
                 &borrow_global<DispatchFunctionStore>(metadata_addr).deposit_function
             )
@@ -603,12 +637,30 @@ module initia_std::fungible_asset {
         metadata: Object<Metadata>
     ): bool acquires DispatchFunctionStore {
         let metadata_addr = object::object_address(&metadata);
-        // Short circuit on APT for better perf
-        if (metadata_addr != @initia_std
-            && exists<DispatchFunctionStore>(metadata_addr)) {
+        // Short circuit on INIT for better perf
+        if (metadata_addr != @init_fa && exists<DispatchFunctionStore>(metadata_addr)) {
             option::is_some(
                 &borrow_global<DispatchFunctionStore>(metadata_addr).withdraw_function
             )
+        } else { false }
+    }
+
+    fun has_balance_dispatch_function(
+        metadata: Object<Metadata>
+    ): bool acquires DispatchFunctionStore {
+        let metadata_addr = object::object_address(&metadata);
+        // Short circuit on INIT for better perf
+        if (metadata_addr != @init_fa && exists<DispatchFunctionStore>(metadata_addr)) {
+            option::is_some(
+                &borrow_global<DispatchFunctionStore>(metadata_addr).derived_balance_function
+            )
+        } else { false }
+    }
+
+    fun has_supply_dispatch_function(metadata_addr: address): bool {
+        // Short circuit on INIT for better perf
+        if (metadata_addr != @init_fa) {
+            exists<DeriveSupply>(metadata_addr)
         } else { false }
     }
 
@@ -1286,7 +1338,7 @@ module initia_std::fungible_asset {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_transfer_with_ref(creator: &signer, aaron: &signer) acquires FungibleStore, Supply {
+    fun test_transfer_with_ref(creator: &signer, aaron: &signer) acquires FungibleStore, Supply, DispatchFunctionStore {
         let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
             create_fungible_asset(creator);
         let metadata = mint_ref.metadata;

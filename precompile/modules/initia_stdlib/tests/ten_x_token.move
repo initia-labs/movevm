@@ -39,14 +39,14 @@ module 0xcafe::ten_x_token {
 
     public fun derived_balance<T: key>(store: Object<T>): u64 {
         // Derived value is always 10x!
-        fungible_asset::balance(store) * 10
+        fungible_asset::balance_without_sanity_check(store) * 10
     }
 
     public fun derived_supply<T: key>(metadata: Object<T>): Option<u128> {
         // Derived supply is 10x.
-        if (option::is_some(&fungible_asset::supply(metadata))) {
+        if (option::is_some(&fungible_asset::supply_without_sanity_check(metadata))) {
             return option::some(
-                option::extract(&mut fungible_asset::supply(metadata)) * 10
+                option::extract(&mut fungible_asset::supply_without_sanity_check(metadata)) * 10
             )
         };
         option::none()

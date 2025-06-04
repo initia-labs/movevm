@@ -9,6 +9,7 @@ module minitia_std::coin {
 
     use minitia_std::event;
     use minitia_std::primary_fungible_store;
+    use minitia_std::dispatchable_fungible_asset;
     use minitia_std::fungible_asset::{
         Self,
         MintRef,
@@ -330,7 +331,7 @@ module minitia_std::coin {
     #[view]
     /// Get the current supply from the `metadata` object.
     public fun supply(metadata: Object<Metadata>): Option<u128> {
-        fungible_asset::supply(metadata)
+        dispatchable_fungible_asset::derived_supply(metadata)
     }
 
     #[view]
