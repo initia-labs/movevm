@@ -19,7 +19,6 @@ module minitia_std::ten_x_token_tests {
         assert!(
             dispatchable_fungible_asset::derived_supply(metadata) == option::some(0), 2
         );
-        std::debug::print(&metadata);
         // Mint
         let fa = fungible_asset::mint(&mint, 100);
         dispatchable_fungible_asset::deposit(creator_store, fa);
