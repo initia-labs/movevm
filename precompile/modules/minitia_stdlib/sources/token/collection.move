@@ -280,7 +280,12 @@ module minitia_std::collection {
         };
 
         event::emit(
-            CreateEvent { collection: constructor_ref.self, description, name, uri }
+            CreateEvent {
+                collection: object::address_from_constructor_ref(&constructor_ref),
+                description,
+                name,
+                uri
+            }
         );
         constructor_ref
     }
