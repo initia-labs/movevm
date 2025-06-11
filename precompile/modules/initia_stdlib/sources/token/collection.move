@@ -158,22 +158,6 @@ module initia_std::collection {
 
         let supply = FixedSupply { current_supply: 0, max_supply, total_minted: 0 };
 
-        event::emit(
-            CreateEvent {
-                collection: object::address_from_constructor_ref(&constructor_ref),
-                creator: signer::address_of(creator),
-                name,
-                description,
-                uri,
-                royalty: if (option::is_some(&royalty)) {
-                    option::some(royalty::royalty(option::borrow(&royalty)))
-                } else {
-                    option::none()
-                },
-                max_supply: option::some(max_supply)
-            }
-        );
-
         create_collection_internal(
             creator,
             constructor_ref,
@@ -181,7 +165,8 @@ module initia_std::collection {
             name,
             royalty,
             uri,
-            option::some(supply)
+            option::some(supply),
+            option::some(max_supply)
         )
     }
 
@@ -199,22 +184,6 @@ module initia_std::collection {
 
         let supply = UnlimitedSupply { current_supply: 0, total_minted: 0 };
 
-        event::emit(
-            CreateEvent {
-                collection: object::address_from_constructor_ref(&constructor_ref),
-                creator: signer::address_of(creator),
-                name,
-                description,
-                uri,
-                royalty: if (option::is_some(&royalty)) {
-                    option::some(royalty::royalty(option::borrow(&royalty)))
-                } else {
-                    option::none()
-                },
-                max_supply: option::none()
-            }
-        );
-
         create_collection_internal(
             creator,
             constructor_ref,
@@ -222,7 +191,8 @@ module initia_std::collection {
             name,
             royalty,
             uri,
-            option::some(supply)
+            option::some(supply),
+            option::none()
         )
     }
 
@@ -246,6 +216,7 @@ module initia_std::collection {
             name,
             royalty,
             uri,
+            option::none(),
             option::none()
         )
     }
@@ -269,7 +240,8 @@ module initia_std::collection {
         name: String,
         royalty: Option<Royalty>,
         uri: String,
-        supply: Option<Supply>
+        supply: Option<Supply>,
+        max_supply: Option<u64>
     ): ConstructorRef {
         assert_collection_name(&name);
 
@@ -294,6 +266,15 @@ module initia_std::collection {
         };
         move_to(object_signer, collection);
 
+        let royalty_value: Option<BigDecimal> = option::none();
+        if (option::is_some(&royalty)) {
+            royalty_value = option::some(royalty::royalty(option::borrow(&royalty)));
+            royalty::init(
+                &constructor_ref,
+                option::extract(&mut royalty)
+            )
+        };
+
         if (option::is_some(&supply)) {
             move_to(object_signer, option::destroy_some(supply));
             let collection_addr = signer::address_of(object_signer);
@@ -304,15 +285,23 @@ module initia_std::collection {
                     name
                 }
             );
+            event::emit(
+                CreateEvent {
+                    collection: object::address_from_constructor_ref(&constructor_ref),
+                    creator: signer::address_of(creator),
+                    name,
+                    description,
+                    uri,
+                    royalty: if (option::is_some(&royalty)) {
+                        option::some(royalty::royalty(option::borrow(&royalty)))
+                    } else {
+                        option::none()
+                    },
+                    max_supply
+                }
+            );
         } else {
             option::destroy_none(supply)
-        };
-
-        if (option::is_some(&royalty)) {
-            royalty::init(
-                &constructor_ref,
-                option::extract(&mut royalty)
-            )
         };
 
         constructor_ref
