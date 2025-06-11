@@ -73,6 +73,15 @@ module initia_std::collection {
     }
 
     #[event]
+    // Contains the minted NFT information.
+    struct CreateEvent has drop, store {
+        collection: address,
+        description: String,
+        name: String,
+        uri: String
+    }
+
+    #[event]
     /// Contains the mutated fields name. This makes the life of indexers easier, so that they can
     /// directly understand the behavior in a writeset.
     struct MutationEvent has drop, store {
@@ -270,6 +279,9 @@ module initia_std::collection {
             )
         };
 
+        event::emit(
+            CreateEvent { collection: constructor_ref.self, description, name, uri }
+        );
         constructor_ref
     }
 

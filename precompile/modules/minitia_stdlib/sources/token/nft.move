@@ -69,8 +69,8 @@ module minitia_std::nft {
     // Contains the minted NFT information.
     struct CreateEvent has drop, store {
         token_id: String,
-        uri: String,
-        description: String
+        description: String,
+        uri: String
     }
 
     #[event]
@@ -144,7 +144,7 @@ module minitia_std::nft {
             )
         };
 
-        event::emit(CreateEvent { token_id, uri, description });
+        event::emit(CreateEvent { token_id, description, uri });
     }
 
     /// Creates a new nft object from a nft name and returns the ConstructorRef for
