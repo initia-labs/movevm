@@ -24,6 +24,7 @@ module minitia_std::collection {
     use std::vector;
     use std::bcs;
     use minitia_std::event;
+    use minitia_std::bigdecimal::{BigDecimal};
     use minitia_std::object::{Self, ConstructorRef, Object};
     use minitia_std::table::{Self, Table};
     use minitia_std::hex;
@@ -73,15 +74,6 @@ module minitia_std::collection {
     }
 
     #[event]
-    // Contains the minted NFT information.
-    struct CreateEvent has drop, store {
-        collection: address,
-        description: String,
-        name: String,
-        uri: String
-    }
-
-    #[event]
     /// Contains the mutated fields name. This makes the life of indexers easier, so that they can
     /// directly understand the behavior in a writeset.
     struct MutationEvent has drop, store {
@@ -116,6 +108,18 @@ module minitia_std::collection {
         collection: address,
         creator: address,
         name: String
+    }
+
+    #[event]
+    // Contains the minted NFT information.
+    struct CreateEvent has drop, store {
+        collection: address,
+        creator: address,
+        name: String,
+        description: String,
+        uri: String,
+        royalty: Option<BigDecimal>,
+        max_supply: Option<u64>
     }
 
     #[event]
@@ -154,6 +158,22 @@ module minitia_std::collection {
 
         let supply = FixedSupply { current_supply: 0, max_supply, total_minted: 0 };
 
+        event::emit(
+            CreateEvent {
+                collection: object::address_from_constructor_ref(&constructor_ref),
+                creator: signer::address_of(creator),
+                name,
+                description,
+                uri,
+                royalty: if (option::is_some(&royalty)) {
+                    option::some(royalty::royalty(option::borrow(&royalty)))
+                } else {
+                    option::none()
+                },
+                max_supply: option::some(max_supply)
+            }
+        );
+
         create_collection_internal(
             creator,
             constructor_ref,
@@ -178,6 +198,22 @@ module minitia_std::collection {
         let constructor_ref = object::create_named_object(creator, collection_seed);
 
         let supply = UnlimitedSupply { current_supply: 0, total_minted: 0 };
+
+        event::emit(
+            CreateEvent {
+                collection: object::address_from_constructor_ref(&constructor_ref),
+                creator: signer::address_of(creator),
+                name,
+                description,
+                uri,
+                royalty: if (option::is_some(&royalty)) {
+                    option::some(royalty::royalty(option::borrow(&royalty)))
+                } else {
+                    option::none()
+                },
+                max_supply: option::none()
+            }
+        );
 
         create_collection_internal(
             creator,
@@ -279,14 +315,6 @@ module minitia_std::collection {
             )
         };
 
-        event::emit(
-            CreateEvent {
-                collection: object::address_from_constructor_ref(&constructor_ref),
-                description,
-                name,
-                uri
-            }
-        );
         constructor_ref
     }
 
