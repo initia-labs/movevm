@@ -1,4 +1,5 @@
-use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte};
+use move_core_types::gas_algebra::{InternalGas, InternalGasPerArg, InternalGasPerByte, InternalGasPerTypeNode};
+use crate::InternalGasPerAbstractValueUnit;
 
 crate::macros::define_gas_parameters!(
     MoveStdlibGasParameters,
@@ -11,6 +12,8 @@ crate::macros::define_gas_parameters!(
         [bcs_serialized_size_base: InternalGas, "bcs.serialized_size.base", 735],
         [bcs_serialized_size_per_byte_serialized: InternalGasPerByte, "bcs.serialized_size.per_byte_serialized", 36],
         [bcs_serialized_size_failure: InternalGas, "bcs.serialized_size.failure", 3676],
+        [bcs_constant_serialized_size_base: InternalGas, "bcs.constant_serialized_size.base", 735],
+        [bcs_constant_serialized_size_per_type_node: InternalGasPerTypeNode, "bcs.constant_serialized_size.per_type_node", 40],
 
         [hash_sha2_256_base: InternalGas, "hash.sha2_256.base", 11028],
         [hash_sha2_256_per_byte: InternalGasPerByte, "hash.sha2_256.per_byte", 183],
@@ -31,5 +34,13 @@ crate::macros::define_gas_parameters!(
         [string_index_of_base: InternalGas, "string.index_of.base", 1470],
         [string_index_of_per_byte_pattern: InternalGasPerByte, "string.index_of.per_byte_pattern", 73],
         [string_index_of_per_byte_searched: InternalGasPerByte, "string.index_of.per_byte_searched", 36],
+
+        [cmp_compare_base: InternalGas, "cmp.compare.base", 367],
+        [cmp_compare_per_abs_val_unit: InternalGasPerAbstractValueUnit, "cmp.compare.per_abs_val_unit", 14],
+
+        [vector_move_range_base: InternalGas, "vector.move_range.base", 4000],
+        [vector_move_range_per_index_moved: InternalGasPerArg, "vector.move_range.per_index_moved", 10],
+
+        [mem_swap_base: InternalGas, "mem.swap.base", 1500],
     ]
 );

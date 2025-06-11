@@ -4,13 +4,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::gas_algebra::NumBytes;
+use move_binary_format::errors::PartialVMError;
+use move_core_types::{account_address::AccountAddress, gas_algebra::{NumBytes, NumTypeNodes}, u256, value::{MoveStructLayout, MoveTypeLayout}, vm_status::{sub_status::NFE_BCS_SERIALIZATION_FAILURE, StatusCode}};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::PartialVMResult,
     value_serde::ValueSerDeContext,
-    values::{values_impl::Reference, Value},
+    values::{values_impl::Reference, Struct, Value},
 };
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
@@ -22,11 +23,9 @@ use crate::{
     safely_pop_arg,
 };
 
-// See stdlib/error.move
-const ECATEGORY_INVALID_ARGUMENT: u64 = 0x1;
-
-// native errors always start from 100
-const BCS_SERIALIZATION_FAILURE: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
+pub fn create_option_u64(value: Option<u64>) -> Value {
+    Value::struct_(Struct::pack(vec![Value::vector_u64(value)]))
+}
 
 /***************************************************************************************************
  * native fun to_bytes
@@ -62,7 +61,7 @@ fn native_to_bytes(
         Err(_) => {
             context.charge(gas_params.bcs_to_bytes_failure)?;
             return Err(SafeNativeError::Abort {
-                abort_code: BCS_SERIALIZATION_FAILURE,
+                abort_code: NFE_BCS_SERIALIZATION_FAILURE,
             });
         }
     };
@@ -80,7 +79,7 @@ fn native_to_bytes(
         None => {
             context.charge(gas_params.bcs_to_bytes_failure)?;
             return Err(SafeNativeError::Abort {
-                abort_code: BCS_SERIALIZATION_FAILURE,
+                abort_code: NFE_BCS_SERIALIZATION_FAILURE,
             });
         }
     };
@@ -123,7 +122,7 @@ fn native_serialized_size(
 
             // Reuse the same abort code as bcs::to_bytes.
             return Err(SafeNativeError::Abort {
-                abort_code: BCS_SERIALIZATION_FAILURE,
+                abort_code: NFE_BCS_SERIALIZATION_FAILURE,
             });
         }
     };
@@ -152,6 +151,110 @@ fn serialized_size_impl(
         .serialized_size(&value, &ty_layout)
 }
 
+fn native_constant_serialized_size(
+    context: &mut SafeNativeContext,
+    mut ty_args: Vec<Type>,
+    _args: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    debug_assert!(ty_args.len() == 1);
+
+    let gas_params = &context.native_gas_params.move_stdlib;
+
+    context.charge(gas_params.bcs_constant_serialized_size_base)?;
+
+    let ty = ty_args.pop().unwrap();
+    let ty_layout = context.type_to_type_layout(&ty)?;
+
+    let (visited_count, serialized_size_result) = constant_serialized_size(&ty_layout);
+    context
+        .charge(gas_params.bcs_constant_serialized_size_per_type_node * NumTypeNodes::new(visited_count))?;
+
+    let result = match serialized_size_result {
+        Ok(value) => create_option_u64(value.map(|v| v as u64)),
+        Err(_) => {
+            context.charge(gas_params.bcs_serialized_size_failure)?;
+
+            // Re-use the same abort code as bcs::to_bytes.
+            return Err(SafeNativeError::Abort {
+                abort_code: NFE_BCS_SERIALIZATION_FAILURE,
+            });
+        },
+    };
+
+    Ok(smallvec![result])
+}
+
+/// If given type has a constant serialized size (irrespective of the instance), it returns the serialized
+/// size in bytes any value would have.
+/// Otherwise it returns None.
+/// First element of the returned tuple represents number of visited nodes, used to charge gas.
+fn constant_serialized_size(ty_layout: &MoveTypeLayout) -> (u64, PartialVMResult<Option<usize>>) {
+    let mut visited_count = 1;
+    let bcs_size_result = match ty_layout {
+        MoveTypeLayout::Bool => bcs::serialized_size(&false).map(Some),
+        MoveTypeLayout::U8 => bcs::serialized_size(&0u8).map(Some),
+        MoveTypeLayout::U16 => bcs::serialized_size(&0u16).map(Some),
+        MoveTypeLayout::U32 => bcs::serialized_size(&0u32).map(Some),
+        MoveTypeLayout::U64 => bcs::serialized_size(&0u64).map(Some),
+        MoveTypeLayout::U128 => bcs::serialized_size(&0u128).map(Some),
+        MoveTypeLayout::U256 => bcs::serialized_size(&u256::U256::zero()).map(Some),
+        MoveTypeLayout::Address => bcs::serialized_size(&AccountAddress::ZERO).map(Some),
+        // signer's size is VM implementation detail, and can change at will.
+        MoveTypeLayout::Signer => Ok(None),
+        // vectors have no constant size
+        MoveTypeLayout::Vector(_) => Ok(None),
+        // enums and functions have no constant size
+        MoveTypeLayout::Struct(
+            MoveStructLayout::RuntimeVariants(_) | MoveStructLayout::WithVariants(_),
+        )
+        | MoveTypeLayout::Function(..) => Ok(None),
+        MoveTypeLayout::Struct(MoveStructLayout::Runtime(fields)) => {
+            let mut total = Some(0);
+            for field in fields {
+                let (cur_visited_count, cur) = constant_serialized_size(field);
+                visited_count += cur_visited_count;
+                match cur {
+                    Err(e) => return (visited_count, Err(e)),
+                    Ok(Some(cur_value)) => total = total.map(|v| v + cur_value),
+                    Ok(None) => {
+                        total = None;
+                        break;
+                    },
+                }
+            }
+            Ok(total)
+        },
+        MoveTypeLayout::Struct(MoveStructLayout::WithFields(_))
+        | MoveTypeLayout::Struct(MoveStructLayout::WithTypes { .. }) => {
+            return (
+                visited_count,
+                Err(
+                    PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR).with_message(
+                        "Only runtime types expected, but found WithFields/WithTypes".to_string(),
+                    ),
+                ),
+            )
+        },
+        MoveTypeLayout::Native(_, inner) => {
+            let (cur_visited_count, cur) = constant_serialized_size(inner);
+            visited_count += cur_visited_count;
+            match cur {
+                Err(e) => return (visited_count, Err(e)),
+                Ok(v) => Ok(v),
+            }
+        },
+    };
+    (
+        visited_count,
+        bcs_size_result.map_err(|e| {
+            PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR).with_message(format!(
+                "failed to compute serialized size of a value: {:?}",
+                e
+            ))
+        }),
+    )
+}
+
 /***************************************************************************************************
  * module
  **************************************************************************************************/
@@ -161,6 +264,7 @@ pub fn make_all(
     let funcs = [
         ("to_bytes", native_to_bytes as RawSafeNative),
         ("serialized_size", native_serialized_size),
+        ("constant_serialized_size", native_constant_serialized_size),
     ];
 
     builder.make_named_natives(funcs)
