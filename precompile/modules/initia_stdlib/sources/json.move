@@ -92,12 +92,32 @@ module initia_std::json {
         marshal_internal(value)
     }
 
+    /// Marshal data to JSON bytes.
+    /// Same with `marshal` but it has not drop restriction.
+    ///
+    /// NOTE: key `_type_` is converted to `@type`
+    /// NOTE: key `_move_` is converted to `move`
+    /// NOTE: key `_signer_` is converted to `signer`
+    public fun marshal_v2<T>(value: &T): vector<u8> {
+        marshal_internal(value)
+    }
+
     /// Marshal data to JSON string.
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
     /// /// NOTE: key `_signer_` is converted to `signer`
     public fun marshal_to_string<T: drop>(value: &T): String {
+        marshal_to_string_internal(value)
+    }
+
+    /// Marshal data to JSON string.
+    /// Same with `marshal_to_string` but it has not drop restriction.
+    ///
+    /// NOTE: key `_type_` is converted to `@type`
+    /// NOTE: key `_move_` is converted to `move`
+    /// NOTE: key `_signer_` is converted to `signer`
+    public fun marshal_to_string_v2<T>(value: &T): String {
         marshal_to_string_internal(value)
     }
 
@@ -110,8 +130,8 @@ module initia_std::json {
         unmarshal_internal(json)
     }
 
-    native fun marshal_internal<T: drop>(value: &T): vector<u8>;
-    native fun marshal_to_string_internal<T: drop>(value: &T): String;
+    native fun marshal_internal<T>(value: &T): vector<u8>;
+    native fun marshal_to_string_internal<T>(value: &T): String;
     native fun unmarshal_internal<T: drop>(json: vector<u8>): T;
 
     #[test_only]
