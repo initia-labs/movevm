@@ -93,7 +93,7 @@ module initia_std::json {
     }
 
     /// Marshal data to JSON bytes.
-    /// Same with `marshal` but it has not drop restriction.
+    /// Same as `marshal` but without the drop restriction on type parameter T.
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
@@ -112,7 +112,7 @@ module initia_std::json {
     }
 
     /// Marshal data to JSON string.
-    /// Same with `marshal_to_string` but it has not drop restriction.
+    /// Same as `marshal_to_string` but without the drop restriction on type parameter T.
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
