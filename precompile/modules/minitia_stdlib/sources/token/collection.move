@@ -23,8 +23,8 @@ module minitia_std::collection {
     use std::string::{Self, String};
     use std::vector;
     use std::bcs;
+    use std::json::{Self, JSONObject};
     use minitia_std::event;
-    use minitia_std::bigdecimal::{BigDecimal};
     use minitia_std::object::{Self, ConstructorRef, Object};
     use minitia_std::table::{Self, Table};
     use minitia_std::hex;
@@ -112,14 +112,14 @@ module minitia_std::collection {
 
     #[event]
     // Contains the minted NFT information.
-    struct CreateEvent has drop, store {
+    struct CreateEvent has drop {
         collection: address,
         creator: address,
         name: String,
         description: String,
         uri: String,
-        royalty: Option<BigDecimal>,
-        max_supply: Option<u64>
+        royalty: Option<Royalty>,
+        supply: Option<JSONObject>
     }
 
     #[event]
@@ -165,8 +165,7 @@ module minitia_std::collection {
             name,
             royalty,
             uri,
-            option::some(supply),
-            option::some(max_supply)
+            option::some(supply)
         )
     }
 
@@ -191,8 +190,7 @@ module minitia_std::collection {
             name,
             royalty,
             uri,
-            option::some(supply),
-            option::none()
+            option::some(supply)
         )
     }
 
@@ -216,7 +214,6 @@ module minitia_std::collection {
             name,
             royalty,
             uri,
-            option::none(),
             option::none()
         )
     }
@@ -240,8 +237,7 @@ module minitia_std::collection {
         name: String,
         royalty: Option<Royalty>,
         uri: String,
-        supply: Option<Supply>,
-        max_supply: Option<u64>
+        supply: Option<Supply>
     ): ConstructorRef {
         assert_collection_name(&name);
 
@@ -266,14 +262,17 @@ module minitia_std::collection {
         };
         move_to(object_signer, collection);
 
-        let royalty_value: Option<BigDecimal> = option::none();
-        if (option::is_some(&royalty)) {
-            royalty_value = option::some(royalty::royalty(option::borrow(&royalty)));
-            royalty::init(
-                &constructor_ref,
-                option::extract(&mut royalty)
-            )
-        };
+        event::emit(
+            CreateEvent {
+                collection: object::address_from_constructor_ref(&constructor_ref),
+                creator: signer::address_of(creator),
+                name,
+                description,
+                uri,
+                royalty,
+                supply: json::unmarshal(json::marshal_v2(&supply))
+            }
+        );
 
         if (option::is_some(&supply)) {
             move_to(object_signer, option::destroy_some(supply));
@@ -285,19 +284,15 @@ module minitia_std::collection {
                     name
                 }
             );
-            event::emit(
-                CreateEvent {
-                    collection: object::address_from_constructor_ref(&constructor_ref),
-                    creator: signer::address_of(creator),
-                    name,
-                    description,
-                    uri,
-                    royalty: royalty_value,
-                    max_supply
-                }
-            );
         } else {
             option::destroy_none(supply)
+        };
+
+        if (option::is_some(&royalty)) {
+            royalty::init(
+                &constructor_ref,
+                option::extract(&mut royalty)
+            )
         };
 
         constructor_ref
