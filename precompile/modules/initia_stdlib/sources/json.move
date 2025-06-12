@@ -78,6 +78,31 @@ module initia_std::json {
         }
     }
 
+    /// Set or overwrite the element in the JSON object.
+    /// Same as `set_elem` but without the drop restriction on type parameter T.
+    public fun set_elem_v2<T>(
+        obj: &mut JSONObject, key: String, value: &T
+    ) {
+        let key_bytes = string::bytes(&key);
+        let (found, idx) = vector::find(
+            &obj.elems,
+            |elem| {
+                use_elem(elem);
+                elem.key == *key_bytes
+            }
+        );
+
+        if (!found) {
+            vector::push_back(
+                &mut obj.elems,
+                Element { key: *key_bytes, value: marshal_v2(value) }
+            );
+        } else {
+            let elem = vector::borrow_mut(&mut obj.elems, idx);
+            elem.value = marshal_v2(value);
+        }
+    }
+
     //
     // (only on compiler v1) for preventing compile error; because of inferring type issue
     //
