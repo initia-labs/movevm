@@ -74,6 +74,8 @@ crate::macros::define_gas_parameters!(
 
     [transaction_context_get_transaction_hash_base: InternalGas, "transaction_context.get_transaction_hash.base", 735],
     [transaction_context_generate_unique_address_base: InternalGas, "transaction_context.generate_unique_address.base", 735],
+    [transaction_context_entry_function_payload_base: InternalGas, "transaction_context.entry_function_payload.base", 735],
+    [transaction_context_entry_function_payload_per_byte_in_str: InternalGasPerByte, "transaction_context.entry_function_payload.per_abstract_memory_unit", 18],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [staking_delegate_base: InternalGas, "staking.delegate.base", 50_000 * SCALING],
@@ -98,6 +100,7 @@ crate::macros::define_gas_parameters!(
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [block_get_block_info_base_cost: InternalGas, "block.get_block_info.base", 100 * SCALING],
+    [block_get_chain_id_base_cost: InternalGas, "block.get_chain_id.base", 100 * SCALING],
     [oracle_get_price_base_cost: InternalGas, "oracle.get_prices.base_cost", 1500 * SCALING],
     [oracle_get_price_per_byte: InternalGasPerByte, "oracle.get_prices.per_byte", 18],
 
@@ -110,6 +113,7 @@ crate::macros::define_gas_parameters!(
     [function_info_check_dispatch_type_compatibility_impl_base: InternalGas, "function_info.check_dispatch_type_compatibility_impl.base", 1002],
     [function_info_load_function_base: InternalGas, "function_info.load_function.base", 551],
     [dispatchable_fungible_asset_dispatch_base: InternalGas, "dispatchable_fungible_asset.dispatch.base", 551],
+    [dispatchable_authenticate_dispatch_base: InternalGas, "dispatchable_authenticate.dispatch.base" , 551],
 
     [biguint_add_base: InternalGas, "biguint.add.base", 588],
     [biguint_add_per_byte: InternalGasPerByte, "biguint.add.per_byte", 3],

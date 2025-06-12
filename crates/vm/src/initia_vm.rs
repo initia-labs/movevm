@@ -44,17 +44,7 @@ use initia_move_storage::{
     script_cache::InitiaScriptCache, state_view::StateView, table_resolver::TableResolver,
 };
 use initia_move_types::{
-    account::Accounts,
-    cosmos::CosmosMessages,
-    env::Env,
-    gas_usage::GasUsageSet,
-    json_event::JsonEvents,
-    message::{Message, MessageOutput, MessagePayload},
-    module::ModuleBundle,
-    staking_change_set::StakingChangeSet,
-    view_function::{ViewFunction, ViewOutput},
-    vm_config::InitiaVMConfig,
-    write_set::WriteSet,
+    account::Accounts, cosmos::CosmosMessages, env::Env, gas_usage::GasUsageSet, json_event::JsonEvents, message::{Message, MessageOutput, MessagePayload}, module::ModuleBundle, staking_change_set::StakingChangeSet, user_transaction_context::{EntryFunctionPayload, UserTransactionContext}, view_function::{ViewFunction, ViewOutput}, vm_config::InitiaVMConfig, write_set::WriteSet
 };
 
 use crate::{
@@ -140,6 +130,7 @@ impl InitiaVM {
         env: &Env,
         resolver: &'r R,
         table_resolver: &'r mut T,
+        user_transaction_context_opt: Option<UserTransactionContext>,
     ) -> SessionExt<'r, R> {
         let mut extensions = NativeContextExtensions::default();
         let tx_hash: [u8; 32] = env
@@ -150,10 +141,11 @@ impl InitiaVM {
             .session_id()
             .try_into()
             .expect("HashValue should be converted to [u8; 32]");
-
+        
         extensions.add(NativeAccountContext::new(api, env.next_account_number()));
         extensions.add(NativeTableContext::new(session_id, table_resolver));
         extensions.add(NativeBlockContext::new(
+            env.chain_id().to_string(),
             env.block_height(),
             env.block_timestamp(),
         ));
@@ -161,7 +153,7 @@ impl InitiaVM {
         extensions.add(NativeStakingContext::new(api));
         extensions.add(NativeQueryContext::new(api));
         extensions.add(NativeCosmosContext::default());
-        extensions.add(NativeTransactionContext::new(tx_hash, session_id));
+        extensions.add(NativeTransactionContext::new(tx_hash, session_id, user_transaction_context_opt));
         extensions.add(NativeEventContext::default());
         extensions.add(NativeOracleContext::new(api));
 
@@ -195,7 +187,7 @@ impl InitiaVM {
         let gas_params = self.gas_params.clone();
         let mut gas_meter = InitiaGasMeter::new(gas_params, gas_limit);
 
-        let session = self.create_session(api, env, move_resolver, table_resolver);
+        let session = self.create_session(api, env, move_resolver, table_resolver, None);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
@@ -283,7 +275,7 @@ impl InitiaVM {
             self.module_cache.clone(),
         );
         let move_resolver = code_storage.state_view_impl();
-        let mut session = self.create_session(api, env, move_resolver, table_resolver);
+        let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
@@ -355,7 +347,22 @@ impl InitiaVM {
         traversal_context: &mut TraversalContext,
     ) -> Result<MessageOutput, VMStatus> {
         let move_resolver = code_storage.state_view_impl();
-        let mut session = self.create_session(api, env, move_resolver, table_resolver);
+        let user_transaction_context_opt = match payload {
+            MessagePayload::Execute(entry_function) => {
+                Some(UserTransactionContext::new(
+                    senders[0],
+                    Some(EntryFunctionPayload::new(
+                        entry_function.module().address,
+                    entry_function.module().name.to_string(),
+                    entry_function.function().to_string(),
+                    entry_function.ty_args().iter().map(|ty| ty.to_string()).collect(),
+                    entry_function.args().iter().map(|arg| arg.to_vec()).collect(),
+                    ))
+                ))
+            }
+            MessagePayload::Script(..) => None,
+        };
+        let mut session = self.create_session(api, env, move_resolver, table_resolver, user_transaction_context_opt);
 
         match payload {
             MessagePayload::Script(script) => {

@@ -73,6 +73,7 @@ impl MoveHarness {
         let mut table_resolver = MockTableState::new(&state);
 
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,
@@ -165,6 +166,7 @@ impl MoveHarness {
         let mut gas_meter = self.vm.create_gas_meter(gas_limit);
 
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,
@@ -306,6 +308,7 @@ impl MoveHarness {
 
     pub fn run_message(&mut self, message: Message) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,
@@ -335,6 +338,7 @@ impl MoveHarness {
         message: Message,
     ) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,

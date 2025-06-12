@@ -18,6 +18,7 @@
 #[macro_use]
 mod macros;
 
+pub mod abstract_algebra;
 mod algebra;
 pub mod initia_stdlib;
 mod instr;

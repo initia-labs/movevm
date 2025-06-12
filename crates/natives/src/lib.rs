@@ -5,6 +5,7 @@ mod helpers;
 mod interface;
 
 pub mod account;
+pub mod account_abstraction;
 pub mod address;
 pub mod any;
 pub mod base64;
