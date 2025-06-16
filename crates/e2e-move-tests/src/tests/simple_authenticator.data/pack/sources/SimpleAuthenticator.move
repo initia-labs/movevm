@@ -1,4 +1,4 @@
-module 0x2::simple_authenticator {
+module 0xcafe::simple_authenticator {
     use std::auth_data::{Self, AbstractionAuthData};
 
     public fun authenticate(

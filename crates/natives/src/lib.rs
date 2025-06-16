@@ -58,6 +58,7 @@ pub fn initia_move_natives(
     }
 
     add_natives_from_module!("account", account::make_all(builder));
+    add_natives_from_module!("account_abstraction", account_abstraction::make_all(builder));
     add_natives_from_module!("address", address::make_all(builder));
     add_natives_from_module!("block", block::make_all(builder));
     add_natives_from_module!("code", code::make_all(builder));

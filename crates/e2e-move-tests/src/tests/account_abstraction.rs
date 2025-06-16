@@ -21,6 +21,7 @@ type TestInput<'a> = (
 fn run_tests(tests: Vec<TestInput>) {
     let minter_addr =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
+    let deploy_addr = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let mut h = MoveHarness::new();
     h.initialize();
 
@@ -31,7 +32,7 @@ fn run_tests(tests: Vec<TestInput>) {
     h.commit(output, true);
 
     let output = h
-        .publish_package(&minter_addr, "src/tests/simple_authenticator.data/pack", UpgradePolicy::Compatible)
+        .publish_package(&deploy_addr, "src/tests/simple_authenticator.data/pack", UpgradePolicy::Compatible)
         .expect("should success");
     h.commit(output, true);
 
@@ -61,14 +62,16 @@ fn run_tests(tests: Vec<TestInput>) {
 fn test_simple_authenticator() {
     let mut tests = vec![];
 
-    let module_address = AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
+    let minter_address =
+        AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
+    let module_address = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let module_name = "simple_authenticator";
     let function_name = "authenticate";
-
+    
     let receiver_addr = AccountAddress::random();
 
     let test_init = (
-        vec![module_address],
+        vec![minter_address],
         "0x2::StdCoin::init",
         vec![],
         vec![],
@@ -78,7 +81,7 @@ fn test_simple_authenticator() {
     tests.push(test_init);
 
     let test_mint = (
-        vec![module_address],
+        vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
@@ -98,10 +101,14 @@ fn test_simple_authenticator() {
     tests.push(test_balance);
 
     let test_enable_account_abstraction = (
-        vec![module_address],
+        vec![minter_address],
         "0x1::account_abstraction::add_authentication_function",
         vec![],
-        vec![module_address.to_vec(), module_name.as_bytes().to_vec(), function_name.as_bytes().to_vec()],
+        vec![
+            module_address.to_vec(), 
+            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(), 
+            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap()
+        ],
         None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
@@ -122,7 +129,7 @@ fn test_simple_authenticator() {
     let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
 
     let test_mint_with_account_abstraction = (
-        vec![module_address],
+        vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],

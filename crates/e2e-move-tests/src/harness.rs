@@ -9,8 +9,7 @@ use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
-use move_model::metadata::{CompilerVersion, LanguageVersion};
-use move_package::{BuildConfig, CompilerConfig};
+use move_package::BuildConfig;
 
 use crate::test_utils::mock_chain::{MockAPI, MockChain, MockState, MockTableState};
 use crate::test_utils::parser::MemberId;
@@ -203,11 +202,6 @@ impl MoveHarness {
                 install_dir: Some(package_path.clone()),
                 generate_docs: false,
                 generate_abis: false,
-                compiler_config: CompilerConfig {
-                    compiler_version: Some(CompilerVersion::V2_1),
-                    language_version: Some(LanguageVersion::V2_1),
-                    ..Default::default()
-                },
                 ..Default::default()
             },
             None,
