@@ -76,6 +76,7 @@ fn run_tests(tests: Vec<TestInput>) {
             str::parse(entry).unwrap(),
             ty_args.clone(),
             args,
+            None,
         );
         exp_output.check_execute_output(&vm_output);
 

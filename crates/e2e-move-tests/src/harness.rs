@@ -9,7 +9,8 @@ use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_core_types::vm_status::VMStatus;
-use move_package::BuildConfig;
+use move_model::metadata::{CompilerVersion, LanguageVersion};
+use move_package::{BuildConfig, CompilerConfig};
 
 use crate::test_utils::mock_chain::{MockAPI, MockChain, MockState, MockTableState};
 use crate::test_utils::parser::MemberId;
@@ -79,6 +80,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            None,
         );
 
         let output = self
@@ -114,7 +116,7 @@ impl MoveHarness {
     ) -> Result<MessageOutput, VMStatus> {
         let code = self.compile_package(path);
         let msg = self.create_publish_message(*acc, code, upgrade_policy);
-        self.run_message(msg)
+        self.run_message(msg, None)
     }
 
     pub fn run_entry_function(
@@ -123,10 +125,11 @@ impl MoveHarness {
         fun: MemberId,
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
+        signatures: Option<Vec<Vec<u8>>>,
     ) -> Result<MessageOutput, VMStatus> {
         let entry_function = MoveHarness::create_entry_function(fun, ty_args, args);
         let msg = self.create_entry_function_message(senders, entry_function);
-        self.run_message(msg)
+        self.run_message(msg, signatures)
     }
 
     pub fn run_entry_function_with_json(
@@ -135,10 +138,11 @@ impl MoveHarness {
         fun: MemberId,
         ty_args: Vec<TypeTag>,
         args: Vec<String>,
+        signatures: Option<Vec<Vec<u8>>>,
     ) -> Result<MessageOutput, VMStatus> {
         let entry_function = MoveHarness::create_entry_function_with_json(fun, ty_args, args);
         let msg = self.create_entry_function_message(senders, entry_function);
-        self.run_message(msg)
+        self.run_message(msg, signatures)
     }
 
     pub fn run_view_function(&mut self, view_fn: ViewFunction) -> Result<String, VMStatus> {
@@ -172,6 +176,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            None,
         );
 
         self.vm.execute_view_function(
@@ -198,6 +203,11 @@ impl MoveHarness {
                 install_dir: Some(package_path.clone()),
                 generate_docs: false,
                 generate_abis: false,
+                compiler_config: CompilerConfig {
+                    compiler_version: Some(CompilerVersion::V2_1),
+                    language_version: Some(LanguageVersion::V2_1),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             None,
@@ -306,7 +316,7 @@ impl MoveHarness {
         ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 
-    pub fn run_message(&mut self, message: Message) -> Result<MessageOutput, VMStatus> {
+    pub fn run_message(&mut self, message: Message, signatures: Option<Vec<Vec<u8>>>) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
             "test".to_string(),
             0,
@@ -314,6 +324,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            signatures,
         );
 
         let state = self.chain.create_state();
@@ -344,6 +355,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            None,
         );
 
         let mut table_resolver = MockTableState::new(state);

@@ -1,12 +1,15 @@
 pub mod access_path;
 pub mod account;
+pub mod authenticator; 
 pub mod compiler;
 pub mod cosmos;
 pub mod entry_function;
 pub mod env;
 pub mod errors;
 pub mod event;
+pub mod function_info;
 pub mod gas_usage;
+pub mod move_utils;
 pub mod iterator;
 pub mod json_event;
 pub mod message;

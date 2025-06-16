@@ -21,6 +21,7 @@ fn clone_large_vectors() {
             str::parse("0xbeef::test::just_under_quota").unwrap(),
             vec![],
             vec![],
+            None,
         )
         .expect("should success");
 
@@ -30,6 +31,7 @@ fn clone_large_vectors() {
             str::parse("0xbeef::test::just_above_quota").unwrap(),
             vec![],
             vec![],
+            None,
         )
         .expect_err("should error");
 
@@ -55,6 +57,7 @@ fn add_vec_to_table() {
             str::parse("0xbeef::test::just_under_quota").unwrap(),
             vec![],
             vec![],
+            None,
         )
         .expect_err("should error");
 
@@ -67,6 +70,7 @@ fn add_vec_to_table() {
             str::parse("0xbeef::test::just_above_quota").unwrap(),
             vec![],
             vec![],
+            None,
         )
         .expect_err("should error");
 

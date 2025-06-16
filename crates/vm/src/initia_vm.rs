@@ -4,9 +4,7 @@ use move_binary_format::{
     file_format::CompiledScript,
 };
 use move_core_types::{
-    account_address::AccountAddress,
-    value::{MoveTypeLayout, MoveValue},
-    vm_status::{StatusCode, VMStatus},
+    account_address::AccountAddress, ident_str, identifier::IdentStr, language_storage::ModuleId, value::{serialize_values, MoveTypeLayout, MoveValue}, vm_status::{StatusCode, VMStatus}
 };
 use move_vm_runtime::{
     check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas,
@@ -17,6 +15,7 @@ use move_vm_runtime::{
     CodeStorage, LayoutConverter, ModuleStorage, RuntimeEnvironment, StorageLayoutConverter,
 };
 use move_vm_types::resolver::ResourceResolver;
+use once_cell::sync::Lazy;
 
 use std::sync::Arc;
 
@@ -44,7 +43,7 @@ use initia_move_storage::{
     script_cache::InitiaScriptCache, state_view::StateView, table_resolver::TableResolver,
 };
 use initia_move_types::{
-    account::Accounts, cosmos::CosmosMessages, env::Env, gas_usage::GasUsageSet, json_event::JsonEvents, message::{Message, MessageOutput, MessagePayload}, module::ModuleBundle, staking_change_set::StakingChangeSet, user_transaction_context::{EntryFunctionPayload, UserTransactionContext}, view_function::{ViewFunction, ViewOutput}, vm_config::InitiaVMConfig, write_set::WriteSet
+    account::Accounts, authenticator::{AbstractionAuthData, AbstractionData}, cosmos::CosmosMessages, env::Env, function_info::FunctionInfo, gas_usage::GasUsageSet, json_event::JsonEvents, message::{Message, MessageOutput, MessagePayload}, module::ModuleBundle, move_utils::as_move_value::AsMoveValue, staking_change_set::StakingChangeSet, user_transaction_context::{EntryFunctionPayload, UserTransactionContext}, view_function::{ViewFunction, ViewOutput}, vm_config::InitiaVMConfig, write_set::WriteSet
 };
 
 use crate::{
@@ -56,6 +55,15 @@ use crate::{
         view_function::validate_view_function_and_construct,
     },
 };
+
+pub static ACCOUNT_ABSTRACTION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        AccountAddress::ONE,
+        ident_str!("account_abstraction").to_owned(),
+    )
+});
+
+pub const AUTHENTICATE: &IdentStr = ident_str!("authenticate");
 
 #[allow(clippy::upper_case_acronyms)]
 pub struct InitiaVM {
@@ -447,6 +455,7 @@ impl InitiaVM {
 
                 // need check function.is_friend_or_private() ??
 
+                let sender = senders[0].clone();
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     code_storage,
@@ -455,6 +464,29 @@ impl InitiaVM {
                     &function,
                     entry_fn.is_json(),
                 )?;
+
+                // verify signatures if account abstraction is enabled
+                if env.signatures().is_some() {
+                    let signatures = env.signatures().unwrap();
+                    let abstraction_data: AbstractionData = signatures[0].clone().into();
+
+                    dispatchable_authenticate(
+                        &mut session,
+                        gas_meter,
+                        sender,
+                        abstraction_data.function_info,
+                        &abstraction_data.auth_data,
+                        traversal_context,
+                        code_storage,
+                    )
+                    .map_err(|mut vm_error| {
+                        if vm_error.major_status() == StatusCode::OUT_OF_GAS {
+                            vm_error
+                                .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
+                        }
+                        vm_error.into_vm_status()
+                    })?;
+                }
 
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
@@ -508,6 +540,50 @@ impl InitiaVM {
             gas_usage_set,
         ))
     }
+}
+
+fn dispatchable_authenticate<
+    'r,
+    R: ResourceResolver,
+>(
+    session: &mut SessionExt<'r, R>,
+    gas_meter: &mut InitiaGasMeter,
+    account: AccountAddress,
+    function_info: FunctionInfo,
+    auth_data: &AbstractionAuthData,
+    traversal_context: &mut TraversalContext,
+    module_storage: &impl ModuleStorage,
+) -> VMResult<Vec<u8>> {
+    let auth_data = bcs::to_bytes(auth_data).expect("from rust succeeds");
+    let mut params = serialize_values(&vec![
+        MoveValue::Signer(account),
+        function_info.as_move_value(),
+    ]);
+    params.push(auth_data);
+    session
+        .execute_function_bypass_visibility(
+            &ACCOUNT_ABSTRACTION_MODULE,
+            AUTHENTICATE,
+            vec![],
+            params,
+            gas_meter,
+            traversal_context,
+            module_storage,
+        )
+        .map(|mut return_vals| {
+            assert!(
+                return_vals.mutable_reference_outputs.is_empty()
+                    && return_vals.return_values.len() == 1,
+                "Abstraction authentication function must only have 1 return value"
+            );
+            let (signer_data, signer_layout) = return_vals.return_values.pop().expect("Must exist");
+            assert_eq!(
+                signer_layout,
+                MoveTypeLayout::Signer,
+                "Abstraction authentication function returned non-signer."
+            );
+            signer_data
+        })
 }
 
 fn serialize_response_to_json(

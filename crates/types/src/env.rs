@@ -15,6 +15,9 @@ pub struct Env {
     /// SessionID is a seed for global unique ID of Table extension.
     /// Ex) transaction hash
     session_id: [u8; 32],
+
+    // this is only used for account abstraction
+    signatures: Option<Vec<Vec<u8>>>,
 }
 
 impl Env {
@@ -25,6 +28,7 @@ impl Env {
         next_account_number: u64,
         tx_hash: [u8; 32],
         session_id: [u8; 32],
+        signatures: Option<Vec<Vec<u8>>>,
     ) -> Self {
         Self {
             chain_id,
@@ -33,6 +37,7 @@ impl Env {
             next_account_number,
             tx_hash,
             session_id,
+            signatures,
         }
     }
 
@@ -60,5 +65,9 @@ impl Env {
     /// Return session_id
     pub fn session_id(&self) -> &[u8] {
         &self.session_id
+    }
+
+    pub fn signatures(&self) -> Option<Vec<Vec<u8>>> {
+        self.signatures.clone()
     }
 }
