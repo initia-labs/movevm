@@ -78,6 +78,31 @@ module minitia_std::json {
         }
     }
 
+    /// Set or overwrite the element in the JSON object.
+    /// Same as `set_elem` but without the drop restriction on type parameter T.
+    public fun set_elem_v2<T>(
+        obj: &mut JSONObject, key: String, value: &T
+    ) {
+        let key_bytes = string::bytes(&key);
+        let (found, idx) = vector::find(
+            &obj.elems,
+            |elem| {
+                use_elem(elem);
+                elem.key == *key_bytes
+            }
+        );
+
+        if (!found) {
+            vector::push_back(
+                &mut obj.elems,
+                Element { key: *key_bytes, value: marshal_v2(value) }
+            );
+        } else {
+            let elem = vector::borrow_mut(&mut obj.elems, idx);
+            elem.value = marshal_v2(value);
+        }
+    }
+
     //
     // (only on compiler v1) for preventing compile error; because of inferring type issue
     //
@@ -92,12 +117,32 @@ module minitia_std::json {
         marshal_internal(value)
     }
 
+    /// Marshal data to JSON bytes.
+    /// Same as `marshal` but without the drop restriction on type parameter T.
+    ///
+    /// NOTE: key `_type_` is converted to `@type`
+    /// NOTE: key `_move_` is converted to `move`
+    /// NOTE: key `_signer_` is converted to `signer`
+    public fun marshal_v2<T>(value: &T): vector<u8> {
+        marshal_internal(value)
+    }
+
     /// Marshal data to JSON string.
     ///
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
     /// /// NOTE: key `_signer_` is converted to `signer`
     public fun marshal_to_string<T: drop>(value: &T): String {
+        marshal_to_string_internal(value)
+    }
+
+    /// Marshal data to JSON string.
+    /// Same as `marshal_to_string` but without the drop restriction on type parameter T.
+    ///
+    /// NOTE: key `_type_` is converted to `@type`
+    /// NOTE: key `_move_` is converted to `move`
+    /// NOTE: key `_signer_` is converted to `signer`
+    public fun marshal_to_string_v2<T>(value: &T): String {
         marshal_to_string_internal(value)
     }
 
@@ -110,8 +155,8 @@ module minitia_std::json {
         unmarshal_internal(json)
     }
 
-    native fun marshal_internal<T: drop>(value: &T): vector<u8>;
-    native fun marshal_to_string_internal<T: drop>(value: &T): String;
+    native fun marshal_internal<T>(value: &T): vector<u8>;
+    native fun marshal_to_string_internal<T>(value: &T): String;
     native fun unmarshal_internal<T: drop>(json: vector<u8>): T;
 
     #[test_only]

@@ -66,6 +66,15 @@ module initia_std::nft {
     }
 
     #[event]
+    // Contains the minted NFT information.
+    struct CreateEvent has drop, store {
+        collection: Object<Collection>,
+        token_id: String,
+        description: String,
+        uri: String
+    }
+
+    #[event]
     /// Contains the mutated fields name. This makes the life of indexers easier, so that they can
     /// directly understand the behavior in a writeset.
     struct MutationEvent has drop, store {
@@ -135,6 +144,10 @@ module initia_std::nft {
                 option::extract(&mut royalty)
             )
         };
+
+        event::emit(
+            CreateEvent { collection, token_id, description, uri }
+        );
     }
 
     /// Creates a new nft object from a nft name and returns the ConstructorRef for
