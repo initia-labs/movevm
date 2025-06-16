@@ -5,6 +5,7 @@ mod helpers;
 mod interface;
 
 pub mod account;
+pub mod account_abstraction;
 pub mod address;
 pub mod any;
 pub mod base64;
@@ -24,6 +25,7 @@ pub mod keccak;
 pub mod move_stdlib;
 pub mod object;
 pub mod oracle;
+pub mod permissioned_signer;
 pub mod query;
 pub mod staking;
 pub mod string_utils;
@@ -85,6 +87,8 @@ pub fn initia_move_natives(
         dispatchable_fungible_asset::make_all(builder)
     );
     add_natives_from_module!("biguint", biguint::make_all(builder));
+
+    add_natives_from_module!("permissioned_signer", permissioned_signer::make_all(builder));
 
     #[cfg(feature = "testing")]
     add_natives_from_module!("ibctesting", ibctesting::make_all(builder));

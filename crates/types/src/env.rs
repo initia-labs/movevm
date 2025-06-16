@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Env {
+    /// Chain ID of the chain where this message was executed.
+    chain_id: String,
     /// Block hash where this message was executed.
     block_height: u64,
     /// Block timestamp where this message was executed.
@@ -17,6 +19,7 @@ pub struct Env {
 
 impl Env {
     pub fn new(
+        chain_id: String,
         block_height: u64,
         block_timestamp: u64,
         next_account_number: u64,
@@ -24,12 +27,17 @@ impl Env {
         session_id: [u8; 32],
     ) -> Self {
         Self {
+            chain_id,
             block_height,
             block_timestamp,
             next_account_number,
             tx_hash,
             session_id,
         }
+    }
+
+    pub fn chain_id(&self) -> &str {
+        &self.chain_id
     }
 
     pub fn block_height(&self) -> u64 {

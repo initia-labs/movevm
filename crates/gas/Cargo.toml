@@ -11,6 +11,7 @@ rust-version = { workspace = true }
 initia-move-types = { workspace = true }
 
 bcs = { workspace = true }
+either = { workspace = true }
 rand = { workspace = true }
 
 move-core-types = { workspace = true }

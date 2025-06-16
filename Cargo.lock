@@ -1473,6 +1473,7 @@ name = "initia-move-gas"
 version = "0.1.0"
 dependencies = [
  "bcs 0.1.4",
+ "either",
  "initia-move-types",
  "move-binary-format",
  "move-core-types",
