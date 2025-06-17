@@ -468,24 +468,26 @@ impl InitiaVM {
                 // verify signatures if account abstraction is enabled
                 if env.signatures().is_some() {
                     let signatures = env.signatures().unwrap();
-                    let abstraction_data: AbstractionData = signatures[0].clone().into();
+                    for signature in signatures {
+                        let abstraction_data: AbstractionData = signature.into();
 
-                    dispatchable_authenticate(
-                        &mut session,
-                        gas_meter,
-                        sender,
-                        abstraction_data.function_info,
-                        &abstraction_data.auth_data,
-                        traversal_context,
-                        code_storage,
-                    )
-                    .map_err(|mut vm_error| {
-                        if vm_error.major_status() == StatusCode::OUT_OF_GAS {
-                            vm_error
-                                .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
-                        }
-                        vm_error.into_vm_status()
-                    })?;
+                        dispatchable_authenticate(
+                            &mut session,
+                            gas_meter,
+                            sender,
+                            abstraction_data.function_info,
+                            &abstraction_data.auth_data,
+                            traversal_context,
+                            code_storage,
+                        )
+                        .map_err(|mut vm_error| {
+                            if vm_error.major_status() == StatusCode::OUT_OF_GAS {
+                                vm_error
+                                    .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
+                            }
+                            vm_error.into_vm_status()
+                        })?;
+                    }
                 }
 
                 // first execution does not execute `charge_call`, so need to record call here
