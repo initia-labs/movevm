@@ -250,7 +250,7 @@ pub fn make_all(
             native_generate_unique_address as RawSafeNative,
         ),
         ("get_transaction_hash", native_get_transaction_hash),
-        ("entry_function_payload", native_entry_function_payload_internal),
+        ("entry_function_payload_internal", native_entry_function_payload_internal),
     ]);
 
     #[cfg(feature = "testing")]
