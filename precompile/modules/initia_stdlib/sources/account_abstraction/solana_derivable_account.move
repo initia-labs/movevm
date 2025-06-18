@@ -19,12 +19,7 @@
 module initia_std::solana_derivable_account {
     use initia_std::auth_data::AbstractionAuthData;
     use initia_std::common_account_abstractions_utils::entry_function_name;
-    use std::ed25519::{
-        Self,
-        signature_from_bytes,
-        public_key_from_bytes,
-        public_key_to_bytes
-    };
+    use std::ed25519::{Self, signature_from_bytes, public_key_from_bytes};
     use std::bcs_stream::{Self, deserialize_u8};
     use std::string_utils;
     use std::transaction_context;

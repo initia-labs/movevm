@@ -183,7 +183,7 @@ fn test_ethereum_derivable_account() {
         "0x1::coin::transfer",
         digest_hex.as_str(),
         "2025-01-01T00:00:00.000Z",
-        "https",
+        "http",
         "test"
     );
 
