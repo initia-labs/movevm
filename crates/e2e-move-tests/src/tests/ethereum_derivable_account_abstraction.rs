@@ -1,17 +1,15 @@
+use super::std_coin::std_coin_metadata;
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
 use hex::ToHex;
 use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::authenticator::{AbstractionAuthData, AbstractionData};
 use initia_move_types::function_info::FunctionInfo;
+use libsecp256k1::{sign, Message, PublicKey, SecretKey};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::VMStatus;
 use rand_core::OsRng;
 use serde::Serialize;
-use super::std_coin::std_coin_metadata;
-use libsecp256k1::{
-    Message, PublicKey, sign, SecretKey
-};
 use tiny_keccak::{Hasher as KeccakHasher, Keccak};
 
 fn construct_message(
@@ -21,7 +19,7 @@ fn construct_message(
     digest_utf8: &str,
     issued_at: &str,
     scheme: &str,
-    chain_id: &str
+    chain_id: &str,
 ) -> Vec<u8> {
     let message = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction {} on Initia blockchain.\n\nURI: {}://{}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}", domain, ethereum_address, domain, entry_function_name, scheme, domain, chain_id, digest_utf8, issued_at);
     let msg_len = message.len();
@@ -40,13 +38,14 @@ fn construct_message(
 #[derive(Serialize)]
 struct SIWEAbstractPublicKey {
     ethereum_address: Vec<u8>,
-    domain: Vec<u8>
+    domain: Vec<u8>,
 }
 
-fn create_abstract_public_key(
-    ethereum_address: Vec<u8>, domain: Vec<u8>
-) -> Vec<u8> {
-    let abstract_public_key = SIWEAbstractPublicKey { ethereum_address, domain };
+fn create_abstract_public_key(ethereum_address: Vec<u8>, domain: Vec<u8>) -> Vec<u8> {
+    let abstract_public_key = SIWEAbstractPublicKey {
+        ethereum_address,
+        domain,
+    };
     bcs::to_bytes(&abstract_public_key).unwrap()
 }
 
@@ -54,22 +53,20 @@ fn create_abstract_public_key(
 enum SIWEAbstractSignature {
     _MessageV1 {
         issued_at: String,
-        signature: Vec<u8>
+        signature: Vec<u8>,
     },
     MessageV2 {
         scheme: String,
         issued_at: String,
-        signature: Vec<u8>
-    }
+        signature: Vec<u8>,
+    },
 }
 
-fn create_raw_signature(
-    scheme: String, issued_at: String, signature: Vec<u8>
-) -> Vec<u8> {
+fn create_raw_signature(scheme: String, issued_at: String, signature: Vec<u8>) -> Vec<u8> {
     let abstract_signature = SIWEAbstractSignature::MessageV2 {
         scheme,
         issued_at,
-        signature
+        signature,
     };
     bcs::to_bytes(&abstract_signature).unwrap()
 }
@@ -85,11 +82,14 @@ fn test_ethereum_derivable_account() {
     let sk = SecretKey::random(&mut OsRng);
     let pk = PublicKey::from_secret_key(&sk);
     let mut hasher = Keccak::v256();
-    hasher.update(&pk.serialize()[1..].to_vec());
+    hasher.update(&pk.serialize()[1..]);
     let mut output = [0u8; 32];
     hasher.finalize(&mut output);
     let ethereum_address = "0x".to_string() + &output[12..].to_vec().encode_hex::<String>();
-    let abstract_public_key = create_abstract_public_key(ethereum_address.as_bytes().to_vec(), "localhost:3001".as_bytes().to_vec());
+    let abstract_public_key = create_abstract_public_key(
+        ethereum_address.as_bytes().to_vec(),
+        "localhost:3001".as_bytes().to_vec(),
+    );
 
     let mut tests = vec![];
 
@@ -98,18 +98,20 @@ fn test_ethereum_derivable_account() {
 
     // derive account address from ethereum public key
     let view_fn = h.create_view_function(
-        str::parse("0x1::account_abstraction::derive_account_address_view").unwrap(), 
-        vec![], 
+        str::parse("0x1::account_abstraction::derive_account_address_view").unwrap(),
+        vec![],
         vec![
             module_address.to_vec(),
             bcs::to_bytes(&module_name).unwrap(),
             bcs::to_bytes(&function_name).unwrap(),
             bcs::to_bytes(&abstract_public_key).unwrap(),
-        ]
+        ],
     );
     let view_output = h.run_view_function(view_fn);
-    let unwrapped_view_output: String = serde_json::from_str(view_output.expect("should success").as_str()).unwrap();
-    let daa_address = AccountAddress::from_hex_literal(unwrapped_view_output.as_str()).expect("should success");
+    let unwrapped_view_output: String =
+        serde_json::from_str(view_output.expect("should success").as_str()).unwrap();
+    let daa_address =
+        AccountAddress::from_hex_literal(unwrapped_view_output.as_str()).expect("should success");
 
     // register derivable authentication function from chain
     let test_initialize_account_abstraction = (
@@ -117,7 +119,7 @@ fn test_ethereum_derivable_account() {
         "0x1::account_abstraction::initialize",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_initialize_account_abstraction);
@@ -132,7 +134,7 @@ fn test_ethereum_derivable_account() {
             bcs::to_bytes(&module_name).unwrap(),
             bcs::to_bytes(&function_name).unwrap(),
         ],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_register_derivable_authentication_function);
@@ -140,16 +142,20 @@ fn test_ethereum_derivable_account() {
     // publish std coin
 
     let output = h
-        .publish_package(&minter_address, "src/tests/std_coin.data/pack", UpgradePolicy::Compatible)
+        .publish_package(
+            &minter_address,
+            "src/tests/std_coin.data/pack",
+            UpgradePolicy::Compatible,
+        )
         .expect("should success");
     h.commit(output, true);
-    
+
     let test_init = (
         vec![minter_address],
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -184,7 +190,7 @@ fn test_ethereum_derivable_account() {
         digest_hex.as_str(),
         "2025-01-01T00:00:00.000Z",
         "http",
-        "test"
+        "test",
     );
 
     let mut hasher = Keccak::v256();
@@ -192,28 +198,29 @@ fn test_ethereum_derivable_account() {
     let mut output = [0u8; 32];
     hasher.finalize(&mut output);
     let signing_message_digest = output.to_vec();
-    
-    let (signature, recovery_id) = sign(&Message::parse_slice(&signing_message_digest).unwrap(), &sk);
+
+    let (signature, recovery_id) =
+        sign(&Message::parse_slice(&signing_message_digest).unwrap(), &sk);
     let mut signature_vec = signature.serialize().to_vec();
-    signature_vec.push(recovery_id.serialize()+27);
+    signature_vec.push(recovery_id.serialize() + 27);
 
     let abstract_signature = create_raw_signature(
         "http".to_string(),
         "2025-01-01T00:00:00.000Z".to_string(),
-        signature_vec.clone()
+        signature_vec.clone(),
     );
 
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
-        auth_data: AbstractionAuthData::DerivableV1 { 
-            signing_message_digest: digest.as_bytes().to_vec(), 
-            abstract_signature: abstract_signature, 
-            abstract_public_key: abstract_public_key
-        }
+        auth_data: AbstractionAuthData::DerivableV1 {
+            signing_message_digest: digest.as_bytes().to_vec(),
+            abstract_signature,
+            abstract_public_key,
+        },
     };
     let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
 
@@ -221,7 +228,11 @@ fn test_ethereum_derivable_account() {
         vec![daa_address],
         "0x1::coin::transfer",
         vec![],
-        vec![minter_address.to_vec(), std_coin_metadata().to_vec(), 10u64.to_le_bytes().to_vec()],
+        vec![
+            minter_address.to_vec(),
+            std_coin_metadata().to_vec(),
+            10u64.to_le_bytes().to_vec(),
+        ],
         Some(abstraction_data_vec),
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );

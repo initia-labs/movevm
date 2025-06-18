@@ -5,7 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_binary_format::errors::PartialVMError;
-use move_core_types::{account_address::AccountAddress, gas_algebra::{NumBytes, NumTypeNodes}, u256, value::{MoveStructLayout, MoveTypeLayout}, vm_status::{sub_status::NFE_BCS_SERIALIZATION_FAILURE, StatusCode}};
+use move_core_types::{
+    account_address::AccountAddress,
+    gas_algebra::{NumBytes, NumTypeNodes},
+    u256,
+    value::{MoveStructLayout, MoveTypeLayout},
+    vm_status::{sub_status::NFE_BCS_SERIALIZATION_FAILURE, StatusCode},
+};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -151,6 +157,7 @@ fn serialized_size_impl(
         .serialized_size(&value, &ty_layout)
 }
 
+#[allow(clippy::result_large_err)]
 fn native_constant_serialized_size(
     context: &mut SafeNativeContext,
     mut ty_args: Vec<Type>,
@@ -166,8 +173,9 @@ fn native_constant_serialized_size(
     let ty_layout = context.type_to_type_layout(&ty)?;
 
     let (visited_count, serialized_size_result) = constant_serialized_size(&ty_layout);
-    context
-        .charge(gas_params.bcs_constant_serialized_size_per_type_node * NumTypeNodes::new(visited_count))?;
+    context.charge(
+        gas_params.bcs_constant_serialized_size_per_type_node * NumTypeNodes::new(visited_count),
+    )?;
 
     let result = match serialized_size_result {
         Ok(value) => create_option_u64(value.map(|v| v as u64)),
@@ -178,7 +186,7 @@ fn native_constant_serialized_size(
             return Err(SafeNativeError::Abort {
                 abort_code: NFE_BCS_SERIALIZATION_FAILURE,
             });
-        },
+        }
     };
 
     Ok(smallvec![result])
@@ -219,11 +227,11 @@ fn constant_serialized_size(ty_layout: &MoveTypeLayout) -> (u64, PartialVMResult
                     Ok(None) => {
                         total = None;
                         break;
-                    },
+                    }
                 }
             }
             Ok(total)
-        },
+        }
         MoveTypeLayout::Struct(MoveStructLayout::WithFields(_))
         | MoveTypeLayout::Struct(MoveStructLayout::WithTypes { .. }) => {
             return (
@@ -234,7 +242,7 @@ fn constant_serialized_size(ty_layout: &MoveTypeLayout) -> (u64, PartialVMResult
                     ),
                 ),
             )
-        },
+        }
         MoveTypeLayout::Native(_, inner) => {
             let (cur_visited_count, cur) = constant_serialized_size(inner);
             visited_count += cur_visited_count;
@@ -242,7 +250,7 @@ fn constant_serialized_size(ty_layout: &MoveTypeLayout) -> (u64, PartialVMResult
                 Err(e) => return (visited_count, Err(e)),
                 Ok(v) => Ok(v),
             }
-        },
+        }
     };
     (
         visited_count,

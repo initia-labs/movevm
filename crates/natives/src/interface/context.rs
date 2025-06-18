@@ -62,7 +62,9 @@ impl SafeNativeContext<'_, '_, '_> {
     }
 
     pub fn abs_val_size_dereferenced(&self, val: &Value) -> AbstractValueSize {
-        self.misc_gas_params.abs_val.abstract_value_size_dereferenced(val)
+        self.misc_gas_params
+            .abs_val
+            .abstract_value_size_dereferenced(val)
     }
 
     /// Computes left gas balance for this native context.

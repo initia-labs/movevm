@@ -1,5 +1,7 @@
+use super::std_coin::std_coin_metadata;
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
+use ed25519_consensus::SigningKey;
 use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::authenticator::{AbstractionAuthData, AbstractionData};
 use initia_move_types::function_info::FunctionInfo;
@@ -7,10 +9,8 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{ModuleId, TypeTag};
 use move_core_types::vm_status::{AbortLocation, VMStatus};
-use ed25519_consensus::SigningKey;
 use rand_core::OsRng;
 use sha3::Digest;
-use super::std_coin::std_coin_metadata;
 
 type TestInput<'a> = (
     Vec<AccountAddress>,
@@ -24,13 +24,18 @@ type TestInput<'a> = (
 fn run_tests(tests: Vec<TestInput>, authenticator_path: &str) {
     let minter_addr =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
-    let deploy_addr = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let deploy_addr =
+        AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let mut h = MoveHarness::new();
     h.initialize();
 
     // publish std coin
     let output = h
-        .publish_package(&minter_addr, "src/tests/std_coin.data/pack", UpgradePolicy::Compatible)
+        .publish_package(
+            &minter_addr,
+            "src/tests/std_coin.data/pack",
+            UpgradePolicy::Compatible,
+        )
         .expect("should success");
     h.commit(output, true);
 
@@ -67,10 +72,11 @@ fn test_simple_authenticator() {
 
     let minter_address =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
-    let module_address = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let module_address =
+        AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let module_name = "simple_authenticator";
     let function_name = "authenticate";
-    
+
     let receiver_addr = AccountAddress::random();
 
     let test_init = (
@@ -78,7 +84,7 @@ fn test_simple_authenticator() {
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -108,9 +114,9 @@ fn test_simple_authenticator() {
         "0x1::account_abstraction::add_authentication_function",
         vec![],
         vec![
-            module_address.to_vec(), 
-            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(), 
-            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap()
+            module_address.to_vec(),
+            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(),
+            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap(),
         ],
         None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
@@ -119,7 +125,7 @@ fn test_simple_authenticator() {
 
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
@@ -140,7 +146,7 @@ fn test_simple_authenticator() {
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
-    
+
     run_tests(tests, "src/tests/simple_authenticator.data/pack");
 }
 
@@ -150,10 +156,11 @@ fn test_simple_authenticator_with_invalid_signature() {
 
     let minter_address =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
-    let module_address = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let module_address =
+        AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let module_name = "simple_authenticator";
     let function_name = "authenticate";
-    
+
     let receiver_addr = AccountAddress::random();
 
     let test_init = (
@@ -161,7 +168,7 @@ fn test_simple_authenticator_with_invalid_signature() {
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -191,9 +198,9 @@ fn test_simple_authenticator_with_invalid_signature() {
         "0x1::account_abstraction::add_authentication_function",
         vec![],
         vec![
-            module_address.to_vec(), 
-            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(), 
-            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap()
+            module_address.to_vec(),
+            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(),
+            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap(),
         ],
         None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
@@ -202,7 +209,7 @@ fn test_simple_authenticator_with_invalid_signature() {
 
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
@@ -220,10 +227,21 @@ fn test_simple_authenticator_with_invalid_signature() {
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
         Some(abstraction_data_vec),
-        ExpectedOutput::new(VMStatus::MoveAbort(AbortLocation::Module(ModuleId::new(module_address, Identifier::new(module_name).unwrap())), 1), None, None, None),
+        ExpectedOutput::new(
+            VMStatus::MoveAbort(
+                AbortLocation::Module(ModuleId::new(
+                    module_address,
+                    Identifier::new(module_name).unwrap(),
+                )),
+                1,
+            ),
+            None,
+            None,
+            None,
+        ),
     );
     tests.push(test_mint_with_account_abstraction);
-    
+
     run_tests(tests, "src/tests/simple_authenticator.data/pack");
 }
 
@@ -233,10 +251,11 @@ fn test_public_key_authenticator() {
 
     let minter_address =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
-    let module_address = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let module_address =
+        AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let module_name = "public_key_authenticator";
     let function_name = "authenticate";
-    
+
     let receiver_addr = AccountAddress::random();
 
     let test_init = (
@@ -244,7 +263,7 @@ fn test_public_key_authenticator() {
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -274,9 +293,9 @@ fn test_public_key_authenticator() {
         "0x1::account_abstraction::add_authentication_function",
         vec![],
         vec![
-            module_address.to_vec(), 
-            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(), 
-            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap()
+            module_address.to_vec(),
+            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(),
+            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap(),
         ],
         None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
@@ -286,7 +305,7 @@ fn test_public_key_authenticator() {
     let sk = SigningKey::new(OsRng);
     let vk = sk.verification_key();
 
-    // permit public key 
+    // permit public key
     let test_permit_public_key = (
         vec![minter_address],
         "0xcafe::public_key_authenticator::permit_public_key",
@@ -306,16 +325,16 @@ fn test_public_key_authenticator() {
     let mut authenticator = vec![];
     authenticator.append(&mut bcs::to_bytes(&vk.to_bytes().to_vec()).unwrap());
     authenticator.append(&mut bcs::to_bytes(&signature.to_bytes().to_vec()).unwrap());
-    
+
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
         auth_data: AbstractionAuthData::V1 {
             signing_message_digest: digest.to_vec(),
-            authenticator: authenticator,
+            authenticator,
         },
     };
 
@@ -330,7 +349,7 @@ fn test_public_key_authenticator() {
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
-    
+
     run_tests(tests, "src/tests/public_key_authenticator.data/pack");
 }
 
@@ -340,10 +359,11 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
 
     let minter_address =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
-    let module_address = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let module_address =
+        AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let module_name = "public_key_authenticator";
     let function_name = "authenticate";
-    
+
     let receiver_addr = AccountAddress::random();
 
     let test_init = (
@@ -351,7 +371,7 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -381,9 +401,9 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
         "0x1::account_abstraction::add_authentication_function",
         vec![],
         vec![
-            module_address.to_vec(), 
-            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(), 
-            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap()
+            module_address.to_vec(),
+            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(),
+            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap(),
         ],
         None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
@@ -393,7 +413,7 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
     let sk_permitted = SigningKey::new(OsRng);
     let vk_permitted = sk_permitted.verification_key();
 
-    // permit public key 
+    // permit public key
     let test_permit_public_key = (
         vec![minter_address],
         "0xcafe::public_key_authenticator::permit_public_key",
@@ -416,16 +436,16 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
     let mut authenticator = vec![];
     authenticator.append(&mut bcs::to_bytes(&vk.to_bytes().to_vec()).unwrap());
     authenticator.append(&mut bcs::to_bytes(&signature.to_bytes().to_vec()).unwrap());
-    
+
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
         auth_data: AbstractionAuthData::V1 {
             signing_message_digest: digest.to_vec(),
-            authenticator: authenticator,
+            authenticator,
         },
     };
 
@@ -437,10 +457,21 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
         Some(abstraction_data_vec),
-        ExpectedOutput::new(VMStatus::MoveAbort(AbortLocation::Module(ModuleId::new(module_address, Identifier::new(module_name).unwrap())), 0x20001), None, None, None),
+        ExpectedOutput::new(
+            VMStatus::MoveAbort(
+                AbortLocation::Module(ModuleId::new(
+                    module_address,
+                    Identifier::new(module_name).unwrap(),
+                )),
+                0x20001,
+            ),
+            None,
+            None,
+            None,
+        ),
     );
     tests.push(test_mint_with_account_abstraction);
-    
+
     run_tests(tests, "src/tests/public_key_authenticator.data/pack");
 }
 
@@ -450,10 +481,11 @@ fn test_public_key_authenticator_with_invalid_signature() {
 
     let minter_address =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");
-    let module_address = AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
+    let module_address =
+        AccountAddress::from_hex_literal("0xcafe").expect("0xcafe account should be created");
     let module_name = "public_key_authenticator";
     let function_name = "authenticate";
-    
+
     let receiver_addr = AccountAddress::random();
 
     let test_init = (
@@ -461,7 +493,7 @@ fn test_public_key_authenticator_with_invalid_signature() {
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -491,9 +523,9 @@ fn test_public_key_authenticator_with_invalid_signature() {
         "0x1::account_abstraction::add_authentication_function",
         vec![],
         vec![
-            module_address.to_vec(), 
-            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(), 
-            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap()
+            module_address.to_vec(),
+            bcs::to_bytes(&module_name.as_bytes().to_vec()).unwrap(),
+            bcs::to_bytes(&function_name.as_bytes().to_vec()).unwrap(),
         ],
         None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
@@ -503,7 +535,7 @@ fn test_public_key_authenticator_with_invalid_signature() {
     let sk = SigningKey::new(OsRng);
     let vk = sk.verification_key();
 
-    // permit public key 
+    // permit public key
     let test_permit_public_key = (
         vec![minter_address],
         "0xcafe::public_key_authenticator::permit_public_key",
@@ -528,16 +560,16 @@ fn test_public_key_authenticator_with_invalid_signature() {
     let mut authenticator = vec![];
     authenticator.append(&mut bcs::to_bytes(&vk.to_bytes().to_vec()).unwrap());
     authenticator.append(&mut bcs::to_bytes(&signature.to_bytes().to_vec()).unwrap());
-    
+
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
         auth_data: AbstractionAuthData::V1 {
             signing_message_digest: digest.to_vec(),
-            authenticator: authenticator,
+            authenticator,
         },
     };
 
@@ -549,9 +581,20 @@ fn test_public_key_authenticator_with_invalid_signature() {
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
         Some(abstraction_data_vec),
-        ExpectedOutput::new(VMStatus::MoveAbort(AbortLocation::Module(ModuleId::new(module_address, Identifier::new(module_name).unwrap())), 0x20004), None, None, None),
+        ExpectedOutput::new(
+            VMStatus::MoveAbort(
+                AbortLocation::Module(ModuleId::new(
+                    module_address,
+                    Identifier::new(module_name).unwrap(),
+                )),
+                0x20004,
+            ),
+            None,
+            None,
+            None,
+        ),
     );
     tests.push(test_mint_with_account_abstraction);
-    
+
     run_tests(tests, "src/tests/public_key_authenticator.data/pack");
 }

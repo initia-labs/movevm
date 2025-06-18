@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context};
-use move_core_types::{account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
+};
 use std::str::FromStr;
 
 /// Identifier of a module member (function or struct).

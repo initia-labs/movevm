@@ -1,20 +1,25 @@
 use better_any::{Tid, TidAble};
 use initia_move_gas::NumBytes;
+use initia_move_types::user_transaction_context::{EntryFunctionPayload, UserTransactionContext};
 use move_binary_format::errors::PartialVMError;
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{loaded_data::runtime_types::Type, values::{Struct, Value}};
+use move_vm_types::{
+    loaded_data::runtime_types::Type,
+    values::{Struct, Value},
+};
 use sha3::{Digest, Sha3_256};
 use smallvec::{smallvec, SmallVec};
-use initia_move_types::user_transaction_context::{UserTransactionContext, EntryFunctionPayload};
 
 use std::collections::VecDeque;
 
-use crate::interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult};
+use crate::interface::{
+    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+};
 
 /// UID prefix is used to generate unique address from the txn hash.
 const UID_PREFIX: [u8; 4] = [0, 0, 0, 1];
-const ETRANSACTION_CONTEXT_NOT_AVAILABLE: u64 = 3 << 16 + 1;
+const ETRANSACTION_CONTEXT_NOT_AVAILABLE: u64 = 3 << (16 + 1);
 
 /// The native transaction context extension. This needs to be attached to the
 /// NativeContextExtensions value which is passed into session functions, so its accessible from
@@ -31,7 +36,11 @@ pub struct NativeTransactionContext {
 impl NativeTransactionContext {
     /// Create a new instance of a native transaction context. This must be passed in via an
     /// extension into VM session functions.
-    pub fn new(tx_hash: [u8; 32], session_id: [u8; 32], user_transaction_context_opt: Option<UserTransactionContext>,) -> Self {
+    pub fn new(
+        tx_hash: [u8; 32],
+        session_id: [u8; 32],
+        user_transaction_context_opt: Option<UserTransactionContext>,
+    ) -> Self {
         Self {
             tx_hash,
             session_id,
@@ -100,6 +109,7 @@ fn native_generate_unique_address(
     Ok(smallvec![Value::address(unique_address)])
 }
 
+#[allow(clippy::result_large_err)]
 fn native_entry_function_payload_internal(
     context: &mut SafeNativeContext,
     mut _ty_args: Vec<Type>,
@@ -250,7 +260,10 @@ pub fn make_all(
             native_generate_unique_address as RawSafeNative,
         ),
         ("get_transaction_hash", native_get_transaction_hash),
-        ("entry_function_payload_internal", native_entry_function_payload_internal),
+        (
+            "entry_function_payload_internal",
+            native_entry_function_payload_internal,
+        ),
     ]);
 
     #[cfg(feature = "testing")]

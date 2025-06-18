@@ -10,9 +10,9 @@ pub mod hash;
 pub mod mem;
 pub mod signer;
 pub mod string;
-pub mod vector;
 #[cfg(feature = "testing")]
 pub mod unit_test;
+pub mod vector;
 
 use move_core_types::account_address::AccountAddress;
 use move_vm_runtime::native_functions::{make_table_from_iter, NativeFunctionTable};

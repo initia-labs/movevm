@@ -38,7 +38,7 @@ pub use meter::{
 pub use misc::{AbstractValueSizeGasParameters, MiscGasParameters};
 pub use move_core_types::gas_algebra::{
     Arg, Byte, GasQuantity, InternalGas, InternalGasPerArg, InternalGasPerByte, InternalGasUnit,
-    NumArgs, NumBytes, UnitDiv
+    NumArgs, NumBytes, UnitDiv,
 };
 pub use traits::{FromOnChainGasSchedule, InitialGasSchedule, ToOnChainGasSchedule};
 

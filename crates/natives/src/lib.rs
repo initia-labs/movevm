@@ -58,7 +58,10 @@ pub fn initia_move_natives(
     }
 
     add_natives_from_module!("account", account::make_all(builder));
-    add_natives_from_module!("account_abstraction", account_abstraction::make_all(builder));
+    add_natives_from_module!(
+        "account_abstraction",
+        account_abstraction::make_all(builder)
+    );
     add_natives_from_module!("address", address::make_all(builder));
     add_natives_from_module!("block", block::make_all(builder));
     add_natives_from_module!("code", code::make_all(builder));
@@ -89,7 +92,10 @@ pub fn initia_move_natives(
     );
     add_natives_from_module!("biguint", biguint::make_all(builder));
 
-    add_natives_from_module!("permissioned_signer", permissioned_signer::make_all(builder));
+    add_natives_from_module!(
+        "permissioned_signer",
+        permissioned_signer::make_all(builder)
+    );
 
     #[cfg(feature = "testing")]
     add_natives_from_module!("ibctesting", ibctesting::make_all(builder));

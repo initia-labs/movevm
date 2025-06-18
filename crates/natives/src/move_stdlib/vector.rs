@@ -7,10 +7,12 @@
 
 //! Implementation of native functions (non-bytecode instructions) for vector.
 
-use crate::{safely_pop_arg, interface::{
-    RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError,
-    SafeNativeResult,
-}};
+use crate::{
+    interface::{
+        RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeError, SafeNativeResult,
+    },
+    safely_pop_arg,
+};
 use move_core_types::gas_algebra::NumArgs;
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
@@ -21,7 +23,7 @@ use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
 /// Given input positions/lengths are outside of vector boundaries.
-pub const EINDEX_OUT_OF_BOUNDS: u64 = 0x1 << 16 + 1;
+pub const EINDEX_OUT_OF_BOUNDS: u64 = 0x1 << (16 + 1);
 
 /***************************************************************************************************
  * native fun move_range<T>(from: &mut vector<T>, removal_position: u64, length: u64, to: &mut vector<T>, insert_position: u64)
@@ -29,6 +31,7 @@ pub const EINDEX_OUT_OF_BOUNDS: u64 = 0x1 << 16 + 1;
  *   gas cost: VECTOR_MOVE_RANGE_BASE + VECTOR_MOVE_RANGE_PER_INDEX_MOVED * num_elements_to_move
  *
  **************************************************************************************************/
+ #[allow(clippy::result_large_err)]
 fn native_move_range(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

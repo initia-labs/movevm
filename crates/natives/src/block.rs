@@ -1,6 +1,9 @@
 use better_any::{Tid, TidAble};
 use move_vm_runtime::native_functions::NativeFunction;
-use move_vm_types::{loaded_data::runtime_types::Type, values::{Struct, Value}};
+use move_vm_types::{
+    loaded_data::runtime_types::Type,
+    values::{Struct, Value},
+};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -16,7 +19,11 @@ pub struct NativeBlockContext {
 
 impl NativeBlockContext {
     pub fn new(chain_id: String, height: u64, timestamp: u64) -> Self {
-        Self { chain_id, height, timestamp }
+        Self {
+            chain_id,
+            height,
+            timestamp,
+        }
     }
 
     #[cfg(feature = "testing")]
@@ -40,7 +47,6 @@ impl NativeBlockContext {
     }
 }
 
-
 #[allow(clippy::result_large_err)]
 fn native_get_chain_id(
     context: &mut SafeNativeContext,
@@ -51,9 +57,9 @@ fn native_get_chain_id(
     context.charge(gas_params.block_get_chain_id_base_cost)?;
 
     let block_context = context.extensions().get::<NativeBlockContext>();
-    Ok(smallvec![
-        Value::struct_(Struct::pack(vec![Value::vector_u8(block_context.chain_id.clone().into_bytes())])),
-    ])
+    Ok(smallvec![Value::struct_(Struct::pack(vec![
+        Value::vector_u8(block_context.chain_id.clone().into_bytes())
+    ])),])
 }
 
 #[allow(clippy::result_large_err)]

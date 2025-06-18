@@ -310,7 +310,11 @@ impl MoveHarness {
         ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 
-    pub fn run_message(&mut self, message: Message, signatures: Option<Vec<Vec<u8>>>) -> Result<MessageOutput, VMStatus> {
+    pub fn run_message(
+        &mut self,
+        message: Message,
+        signatures: Option<Vec<Vec<u8>>>,
+    ) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
             "test".to_string(),
             0,

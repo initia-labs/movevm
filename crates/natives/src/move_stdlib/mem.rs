@@ -3,10 +3,10 @@
 
 //! Implementation of native functions for memory manipulation.
 
-use crate::{interface::{
-    RawSafeNative, SafeNativeBuilder, SafeNativeContext,
-    SafeNativeResult,
-}, safely_pop_arg};
+use crate::{
+    interface::{RawSafeNative, SafeNativeBuilder, SafeNativeContext, SafeNativeResult},
+    safely_pop_arg,
+};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -15,13 +15,13 @@ use move_vm_types::{
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
-
 /***************************************************************************************************
  * native fun native_swap
  *
  *   gas cost: MEM_SWAP_BASE
  *
  **************************************************************************************************/
+ #[allow(clippy::result_large_err)]
 fn native_swap(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

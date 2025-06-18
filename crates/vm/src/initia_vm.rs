@@ -4,7 +4,12 @@ use move_binary_format::{
     file_format::CompiledScript,
 };
 use move_core_types::{
-    account_address::AccountAddress, ident_str, identifier::IdentStr, language_storage::ModuleId, value::{serialize_values, MoveTypeLayout, MoveValue}, vm_status::{StatusCode, VMStatus}
+    account_address::AccountAddress,
+    ident_str,
+    identifier::IdentStr,
+    language_storage::ModuleId,
+    value::{serialize_values, MoveTypeLayout, MoveValue},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
     check_dependencies_and_charge_gas, check_script_dependencies_and_check_gas,
@@ -43,7 +48,21 @@ use initia_move_storage::{
     script_cache::InitiaScriptCache, state_view::StateView, table_resolver::TableResolver,
 };
 use initia_move_types::{
-    account::Accounts, authenticator::{AbstractionAuthData, AbstractionData}, cosmos::CosmosMessages, env::Env, function_info::FunctionInfo, gas_usage::GasUsageSet, json_event::JsonEvents, message::{Message, MessageOutput, MessagePayload}, module::ModuleBundle, move_utils::as_move_value::AsMoveValue, staking_change_set::StakingChangeSet, user_transaction_context::{EntryFunctionPayload, UserTransactionContext}, view_function::{ViewFunction, ViewOutput}, vm_config::InitiaVMConfig, write_set::WriteSet
+    account::Accounts,
+    authenticator::{AbstractionAuthData, AbstractionData},
+    cosmos::CosmosMessages,
+    env::Env,
+    function_info::FunctionInfo,
+    gas_usage::GasUsageSet,
+    json_event::JsonEvents,
+    message::{Message, MessageOutput, MessagePayload},
+    module::ModuleBundle,
+    move_utils::as_move_value::AsMoveValue,
+    staking_change_set::StakingChangeSet,
+    user_transaction_context::{EntryFunctionPayload, UserTransactionContext},
+    view_function::{ViewFunction, ViewOutput},
+    vm_config::InitiaVMConfig,
+    write_set::WriteSet,
 };
 
 use crate::{
@@ -149,7 +168,7 @@ impl InitiaVM {
             .session_id()
             .try_into()
             .expect("HashValue should be converted to [u8; 32]");
-        
+
         extensions.add(NativeAccountContext::new(api, env.next_account_number()));
         extensions.add(NativeTableContext::new(session_id, table_resolver));
         extensions.add(NativeBlockContext::new(
@@ -161,7 +180,11 @@ impl InitiaVM {
         extensions.add(NativeStakingContext::new(api));
         extensions.add(NativeQueryContext::new(api));
         extensions.add(NativeCosmosContext::default());
-        extensions.add(NativeTransactionContext::new(tx_hash, session_id, user_transaction_context_opt));
+        extensions.add(NativeTransactionContext::new(
+            tx_hash,
+            session_id,
+            user_transaction_context_opt,
+        ));
         extensions.add(NativeEventContext::default());
         extensions.add(NativeOracleContext::new(api));
 
@@ -356,21 +379,33 @@ impl InitiaVM {
     ) -> Result<MessageOutput, VMStatus> {
         let move_resolver = code_storage.state_view_impl();
         let user_transaction_context_opt = match payload {
-            MessagePayload::Execute(entry_function) => {
-                Some(UserTransactionContext::new(
-                    senders[0],
-                    Some(EntryFunctionPayload::new(
-                        entry_function.module().address,
+            MessagePayload::Execute(entry_function) => Some(UserTransactionContext::new(
+                senders[0],
+                Some(EntryFunctionPayload::new(
+                    entry_function.module().address,
                     entry_function.module().name.to_string(),
                     entry_function.function().to_string(),
-                    entry_function.ty_args().iter().map(|ty| ty.to_string()).collect(),
-                    entry_function.args().iter().map(|arg| arg.to_vec()).collect(),
-                    ))
-                ))
-            }
+                    entry_function
+                        .ty_args()
+                        .iter()
+                        .map(|ty| ty.to_string())
+                        .collect(),
+                    entry_function
+                        .args()
+                        .iter()
+                        .map(|arg| arg.to_vec())
+                        .collect(),
+                )),
+            )),
             MessagePayload::Script(..) => None,
         };
-        let mut session = self.create_session(api, env, move_resolver, table_resolver, user_transaction_context_opt);
+        let mut session = self.create_session(
+            api,
+            env,
+            move_resolver,
+            table_resolver,
+            user_transaction_context_opt,
+        );
 
         match payload {
             MessagePayload::Script(script) => {
@@ -455,7 +490,7 @@ impl InitiaVM {
 
                 // need check function.is_friend_or_private() ??
 
-                let sender = senders[0].clone();
+                let sender = senders[0];
                 let args = validate_combine_signer_and_txn_args(
                     &mut session,
                     code_storage,
@@ -482,8 +517,9 @@ impl InitiaVM {
                         )
                         .map_err(|mut vm_error| {
                             if vm_error.major_status() == StatusCode::OUT_OF_GAS {
-                                vm_error
-                                    .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
+                                vm_error.set_major_status(
+                                    StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED,
+                                );
                             }
                             vm_error.into_vm_status()
                         })?;
@@ -544,10 +580,7 @@ impl InitiaVM {
     }
 }
 
-fn dispatchable_authenticate<
-    'r,
-    R: ResourceResolver,
->(
+fn dispatchable_authenticate<'r, R: ResourceResolver>(
     session: &mut SessionExt<'r, R>,
     gas_meter: &mut InitiaGasMeter,
     account: AccountAddress,

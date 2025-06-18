@@ -1,5 +1,7 @@
+use super::std_coin::std_coin_metadata;
 use crate::tests::common::ExpectedOutput;
 use crate::MoveHarness;
+use ed25519_consensus::SigningKey;
 use hex::ToHex;
 use initia_move_natives::code::UpgradePolicy;
 use initia_move_types::authenticator::{AbstractionAuthData, AbstractionData};
@@ -8,9 +10,6 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::VMStatus;
 use rand_core::OsRng;
 use serde::Serialize;
-use super::std_coin::std_coin_metadata;
-use ed25519_consensus::SigningKey;
-use bs58;
 
 fn construct_message(
     base58_public_key: &str,
@@ -24,29 +23,24 @@ fn construct_message(
 #[derive(Serialize)]
 struct SIWSAbstractPublicKey {
     base58_public_key: Vec<u8>,
-    domain: Vec<u8>
+    domain: Vec<u8>,
 }
 
-fn create_abstract_public_key(
-    base58_public_key: Vec<u8>, domain: Vec<u8>
-) -> Vec<u8> {
-    let abstract_public_key = SIWSAbstractPublicKey { base58_public_key, domain };
+fn create_abstract_public_key(base58_public_key: Vec<u8>, domain: Vec<u8>) -> Vec<u8> {
+    let abstract_public_key = SIWSAbstractPublicKey {
+        base58_public_key,
+        domain,
+    };
     bcs::to_bytes(&abstract_public_key).unwrap()
 }
 
 #[derive(Serialize)]
 enum SIWSAbstractSignature {
-    MessageV1 {
-        signature: Vec<u8>
-    },
+    MessageV1 { signature: Vec<u8> },
 }
 
-fn create_raw_signature(
-    signature: Vec<u8>
-) -> Vec<u8> {
-    let abstract_signature = SIWSAbstractSignature::MessageV1 {
-        signature
-    };
+fn create_raw_signature(signature: Vec<u8>) -> Vec<u8> {
+    let abstract_signature = SIWSAbstractSignature::MessageV1 { signature };
     bcs::to_bytes(&abstract_signature).unwrap()
 }
 
@@ -61,8 +55,13 @@ fn test_solana_derivable_account() {
     let sk = SigningKey::new(OsRng);
     let vk = sk.verification_key();
 
-    let solana_address = bs58::encode(vk.to_bytes().to_vec()).with_alphabet(bs58::Alphabet::BITCOIN).into_string();
-    let abstract_public_key = create_abstract_public_key(solana_address.as_bytes().to_vec(), "localhost:3001".as_bytes().to_vec());
+    let solana_address = bs58::encode(vk.to_bytes().to_vec())
+        .with_alphabet(bs58::Alphabet::BITCOIN)
+        .into_string();
+    let abstract_public_key = create_abstract_public_key(
+        solana_address.as_bytes().to_vec(),
+        "localhost:3001".as_bytes().to_vec(),
+    );
 
     let mut tests = vec![];
 
@@ -71,18 +70,20 @@ fn test_solana_derivable_account() {
 
     // derive account address from ethereum public key
     let view_fn = h.create_view_function(
-        str::parse("0x1::account_abstraction::derive_account_address_view").unwrap(), 
-        vec![], 
+        str::parse("0x1::account_abstraction::derive_account_address_view").unwrap(),
+        vec![],
         vec![
             module_address.to_vec(),
             bcs::to_bytes(&module_name).unwrap(),
             bcs::to_bytes(&function_name).unwrap(),
             bcs::to_bytes(&abstract_public_key).unwrap(),
-        ]
+        ],
     );
     let view_output = h.run_view_function(view_fn);
-    let unwrapped_view_output: String = serde_json::from_str(view_output.expect("should success").as_str()).unwrap();
-    let daa_address = AccountAddress::from_hex_literal(unwrapped_view_output.as_str()).expect("should success");
+    let unwrapped_view_output: String =
+        serde_json::from_str(view_output.expect("should success").as_str()).unwrap();
+    let daa_address =
+        AccountAddress::from_hex_literal(unwrapped_view_output.as_str()).expect("should success");
 
     // register derivable authentication function from chain
     let test_initialize_account_abstraction = (
@@ -90,7 +91,7 @@ fn test_solana_derivable_account() {
         "0x1::account_abstraction::initialize",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_initialize_account_abstraction);
@@ -105,7 +106,7 @@ fn test_solana_derivable_account() {
             bcs::to_bytes(&module_name).unwrap(),
             bcs::to_bytes(&function_name).unwrap(),
         ],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_register_derivable_authentication_function);
@@ -113,16 +114,20 @@ fn test_solana_derivable_account() {
     // publish std coin
 
     let output = h
-        .publish_package(&minter_address, "src/tests/std_coin.data/pack", UpgradePolicy::Compatible)
+        .publish_package(
+            &minter_address,
+            "src/tests/std_coin.data/pack",
+            UpgradePolicy::Compatible,
+        )
         .expect("should success");
     h.commit(output, true);
-    
+
     let test_init = (
         vec![minter_address],
         "0x2::StdCoin::init",
         vec![],
         vec![],
-        None, 
+        None,
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_init);
@@ -159,21 +164,19 @@ fn test_solana_derivable_account() {
 
     let signature = sk.sign(message.as_slice());
 
-    let abstract_signature = create_raw_signature(
-        signature.to_bytes().to_vec()
-    );
+    let abstract_signature = create_raw_signature(signature.to_bytes().to_vec());
 
     let abstraction_data = AbstractionData {
         function_info: FunctionInfo {
-            module_address: module_address,
+            module_address,
             module_name: module_name.to_string(),
             function_name: function_name.to_string(),
         },
-        auth_data: AbstractionAuthData::DerivableV1 { 
-            signing_message_digest: digest.as_bytes().to_vec(), 
-            abstract_signature: abstract_signature, 
-            abstract_public_key: abstract_public_key
-        }
+        auth_data: AbstractionAuthData::DerivableV1 {
+            signing_message_digest: digest.as_bytes().to_vec(),
+            abstract_signature,
+            abstract_public_key,
+        },
     };
     let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
 
@@ -181,7 +184,11 @@ fn test_solana_derivable_account() {
         vec![daa_address],
         "0x1::coin::transfer",
         vec![],
-        vec![minter_address.to_vec(), std_coin_metadata().to_vec(), 10u64.to_le_bytes().to_vec()],
+        vec![
+            minter_address.to_vec(),
+            std_coin_metadata().to_vec(),
+            10u64.to_le_bytes().to_vec(),
+        ],
         Some(abstraction_data_vec),
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
