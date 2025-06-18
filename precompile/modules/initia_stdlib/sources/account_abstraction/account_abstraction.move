@@ -15,8 +15,8 @@ module initia_std::account_abstraction {
     use initia_std::object;
     use initia_std::auth_data::AbstractionAuthData;
     use initia_std::permissioned_signer::is_permissioned_signer;
-    // #[test_only]
-    // use aptos_framework::account::create_account_for_test;
+    #[test_only]
+    use initia_std::account::create_account_for_test;
     #[test_only]
     use initia_std::auth_data;
 
@@ -54,7 +54,6 @@ module initia_std::account_abstraction {
         account: address
     }
 
-    #[resource_group_member(group = initia_std::object::ObjectGroup)]
     /// The dispatchable authenticator that defines how to authenticates this account in the specified module.
     /// An integral part of Account Abstraction.
     enum DispatchableAuthenticator has key, copy, drop {
@@ -358,48 +357,48 @@ module initia_std::account_abstraction {
         account: signer, signing_data: AbstractionAuthData, function: &FunctionInfo
     ): signer;
 
-    // #[test(bob = @0xb0b)]
-    // entry fun test_dispatchable_authenticator(bob: &signer) acquires DispatchableAuthenticator {
-    //     let bob_addr = signer::address_of(bob);
-    //     create_account_for_test(bob_addr);
-    //     assert!(!using_dispatchable_authenticator(bob_addr));
-    //     add_authentication_function(
-    //         bob,
-    //         @initia_std,
-    //         string::utf8(b"account_abstraction_tests"),
-    //         string::utf8(b"test_auth")
-    //     );
-    //     assert!(using_dispatchable_authenticator(bob_addr));
-    //     remove_authenticator(bob);
-    //     assert!(!using_dispatchable_authenticator(bob_addr));
-    // }
+    #[test(bob = @0xb0b)]
+    entry fun test_dispatchable_authenticator(bob: &signer) acquires DispatchableAuthenticator {
+        let bob_addr = signer::address_of(bob);
+        create_account_for_test(bob_addr);
+        assert!(!using_dispatchable_authenticator(bob_addr));
+        add_authentication_function(
+            bob,
+            @0xcafe,
+            string::utf8(b"account_abstraction_tests"),
+            string::utf8(b"test_auth")
+        );
+        assert!(using_dispatchable_authenticator(bob_addr));
+        remove_authenticator(bob);
+        assert!(!using_dispatchable_authenticator(bob_addr));
+    }
 
-    // #[test(bob = @0xb0b)]
-    // #[expected_failure(abort_code = 0x30005, location = Self)]
-    // entry fun test_authenticate_function_returning_invalid_signer(
-    //     bob: signer
-    // ) acquires DispatchableAuthenticator, DerivableDispatchableAuthenticator {
-    //     let bob_addr = signer::address_of(&bob);
-    //     create_account_for_test(bob_addr);
-    //     assert!(!using_dispatchable_authenticator(bob_addr), 0);
-    //     add_authentication_function(
-    //         &bob,
-    //         @initia_std,
-    //         string::utf8(b"account_abstraction_tests"),
-    //         string::utf8(b"invalid_authenticate")
-    //     );
-    //     let function_info =
-    //         function_info::new_function_info_from_address(
-    //             @initia_std,
-    //             string::utf8(b"account_abstraction_tests"),
-    //             string::utf8(b"invalid_authenticate")
-    //         );
-    //     authenticate(
-    //         bob,
-    //         function_info,
-    //         auth_data::create_auth_data(vector[], vector[])
-    //     );
-    // }
+    #[test(bob = @0xb0b)]
+    #[expected_failure(abort_code = 0x30005, location = Self)]
+    entry fun test_authenticate_function_returning_invalid_signer(
+        bob: signer
+    ) acquires DispatchableAuthenticator, DerivableDispatchableAuthenticator {
+        let bob_addr = signer::address_of(&bob);
+        create_account_for_test(bob_addr);
+        assert!(!using_dispatchable_authenticator(bob_addr), 0);
+        add_authentication_function(
+            &bob,
+            @0xcafe,
+            string::utf8(b"account_abstraction_tests"),
+            string::utf8(b"invalid_authenticate")
+        );
+        let function_info =
+            function_info::new_function_info_from_address(
+                @0xcafe,
+                string::utf8(b"account_abstraction_tests"),
+                string::utf8(b"invalid_authenticate")
+            );
+        authenticate(
+            bob,
+            function_info,
+            auth_data::create_auth_data(vector[], vector[])
+        );
+    }
 
     #[deprecated]
     public entry fun add_dispatchable_authentication_function(

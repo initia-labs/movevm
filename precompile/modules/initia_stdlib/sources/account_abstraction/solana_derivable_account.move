@@ -101,8 +101,7 @@ module initia_std::solana_derivable_account {
         message.append(b".");
         message.append(b" You are approving to execute transaction ");
         message.append(*entry_function_name);
-        message.append(b" on Initia blockchain");
-        message.append(b".");
+        message.append(b" on Initia blockchain.");
         message.append(b"\n\nNonce: ");
         message.append(*digest_utf8);
         *message
@@ -239,7 +238,7 @@ module initia_std::solana_derivable_account {
     #[test]
     fun test_deserialize_abstract_public_key() {
         let base58_public_key = b"G56zT1K6AQab7FzwHdQ8hiHXusR14Rmddw6Vz5MFbbmV";
-        let domain = b"aptos-labs.github.io";
+        let domain = b"app.initia.xyz";
         let abstract_public_key =
             create_abstract_public_key(utf8(base58_public_key), utf8(domain));
         let (public_key, domain) = deserialize_abstract_public_key(&abstract_public_key);
@@ -250,10 +249,10 @@ module initia_std::solana_derivable_account {
     #[test]
     fun test_deserialize_abstract_signature() {
         let signature_bytes = vector[
-            129, 0, 6, 135, 53, 153, 88, 201, 243, 227, 13, 232, 192, 42, 167, 94, 3, 120,
-            49, 80, 102, 193, 61, 211, 189, 83, 37, 121, 5, 216, 30, 25, 243, 207, 172,
-            248, 94, 201, 123, 66, 237, 66, 122, 201, 171, 215, 162, 187, 218, 188, 24,
-            165, 52, 147, 210, 39, 128, 78, 62, 81, 73, 167, 235, 1
+            126, 104, 169, 255, 105, 84, 6, 159, 29, 109, 158, 115, 83, 122, 199, 32, 132,
+            10, 182, 86, 248, 88, 206, 122, 246, 49, 198, 82, 101, 92, 252, 172, 169, 100,
+            68, 26, 63, 76, 10, 95, 200, 70, 98, 166, 221, 66, 246, 37, 80, 50, 65, 16,
+            222, 125, 158, 100, 158, 48, 127, 227, 18, 210, 162, 9
         ];
         let abstract_signature = create_message_v1_signature(signature_bytes);
         let siws_abstract_signature = deserialize_abstract_signature(&abstract_signature);
@@ -263,15 +262,14 @@ module initia_std::solana_derivable_account {
         };
     }
 
-    #[test(framework = @0x1)]
-    fun test_construct_message(framework: &signer) {
-        set_chain_id_for_test(utf8(b"interwoven-1"));
+    #[test]
+    fun test_construct_message() {
+        set_chain_id_for_test(utf8(b"test"));
 
-        let base58_public_key = b"G56zT1K6AQab7FzwHdQ8hiHXusR14Rmddw6Vz5MFbbmV";
-        let domain = b"localhost:3000";
+        let base58_public_key = b"8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp";
+        let domain = b"localhost:3001";
         let entry_function_name = b"0x1::coin::transfer";
-        let digest_utf8 =
-            b"0x9509edc861070b2848d8161c9453159139f867745dc87d32864a71e796c7d279";
+        let digest_utf8 = b"0x68656c6c6f20776f726c64";
         let message =
             construct_message(
                 &base58_public_key,
@@ -281,7 +279,7 @@ module initia_std::solana_derivable_account {
             );
         assert!(
             message
-                == b"localhost:3000 wants you to sign in with your Solana account:\nG56zT1K6AQab7FzwHdQ8hiHXusR14Rmddw6Vz5MFbbmV\n\nPlease confirm you explicitly initiated this request from localhost:3000. You are approving to execute transaction 0x1::coin::transfer on Aptos blockchain (testnet).\n\nNonce: 0x9509edc861070b2848d8161c9453159139f867745dc87d32864a71e796c7d279"
+                == b"localhost:3001 wants you to sign in with your Solana account:\n8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction 0x1::coin::transfer on Initia blockchain.\n\nNonce: 0x68656c6c6f20776f726c64"
         );
     }
 
@@ -300,50 +298,48 @@ module initia_std::solana_derivable_account {
         );
     }
 
-    #[test(framework = @0x1)]
-    fun test_authenticate_auth_data(framework: &signer) {
-        set_chain_id_for_test(utf8(b"interwoven-1"));
+    #[test]
+    fun test_authenticate_auth_data() {
+        set_chain_id_for_test(utf8(b"test"));
 
-        let digest = x"9800ae3d949260dedd01573b2903e9de06abe914530ba5d21f068f8823bfdfa3";
+        let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-            70, 135, 9, 250, 23, 189, 162, 119, 77, 133, 195, 66, 102, 105, 116, 86, 29,
-            118, 226, 100, 94, 120, 138, 219, 252, 134, 231, 139, 47, 77, 19, 201, 4, 88,
-            255, 64, 185, 96, 134, 50, 27, 30, 110, 125, 251, 89, 57, 156, 17, 170, 16,
-            102, 107, 40, 46, 234, 15, 162, 156, 69, 132, 70, 135, 11
+            126, 104, 169, 255, 105, 84, 6, 159, 29, 109, 158, 115, 83, 122, 199, 32, 132,
+            10, 182, 86, 248, 88, 206, 122, 246, 49, 198, 82, 101, 92, 252, 172, 169, 100,
+            68, 26, 63, 76, 10, 95, 200, 70, 98, 166, 221, 66, 246, 37, 80, 50, 65, 16,
+            222, 125, 158, 100, 158, 48, 127, 227, 18, 210, 162, 9
         ];
         let abstract_signature = create_message_v1_signature(signature);
-        let base58_public_key = b"Awrh7Cfvx5gc7Ua93hdmmni6KWvkJgH4HwMkixTxmxe";
+        let base58_public_key = b"8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp";
         let domain = b"localhost:3001";
         let abstract_public_key =
             create_abstract_public_key(utf8(base58_public_key), utf8(domain));
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
-        let entry_function_name = b"0x1::aptos_account::transfer";
+        let entry_function_name = b"0x1::coin::transfer";
         authenticate_auth_data(auth_data, &entry_function_name);
     }
 
-    #[test(framework = @0x1)]
+    #[test]
     #[expected_failure(abort_code = EINVALID_SIGNATURE)]
-    fun test_authenticate_auth_data_invalid_signature(
-        framework: &signer
-    ) {
-        set_chain_id_for_test(utf8(b"interwoven-1"));
+    fun test_authenticate_auth_data_invalid_signature() {
+        set_chain_id_for_test(utf8(b"test"));
 
-        let digest = x"9800ae3d949260dedd01573b2903e9de06abe914530ba5d21f068f8823bfdfa3";
+        let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-            71, 135, 9, 250, 23, 189, 162, 119, 77, 133, 195, 66, 102, 105, 116, 86, 29,
-            118, 226, 100, 94, 120, 138, 219, 252, 134, 231, 139, 47, 77, 19, 201, 4, 88,
-            255, 64, 185, 96, 134, 50, 27, 30, 110, 125, 251, 89, 57, 156, 17, 170, 16,
-            102, 107, 40, 46, 234, 15, 162, 156, 69, 132, 70, 135, 11
+            126, 104, 169, 255, 105, 84, 6, 159, 29, 109, 158, 115, 83, 122, 199, 32, 132,
+            10, 182, 86, 248, 88, 206, 122, 246, 49, 198, 82, 101, 92, 252, 172, 169, 100,
+            68, 26, 63, 76, 10, 95, 200, 70, 98, 166, 221, 66, 246, 37, 80, 50, 65, 16,
+            222, 125, 158, 100, 158, 48, 127, 227, 18, 210, 162, 10
         ];
         let abstract_signature = create_message_v1_signature(signature);
-        let base58_public_key = b"Awrh7Cfvx5gc7Ua93hdmmni6KWvkJgH4HwMkixTxmxe";
+        let base58_public_key = b"8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp";
         let domain = b"localhost:3001";
         let abstract_public_key =
             create_abstract_public_key(utf8(base58_public_key), utf8(domain));
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
-        let entry_function_name = b"0x1::aptos_account::transfer";
+        let entry_function_name = b"0x1::coin::transfer";
         authenticate_auth_data(auth_data, &entry_function_name);
     }
 }
