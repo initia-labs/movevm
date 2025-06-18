@@ -76,8 +76,12 @@ module std::capability {
     use std::signer;
     use std::vector;
 
-    const ECAP: u64 = 0;
-    const EDELEGATE: u64 = 1;
+    /// Capability resource already exists on the specified account
+    const ECAPABILITY_ALREADY_EXISTS: u64 = 1;
+    /// Capability resource not found
+    const ECAPABILITY_NOT_FOUND: u64 = 2;
+    /// Account does not have delegated permissions
+    const EDELEGATE: u64 = 3;
 
     /// The token representing an acquired capability. Cannot be stored in memory, but copied and dropped freely.
     struct Cap<phantom Feature> has copy, drop {
@@ -108,7 +112,7 @@ module std::capability {
         let addr = signer::address_of(owner);
         assert!(
             !exists<CapState<Feature>>(addr),
-            error::already_exists(ECAP)
+            error::already_exists(ECAPABILITY_ALREADY_EXISTS)
         );
         move_to<CapState<Feature>>(owner, CapState { delegates: vector::empty() });
     }
@@ -145,17 +149,14 @@ module std::capability {
                 error::invalid_state(EDELEGATE)
             );
             assert!(
-                vector::contains(
-                    &borrow_global<CapState<Feature>>(root_addr).delegates,
-                    &addr
-                ),
+                borrow_global<CapState<Feature>>(root_addr).delegates.contains(&addr),
                 error::invalid_state(EDELEGATE)
             );
             root_addr
         } else {
             assert!(
                 exists<CapState<Feature>>(addr),
-                error::not_found(ECAP)
+                error::not_found(ECAPABILITY_NOT_FOUND)
             );
             addr
         }
@@ -164,29 +165,29 @@ module std::capability {
     /// Returns the root address associated with the given capability token. Only the owner
     /// of the feature can do this.
     public fun root_addr<Feature>(
-        cap: Cap<Feature>, _feature_witness: &Feature
+        self: Cap<Feature>, _feature_witness: &Feature
     ): address {
-        cap.root
+        self.root
     }
 
     /// Returns the root address associated with the given linear capability token.
     public fun linear_root_addr<Feature>(
-        cap: LinearCap<Feature>, _feature_witness: &Feature
+        self: LinearCap<Feature>, _feature_witness: &Feature
     ): address {
-        cap.root
+        self.root
     }
 
     /// Registers a delegation relation. If the relation already exists, this function does
     /// nothing.
     // TODO: explore whether this should be idempotent like now or abort
     public fun delegate<Feature>(
-        cap: Cap<Feature>, _feature_witness: &Feature, to: &signer
+        self: Cap<Feature>, _feature_witness: &Feature, to: &signer
     ) acquires CapState {
         let addr = signer::address_of(to);
         if (exists<CapDelegateState<Feature>>(addr)) return;
-        move_to(to, CapDelegateState<Feature> { root: cap.root });
+        move_to(to, CapDelegateState<Feature> { root: self.root });
         add_element(
-            &mut borrow_global_mut<CapState<Feature>>(cap.root).delegates,
+            &mut borrow_global_mut<CapState<Feature>>(self.root).delegates,
             addr
         );
     }
@@ -194,38 +195,28 @@ module std::capability {
     /// Revokes a delegation relation. If no relation exists, this function does nothing.
     // TODO: explore whether this should be idempotent like now or abort
     public fun revoke<Feature>(
-        cap: Cap<Feature>, _feature_witness: &Feature, from: address
+        self: Cap<Feature>, _feature_witness: &Feature, from: address
     ) acquires CapState, CapDelegateState {
         if (!exists<CapDelegateState<Feature>>(from)) return;
         let CapDelegateState { root: _root } = move_from<CapDelegateState<Feature>>(from);
         remove_element(
-            &mut borrow_global_mut<CapState<Feature>>(cap.root).delegates,
+            &mut borrow_global_mut<CapState<Feature>>(self.root).delegates,
             &from
         );
     }
 
     /// Helper to remove an element from a vector.
     fun remove_element<E: drop>(v: &mut vector<E>, x: &E) {
-        let (found, index) = vector::index_of(v, x);
+        let (found, index) = v.index_of(x);
         if (found) {
-            vector::remove(v, index);
+            v.remove(index);
         }
     }
 
     /// Helper to add an element to a vector.
     fun add_element<E: drop>(v: &mut vector<E>, x: E) {
-        if (!vector::contains(v, &x)) {
-            vector::push_back(v, x)
+        if (!v.contains(&x)) {
+            v.push_back(x)
         }
-    }
-
-    /// Helper specification function to check whether a capability exists at address.
-    spec fun spec_has_cap<Feature>(addr: address): bool {
-        exists<CapState<Feature>>(addr)
-    }
-
-    /// Helper specification function to obtain the delegates of a capability.
-    spec fun spec_delegates<Feature>(addr: address): vector<address> {
-        global<CapState<Feature>>(addr).delegates
     }
 }

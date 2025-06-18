@@ -14,6 +14,10 @@ crate::macros::define_gas_parameters!(
     [account_create_address_base_cost: InternalGas, "account.create_address.base", 1102],
     [account_create_signer_base_cost: InternalGas, "account.create_signer.base", 1102],
 
+    [permission_address_base: InternalGas, "permissioned_signer.permission_address.base", 1102],
+    [is_permissioned_signer_base: InternalGas, "permissioned_signer.is_permissioned_signer.base", 1102],
+    [signer_from_permissioned_handle_base: InternalGas, "permissioned_signer.signer_from_permissioned_handle.base", 1102],
+
     [address_to_string_base_cost: InternalGas, "address.to_string.base_cost", 1678], // 1102 + 18 * 32
     [address_from_string_base_cost: InternalGas, "address.from_string.base_cost", 1102],
     [address_from_string_per_byte: InternalGasPerByte, "address.from_string.per_byte", 18],

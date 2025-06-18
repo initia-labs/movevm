@@ -5,9 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod bcs;
+pub mod cmp;
 pub mod hash;
+pub mod mem;
 pub mod signer;
 pub mod string;
+pub mod vector;
 #[cfg(feature = "testing")]
 pub mod unit_test;
 
@@ -34,6 +37,9 @@ pub fn all_natives(
     add_natives!("hash", hash::make_all(builder));
     add_natives!("signer", signer::make_all(builder));
     add_natives!("string", string::make_all(builder));
+    add_natives!("cmp", cmp::make_all(builder));
+    add_natives!("mem", mem::make_all(builder));
+    add_natives!("vector", vector::make_all(builder));
 
     #[cfg(feature = "testing")]
     add_natives!("unit_test", unit_test::make_all(builder));
