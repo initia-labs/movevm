@@ -660,7 +660,6 @@ type Env struct {
 	NextAccountNumber uint64
 	TxHash [32]uint8
 	SessionId [32]uint8
-	Signatures *[][]uint8
 }
 
 func (obj *Env) Serialize(serializer serde.Serializer) error {
@@ -671,7 +670,6 @@ func (obj *Env) Serialize(serializer serde.Serializer) error {
 	if err := serializer.SerializeU64(obj.NextAccountNumber); err != nil { return err }
 	if err := serialize_array32_u8_array(obj.TxHash, serializer); err != nil { return err }
 	if err := serialize_array32_u8_array(obj.SessionId, serializer); err != nil { return err }
-	if err := serialize_option_vector_vector_u8(obj.Signatures, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -694,7 +692,6 @@ func DeserializeEnv(deserializer serde.Deserializer) (Env, error) {
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.NextAccountNumber = val } else { return obj, err }
 	if val, err := deserialize_array32_u8_array(deserializer); err == nil { obj.TxHash = val } else { return obj, err }
 	if val, err := deserialize_array32_u8_array(deserializer); err == nil { obj.SessionId = val } else { return obj, err }
-	if val, err := deserialize_option_vector_vector_u8(deserializer); err == nil { obj.Signatures = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -1963,28 +1960,6 @@ func deserialize_option_str(deserializer serde.Deserializer) (*string, error) {
 	}
 }
 
-func serialize_option_vector_vector_u8(value *[][]uint8, serializer serde.Serializer) error {
-	if value != nil {
-		if err := serializer.SerializeOptionTag(true); err != nil { return err }
-		if err := serialize_vector_vector_u8((*value), serializer); err != nil { return err }
-	} else {
-		if err := serializer.SerializeOptionTag(false); err != nil { return err }
-	}
-	return nil
-}
-
-func deserialize_option_vector_vector_u8(deserializer serde.Deserializer) (*[][]uint8, error) {
-	tag, err := deserializer.DeserializeOptionTag()
-	if err != nil { return nil, err }
-	if tag {
-		value := new([][]uint8)
-		if val, err := deserialize_vector_vector_u8(deserializer); err == nil { *value = val } else { return nil, err }
-	        return value, nil
-	} else {
-		return nil, nil
-	}
-}
-
 func serialize_tuple2_str_AccountAddress(value struct {Field0 string; Field1 AccountAddress}, serializer serde.Serializer) error {
 	if err := serializer.SerializeStr(value.Field0); err != nil { return err }
 	if err := value.Field1.Serialize(serializer); err != nil { return err }
@@ -2174,24 +2149,6 @@ func deserialize_vector_u8(deserializer serde.Deserializer) ([]uint8, error) {
 	obj := make([]uint8, length)
 	for i := range(obj) {
 		if val, err := deserializer.DeserializeU8(); err == nil { obj[i] = val } else { return nil, err }
-	}
-	return obj, nil
-}
-
-func serialize_vector_vector_u8(value [][]uint8, serializer serde.Serializer) error {
-	if err := serializer.SerializeLen(uint64(len(value))); err != nil { return err }
-	for _, item := range(value) {
-		if err := serialize_vector_u8(item, serializer); err != nil { return err }
-	}
-	return nil
-}
-
-func deserialize_vector_vector_u8(deserializer serde.Deserializer) ([][]uint8, error) {
-	length, err := deserializer.DeserializeLen()
-	if err != nil { return nil, err }
-	obj := make([][]uint8, length)
-	for i := range(obj) {
-		if val, err := deserialize_vector_u8(deserializer); err == nil { obj[i] = val } else { return nil, err }
 	}
 	return obj, nil
 }

@@ -16,7 +16,7 @@ use crate::test_utils::parser::MemberId;
 use initia_move_gas::Gas;
 use initia_move_storage::state_view::StateView;
 use initia_move_types::access_path::AccessPath;
-use initia_move_types::message::{Message, MessageOutput};
+use initia_move_types::message::{AuthenticateMessage, Message, MessageOutput};
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::{entry_function::EntryFunction, script::Script};
 use initia_move_vm::InitiaVM;
@@ -79,7 +79,6 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
-            None,
         );
 
         let output = self
@@ -115,7 +114,16 @@ impl MoveHarness {
     ) -> Result<MessageOutput, VMStatus> {
         let code = self.compile_package(path);
         let msg = self.create_publish_message(*acc, code, upgrade_policy);
-        self.run_message(msg, None)
+        self.run_message(msg)
+    }
+
+    pub fn authenticate(
+        &mut self,
+        sender: AccountAddress,
+        signature: Vec<u8>,
+    ) -> Result<String, VMStatus> {
+        let msg = self.create_authenticate_message(sender, signature);
+        self.run_authenticate(msg)
     }
 
     pub fn run_entry_function(
@@ -124,11 +132,10 @@ impl MoveHarness {
         fun: MemberId,
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
-        signatures: Option<Vec<Vec<u8>>>,
     ) -> Result<MessageOutput, VMStatus> {
         let entry_function = MoveHarness::create_entry_function(fun, ty_args, args);
         let msg = self.create_entry_function_message(senders, entry_function);
-        self.run_message(msg, signatures)
+        self.run_message(msg)
     }
 
     pub fn run_entry_function_with_json(
@@ -137,11 +144,10 @@ impl MoveHarness {
         fun: MemberId,
         ty_args: Vec<TypeTag>,
         args: Vec<String>,
-        signatures: Option<Vec<Vec<u8>>>,
     ) -> Result<MessageOutput, VMStatus> {
         let entry_function = MoveHarness::create_entry_function_with_json(fun, ty_args, args);
         let msg = self.create_entry_function_message(senders, entry_function);
-        self.run_message(msg, signatures)
+        self.run_message(msg)
     }
 
     pub fn run_view_function(&mut self, view_fn: ViewFunction) -> Result<String, VMStatus> {
@@ -175,7 +181,6 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
-            None,
         );
 
         self.vm.execute_view_function(
@@ -279,6 +284,14 @@ impl MoveHarness {
         Message::execute(senders, entry_function)
     }
 
+    pub fn create_authenticate_message(
+        &mut self,
+        sender: AccountAddress,
+        signature: Vec<u8>,
+    ) -> AuthenticateMessage {
+        AuthenticateMessage::new(sender, signature)
+    }
+
     pub fn create_view_function(
         &mut self,
         fun: MemberId,
@@ -310,10 +323,38 @@ impl MoveHarness {
         ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 
+    pub fn run_authenticate(
+        &mut self,
+        message: AuthenticateMessage,
+    ) -> Result<String, VMStatus> {
+        let env = Env::new(
+            "test".to_string(),
+            0,
+            0,
+            1,
+            Self::generate_random_hash().try_into().unwrap(),
+            Self::generate_random_hash().try_into().unwrap(),
+        );
+
+        let state = self.chain.create_state();
+        let mut table_resolver = MockTableState::new(&state);
+
+        let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> =
+            Gas::new(100_000_000u64);
+        let mut gas_meter = self.vm.create_gas_meter(gas_limit);
+        self.vm.execute_authenticate(
+            &mut gas_meter,
+            &self.api,
+            &env,
+            &state,
+            &mut table_resolver,
+            message,
+        )
+    }
+
     pub fn run_message(
         &mut self,
         message: Message,
-        signatures: Option<Vec<Vec<u8>>>,
     ) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
             "test".to_string(),
@@ -322,7 +363,6 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
-            signatures,
         );
 
         let state = self.chain.create_state();
@@ -353,7 +393,6 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
-            None,
         );
 
         let mut table_resolver = MockTableState::new(state);

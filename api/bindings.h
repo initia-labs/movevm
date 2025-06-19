@@ -244,6 +244,14 @@ UnmanagedVector decode_script_bytes(UnmanagedVector *errmsg, ByteSliceView scrip
 
 void destroy_unmanaged_vector(UnmanagedVector v);
 
+UnmanagedVector execute_authenticate(vm_t *vm_ptr,
+                                     uint64_t *gas_balance_ptr,
+                                     Db db,
+                                     GoApi api,
+                                     ByteSliceView env_payload,
+                                     ByteSliceView authenticate_payload,
+                                     UnmanagedVector *errmsg);
+
 UnmanagedVector execute_contract(vm_t *vm_ptr,
                                  uint64_t *gas_balance_ptr,
                                  Db db,

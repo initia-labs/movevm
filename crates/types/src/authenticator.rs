@@ -15,6 +15,13 @@ impl From<Vec<u8>> for AbstractionData {
     }
 }
 
+impl From<&Vec<u8>> for AbstractionData {
+    fn from(signature: &Vec<u8>) -> Self {
+        let data: AbstractionData = serde_json::from_slice(signature).unwrap();
+        data
+    }
+}
+
 impl From<AbstractionData> for Vec<u8> {
     fn from(data: AbstractionData) -> Self {
         serde_json::to_vec(&data).unwrap()

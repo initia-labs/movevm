@@ -14,10 +14,9 @@ use serde::Serialize;
 fn construct_message(
     base58_public_key: &str,
     domain: &str,
-    entry_function_name: &str,
     digest_utf8: &str,
 ) -> Vec<u8> {
-    format!("{} wants you to sign in with your Solana account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction {} on Initia blockchain.\n\nNonce: {}", domain, base58_public_key, domain, entry_function_name, digest_utf8).into()
+    format!("{} wants you to sign in with your Solana account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain.\n\nNonce: {}", domain, base58_public_key, domain, digest_utf8).into()
 }
 
 #[derive(Serialize)]
@@ -158,7 +157,6 @@ fn test_solana_derivable_account() {
     let message = construct_message(
         solana_address.as_str(),
         "localhost:3001",
-        "0x1::coin::transfer",
         digest_hex.as_str(),
     );
 
@@ -178,8 +176,7 @@ fn test_solana_derivable_account() {
             abstract_public_key,
         },
     };
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
-
+    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
     let test_daa_transfer = (
         vec![daa_address],
         "0x1::coin::transfer",
@@ -204,14 +201,17 @@ fn test_solana_derivable_account() {
     );
     tests.push(test_daa_balance);
 
-    for (senders, entry, ty_args, args, signatures, exp_output) in tests {
+    for (senders, entry, ty_args, args, signature, exp_output) in tests {
         if !senders.is_empty() {
+            if signature.is_some() {
+                let output = h.authenticate(senders[0], signature.unwrap()).expect("should success");
+                assert!(output == senders[0].to_hex());
+            }
             let exec_output = h.run_entry_function(
                 senders,
                 str::parse(entry).unwrap(),
                 ty_args.clone(),
                 args,
-                signatures,
             );
             exp_output.check_execute_output(&exec_output);
 

@@ -15,13 +15,12 @@ use tiny_keccak::{Hasher as KeccakHasher, Keccak};
 fn construct_message(
     ethereum_address: &str,
     domain: &str,
-    entry_function_name: &str,
     digest_utf8: &str,
     issued_at: &str,
     scheme: &str,
     chain_id: &str,
 ) -> Vec<u8> {
-    let message = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction {} on Initia blockchain.\n\nURI: {}://{}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}", domain, ethereum_address, domain, entry_function_name, scheme, domain, chain_id, digest_utf8, issued_at);
+    let message = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain.\n\nURI: {}://{}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}", domain, ethereum_address, domain, scheme, domain, chain_id, digest_utf8, issued_at);
     let msg_len = message.len();
 
     let prefix = b"\x19Ethereum Signed Message:\n";
@@ -186,7 +185,6 @@ fn test_ethereum_derivable_account() {
     let message = construct_message(
         &ethereum_address,
         "localhost:3001",
-        "0x1::coin::transfer",
         digest_hex.as_str(),
         "2025-01-01T00:00:00.000Z",
         "http",
@@ -222,7 +220,7 @@ fn test_ethereum_derivable_account() {
             abstract_public_key,
         },
     };
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
+    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
 
     let test_daa_transfer = (
         vec![daa_address],
@@ -248,14 +246,17 @@ fn test_ethereum_derivable_account() {
     );
     tests.push(test_daa_balance);
 
-    for (senders, entry, ty_args, args, signatures, exp_output) in tests {
+    for (senders, entry, ty_args, args, signature, exp_output) in tests {
         if !senders.is_empty() {
+            if signature.is_some() {
+                let output = h.authenticate(senders[0], signature.unwrap()).expect("should success");
+                assert!(output == senders[0].to_hex());
+            }
             let exec_output = h.run_entry_function(
                 senders,
                 str::parse(entry).unwrap(),
                 ty_args.clone(),
                 args,
-                signatures,
             );
             exp_output.check_execute_output(&exec_output);
 

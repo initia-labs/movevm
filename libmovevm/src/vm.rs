@@ -11,6 +11,7 @@ use initia_move_gas::InitiaGasMeter;
 use initia_move_types::access_path::AccessPath;
 use initia_move_types::env::Env;
 use initia_move_types::errors::BackendError;
+use initia_move_types::message::AuthenticateMessage;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_types::write_set::WriteSet;
 use initia_move_types::{message::Message, module::ModuleBundle};
@@ -87,6 +88,29 @@ pub(crate) fn execute_script(
 
     let res = generate_result(output)?;
     to_vec(&res)
+}
+
+pub(crate) fn execute_authenticate(
+    vm: &mut InitiaVM,
+    gas_meter: &mut InitiaGasMeter,
+    db_handle: Db,
+    api: GoApi,
+    env: Env,
+    authenticate_message: AuthenticateMessage,
+) -> Result<Vec<u8>, Error> {
+    let storage = GoStorage::new(&db_handle);
+    let mut table_storage = GoTableStorage::new(&db_handle);
+
+    let output = vm.execute_authenticate(
+        gas_meter,
+        &api,
+        &env,
+        &storage,
+        &mut table_storage,
+        authenticate_message,
+    )?;
+
+    to_vec(&output)
 }
 
 // execute view function
