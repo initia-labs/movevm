@@ -48,12 +48,7 @@ fn success_generic(ty_args: Vec<TypeTag>, tests: Vec<TestInput>) {
     for (entry, in_out) in tests {
         for (args, expected_change) in in_out {
             let output = h
-                .run_entry_function(
-                    vec![acc],
-                    str::parse(entry).unwrap(),
-                    ty_args.clone(),
-                    args,
-                )
+                .run_entry_function(vec![acc], str::parse(entry).unwrap(), ty_args.clone(), args)
                 .expect("should success");
             h.commit(output, true);
 
@@ -93,12 +88,7 @@ fn fail_generic(ty_args: Vec<TypeTag>, tests: Vec<(&str, Vec<Vec<u8>>, StatusCod
 
     for (entry, args, _err) in tests {
         let err = h
-            .run_entry_function(
-                vec![acc],
-                str::parse(entry).unwrap(),
-                ty_args.clone(),
-                args,
-            )
+            .run_entry_function(vec![acc], str::parse(entry).unwrap(), ty_args.clone(), args)
             .unwrap_err();
         assert_eq!(err.status_code(), _err);
     }

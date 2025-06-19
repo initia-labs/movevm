@@ -378,7 +378,7 @@ impl InitiaVM {
 
         let sender = msg.sender();
         let signature = msg.signature();
-        
+
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
@@ -391,21 +391,15 @@ impl InitiaVM {
 
         // Charge for msg byte size
         gas_meter.charge_intrinsic_gas_for_transaction((signature.len() as u64).into())?;
-        
+
         let move_resolver = code_storage.state_view_impl();
-        let mut session = self.create_session(
-            api,
-            env,
-            move_resolver,
-            table_resolver,
-            None,
-        );
+        let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
 
         let abstraction_data: AbstractionData = signature.into();
 
         let auth_data = bcs::to_bytes(&abstraction_data.auth_data).expect("from rust succeeds");
         let mut params = serialize_values(&vec![
-            MoveValue::Signer(sender.clone()),
+            MoveValue::Signer(*sender),
             abstraction_data.function_info.as_move_value(),
         ]);
         params.push(auth_data);
@@ -418,7 +412,8 @@ impl InitiaVM {
                 gas_meter,
                 &mut traversal_context,
                 &code_storage,
-            ).map(|mut return_vals| {
+            )
+            .map(|mut return_vals| {
                 assert!(
                     return_vals.mutable_reference_outputs.is_empty()
                         && return_vals.return_values.len() == 1,
@@ -431,11 +426,11 @@ impl InitiaVM {
                     "Abstraction authentication function returned non-signer."
                 );
                 signer[1..].to_vec()
-            }).map_err(|mut vm_error| {
+            })
+            .map_err(|mut vm_error| {
                 if vm_error.major_status() == StatusCode::OUT_OF_GAS {
-                    vm_error.set_major_status(
-                        StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED,
-                    );
+                    vm_error
+                        .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
                 }
                 vm_error
             })?;

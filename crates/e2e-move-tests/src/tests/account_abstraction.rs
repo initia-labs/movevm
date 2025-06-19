@@ -54,12 +54,8 @@ fn run_tests(tests: Vec<TestInput>, authenticator_path: &str) {
                 }
             }
 
-            let exec_output = h.run_entry_function(
-                senders,
-                str::parse(entry).unwrap(),
-                ty_args.clone(),
-                args,
-            );
+            let exec_output =
+                h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
             if let Ok(output) = exec_output {
@@ -233,19 +229,17 @@ fn test_simple_authenticator_with_invalid_signature() {
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some((VMStatus::MoveAbort(
-            AbortLocation::Module(ModuleId::new(
-                module_address,
-                Identifier::new(module_name).unwrap(),
-            )),
-            1,
-        ), abstraction_data_vec)),
-        ExpectedOutput::new(
-            VMStatus::Executed,
-            None,
-            None,
-            None,
-        ),
+        Some((
+            VMStatus::MoveAbort(
+                AbortLocation::Module(ModuleId::new(
+                    module_address,
+                    Identifier::new(module_name).unwrap(),
+                )),
+                1,
+            ),
+            abstraction_data_vec,
+        )),
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
 
@@ -463,19 +457,17 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some((VMStatus::MoveAbort(
-            AbortLocation::Module(ModuleId::new(
-                module_address,
-                Identifier::new(module_name).unwrap(),
-            )),
-            0x20001,
-        ), abstraction_data_vec)),
-        ExpectedOutput::new(
-            VMStatus::Executed,
-            None,
-            None,
-            None,
-        ),
+        Some((
+            VMStatus::MoveAbort(
+                AbortLocation::Module(ModuleId::new(
+                    module_address,
+                    Identifier::new(module_name).unwrap(),
+                )),
+                0x20001,
+            ),
+            abstraction_data_vec,
+        )),
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
 
@@ -587,19 +579,17 @@ fn test_public_key_authenticator_with_invalid_signature() {
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some((VMStatus::MoveAbort(
-            AbortLocation::Module(ModuleId::new(
-                module_address,
-                Identifier::new(module_name).unwrap(),
-            )),
-            0x20004,
-        ), abstraction_data_vec)),
-        ExpectedOutput::new(
-            VMStatus::Executed,
-            None,
-            None,
-            None,
-        ),
+        Some((
+            VMStatus::MoveAbort(
+                AbortLocation::Module(ModuleId::new(
+                    module_address,
+                    Identifier::new(module_name).unwrap(),
+                )),
+                0x20004,
+            ),
+            abstraction_data_vec,
+        )),
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
 

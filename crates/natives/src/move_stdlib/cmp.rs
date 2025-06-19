@@ -30,7 +30,7 @@ const ORDERING_GREATER_THAN_VARIANT: u16 = 2;
  *   gas cost: CMP_COMPARE_BASE + CMP_COMPARE_PER_ABS_VAL_UNIT * dereferenced_size_of_both_values
  *
  **************************************************************************************************/
- #[allow(clippy::result_large_err)]
+#[allow(clippy::result_large_err)]
 fn native_compare(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

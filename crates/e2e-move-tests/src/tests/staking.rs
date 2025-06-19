@@ -46,12 +46,8 @@ fn run_tests(tests: Vec<TestInput>) {
 
     for (senders, entry, ty_args, args, exp_output) in tests {
         if !senders.is_empty() {
-            let exec_output = h.run_entry_function(
-                senders,
-                str::parse(entry).unwrap(),
-                ty_args.clone(),
-                args,
-            );
+            let exec_output =
+                h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
             if let Ok(output) = exec_output {

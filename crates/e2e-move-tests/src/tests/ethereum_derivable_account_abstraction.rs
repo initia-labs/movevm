@@ -249,15 +249,13 @@ fn test_ethereum_derivable_account() {
     for (senders, entry, ty_args, args, signature, exp_output) in tests {
         if !senders.is_empty() {
             if signature.is_some() {
-                let output = h.authenticate(senders[0], signature.unwrap()).expect("should success");
+                let output = h
+                    .authenticate(senders[0], signature.unwrap())
+                    .expect("should success");
                 assert!(output == senders[0].to_hex());
             }
-            let exec_output = h.run_entry_function(
-                senders,
-                str::parse(entry).unwrap(),
-                ty_args.clone(),
-                args,
-            );
+            let exec_output =
+                h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
             if let Ok(output) = exec_output {

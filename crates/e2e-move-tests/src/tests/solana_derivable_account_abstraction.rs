@@ -11,11 +11,7 @@ use move_core_types::vm_status::VMStatus;
 use rand_core::OsRng;
 use serde::Serialize;
 
-fn construct_message(
-    base58_public_key: &str,
-    domain: &str,
-    digest_utf8: &str,
-) -> Vec<u8> {
+fn construct_message(base58_public_key: &str, domain: &str, digest_utf8: &str) -> Vec<u8> {
     format!("{} wants you to sign in with your Solana account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain.\n\nNonce: {}", domain, base58_public_key, domain, digest_utf8).into()
 }
 
@@ -204,15 +200,13 @@ fn test_solana_derivable_account() {
     for (senders, entry, ty_args, args, signature, exp_output) in tests {
         if !senders.is_empty() {
             if signature.is_some() {
-                let output = h.authenticate(senders[0], signature.unwrap()).expect("should success");
+                let output = h
+                    .authenticate(senders[0], signature.unwrap())
+                    .expect("should success");
                 assert!(output == senders[0].to_hex());
             }
-            let exec_output = h.run_entry_function(
-                senders,
-                str::parse(entry).unwrap(),
-                ty_args.clone(),
-                args,
-            );
+            let exec_output =
+                h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
             if let Ok(output) = exec_output {
