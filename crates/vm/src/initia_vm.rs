@@ -9,10 +9,7 @@ use move_core_types::{
     ident_str,
     identifier::IdentStr,
     language_storage::ModuleId,
-    value::{
-        serialize_values, MoveTypeLayout, MoveValue, MASTER_ADDRESS_FIELD_OFFSET,
-        MASTER_SIGNER_VARIANT,
-    },
+    value::{serialize_values, MoveTypeLayout, MoveValue},
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
@@ -23,7 +20,7 @@ use move_vm_runtime::{
     native_extensions::NativeContextExtensions,
     CodeStorage, LayoutConverter, ModuleStorage, RuntimeEnvironment, StorageLayoutConverter,
 };
-use move_vm_types::resolver::ResourceResolver;
+use move_vm_types::{resolver::ResourceResolver, value_serde::ValueSerDeContext};
 use once_cell::sync::Lazy;
 
 use std::sync::Arc;
@@ -438,17 +435,20 @@ impl InitiaVM {
                     ));
                 }
                 let (signer, signer_layout) = return_vals.return_values.pop().expect("Must exist");
-                if signer_layout != MoveTypeLayout::Signer {
-                    return Err(invariant_violation_error(
-                        "Abstraction authentication function returned non-signer.",
-                    ));
+                let invalid_signer_err = invariant_violation_error(
+                    "Abstraction authentication function returned invalid signer.",
+                );
+                // Aptos is using non-legacy serde context for return value serialization
+                // https://github.com/aptos-labs/aptos-core/blob/46ff583f7c392d9a34cc445f7b279c2d7930a374/third_party/move/move-vm/runtime/src/move_vm.rs#L226-L229
+                let signer_value = ValueSerDeContext::new()
+                    .deserialize(&signer, &signer_layout)
+                    .ok_or_else(|| invalid_signer_err.clone())?;
+                let signer_move_value = signer_value.as_move_value(&signer_layout);
+                if let MoveValue::Signer(addr) = signer_move_value {
+                    Ok(addr.to_vec())
+                } else {
+                    Err(invalid_signer_err)
                 }
-                if signer[0] != MASTER_SIGNER_VARIANT as u8 {
-                    return Err(invariant_violation_error(
-                        "Abstraction authentication function returned non-master signer.",
-                    ));
-                }
-                Ok(signer[MASTER_ADDRESS_FIELD_OFFSET..].to_vec())
             })
             .map_err(|mut vm_error| {
                 if vm_error.major_status() == StatusCode::OUT_OF_GAS {
