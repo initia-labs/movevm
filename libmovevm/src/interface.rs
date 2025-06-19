@@ -215,12 +215,13 @@ pub extern "C" fn execute_authenticate(
     db: Db,
     api: GoApi,
     env_payload: ByteSliceView,
+    sender: ByteSliceView,
     authenticate_payload: ByteSliceView,
     errmsg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
-    let authenticate_message: AuthenticateMessage =
-        bcs::from_bytes(authenticate_payload.read().unwrap()).unwrap();
+    let sender: AccountAddress = bcs::from_bytes(sender.read().unwrap()).unwrap();
+    let authenticate_message: AuthenticateMessage = AuthenticateMessage::new(sender, bcs::from_bytes(authenticate_payload.read().unwrap()).unwrap());
 
     let res = to_vm(vm_ptr)
         .ok_or(Error::unset_arg(VM_ARG))

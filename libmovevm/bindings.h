@@ -249,6 +249,7 @@ UnmanagedVector execute_authenticate(vm_t *vm_ptr,
                                      Db db,
                                      GoApi api,
                                      ByteSliceView env_payload,
+                                     ByteSliceView sender,
                                      ByteSliceView authenticate_payload,
                                      UnmanagedVector *errmsg);
 
