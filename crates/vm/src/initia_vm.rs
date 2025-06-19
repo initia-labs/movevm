@@ -9,7 +9,10 @@ use move_core_types::{
     ident_str,
     identifier::IdentStr,
     language_storage::ModuleId,
-    value::{serialize_values, MoveTypeLayout, MoveValue},
+    value::{
+        serialize_values, MoveTypeLayout, MoveValue, MASTER_ADDRESS_FIELD_OFFSET,
+        MASTER_SIGNER_VARIANT,
+    },
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
@@ -395,9 +398,22 @@ impl InitiaVM {
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
 
-        let abstraction_data: AbstractionData = signature.into();
+        let abstraction_data: AbstractionData = signature.try_into().map_err(|e| {
+            PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT)
+                .with_message(format!("Failed to deserialize abstraction data: {}", e))
+                .finish(Location::Undefined)
+        })?;
 
-        let auth_data = bcs::to_bytes(&abstraction_data.auth_data).expect("from rust succeeds");
+        // helper function to create invariant violation error
+        let invariant_violation_error = |msg: &str| {
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(msg.to_string())
+                .finish(Location::Undefined)
+        };
+
+        let auth_data = bcs::to_bytes(&abstraction_data.auth_data).map_err(|e| {
+            invariant_violation_error(&format!("Failed to serialize auth data: {}", e))
+        })?;
         let mut params = serialize_values(&vec![
             MoveValue::Signer(*sender),
             abstraction_data.function_info.as_move_value(),
@@ -414,18 +430,25 @@ impl InitiaVM {
                 &code_storage,
             )
             .map(|mut return_vals| {
-                assert!(
-                    return_vals.mutable_reference_outputs.is_empty()
-                        && return_vals.return_values.len() == 1,
-                    "Abstraction authentication function must only have 1 return value"
-                );
+                if !(return_vals.mutable_reference_outputs.is_empty()
+                    && return_vals.return_values.len() == 1)
+                {
+                    return Err(invariant_violation_error(
+                        "Abstraction authentication function must only have 1 return value",
+                    ));
+                }
                 let (signer, signer_layout) = return_vals.return_values.pop().expect("Must exist");
-                assert_eq!(
-                    signer_layout,
-                    MoveTypeLayout::Signer,
-                    "Abstraction authentication function returned non-signer."
-                );
-                signer[1..].to_vec()
+                if signer_layout != MoveTypeLayout::Signer {
+                    return Err(invariant_violation_error(
+                        "Abstraction authentication function returned non-signer.",
+                    ));
+                }
+                if signer[0] != MASTER_SIGNER_VARIANT as u8 {
+                    return Err(invariant_violation_error(
+                        "Abstraction authentication function returned non-master signer.",
+                    ));
+                }
+                Ok(signer[MASTER_ADDRESS_FIELD_OFFSET..].to_vec())
             })
             .map_err(|mut vm_error| {
                 if vm_error.major_status() == StatusCode::OUT_OF_GAS {
@@ -433,7 +456,7 @@ impl InitiaVM {
                         .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
                 }
                 vm_error
-            })?;
+            })??;
 
         Ok(res.encode_hex::<String>())
     }

@@ -51,9 +51,7 @@ module initia_std::bigdecimal {
 
     /// Create a BigDecimal from a BigUint value by multiplying it by the fractional part.
     public fun new(value: BigUint): BigDecimal {
-        BigDecimal {
-            scaled: biguint::mul(value, f())
-        }
+        BigDecimal { scaled: value.mul(f()) }
     }
 
     /// Create a BigDecimal from a scaled BigUint value.
@@ -72,17 +70,17 @@ module initia_std::bigdecimal {
     }
 
     public fun get_scaled_le_bytes(self: BigDecimal): vector<u8> {
-        biguint::to_le_bytes(self.scaled)
+        self.scaled.to_le_bytes()
     }
 
     public fun from_ratio(numerator: BigUint, denominator: BigUint): BigDecimal {
         assert!(
-            !biguint::is_zero(denominator),
+            !denominator.is_zero(),
             error::invalid_argument(EDIVISION_BY_ZERO)
         );
 
-        let numerator = biguint::mul(numerator, f());
-        BigDecimal { scaled: biguint::div(numerator, denominator) }
+        let numerator = numerator.mul(f());
+        BigDecimal { scaled: numerator.div(denominator) }
     }
 
     public fun from_ratio_u64(numerator: u64, denominator: u64): BigDecimal {
@@ -93,7 +91,7 @@ module initia_std::bigdecimal {
         );
         let denominator = biguint::from_u64(denominator);
 
-        BigDecimal { scaled: biguint::div(numerator, denominator) }
+        BigDecimal { scaled: numerator.div(denominator) }
     }
 
     public fun from_ratio_u128(numerator: u128, denominator: u128): BigDecimal {
@@ -104,7 +102,7 @@ module initia_std::bigdecimal {
         );
         let denominator = biguint::from_u128(denominator);
 
-        BigDecimal { scaled: biguint::div(numerator, denominator) }
+        BigDecimal { scaled: numerator.div(denominator) }
     }
 
     public fun from_ratio_u256(numerator: u256, denominator: u256): BigDecimal {
@@ -113,7 +111,7 @@ module initia_std::bigdecimal {
         let numerator = biguint::mul(biguint::from_u256(numerator), f());
         let denominator = biguint::from_u256(denominator);
 
-        BigDecimal { scaled: biguint::div(numerator, denominator) }
+        BigDecimal { scaled: numerator.div(denominator) }
     }
 
     public fun rev(self: BigDecimal): BigDecimal {
@@ -124,7 +122,7 @@ module initia_std::bigdecimal {
 
         let fractional = f();
         BigDecimal {
-            scaled: biguint::div(biguint::mul(fractional, fractional), self.scaled)
+            scaled: biguint::div(fractional.mul(fractional), self.scaled)
         }
     }
 
@@ -169,53 +167,53 @@ module initia_std::bigdecimal {
     // arithmetic
 
     public fun add(self: BigDecimal, other: BigDecimal): BigDecimal {
-        BigDecimal { scaled: biguint::add(self.scaled, other.scaled) }
+        BigDecimal { scaled: self.scaled.add(other.scaled) }
     }
 
     public fun add_by_u64(self: BigDecimal, other: u64): BigDecimal {
         BigDecimal {
-            scaled: biguint::add(self.scaled, from_u64(other).scaled)
+            scaled: self.scaled.add(from_u64(other).scaled)
         }
     }
 
     public fun add_by_u128(self: BigDecimal, other: u128): BigDecimal {
         BigDecimal {
-            scaled: biguint::add(self.scaled, from_u128(other).scaled)
+            scaled: self.scaled.add(from_u128(other).scaled)
         }
     }
 
     public fun add_by_u256(self: BigDecimal, other: u256): BigDecimal {
         BigDecimal {
-            scaled: biguint::add(self.scaled, from_u256(other).scaled)
+            scaled: self.scaled.add(from_u256(other).scaled)
         }
     }
 
     public fun sub(self: BigDecimal, other: BigDecimal): BigDecimal {
         assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
-        BigDecimal { scaled: biguint::sub(self.scaled, other.scaled) }
+        BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun sub_by_u64(self: BigDecimal, other: u64): BigDecimal {
         let other = from_u64(other);
         assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
-        BigDecimal { scaled: biguint::sub(self.scaled, other.scaled) }
+        BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun sub_by_u128(self: BigDecimal, other: u128): BigDecimal {
         let other = from_u128(other);
         assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
-        BigDecimal { scaled: biguint::sub(self.scaled, other.scaled) }
+        BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun sub_by_u256(self: BigDecimal, other: u256): BigDecimal {
         let other = from_u256(other);
         assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
-        BigDecimal { scaled: biguint::sub(self.scaled, other.scaled) }
+        BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun mul(self: BigDecimal, other: BigDecimal): BigDecimal {
         BigDecimal {
-            scaled: biguint::div(biguint::mul(self.scaled, other.scaled), f())
+            scaled: self.scaled.mul(other.scaled).div(f())
         }
     }
 

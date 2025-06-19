@@ -172,7 +172,7 @@ fn test_solana_derivable_account() {
             abstract_public_key,
         },
     };
-    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
     let test_daa_transfer = (
         vec![daa_address],
         "0x1::coin::transfer",

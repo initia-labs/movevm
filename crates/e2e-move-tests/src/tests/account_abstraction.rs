@@ -138,7 +138,7 @@ fn test_simple_authenticator() {
         },
     };
 
-    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
@@ -222,7 +222,7 @@ fn test_simple_authenticator_with_invalid_signature() {
         },
     };
 
-    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
@@ -339,7 +339,7 @@ fn test_public_key_authenticator() {
         },
     };
 
-    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
@@ -450,7 +450,7 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
         },
     };
 
-    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
@@ -572,7 +572,7 @@ fn test_public_key_authenticator_with_invalid_signature() {
         },
     };
 
-    let abstraction_data_vec: Vec<u8> = abstraction_data.into();
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],

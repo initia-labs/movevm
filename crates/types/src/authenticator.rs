@@ -8,23 +8,26 @@ pub struct AbstractionData {
     pub auth_data: AbstractionAuthData,
 }
 
-impl From<Vec<u8>> for AbstractionData {
-    fn from(signature: Vec<u8>) -> Self {
-        let data: AbstractionData = serde_json::from_slice(&signature).unwrap();
-        data
+impl TryFrom<Vec<u8>> for AbstractionData {
+    type Error = serde_json::Error;
+    fn try_from(signature: Vec<u8>) -> Result<Self, Self::Error> {
+        let data: AbstractionData = serde_json::from_slice(&signature)?;
+        Ok(data)
     }
 }
 
-impl From<&Vec<u8>> for AbstractionData {
-    fn from(signature: &Vec<u8>) -> Self {
-        let data: AbstractionData = serde_json::from_slice(signature).unwrap();
-        data
+impl TryFrom<&Vec<u8>> for AbstractionData {
+    type Error = serde_json::Error;
+    fn try_from(signature: &Vec<u8>) -> Result<Self, Self::Error> {
+        let data: AbstractionData = serde_json::from_slice(signature)?;
+        Ok(data)
     }
 }
 
-impl From<AbstractionData> for Vec<u8> {
-    fn from(data: AbstractionData) -> Self {
-        serde_json::to_vec(&data).unwrap()
+impl TryFrom<AbstractionData> for Vec<u8> {
+    type Error = serde_json::Error;
+    fn try_from(data: AbstractionData) -> Result<Self, Self::Error> {
+        serde_json::to_vec(&data)
     }
 }
 

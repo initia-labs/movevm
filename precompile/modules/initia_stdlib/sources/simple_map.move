@@ -5,7 +5,7 @@
 /// 4) The keys are unsorted.
 /// 5) Adds and removals take O(N) time
 ///
-/// DEPRECATED: since it's implementation is inneficient, it
+/// DEPRECATED: since it's implementation is inefficient, it
 /// has been deprecated in favor of `ordered_map.move`.
 module initia_std::simple_map {
     use std::error;
@@ -17,7 +17,7 @@ module initia_std::simple_map {
     /// Map key is not found
     const EKEY_NOT_FOUND: u64 = 2;
 
-    /// DEPRECATED: since it's implementation is inneficient, it
+    /// DEPRECATED: since it's implementation is inefficient, it
     /// has been deprecated in favor of `ordered_map.move`.
     struct SimpleMap<Key, Value> has copy, drop, store {
         data: vector<Element<Key, Value>>

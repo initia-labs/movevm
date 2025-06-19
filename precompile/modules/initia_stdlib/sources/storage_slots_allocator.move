@@ -15,7 +15,7 @@
 /// for example:
 /// * inlining some nodes
 /// * having a fee-payer for any storage creation operations
-module std::storage_slots_allocator {
+module initia_std::storage_slots_allocator {
     use std::error;
     use std::table_with_length::{Self, TableWithLength};
     use std::option::{Self, Option};

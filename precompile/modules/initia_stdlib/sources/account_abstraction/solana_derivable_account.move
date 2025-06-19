@@ -5,9 +5,9 @@
 /// <domain> wants you to sign in with your Solana account:
 /// <base58_public_key>
 ///
-/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction <entry_function_name> on Aptos blockchain (<network_name>).
+/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<network_name>).
 ///
-/// Nonce: <aptos_txn_digest>
+/// Nonce: <initia_txn_digest>
 ///
 /// 2. The abstract public key is a BCS serialized `SIWSAbstractPublicKey`.
 /// 3. The abstract signature is a BCS serialized `SIWSAbstractSignature`.
