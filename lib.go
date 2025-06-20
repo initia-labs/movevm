@@ -202,7 +202,7 @@ func (vm *VM) ExecuteAuthenticate(
 		return "", err
 	}
 
-	senderBz, err := types.SerializeBytes(sender.Bytes())
+	senderBz, err := sender.BcsSerialize()
 	if err != nil {
 		return "", err
 	}
