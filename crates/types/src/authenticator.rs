@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::function_info::FunctionInfo;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct AbstractionData {
@@ -48,15 +48,27 @@ pub enum AbstractionAuthData {
     },
 }
 
+/// A custom serde module for base64 encoding/decoding of byte arrays.
+///
+/// This module provides serialization that adapts based on the serializer's human readability:
+/// - For human readable formats (like JSON), data is encoded as base64 strings
+/// - For binary formats, data is serialized directly as bytes
+///
+/// This allows the same data structure to be efficiently serialized in binary formats
+/// while remaining human readable when needed.
 mod serde_base64 {
-    use serde::{Serializer, de, Deserialize, Deserializer};
-    use base64::{Engine, self};
+    use base64::{self, Engine};
+    use serde::{de, Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(bytes: &[u8], serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         if serializer.is_human_readable() {
-            let engine = base64::engine::GeneralPurpose::new(&base64::alphabet::STANDARD, base64::engine::general_purpose::PAD);
+            let engine = base64::engine::GeneralPurpose::new(
+                &base64::alphabet::STANDARD,
+                base64::engine::general_purpose::PAD,
+            );
             serializer.serialize_str(&engine.encode(bytes))
         } else {
             serde_bytes::serialize(bytes, serializer)
@@ -64,10 +76,14 @@ mod serde_base64 {
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
-            let engine = base64::engine::GeneralPurpose::new(&base64::alphabet::STANDARD, base64::engine::general_purpose::PAD);
+            let engine = base64::engine::GeneralPurpose::new(
+                &base64::alphabet::STANDARD,
+                base64::engine::general_purpose::PAD,
+            );
             let s = <&str>::deserialize(deserializer)?;
             engine.decode(s).map_err(de::Error::custom)
         } else {
