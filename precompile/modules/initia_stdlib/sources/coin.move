@@ -9,6 +9,7 @@ module initia_std::coin {
 
     use initia_std::event;
     use initia_std::primary_fungible_store;
+    use initia_std::dispatchable_fungible_asset;
     use initia_std::fungible_asset::{
         Self,
         MintRef,
@@ -300,7 +301,7 @@ module initia_std::coin {
     #[view]
     /// Get the current supply from the `metadata` object.
     public fun supply(metadata: Object<Metadata>): Option<u128> {
-        fungible_asset::supply(metadata)
+        dispatchable_fungible_asset::derived_supply(metadata)
     }
 
     #[view]
