@@ -31,7 +31,7 @@ pub const EINDEX_OUT_OF_BOUNDS: u64 = 0x1 << (16 + 1);
  *   gas cost: VECTOR_MOVE_RANGE_BASE + VECTOR_MOVE_RANGE_PER_INDEX_MOVED * num_elements_to_move
  *
  **************************************************************************************************/
- #[allow(clippy::result_large_err)]
+#[allow(clippy::result_large_err)]
 fn native_move_range(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,

@@ -17,7 +17,7 @@ type TestInput<'a> = (
     &'a str,
     Vec<TypeTag>,
     Vec<Vec<u8>>,
-    Option<Vec<Vec<u8>>>,
+    Option<(VMStatus, Vec<u8>)>,
     ExpectedOutput,
 );
 
@@ -44,15 +44,18 @@ fn run_tests(tests: Vec<TestInput>, authenticator_path: &str) {
         .expect("should success");
     h.commit(output, true);
 
-    for (senders, entry, ty_args, args, signatures, exp_output) in tests {
+    for (senders, entry, ty_args, args, authenticate, exp_output) in tests {
         if !senders.is_empty() {
-            let exec_output = h.run_entry_function(
-                senders,
-                str::parse(entry).unwrap(),
-                ty_args.clone(),
-                args,
-                signatures,
-            );
+            if authenticate.is_some() {
+                let (vm_status, signature) = authenticate.unwrap();
+                match h.authenticate(senders[0], signature) {
+                    Ok(output) => assert!(output == senders[0].to_hex()),
+                    Err(e) => assert!(e == vm_status),
+                }
+            }
+
+            let exec_output =
+                h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);
             exp_output.check_execute_output(&exec_output);
 
             if let Ok(output) = exec_output {
@@ -135,14 +138,14 @@ fn test_simple_authenticator() {
         },
     };
 
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some(abstraction_data_vec),
+        Some((VMStatus::Executed, abstraction_data_vec)),
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
@@ -219,15 +222,14 @@ fn test_simple_authenticator_with_invalid_signature() {
         },
     };
 
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some(abstraction_data_vec),
-        ExpectedOutput::new(
+        Some((
             VMStatus::MoveAbort(
                 AbortLocation::Module(ModuleId::new(
                     module_address,
@@ -235,10 +237,9 @@ fn test_simple_authenticator_with_invalid_signature() {
                 )),
                 1,
             ),
-            None,
-            None,
-            None,
-        ),
+            abstraction_data_vec,
+        )),
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
 
@@ -338,14 +339,14 @@ fn test_public_key_authenticator() {
         },
     };
 
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some(abstraction_data_vec),
+        Some((VMStatus::Executed, abstraction_data_vec)),
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
@@ -449,15 +450,14 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
         },
     };
 
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some(abstraction_data_vec),
-        ExpectedOutput::new(
+        Some((
             VMStatus::MoveAbort(
                 AbortLocation::Module(ModuleId::new(
                     module_address,
@@ -465,10 +465,9 @@ fn test_public_key_authenticator_with_unpermitted_public_key() {
                 )),
                 0x20001,
             ),
-            None,
-            None,
-            None,
-        ),
+            abstraction_data_vec,
+        )),
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
 
@@ -573,15 +572,14 @@ fn test_public_key_authenticator_with_invalid_signature() {
         },
     };
 
-    let abstraction_data_vec: Vec<Vec<u8>> = vec![abstraction_data.into()];
+    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_mint_with_account_abstraction = (
         vec![minter_address],
         "0x2::StdCoin::mint",
         vec![],
         vec![receiver_addr.to_vec(), 100u64.to_le_bytes().to_vec()],
-        Some(abstraction_data_vec),
-        ExpectedOutput::new(
+        Some((
             VMStatus::MoveAbort(
                 AbortLocation::Module(ModuleId::new(
                     module_address,
@@ -589,10 +587,9 @@ fn test_public_key_authenticator_with_invalid_signature() {
                 )),
                 0x20004,
             ),
-            None,
-            None,
-            None,
-        ),
+            abstraction_data_vec,
+        )),
+        ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_mint_with_account_abstraction);
 

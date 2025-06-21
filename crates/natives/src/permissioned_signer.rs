@@ -22,7 +22,7 @@ use std::collections::VecDeque;
  *   gas cost: base_cost
  *
  **************************************************************************************************/
- #[allow(clippy::result_large_err)]
+#[allow(clippy::result_large_err)]
 fn native_is_permissioned_signer_impl(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -46,7 +46,7 @@ fn native_is_permissioned_signer_impl(
  *   gas cost: base_cost
  *
  **************************************************************************************************/
- #[allow(clippy::result_large_err)]
+#[allow(clippy::result_large_err)]
 fn native_permission_address(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,
@@ -71,7 +71,7 @@ fn native_permission_address(
  *   gas cost: base_cost
  *
  **************************************************************************************************/
- #[allow(clippy::result_large_err)]
+#[allow(clippy::result_large_err)]
 fn native_signer_from_permissioned(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

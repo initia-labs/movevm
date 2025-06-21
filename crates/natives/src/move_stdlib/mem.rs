@@ -21,7 +21,7 @@ use std::collections::VecDeque;
  *   gas cost: MEM_SWAP_BASE
  *
  **************************************************************************************************/
- #[allow(clippy::result_large_err)]
+#[allow(clippy::result_large_err)]
 fn native_swap(
     context: &mut SafeNativeContext,
     _ty_args: Vec<Type>,

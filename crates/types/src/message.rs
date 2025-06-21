@@ -169,3 +169,23 @@ impl MessageOutput {
         )
     }
 }
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AuthenticateMessage {
+    sender: AccountAddress,
+    signature: Vec<u8>,
+}
+
+impl AuthenticateMessage {
+    pub fn new(sender: AccountAddress, signature: Vec<u8>) -> Self {
+        AuthenticateMessage { sender, signature }
+    }
+
+    pub fn sender(&self) -> &AccountAddress {
+        &self.sender
+    }
+
+    pub fn signature(&self) -> &Vec<u8> {
+        &self.signature
+    }
+}

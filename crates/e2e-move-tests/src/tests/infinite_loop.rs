@@ -24,7 +24,6 @@ fn empty_while_loop() {
             str::parse("0xbeef::test::run").unwrap(),
             vec![],
             vec![],
-            None,
         )
         .unwrap_err();
 

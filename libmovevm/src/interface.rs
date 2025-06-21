@@ -7,7 +7,7 @@ use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
 
 use initia_move_types::entry_function::EntryFunction;
 use initia_move_types::env::Env;
-use initia_move_types::message::Message;
+use initia_move_types::message::{AuthenticateMessage, Message};
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::script::Script;
 use initia_move_types::view_function::ViewFunction;
@@ -192,6 +192,55 @@ pub extern "C" fn execute_view_function(
                             api,
                             env,
                             view_function,
+                        );
+
+                        // update gas balance
+                        *gas_balance = gas_meter.balance().into();
+
+                        res
+                    }))
+                    .unwrap_or_else(|_| Err(Error::panic()))
+                })
+        });
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}
+
+// exported function to execute #[view] function
+#[no_mangle]
+pub extern "C" fn execute_authenticate(
+    vm_ptr: *mut vm_t,
+    gas_balance_ptr: *mut u64,
+    db: Db,
+    api: GoApi,
+    env_payload: ByteSliceView,
+    sender: ByteSliceView,
+    authenticate_payload: ByteSliceView,
+    errmsg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    let env: Env = bcs::from_bytes(env_payload.read().unwrap()).unwrap();
+    let sender: AccountAddress = bcs::from_bytes(sender.read().unwrap()).unwrap();
+    let authenticate_message: AuthenticateMessage = AuthenticateMessage::new(
+        sender,
+        bcs::from_bytes(authenticate_payload.read().unwrap()).unwrap(),
+    );
+
+    let res = to_vm(vm_ptr)
+        .ok_or(Error::unset_arg(VM_ARG))
+        .and_then(|vm| {
+            to_gas_balance(gas_balance_ptr)
+                .ok_or(Error::unset_arg(GAS_BALANCE_ARG))
+                .and_then(|gas_balance| {
+                    catch_unwind(AssertUnwindSafe(move || {
+                        let mut gas_meter = vm.create_gas_meter(*gas_balance);
+                        let res = vm::execute_authenticate(
+                            vm,
+                            &mut gas_meter,
+                            db,
+                            api,
+                            env,
+                            authenticate_message,
                         );
 
                         // update gas balance

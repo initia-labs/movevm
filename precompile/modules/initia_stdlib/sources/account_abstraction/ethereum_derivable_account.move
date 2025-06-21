@@ -5,7 +5,7 @@
 /// <domain> wants you to sign in with your Ethereum account:
 /// <ethereum_address>
 ///
-/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction <entry_function_name> on Aptos blockchain (<network_name>).
+/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<network_name>).
 ///
 /// URI: <scheme>://<domain>
 /// Version: 1
@@ -25,7 +25,6 @@
 
 module initia_std::ethereum_derivable_account {
     use initia_std::auth_data::AbstractionAuthData;
-    use initia_std::common_account_abstractions_utils::entry_function_name;
     use initia_std::base16::base16_utf8_to_vec_u8;
     use std::secp256k1;
     use std::option;
@@ -33,7 +32,6 @@ module initia_std::ethereum_derivable_account {
     use std::bcs_stream::{Self, deserialize_u8};
     use std::block::get_chain_id;
     use std::string_utils;
-    use std::transaction_context;
     use std::vector;
     use std::string::{Self, String};
 
@@ -123,7 +121,6 @@ module initia_std::ethereum_derivable_account {
     fun construct_message(
         ethereum_address: &vector<u8>,
         domain: &vector<u8>,
-        entry_function_name: &vector<u8>,
         digest_utf8: &vector<u8>,
         issued_at: &vector<u8>,
         scheme: &vector<u8>
@@ -135,9 +132,7 @@ module initia_std::ethereum_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(b" You are approving to execute transaction ");
-        message.append(*entry_function_name);
-        message.append(b" on Initia blockchain.");
+        message.append(b" You are approving to execute transaction on Initia blockchain.");
         message.append(b"\n\nURI: ");
         message.append(*scheme);
         message.append(b"://");
@@ -192,9 +187,7 @@ module initia_std::ethereum_derivable_account {
         *full_pubkey
     }
 
-    fun authenticate_auth_data(
-        aa_auth_data: AbstractionAuthData, entry_function_name: &vector<u8>
-    ) {
+    fun authenticate_auth_data(aa_auth_data: AbstractionAuthData) {
         let derivable_abstract_public_key = aa_auth_data.derivable_abstract_public_key();
         let abstract_public_key =
             deserialize_abstract_public_key(derivable_abstract_public_key);
@@ -207,7 +200,6 @@ module initia_std::ethereum_derivable_account {
             construct_message(
                 &abstract_public_key.ethereum_address,
                 &abstract_public_key.domain,
-                entry_function_name,
                 digest_utf8,
                 issued_at,
                 scheme
@@ -240,15 +232,8 @@ module initia_std::ethereum_derivable_account {
     public fun authenticate(
         account: signer, aa_auth_data: AbstractionAuthData
     ): signer {
-        let maybe_entry_function_payload = transaction_context::entry_function_payload();
-        if (maybe_entry_function_payload.is_some()) {
-            let entry_function_payload = maybe_entry_function_payload.destroy_some();
-            let entry_function_name = entry_function_name(&entry_function_payload);
-            authenticate_auth_data(aa_auth_data, &entry_function_name);
-            account
-        } else {
-            abort(EMISSING_ENTRY_FUNCTION_PAYLOAD)
-        }
+        authenticate_auth_data(aa_auth_data);
+        account
     }
 
     #[test_only]
@@ -349,7 +334,6 @@ module initia_std::ethereum_derivable_account {
 
         let ethereum_address = b"0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a";
         let domain = b"localhost:3001";
-        let entry_function_name = b"0x1::coin::transfer";
         let digest_utf8 =
             b"0x2a2f07c32382a94aa90ddfdb97076b77d779656bb9730c4f3e4d22a30df298dd";
         let issued_at = b"2025-01-01T00:00:00.000Z";
@@ -358,22 +342,20 @@ module initia_std::ethereum_derivable_account {
             construct_message(
                 &ethereum_address,
                 &domain,
-                &entry_function_name,
                 &digest_utf8,
                 &issued_at,
                 &scheme
             );
         let expected_message =
-            b"\x19Ethereum Signed Message:\n437localhost:3001 wants you to sign in with your Ethereum account:\n0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction 0x1::coin::transfer on Initia blockchain.\n\nURI: https://localhost:3001\nVersion: 1\nChain ID: interwoven-1\nNonce: 0x2a2f07c32382a94aa90ddfdb97076b77d779656bb9730c4f3e4d22a30df298dd\nIssued At: 2025-01-01T00:00:00.000Z";
+            b"\x19Ethereum Signed Message:\n417localhost:3001 wants you to sign in with your Ethereum account:\n0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction on Initia blockchain.\n\nURI: https://localhost:3001\nVersion: 1\nChain ID: interwoven-1\nNonce: 0x2a2f07c32382a94aa90ddfdb97076b77d779656bb9730c4f3e4d22a30df298dd\nIssued At: 2025-01-01T00:00:00.000Z";
         assert!(message == expected_message);
     }
 
     #[test]
     fun test_recover_public_key() {
         set_chain_id_for_test(string::utf8(b"test"));
-        let ethereum_address = b"0x8da6225c080358b8eae55f0c0d807047022d1239";
+        let ethereum_address = b"0x7a41798bf3ad885b2c9398a4577f14b3cbbecffa";
         let domain = b"localhost:3001";
-        let entry_function_name = b"0x1::coin::transfer";
         let digest = b"0x68656c6c6f20776f726c64";
         let issued_at = b"2025-01-01T00:00:00.000Z";
         let scheme = b"https";
@@ -381,27 +363,26 @@ module initia_std::ethereum_derivable_account {
             construct_message(
                 &ethereum_address,
                 &domain,
-                &entry_function_name,
                 &digest,
                 &issued_at,
                 &scheme
             );
         let hashed_message = aptos_hash::keccak256(message);
         let signature_bytes = vector[
-            252, 220, 29, 221, 200, 210, 132, 29, 182, 161, 79, 27, 220, 207, 46, 26, 121,
-            165, 53, 195, 224, 147, 157, 214, 88, 161, 109, 172, 181, 23, 116, 24, 35, 112,
-            210, 211, 86, 112, 147, 24, 170, 235, 129, 158, 7, 214, 128, 2, 224, 88, 226,
-            104, 124, 222, 164, 20, 224, 128, 25, 34, 210, 250, 81, 251, 27
+            34, 169, 33, 109, 117, 142, 149, 215, 221, 121, 246, 60, 161, 65, 217, 35, 153,
+            137, 199, 61, 213, 20, 35, 182, 47, 53, 255, 212, 136, 83, 44, 94, 75, 54, 25,
+            237, 80, 220, 241, 208, 139, 240, 86, 195, 63, 5, 110, 243, 72, 254, 88, 133,
+            241, 237, 17, 80, 73, 6, 154, 87, 163, 198, 46, 146, 28
         ];
         let base64_public_key = recover_public_key(&signature_bytes, &hashed_message);
         assert!(
             base64_public_key
                 == vector[
-                    4, 56, 134, 224, 202, 71, 116, 252, 164, 40, 59, 164, 29, 194, 198, 11,
-                    192, 246, 182, 232, 167, 151, 232, 150, 87, 28, 130, 50, 53, 163, 66,
-                    115, 42, 167, 86, 113, 194, 43, 33, 242, 91, 51, 30, 106, 1, 59, 243,
-                    146, 113, 70, 77, 114, 102, 54, 188, 129, 107, 128, 103, 212, 215, 3,
-                    161, 54, 206
+                    4, 183, 122, 255, 244, 11, 111, 113, 20, 29, 195, 46, 82, 172, 174,
+                    191, 245, 153, 180, 240, 220, 105, 65, 141, 18, 218, 82, 224, 180, 51,
+                    156, 3, 173, 59, 127, 235, 81, 113, 162, 199, 161, 33, 171, 48, 189,
+                    23, 99, 68, 101, 71, 85, 65, 10, 65, 32, 241, 152, 107, 4, 149, 191, 8,
+                    226, 136, 197
                 ]
         );
     }
@@ -412,22 +393,21 @@ module initia_std::ethereum_derivable_account {
 
         let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-            44, 190, 29, 1, 54, 77, 1, 184, 43, 94, 36, 24, 10, 137, 205, 47, 19, 218, 105,
-            0, 55, 198, 100, 48, 167, 152, 215, 136, 126, 6, 19, 255, 5, 168, 200, 176,
-            138, 54, 114, 142, 92, 31, 200, 140, 42, 92, 170, 27, 140, 227, 183, 46, 182,
-            91, 237, 7, 64, 53, 16, 145, 16, 200, 106, 65, 28
+            34, 169, 33, 109, 117, 142, 149, 215, 221, 121, 246, 60, 161, 65, 217, 35, 153,
+            137, 199, 61, 213, 20, 35, 182, 47, 53, 255, 212, 136, 83, 44, 94, 75, 54, 25,
+            237, 80, 220, 241, 208, 139, 240, 86, 195, 63, 5, 110, 243, 72, 254, 88, 133,
+            241, 237, 17, 80, 73, 6, 154, 87, 163, 198, 46, 146, 28
         ];
         let abstract_signature =
             create_raw_signature(
                 utf8(b"https"), utf8(b"2025-01-01T00:00:00.000Z"), signature
             );
-        let ethereum_address = b"0x037c05ca422a9566c04e659e9219293235ce7a6d";
+        let ethereum_address = b"0x7a41798bf3ad885b2c9398a4577f14b3cbbecffa";
         let domain = b"localhost:3001";
         let abstract_public_key = create_abstract_public_key(ethereum_address, domain);
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
-        let entry_function_name = b"0x1::coin::transfer";
-        authenticate_auth_data(auth_data, &entry_function_name);
+        authenticate_auth_data(auth_data);
     }
 
     #[test]
@@ -451,7 +431,6 @@ module initia_std::ethereum_derivable_account {
         let abstract_public_key = create_abstract_public_key(ethereum_address, domain);
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
-        let entry_function_name = b"0x1::coin::transfer";
-        authenticate_auth_data(auth_data, &entry_function_name);
+        authenticate_auth_data(auth_data);
     }
 }

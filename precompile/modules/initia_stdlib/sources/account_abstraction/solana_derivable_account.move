@@ -5,9 +5,9 @@
 /// <domain> wants you to sign in with your Solana account:
 /// <base58_public_key>
 ///
-/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction <entry_function_name> on Aptos blockchain (<network_name>).
+/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<network_name>).
 ///
-/// Nonce: <aptos_txn_digest>
+/// Nonce: <initia_txn_digest>
 ///
 /// 2. The abstract public key is a BCS serialized `SIWSAbstractPublicKey`.
 /// 3. The abstract signature is a BCS serialized `SIWSAbstractSignature`.
@@ -18,11 +18,9 @@
 /// - OKX
 module initia_std::solana_derivable_account {
     use initia_std::auth_data::AbstractionAuthData;
-    use initia_std::common_account_abstractions_utils::entry_function_name;
     use std::ed25519::{Self, signature_from_bytes, public_key_from_bytes};
     use std::bcs_stream::{Self, deserialize_u8};
     use std::string_utils;
-    use std::transaction_context;
     use std::vector;
 
     /// Signature failed to verify.
@@ -82,10 +80,7 @@ module initia_std::solana_derivable_account {
     }
 
     fun construct_message(
-        base58_public_key: &vector<u8>,
-        domain: &vector<u8>,
-        entry_function_name: &vector<u8>,
-        digest_utf8: &vector<u8>
+        base58_public_key: &vector<u8>, domain: &vector<u8>, digest_utf8: &vector<u8>
     ): vector<u8> {
         let message = &mut vector[];
         message.append(*domain);
@@ -94,9 +89,7 @@ module initia_std::solana_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(b" You are approving to execute transaction ");
-        message.append(*entry_function_name);
-        message.append(b" on Initia blockchain.");
+        message.append(b" You are approving to execute transaction on Initia blockchain.");
         message.append(b"\n\nNonce: ");
         message.append(*digest_utf8);
         *message
@@ -155,9 +148,7 @@ module initia_std::solana_derivable_account {
         pragma verify = false;
     }
 
-    fun authenticate_auth_data(
-        aa_auth_data: AbstractionAuthData, entry_function_name: &vector<u8>
-    ) {
+    fun authenticate_auth_data(aa_auth_data: AbstractionAuthData) {
         let abstract_public_key = aa_auth_data.derivable_abstract_public_key();
         let (base58_public_key, domain) =
             deserialize_abstract_public_key(abstract_public_key);
@@ -169,9 +160,7 @@ module initia_std::solana_derivable_account {
             deserialize_abstract_signature(aa_auth_data.derivable_abstract_signature());
         match(abstract_signature) {
             SIWSAbstractSignature::MessageV1 { signature: signature_bytes } => {
-                let message = construct_message(
-                    &base58_public_key, &domain, entry_function_name, digest_utf8
-                );
+                let message = construct_message(&base58_public_key, &domain, digest_utf8);
 
                 let signature = signature_from_bytes(signature_bytes);
                 assert!(
@@ -190,15 +179,8 @@ module initia_std::solana_derivable_account {
     public fun authenticate(
         account: signer, aa_auth_data: AbstractionAuthData
     ): signer {
-        let maybe_entry_function_payload = transaction_context::entry_function_payload();
-        if (maybe_entry_function_payload.is_some()) {
-            let entry_function_payload = maybe_entry_function_payload.destroy_some();
-            let entry_function_name = entry_function_name(&entry_function_payload);
-            authenticate_auth_data(aa_auth_data, &entry_function_name);
-            account
-        } else {
-            abort(EMISSING_ENTRY_FUNCTION_PAYLOAD)
-        }
+        authenticate_auth_data(aa_auth_data);
+        account
     }
 
     #[test_only]
@@ -263,18 +245,11 @@ module initia_std::solana_derivable_account {
 
         let base58_public_key = b"8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp";
         let domain = b"localhost:3001";
-        let entry_function_name = b"0x1::coin::transfer";
         let digest_utf8 = b"0x68656c6c6f20776f726c64";
-        let message =
-            construct_message(
-                &base58_public_key,
-                &domain,
-                &entry_function_name,
-                &digest_utf8
-            );
+        let message = construct_message(&base58_public_key, &domain, &digest_utf8);
         assert!(
             message
-                == b"localhost:3001 wants you to sign in with your Solana account:\n8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction 0x1::coin::transfer on Initia blockchain.\n\nNonce: 0x68656c6c6f20776f726c64"
+                == b"localhost:3001 wants you to sign in with your Solana account:\n8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction on Initia blockchain.\n\nNonce: 0x68656c6c6f20776f726c64"
         );
     }
 
@@ -299,20 +274,19 @@ module initia_std::solana_derivable_account {
 
         let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-            126, 104, 169, 255, 105, 84, 6, 159, 29, 109, 158, 115, 83, 122, 199, 32, 132,
-            10, 182, 86, 248, 88, 206, 122, 246, 49, 198, 82, 101, 92, 252, 172, 169, 100,
-            68, 26, 63, 76, 10, 95, 200, 70, 98, 166, 221, 66, 246, 37, 80, 50, 65, 16,
-            222, 125, 158, 100, 158, 48, 127, 227, 18, 210, 162, 9
+            163, 85, 79, 24, 106, 80, 133, 46, 201, 128, 156, 243, 169, 98, 40, 235, 181,
+            236, 18, 160, 47, 122, 94, 204, 144, 160, 3, 145, 176, 133, 126, 111, 162, 163,
+            22, 241, 184, 188, 108, 218, 49, 6, 89, 80, 185, 137, 27, 160, 115, 252, 223,
+            207, 151, 219, 231, 167, 165, 224, 77, 161, 45, 225, 165, 9
         ];
         let abstract_signature = create_message_v1_signature(signature);
-        let base58_public_key = b"8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp";
+        let base58_public_key = b"EUAiyK55BYghKCpQJdjchvnBzGxFb6KsgVaHZkzBoxz6";
         let domain = b"localhost:3001";
         let abstract_public_key =
             create_abstract_public_key(utf8(base58_public_key), utf8(domain));
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
-        let entry_function_name = b"0x1::coin::transfer";
-        authenticate_auth_data(auth_data, &entry_function_name);
+        authenticate_auth_data(auth_data);
     }
 
     #[test]
@@ -334,7 +308,6 @@ module initia_std::solana_derivable_account {
             create_abstract_public_key(utf8(base58_public_key), utf8(domain));
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
-        let entry_function_name = b"0x1::coin::transfer";
-        authenticate_auth_data(auth_data, &entry_function_name);
+        authenticate_auth_data(auth_data);
     }
 }

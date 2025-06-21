@@ -65,12 +65,12 @@ module initia_std::table {
     /// Acquire an immutable reference to the value which `key` maps to.
     /// Returns specified default value if there is no entry for `key`.
     public fun borrow_with_default<K: copy + drop, V>(
-        table: &Table<K, V>, key: K, default: &V
+        self: &Table<K, V>, key: K, default: &V
     ): &V {
-        if (!contains(table, copy key)) {
+        if (!self.contains(copy key)) {
             default
         } else {
-            borrow(table, copy key)
+            self.borrow(copy key)
         }
     }
 
@@ -97,10 +97,10 @@ module initia_std::table {
         key: K,
         default: V
     ): &mut V {
-        if (!contains(self, copy key)) {
-            add(self, copy key, default)
+        if (!self.contains(copy key)) {
+            self.add(copy key, default)
         };
-        borrow_mut(self, key)
+        self.borrow_mut(key)
     }
 
     /// Insert the pair (`key`, `value`) if there is no entry for `key`.
@@ -110,10 +110,10 @@ module initia_std::table {
         key: K,
         value: V
     ) {
-        if (!contains(self, copy key)) {
-            add(self, copy key, value)
+        if (!self.contains(copy key)) {
+            self.add(copy key, value)
         } else {
-            let ref = borrow_mut(self, key);
+            let ref = self.borrow_mut(key);
             *ref = value;
         };
     }
@@ -162,14 +162,14 @@ module initia_std::table {
     ): &TableIter<K, V> {
         let start_bytes: vector<u8> =
             if (option::is_some(&start)) {
-                bcs::to_bytes<K>(&option::extract(&mut start))
+                bcs::to_bytes<K>(&start.extract())
             } else {
                 vector::empty()
             };
 
         let end_bytes: vector<u8> =
             if (option::is_some(&end)) {
-                bcs::to_bytes<K>(&option::extract(&mut end))
+                bcs::to_bytes<K>(&end.extract())
             } else {
                 vector::empty()
             };
@@ -177,12 +177,12 @@ module initia_std::table {
         new_table_iter<K, V, Box<V>>(self, start_bytes, end_bytes, order)
     }
 
-    public fun prepare<K: copy + drop, V>(table_iter: &TableIter<K, V>): bool {
-        prepare_box<K, V, Box<V>>(table_iter)
+    public fun prepare<K: copy + drop, V>(self: &TableIter<K, V>): bool {
+        prepare_box<K, V, Box<V>>(self)
     }
 
-    public fun next<K: copy + drop, V>(table_iter: &TableIter<K, V>): (K, &V) {
-        let (key, box) = next_box<K, V, Box<V>>(table_iter);
+    public fun next<K: copy + drop, V>(self: &TableIter<K, V>): (K, &V) {
+        let (key, box) = next_box<K, V, Box<V>>(self);
         (key, &box.val)
     }
 
@@ -210,15 +210,15 @@ module initia_std::table {
         order: u8 /* 1: Ascending, 2: Descending */
     ): &mut TableIter<K, V> {
         let start_bytes: vector<u8> =
-            if (option::is_some(&start)) {
-                bcs::to_bytes<K>(&option::extract(&mut start))
+            if (start.is_some()) {
+                bcs::to_bytes<K>(&start.extract())
             } else {
                 vector::empty()
             };
 
         let end_bytes: vector<u8> =
-            if (option::is_some(&end)) {
-                bcs::to_bytes<K>(&option::extract(&mut end))
+            if (end.is_some()) {
+                bcs::to_bytes<K>(&end.extract())
             } else {
                 vector::empty()
             };
@@ -226,14 +226,12 @@ module initia_std::table {
         new_table_iter_mut<K, V, Box<V>>(self, start_bytes, end_bytes, order)
     }
 
-    public fun prepare_mut<K: copy + drop, V>(
-        table_iter: &mut TableIter<K, V>
-    ): bool {
-        prepare_box_mut<K, V, Box<V>>(table_iter)
+    public fun prepare_mut<K: copy + drop, V>(self: &mut TableIter<K, V>): bool {
+        prepare_box_mut<K, V, Box<V>>(self)
     }
 
-    public fun next_mut<K: copy + drop, V>(table_iter: &mut TableIter<K, V>): (K, &mut V) {
-        let (key, box) = next_box_mut<K, V, Box<V>>(table_iter);
+    public fun next_mut<K: copy + drop, V>(self: &mut TableIter<K, V>): (K, &mut V) {
+        let (key, box) = next_box_mut<K, V, Box<V>>(self);
         (key, &mut box.val)
     }
 
@@ -241,10 +239,10 @@ module initia_std::table {
         self: &Table<K, V>
     ): std::simple_map::SimpleMap<K, V> {
         let map = std::simple_map::new();
-        let iter = iter(self, option::none(), option::none(), 1);
+        let iter = self.iter(option::none(), option::none(), 1);
         while (prepare(iter)) {
-            let (key, value) = next(iter);
-            std::simple_map::add(&mut map, key, *value);
+            let (key, value) = iter.next();
+            map.add(key, *value);
         };
 
         map
@@ -272,34 +270,34 @@ module initia_std::table {
     native fun new_table_handle<K, V>(): address;
 
     native fun add_box<K: copy + drop, V, B>(
-        self: &mut Table<K, V>, key: K, val: Box<V>
+        table: &mut Table<K, V>, key: K, val: Box<V>
     );
 
-    native fun borrow_box<K: copy + drop, V, B>(self: &Table<K, V>, key: K): &Box<V>;
+    native fun borrow_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): &Box<V>;
 
     native fun borrow_box_mut<K: copy + drop, V, B>(
-        self: &mut Table<K, V>, key: K
+        table: &mut Table<K, V>, key: K
     ): &mut Box<V>;
 
-    native fun contains_box<K: copy + drop, V, B>(self: &Table<K, V>, key: K): bool;
+    native fun contains_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): bool;
 
     native fun remove_box<K: copy + drop, V, B>(
-        self: &mut Table<K, V>, key: K
+        table: &mut Table<K, V>, key: K
     ): Box<V>;
 
-    native fun destroy_empty_box<K: copy + drop, V, B>(self: &Table<K, V>);
+    native fun destroy_empty_box<K: copy + drop, V, B>(table: &Table<K, V>);
 
-    native fun drop_unchecked_box<K: copy + drop, V, B>(self: Table<K, V>);
+    native fun drop_unchecked_box<K: copy + drop, V, B>(table: Table<K, V>);
 
     native fun new_table_iter<K: copy + drop, V, B>(
-        self: &Table<K, V>,
+        table: &Table<K, V>,
         start: vector<u8>,
         end: vector<u8>,
         order: u8
     ): &TableIter<K, V>;
 
     native fun new_table_iter_mut<K: copy + drop, V, B>(
-        self: &mut Table<K, V>,
+        table: &mut Table<K, V>,
         start: vector<u8>,
         end: vector<u8>,
         order: u8
