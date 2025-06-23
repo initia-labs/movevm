@@ -57,6 +57,22 @@ func DeserializeBool(bz []byte) (bool, error) {
 	return s.DeserializeBool()
 }
 
+// SerializeUint8 serialize num to BCS bytes
+func SerializeUint8(num uint8) ([]byte, error) {
+	s := NewSerializer()
+	err := s.SerializeU8(num)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetBytes(), nil
+}
+
+// DeserializeUint8 deserialize BCS bytes
+func DeserializeUint8(bz []byte) (uint8, error) {
+	d := NewDeserializer(bz)
+	return d.DeserializeU8()
+}
+
 // SerializeUint64 serialize num to BCS bytes
 func SerializeUint64(num uint64) ([]byte, error) {
 	s := NewSerializer()
