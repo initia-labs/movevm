@@ -1,5 +1,5 @@
 module std::signer {
-    /// signer is a builtin move type that represents an address that has been verfied by the VM.
+    /// signer is a builtin move type that represents an address that has been verified by the VM.
     ///
     /// VM Runtime representation is equivalent to following:
     /// ```
@@ -16,7 +16,7 @@ module std::signer {
     ///     account: address,
     /// }
     /// ```
-    /// ^ The discrepency is needed to maintain backwards compatibility of signer serialization
+    /// ^ The discrepancy is needed to maintain backwards compatibility of signer serialization
     /// semantics.
     ///
     /// `borrow_address` borrows this inner field

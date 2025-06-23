@@ -11,6 +11,7 @@ use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::account::Accounts;
+use crate::authenticator::AbstractionData;
 use crate::cosmos::CosmosMessages;
 use crate::entry_function::EntryFunction;
 use crate::gas_usage::GasUsageSet;
@@ -173,19 +174,22 @@ impl MessageOutput {
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AuthenticateMessage {
     sender: AccountAddress,
-    signature: Vec<u8>,
+    abstraction_data: AbstractionData,
 }
 
 impl AuthenticateMessage {
-    pub fn new(sender: AccountAddress, signature: Vec<u8>) -> Self {
-        AuthenticateMessage { sender, signature }
+    pub fn new(sender: AccountAddress, abstraction_data: AbstractionData) -> Self {
+        AuthenticateMessage {
+            sender,
+            abstraction_data,
+        }
     }
 
     pub fn sender(&self) -> &AccountAddress {
         &self.sender
     }
 
-    pub fn signature(&self) -> &Vec<u8> {
-        &self.signature
+    pub fn abstraction_data(&self) -> &AbstractionData {
+        &self.abstraction_data
     }
 }

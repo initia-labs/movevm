@@ -15,14 +15,12 @@ module minitia_std::account_abstraction {
     use minitia_std::object;
     use minitia_std::auth_data::AbstractionAuthData;
     use minitia_std::permissioned_signer::is_permissioned_signer;
+
     #[test_only]
     use minitia_std::account::create_account_for_test;
+
     #[test_only]
     use minitia_std::auth_data;
-
-    // friend aptos_framework::transaction_validation;
-    // #[test_only]
-    // friend aptos_framework::account_abstraction_tests;
 
     const EDISPATCHABLE_AUTHENTICATOR_IS_NOT_USED: u64 = 1;
     const EFUNCTION_INFO_EXISTENCE: u64 = 2;
@@ -218,13 +216,26 @@ module minitia_std::account_abstraction {
         );
     }
 
-    public entry fun initialize(chain: &signer) {
-        check_chain(chain);
+    fun init_module(chain: &signer) acquires DerivableDispatchableAuthenticator {
         move_to(
             chain,
             DerivableDispatchableAuthenticator::V1 {
                 auth_functions: big_ordered_map::new_with_config(0, 0, false)
             }
+        );
+
+        register_derivable_authentication_function(
+            chain,
+            @minitia_std,
+            string::utf8(b"ethereum_derivable_account"),
+            string::utf8(b"authenticate")
+        );
+
+        register_derivable_authentication_function(
+            chain,
+            @minitia_std,
+            string::utf8(b"solana_derivable_account"),
+            string::utf8(b"authenticate")
         );
     }
 
@@ -344,7 +355,7 @@ module minitia_std::account_abstraction {
         let returned_signer = dispatchable_authenticate(
             account, signing_data, &func_info
         );
-        // Returned signer MUST represent the same account address. Otherwise, it may break the invariant of Aptos blockchain!
+        // Returned signer MUST represent the same account address. Otherwise, it may break the invariant of Initia blockchain!
         assert!(
             master_signer_addr == signer::address_of(&returned_signer),
             error::invalid_state(EINCONSISTENT_SIGNER_ADDRESS)
@@ -398,30 +409,5 @@ module minitia_std::account_abstraction {
             function_info,
             auth_data::create_auth_data(vector[], vector[])
         );
-    }
-
-    #[deprecated]
-    public entry fun add_dispatchable_authentication_function(
-        _account: &signer,
-        _module_address: address,
-        _module_name: String,
-        _function_name: String
-    ) {
-        abort std::error::unavailable(EDEPRECATED_FUNCTION)
-    }
-
-    #[deprecated]
-    public entry fun remove_dispatchable_authentication_function(
-        _account: &signer,
-        _module_address: address,
-        _module_name: String,
-        _function_name: String
-    ) {
-        abort std::error::unavailable(EDEPRECATED_FUNCTION)
-    }
-
-    #[deprecated]
-    public entry fun remove_dispatchable_authenticator(_account: &signer) {
-        abort std::error::unavailable(EDEPRECATED_FUNCTION)
     }
 }

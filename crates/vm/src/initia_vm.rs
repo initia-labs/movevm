@@ -50,7 +50,6 @@ use initia_move_storage::{
 };
 use initia_move_types::{
     account::Accounts,
-    authenticator::AbstractionData,
     cosmos::CosmosMessages,
     env::Env,
     gas_usage::GasUsageSet,
@@ -377,7 +376,7 @@ impl InitiaVM {
         let runtime_environment = self.runtime_environment();
 
         let sender = msg.sender();
-        let signature = msg.signature();
+        let abstraction_data = msg.abstraction_data();
 
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
@@ -390,16 +389,10 @@ impl InitiaVM {
         );
 
         // Charge for msg byte size
-        gas_meter.charge_intrinsic_gas_for_transaction((signature.len() as u64).into())?;
+        gas_meter.charge_intrinsic_gas_for_transaction((abstraction_data.size() as u64).into())?;
 
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
-
-        let abstraction_data: AbstractionData = signature.try_into().map_err(|e| {
-            PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT)
-                .with_message(format!("Failed to deserialize abstraction data: {}", e))
-                .finish(Location::Undefined)
-        })?;
 
         // helper function to create invariant violation error
         let invariant_violation_error = |msg: &str| {

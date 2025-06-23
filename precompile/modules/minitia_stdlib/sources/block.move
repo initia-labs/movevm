@@ -1,5 +1,5 @@
 module minitia_std::block {
-    use std::string::String;
+    use std::string::{String};
 
     #[view]
     /// Return the chain ID of this instance.
@@ -7,6 +7,16 @@ module minitia_std::block {
 
     #[test_only]
     native public fun set_chain_id_for_test(chain_id: String);
+
+    #[test_only]
+    use std::string;
+
+    #[test]
+    public fun test_get_chain_id() {
+        set_chain_id_for_test(string::utf8(b"minitia"));
+        let chain_id = get_chain_id();
+        assert!(chain_id == string::utf8(b"minitia"), 0);
+    }
 
     native public fun get_block_info(): (u64, u64);
 

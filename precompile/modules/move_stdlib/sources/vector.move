@@ -26,11 +26,6 @@ module std::vector {
     /// The range in `slice` is invalid.
     const EINVALID_SLICE_RANGE: u64 = 0x20004;
 
-    /// Whether to utilize native vector::move_range
-    /// Vector module cannot call features module, due to cyclic dependency,
-    /// so this is a constant.
-    const USE_MOVE_RANGE: bool = true;
-
     #[bytecode_instruction]
     /// Create an empty vector.
     native public fun empty<Element>(): vector<Element>;
@@ -135,15 +130,10 @@ module std::vector {
     public fun append<Element>(
         self: &mut vector<Element>, other: vector<Element>
     ) {
-        if (USE_MOVE_RANGE) {
-            let self_length = self.length();
-            let other_length = other.length();
-            move_range(&mut other, 0, other_length, self, self_length);
-            other.destroy_empty();
-        } else {
-            other.reverse();
-            self.reverse_append(other);
-        }
+        let self_length = self.length();
+        let other_length = other.length();
+        move_range(&mut other, 0, other_length, self, self_length);
+        other.destroy_empty();
     }
 
     spec append {
@@ -180,16 +170,7 @@ module std::vector {
         assert!(new_len <= len, EINDEX_OUT_OF_BOUNDS);
 
         let other = empty();
-        if (USE_MOVE_RANGE) {
-            move_range(self, new_len, len - new_len, &mut other, 0);
-        } else {
-            while (len > new_len) {
-                other.push_back(self.pop_back());
-                len -= 1;
-            };
-            other.reverse();
-        };
-
+        move_range(self, new_len, len - new_len, &mut other, 0);
         other
     }
 
@@ -281,27 +262,19 @@ module std::vector {
         let len = self.length();
         assert!(i <= len, EINDEX_OUT_OF_BOUNDS);
 
-        if (USE_MOVE_RANGE) {
-            if (i + 2 >= len) {
-                // When we are close to the end, it is cheaper to not create
-                // a temporary vector, and swap directly
-                self.push_back(e);
-                while (i < len) {
-                    self.swap(i, len);
-                    i += 1;
-                };
-            } else {
-                let other = singleton(e);
-                move_range(&mut other, 0, 1, self, i);
-                other.destroy_empty();
-            }
-        } else {
+        if (i + 2 >= len) {
+            // When we are close to the end, it is cheaper to not create
+            // a temporary vector, and swap directly
             self.push_back(e);
             while (i < len) {
                 self.swap(i, len);
                 i += 1;
             };
-        };
+        } else {
+            let other = singleton(e);
+            move_range(&mut other, 0, 1, self, i);
+            other.destroy_empty();
+        }
     }
 
     spec insert {
@@ -316,30 +289,21 @@ module std::vector {
         // i out of bounds; abort
         if (i >= len) abort EINDEX_OUT_OF_BOUNDS;
 
-        if (USE_MOVE_RANGE) {
-            // When we are close to the end, it is cheaper to not create
-            // a temporary vector, and swap directly
-            if (i + 3 >= len) {
-                len -= 1;
-                while (i < len) self.swap(i, {
-                    i += 1;
-                    i
-                });
-                self.pop_back()
-            } else {
-                let other = empty();
-                move_range(self, i, 1, &mut other, 0);
-                let result = other.pop_back();
-                other.destroy_empty();
-                result
-            }
-        } else {
+        // When we are close to the end, it is cheaper to not create
+        // a temporary vector, and swap directly
+        if (i + 3 >= len) {
             len -= 1;
             while (i < len) self.swap(i, {
                 i += 1;
                 i
             });
             self.pop_back()
+        } else {
+            let other = empty();
+            move_range(self, i, 1, &mut other, 0);
+            let result = other.pop_back();
+            other.destroy_empty();
+            result
         }
     }
 
@@ -390,15 +354,8 @@ module std::vector {
     public fun replace<Element>(
         self: &mut vector<Element>, i: u64, val: Element
     ): Element {
-        let last_idx = self.length();
-        assert!(i < last_idx, EINDEX_OUT_OF_BOUNDS);
-        if (USE_MOVE_RANGE) {
-            mem::replace(self.borrow_mut(i), val)
-        } else {
-            self.push_back(val);
-            self.swap(i, last_idx);
-            self.pop_back()
-        }
+        assert!(i < self.length(), EINDEX_OUT_OF_BOUNDS);
+        mem::replace(self.borrow_mut(i), val)
     }
 
     /// Apply the function to each element in the vector, consuming it.

@@ -1,8 +1,5 @@
 /// Type of large-scale storage tables.
 module minitia_std::table {
-    friend minitia_std::table_with_length;
-    friend minitia_std::storage_slots_allocator;
-
     use std::error;
     use std::account;
     use std::vector;

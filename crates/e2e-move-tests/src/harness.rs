@@ -4,6 +4,7 @@
 use bytes::Bytes;
 use initia_move_compiler::built_package::BuiltPackage;
 use initia_move_natives::code::UpgradePolicy;
+use initia_move_types::authenticator::AbstractionData;
 use initia_move_types::env::Env;
 use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
@@ -120,9 +121,9 @@ impl MoveHarness {
     pub fn authenticate(
         &mut self,
         sender: AccountAddress,
-        signature: Vec<u8>,
+        abstraction_data: AbstractionData,
     ) -> Result<String, VMStatus> {
-        let msg = self.create_authenticate_message(sender, signature);
+        let msg = self.create_authenticate_message(sender, abstraction_data);
         self.run_authenticate(msg)
     }
 
@@ -287,9 +288,9 @@ impl MoveHarness {
     pub fn create_authenticate_message(
         &mut self,
         sender: AccountAddress,
-        signature: Vec<u8>,
+        abstraction_data: AbstractionData,
     ) -> AuthenticateMessage {
-        AuthenticateMessage::new(sender, signature)
+        AuthenticateMessage::new(sender, abstraction_data)
     }
 
     pub fn create_view_function(

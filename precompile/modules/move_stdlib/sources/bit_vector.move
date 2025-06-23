@@ -54,7 +54,7 @@ module std::bit_vector {
         aborts_if length >= MAX_SIZE with ELENGTH;
     }
 
-    /// Set the bit at `bit_index` in the `self` regardless of its previous state.
+    /// Set the bit at `bit_index` in the `bitvector` regardless of its previous state.
     public fun set(self: &mut BitVector, bit_index: u64) {
         assert!(bit_index < self.bit_field.length(), EINDEX);
         self.bit_field[bit_index] = true;
@@ -88,7 +88,7 @@ module std::bit_vector {
         aborts_if bit_index >= self.length() with EINDEX;
     }
 
-    /// Shift the `self` left by `amount`. If `amount` is greater than the
+    /// Shift the `bitvector` left by `amount`. If `amount` is greater than the
     /// bitvector's length the bitvector will be zeroed out.
     public fun shift_left(self: &mut BitVector, amount: u64) {
         if (amount >= self.length) {
@@ -118,7 +118,7 @@ module std::bit_vector {
         pragma verify = false;
     }
 
-    /// Return the value of the bit at `bit_index` in the `self`. `true`
+    /// Return the value of the bit at `bit_index` in the `bitvector`. `true`
     /// represents "1" and `false` represents a 0
     public fun is_index_set(self: &BitVector, bit_index: u64): bool {
         assert!(bit_index < self.bit_field.length(), EINDEX);

@@ -112,32 +112,6 @@ fn test_ethereum_derivable_account() {
     let daa_address =
         AccountAddress::from_hex_literal(unwrapped_view_output.as_str()).expect("should success");
 
-    // register derivable authentication function from chain
-    let test_initialize_account_abstraction = (
-        vec![AccountAddress::ONE],
-        "0x1::account_abstraction::initialize",
-        vec![],
-        vec![],
-        None,
-        ExpectedOutput::new(VMStatus::Executed, None, None, None),
-    );
-    tests.push(test_initialize_account_abstraction);
-
-    // register derivable authentication function from chain
-    let test_register_derivable_authentication_function = (
-        vec![AccountAddress::ONE],
-        "0x1::account_abstraction::register_derivable_authentication_function",
-        vec![],
-        vec![
-            module_address.to_vec(),
-            bcs::to_bytes(&module_name).unwrap(),
-            bcs::to_bytes(&function_name).unwrap(),
-        ],
-        None,
-        ExpectedOutput::new(VMStatus::Executed, None, None, None),
-    );
-    tests.push(test_register_derivable_authentication_function);
-
     // publish std coin
 
     let output = h
@@ -220,7 +194,6 @@ fn test_ethereum_derivable_account() {
             abstract_public_key,
         },
     };
-    let abstraction_data_vec: Vec<u8> = abstraction_data.try_into().unwrap();
 
     let test_daa_transfer = (
         vec![daa_address],
@@ -231,7 +204,7 @@ fn test_ethereum_derivable_account() {
             std_coin_metadata().to_vec(),
             10u64.to_le_bytes().to_vec(),
         ],
-        Some(abstraction_data_vec),
+        Some(abstraction_data),
         ExpectedOutput::new(VMStatus::Executed, None, None, None),
     );
     tests.push(test_daa_transfer);
@@ -246,11 +219,11 @@ fn test_ethereum_derivable_account() {
     );
     tests.push(test_daa_balance);
 
-    for (senders, entry, ty_args, args, signature, exp_output) in tests {
+    for (senders, entry, ty_args, args, abstraction_data, exp_output) in tests {
         if !senders.is_empty() {
-            if signature.is_some() {
+            if abstraction_data.is_some() {
                 let output = h
-                    .authenticate(senders[0], signature.unwrap())
+                    .authenticate(senders[0], abstraction_data.unwrap())
                     .expect("should success");
                 assert!(output == senders[0].to_hex());
             }

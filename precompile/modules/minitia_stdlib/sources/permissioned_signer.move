@@ -65,7 +65,7 @@ module minitia_std::permissioned_signer {
         active_handles: vector<address>
     }
 
-    /// A ephermeral permission handle that can be used to generate a permissioned signer with permission
+    /// A ephemeral permission handle that can be used to generate a permissioned signer with permission
     /// configuration stored within.
     enum PermissionedHandle {
         V1 {
@@ -97,7 +97,7 @@ module minitia_std::permissioned_signer {
     /// handle gets created.
     enum PermissionStorage has key {
         V1 {
-            /// A hetherogenous map from `Permission` structs defined by each different modules to
+            /// A heterogeneous map from `Permission` structs defined by each different modules to
             /// its permission capacity.
             perms: BigOrderedMap<Any, StoredPermission>
         }
@@ -111,7 +111,7 @@ module minitia_std::permissioned_signer {
         Capacity(u256)
     }
 
-    /// Create an ephermeral permission handle based on the master signer.
+    /// Create an ephemeral permission handle based on the master signer.
     ///
     /// This handle can be used to derive a signer that can be used in the context of
     /// the current transaction.
@@ -125,14 +125,14 @@ module minitia_std::permissioned_signer {
         PermissionedHandle::V1 { master_account_addr, permissions_storage_addr }
     }
 
-    /// Destroys an ephermeral permission handle. Clean up the permission stored in that handle
+    /// Destroys an ephemeral permission handle. Clean up the permission stored in that handle
     public fun destroy_permissioned_handle(p: PermissionedHandle) acquires PermissionStorage {
         let PermissionedHandle::V1 { master_account_addr: _, permissions_storage_addr } =
             p;
         destroy_permissions_storage_address(permissions_storage_addr);
     }
 
-    /// Generate the permissioned signer based on the ephermeral permission handle.
+    /// Generate the permissioned signer based on the ephemeral permission handle.
     ///
     /// This signer can be used as a regular signer for other smart contracts. However when such
     /// signer interacts with various framework functions, it would subject to permission checks
@@ -215,9 +215,9 @@ module minitia_std::permissioned_signer {
         move_to(
             &create_signer(permissions_storage_addr),
             // Each key is ~100bytes, the value is 12 bytes.
-            PermissionStorage::V1 { perms: big_ordered_map::new_with_config(
-                40, 35, false
-            ) }
+            PermissionStorage::V1 {
+                perms: big_ordered_map::new_with_config(40, 35, false)
+            }
         );
     }
 

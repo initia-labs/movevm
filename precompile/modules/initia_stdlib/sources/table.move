@@ -1,8 +1,5 @@
 /// Type of large-scale storage tables.
 module initia_std::table {
-    friend initia_std::table_with_length;
-    friend initia_std::storage_slots_allocator;
-
     use std::error;
     use std::account;
     use std::vector;

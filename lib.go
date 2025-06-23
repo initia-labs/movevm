@@ -190,14 +190,14 @@ func (vm *VM) ExecuteAuthenticate(
 	goApi api.GoAPI,
 	env types.Env,
 	sender types.AccountAddress,
-	signature []byte,
+	abstractionData types.AbstractionData,
 ) (string, error) {
 	envBz, err := env.BcsSerialize()
 	if err != nil {
 		return "", err
 	}
 
-	signatureBz, err := types.SerializeBytes(signature)
+	abstractionDataBz, err := abstractionData.BcsSerialize()
 	if err != nil {
 		return "", err
 	}
@@ -214,7 +214,7 @@ func (vm *VM) ExecuteAuthenticate(
 		goApi,
 		envBz,
 		senderBz,
-		signatureBz,
+		abstractionDataBz,
 	)
 
 	if err != nil {

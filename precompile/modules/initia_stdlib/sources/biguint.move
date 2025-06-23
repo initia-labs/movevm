@@ -63,7 +63,7 @@ module initia_std::biguint {
 
     public fun add_by_u64(self: BigUint, num2: u64): BigUint {
         let num2 = from_u64(num2);
-        add(self, num2)
+        self.add(num2)
     }
 
     public fun add_by_u128(self: BigUint, num2: u128): BigUint {

@@ -17,7 +17,7 @@
 /// * having a fee-payer for any storage creation operations
 module initia_std::storage_slots_allocator {
     use std::error;
-    use std::table_with_length::{Self, TableWithLength};
+    use std::table::{Self, Table};
     use std::option::{Self, Option};
 
     const EINVALID_ARGUMENT: u64 = 1;
@@ -45,7 +45,7 @@ module initia_std::storage_slots_allocator {
         // In general, StorageSlotsAllocator is invoked on less frequent operations, so
         // that shouldn't be a big issue.
         V1 {
-            slots: Option<TableWithLength<u64, Link<T>>>, // Lazily create slots table only when needed
+            slots: Option<Table<u64, Link<T>>>, // Lazily create slots table only when needed
             new_slot_index: u64,
             should_reuse: bool,
             reuse_head_index: u64,
@@ -240,7 +240,7 @@ module initia_std::storage_slots_allocator {
         let slot_index = self.new_slot_index;
         self.new_slot_index += 1;
         if (self.slots.is_none()) {
-            self.slots.fill(table_with_length::new<u64, Link<T>>());
+            self.slots.fill(table::new<u64, Link<T>>());
         };
         slot_index
     }

@@ -122,7 +122,7 @@ module minitia_std::bigdecimal {
 
         let fractional = f();
         BigDecimal {
-            scaled: biguint::div(fractional.mul(fractional), self.scaled)
+            scaled: fractional.mul(fractional).div(self.scaled)
         }
     }
 
@@ -137,31 +137,31 @@ module minitia_std::bigdecimal {
     // cmp
 
     public fun eq(self: BigDecimal, other: BigDecimal): bool {
-        biguint::eq(self.scaled, other.scaled)
+        self.scaled.eq(other.scaled)
     }
 
     public fun lt(self: BigDecimal, other: BigDecimal): bool {
-        biguint::lt(self.scaled, other.scaled)
+        self.scaled.lt(other.scaled)
     }
 
     public fun le(self: BigDecimal, other: BigDecimal): bool {
-        biguint::le(self.scaled, other.scaled)
+        self.scaled.le(other.scaled)
     }
 
     public fun gt(self: BigDecimal, other: BigDecimal): bool {
-        biguint::gt(self.scaled, other.scaled)
+        self.scaled.gt(other.scaled)
     }
 
     public fun ge(self: BigDecimal, other: BigDecimal): bool {
-        biguint::ge(self.scaled, other.scaled)
+        self.scaled.ge(other.scaled)
     }
 
     public fun is_zero(self: BigDecimal): bool {
-        biguint::is_zero(self.scaled)
+        self.scaled.is_zero()
     }
 
     public fun is_one(self: BigDecimal): bool {
-        biguint::eq(self.scaled, f())
+        self.scaled.eq(f())
     }
 
     // arithmetic
@@ -189,25 +189,25 @@ module minitia_std::bigdecimal {
     }
 
     public fun sub(self: BigDecimal, other: BigDecimal): BigDecimal {
-        assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
+        assert!(self.ge(other), error::invalid_argument(NEGATIVE_RESULT));
         BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun sub_by_u64(self: BigDecimal, other: u64): BigDecimal {
         let other = from_u64(other);
-        assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
+        assert!(self.ge(other), error::invalid_argument(NEGATIVE_RESULT));
         BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun sub_by_u128(self: BigDecimal, other: u128): BigDecimal {
         let other = from_u128(other);
-        assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
+        assert!(self.ge(other), error::invalid_argument(NEGATIVE_RESULT));
         BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
     public fun sub_by_u256(self: BigDecimal, other: u256): BigDecimal {
         let other = from_u256(other);
-        assert!(ge(self, other), error::invalid_argument(NEGATIVE_RESULT));
+        assert!(self.ge(other), error::invalid_argument(NEGATIVE_RESULT));
         BigDecimal { scaled: self.scaled.sub(other.scaled) }
     }
 
@@ -218,126 +218,126 @@ module minitia_std::bigdecimal {
     }
 
     public fun mul_truncate(self: BigDecimal, other: BigDecimal): BigUint {
-        truncate(mul(self, other))
+        self.mul(other).truncate()
     }
 
     public fun mul_ceil(self: BigDecimal, other: BigDecimal): BigUint {
-        ceil(mul(self, other))
+        self.mul(other).ceil()
     }
 
     public fun mul_by_u64(self: BigDecimal, other: u64): BigDecimal {
-        BigDecimal { scaled: biguint::mul_by_u64(self.scaled, other) }
+        BigDecimal { scaled: self.scaled.mul_by_u64(other) }
     }
 
     public fun mul_by_u64_truncate(self: BigDecimal, other: u64): u64 {
-        truncate_u64(mul_by_u64(self, other))
+        self.mul_by_u64(other).truncate_u64()
     }
 
     public fun mul_by_u64_ceil(self: BigDecimal, other: u64): u64 {
-        ceil_u64(mul_by_u64(self, other))
+        self.mul_by_u64(other).ceil_u64()
     }
 
     public fun mul_by_u128(self: BigDecimal, other: u128): BigDecimal {
-        BigDecimal { scaled: biguint::mul_by_u128(self.scaled, other) }
+        BigDecimal { scaled: self.scaled.mul_by_u128(other) }
     }
 
     public fun mul_by_u128_truncate(self: BigDecimal, other: u128): u128 {
-        truncate_u128(mul_by_u128(self, other))
+        self.mul_by_u128(other).truncate_u128()
     }
 
     public fun mul_by_u128_ceil(self: BigDecimal, other: u128): u128 {
-        ceil_u128(mul_by_u128(self, other))
+        self.mul_by_u128(other).ceil_u128()
     }
 
     public fun mul_by_u256(self: BigDecimal, other: u256): BigDecimal {
-        BigDecimal { scaled: biguint::mul_by_u256(self.scaled, other) }
+        BigDecimal { scaled: self.scaled.mul_by_u256(other) }
     }
 
     public fun mul_by_u256_truncate(self: BigDecimal, other: u256): u256 {
-        truncate_u256(mul_by_u256(self, other))
+        self.mul_by_u256(other).truncate_u256()
     }
 
     public fun mul_by_u256_ceil(self: BigDecimal, other: u256): u256 {
-        ceil_u256(mul_by_u256(self, other))
+        self.mul_by_u256(other).ceil_u256()
     }
 
     public fun div(self: BigDecimal, other: BigDecimal): BigDecimal {
         assert!(
-            !biguint::is_zero(other.scaled),
+            !other.scaled.is_zero(),
             error::invalid_argument(EDIVISION_BY_ZERO)
         );
 
         BigDecimal {
-            scaled: biguint::div(biguint::mul(self.scaled, f()), other.scaled)
+            scaled: self.scaled.mul(f()).div(other.scaled)
         }
     }
 
     public fun div_by_u64(self: BigDecimal, other: u64): BigDecimal {
         assert!(other != 0, error::invalid_argument(EDIVISION_BY_ZERO));
 
-        BigDecimal { scaled: biguint::div_by_u64(self.scaled, other) }
+        BigDecimal { scaled: self.scaled.div_by_u64(other) }
     }
 
     public fun div_by_u128(self: BigDecimal, other: u128): BigDecimal {
         assert!(other != 0, error::invalid_argument(EDIVISION_BY_ZERO));
 
-        BigDecimal { scaled: biguint::div_by_u128(self.scaled, other) }
+        BigDecimal { scaled: self.scaled.div_by_u128(other) }
     }
 
     public fun div_by_u256(self: BigDecimal, other: u256): BigDecimal {
         assert!(other != 0, error::invalid_argument(EDIVISION_BY_ZERO));
 
-        BigDecimal { scaled: biguint::div_by_u256(self.scaled, other) }
+        BigDecimal { scaled: self.scaled.div_by_u256(other) }
     }
 
     // cast
 
     public fun truncate(self: BigDecimal): BigUint {
-        biguint::div(self.scaled, f())
+        self.scaled.div(f())
     }
 
     public fun truncate_u64(self: BigDecimal): u64 {
-        biguint::to_u64(truncate(self))
+        self.truncate().to_u64()
     }
 
     public fun truncate_u128(self: BigDecimal): u128 {
-        biguint::to_u128(truncate(self))
+        self.truncate().to_u128()
     }
 
     public fun truncate_u256(self: BigDecimal): u256 {
-        biguint::to_u256(truncate(self))
+        self.truncate().to_u256()
     }
 
     public fun round_up(self: BigDecimal): BigUint {
-        biguint::div(biguint::add(self.scaled, hf()), f())
+        self.scaled.add(hf()).div(f())
     }
 
     public fun round_up_u64(self: BigDecimal): u64 {
-        biguint::to_u64(round_up(self))
+        self.round_up().to_u64()
     }
 
     public fun round_up_u128(self: BigDecimal): u128 {
-        biguint::to_u128(round_up(self))
+        self.round_up().to_u128()
     }
 
     public fun round_up_u256(self: BigDecimal): u256 {
-        biguint::to_u256(round_up(self))
+        self.round_up().to_u256()
     }
 
     public fun ceil(self: BigDecimal): BigUint {
-        biguint::div(biguint::add(self.scaled, f_1()), f())
+        self.scaled.add(f_1()).div(f())
     }
 
     public fun ceil_u64(self: BigDecimal): u64 {
-        biguint::to_u64(ceil(self))
+        self.ceil().to_u64()
     }
 
     public fun ceil_u128(self: BigDecimal): u128 {
-        biguint::to_u128(ceil(self))
+        self.ceil().to_u128()
     }
 
     public fun ceil_u256(self: BigDecimal): u256 {
-        biguint::to_u256(ceil(self))
+        self.ceil().to_u256()
     }
 
     // tests
