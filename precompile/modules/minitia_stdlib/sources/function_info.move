@@ -5,6 +5,7 @@ module minitia_std::function_info {
 
     friend minitia_std::fungible_asset;
     friend minitia_std::dispatchable_fungible_asset;
+    friend minitia_std::account_abstraction;
 
     /// String is not a valid Move identifier
     const EINVALID_IDENTIFIER: u64 = 1;

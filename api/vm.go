@@ -175,3 +175,38 @@ func ExecuteViewFunction(
 
 	return copyAndDestroyUnmanagedVector(res), err
 }
+
+func ExecuteAuthenticate(
+	vm VM,
+	gasBalance *uint64,
+	store KVStore,
+	api GoAPI,
+	env []byte,
+	sender []byte,
+	message []byte,
+) ([]byte, error) {
+	var err error
+
+	callID := startCall()
+	defer endCall(callID)
+
+	dbState := buildDBState(store, callID)
+	db := buildDB(&dbState)
+	_api := buildAPI(&api)
+
+	e := makeView(env)
+	defer runtime.KeepAlive(e)
+	senderView := makeView(sender)
+	defer runtime.KeepAlive(senderView)
+
+	msg := makeView(message)
+	defer runtime.KeepAlive(msg)
+
+	errmsg := uninitializedUnmanagedVector()
+	res, err := C.execute_authenticate(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, senderView, msg, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return copyAndDestroyUnmanagedVector(res), err
+}

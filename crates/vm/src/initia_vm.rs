@@ -1,3 +1,4 @@
+use hex::ToHex;
 use move_binary_format::{
     deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMResult},
@@ -5,7 +6,10 @@ use move_binary_format::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    value::{MoveTypeLayout, MoveValue},
+    ident_str,
+    identifier::IdentStr,
+    language_storage::ModuleId,
+    value::{serialize_values, MoveTypeLayout, MoveValue},
     vm_status::{StatusCode, VMStatus},
 };
 use move_vm_runtime::{
@@ -16,7 +20,8 @@ use move_vm_runtime::{
     native_extensions::NativeContextExtensions,
     CodeStorage, LayoutConverter, ModuleStorage, RuntimeEnvironment, StorageLayoutConverter,
 };
-use move_vm_types::resolver::ResourceResolver;
+use move_vm_types::{resolver::ResourceResolver, value_serde::ValueSerDeContext};
+use once_cell::sync::Lazy;
 
 use std::sync::Arc;
 
@@ -49,9 +54,11 @@ use initia_move_types::{
     env::Env,
     gas_usage::GasUsageSet,
     json_event::JsonEvents,
-    message::{Message, MessageOutput, MessagePayload},
+    message::{AuthenticateMessage, Message, MessageOutput, MessagePayload},
     module::ModuleBundle,
+    move_utils::as_move_value::AsMoveValue,
     staking_change_set::StakingChangeSet,
+    user_transaction_context::{EntryFunctionPayload, UserTransactionContext},
     view_function::{ViewFunction, ViewOutput},
     vm_config::InitiaVMConfig,
     write_set::WriteSet,
@@ -66,6 +73,15 @@ use crate::{
         view_function::validate_view_function_and_construct,
     },
 };
+
+pub static ACCOUNT_ABSTRACTION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        AccountAddress::ONE,
+        ident_str!("account_abstraction").to_owned(),
+    )
+});
+
+pub const AUTHENTICATE: &IdentStr = ident_str!("authenticate");
 
 #[allow(clippy::upper_case_acronyms)]
 pub struct InitiaVM {
@@ -140,6 +156,7 @@ impl InitiaVM {
         env: &Env,
         resolver: &'r R,
         table_resolver: &'r mut T,
+        user_transaction_context_opt: Option<UserTransactionContext>,
     ) -> SessionExt<'r, R> {
         let mut extensions = NativeContextExtensions::default();
         let tx_hash: [u8; 32] = env
@@ -154,6 +171,7 @@ impl InitiaVM {
         extensions.add(NativeAccountContext::new(api, env.next_account_number()));
         extensions.add(NativeTableContext::new(session_id, table_resolver));
         extensions.add(NativeBlockContext::new(
+            env.chain_id().to_string(),
             env.block_height(),
             env.block_timestamp(),
         ));
@@ -161,7 +179,11 @@ impl InitiaVM {
         extensions.add(NativeStakingContext::new(api));
         extensions.add(NativeQueryContext::new(api));
         extensions.add(NativeCosmosContext::default());
-        extensions.add(NativeTransactionContext::new(tx_hash, session_id));
+        extensions.add(NativeTransactionContext::new(
+            tx_hash,
+            session_id,
+            user_transaction_context_opt,
+        ));
         extensions.add(NativeEventContext::default());
         extensions.add(NativeOracleContext::new(api));
 
@@ -195,7 +217,7 @@ impl InitiaVM {
         let gas_params = self.gas_params.clone();
         let mut gas_meter = InitiaGasMeter::new(gas_params, gas_limit);
 
-        let session = self.create_session(api, env, move_resolver, table_resolver);
+        let session = self.create_session(api, env, move_resolver, table_resolver, None);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
@@ -283,7 +305,7 @@ impl InitiaVM {
             self.module_cache.clone(),
         );
         let move_resolver = code_storage.state_view_impl();
-        let mut session = self.create_session(api, env, move_resolver, table_resolver);
+        let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
         let traversal_storage = TraversalStorage::new();
         let mut traversal_context = TraversalContext::new(&traversal_storage);
 
@@ -338,6 +360,100 @@ impl InitiaVM {
         Ok(ViewOutput::new(ret, json_events.into_inner()))
     }
 
+    pub fn execute_authenticate<
+        S: StateView,
+        T: TableResolver,
+        A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
+    >(
+        &self,
+        gas_meter: &mut InitiaGasMeter,
+        api: &A,
+        env: &Env,
+        storage: &S,
+        table_resolver: &mut T,
+        msg: AuthenticateMessage,
+    ) -> Result<String, VMStatus> {
+        let runtime_environment = self.runtime_environment();
+
+        let sender = msg.sender();
+        let abstraction_data = msg.abstraction_data();
+
+        let traversal_storage = TraversalStorage::new();
+        let mut traversal_context = TraversalContext::new(&traversal_storage);
+
+        let code_storage = InitiaStorage::new(
+            storage,
+            &runtime_environment,
+            self.script_cache.clone(),
+            self.module_cache.clone(),
+        );
+
+        // Charge for msg byte size
+        gas_meter.charge_intrinsic_gas_for_transaction((abstraction_data.size() as u64).into())?;
+
+        let move_resolver = code_storage.state_view_impl();
+        let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
+
+        // helper function to create invariant violation error
+        let invariant_violation_error = |msg: &str| {
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(msg.to_string())
+                .finish(Location::Undefined)
+        };
+
+        let auth_data = bcs::to_bytes(&abstraction_data.auth_data).map_err(|e| {
+            invariant_violation_error(&format!("Failed to serialize auth data: {}", e))
+        })?;
+        let mut params = serialize_values(&vec![
+            MoveValue::Signer(*sender),
+            abstraction_data.function_info.as_move_value(),
+        ]);
+        params.push(auth_data);
+        let res = session
+            .execute_function_bypass_visibility(
+                &ACCOUNT_ABSTRACTION_MODULE,
+                AUTHENTICATE,
+                vec![],
+                params,
+                gas_meter,
+                &mut traversal_context,
+                &code_storage,
+            )
+            .map(|mut return_vals| {
+                if !(return_vals.mutable_reference_outputs.is_empty()
+                    && return_vals.return_values.len() == 1)
+                {
+                    return Err(invariant_violation_error(
+                        "Abstraction authentication function must only have 1 return value",
+                    ));
+                }
+                let (signer, signer_layout) = return_vals.return_values.pop().expect("Must exist");
+                let invalid_signer_err = invariant_violation_error(
+                    "Abstraction authentication function returned invalid signer.",
+                );
+                // Aptos is using non-legacy serde context for return value serialization
+                // https://github.com/aptos-labs/aptos-core/blob/46ff583f7c392d9a34cc445f7b279c2d7930a374/third_party/move/move-vm/runtime/src/move_vm.rs#L226-L229
+                let signer_value = ValueSerDeContext::new()
+                    .deserialize(&signer, &signer_layout)
+                    .ok_or_else(|| invalid_signer_err.clone())?;
+                let signer_move_value = signer_value.as_move_value(&signer_layout);
+                if let MoveValue::Signer(addr) = signer_move_value {
+                    Ok(addr.to_vec())
+                } else {
+                    Err(invalid_signer_err)
+                }
+            })
+            .map_err(|mut vm_error| {
+                if vm_error.major_status() == StatusCode::OUT_OF_GAS {
+                    vm_error
+                        .set_major_status(StatusCode::ACCOUNT_AUTHENTICATION_GAS_LIMIT_EXCEEDED);
+                }
+                vm_error
+            })??;
+
+        Ok(res.encode_hex::<String>())
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn execute_script_or_entry_function<
         S: StateView,
@@ -355,7 +471,34 @@ impl InitiaVM {
         traversal_context: &mut TraversalContext,
     ) -> Result<MessageOutput, VMStatus> {
         let move_resolver = code_storage.state_view_impl();
-        let mut session = self.create_session(api, env, move_resolver, table_resolver);
+        let user_transaction_context_opt = match payload {
+            MessagePayload::Execute(entry_function) => Some(UserTransactionContext::new(
+                senders[0],
+                Some(EntryFunctionPayload::new(
+                    entry_function.module().address,
+                    entry_function.module().name.to_string(),
+                    entry_function.function().to_string(),
+                    entry_function
+                        .ty_args()
+                        .iter()
+                        .map(|ty| ty.to_string())
+                        .collect(),
+                    entry_function
+                        .args()
+                        .iter()
+                        .map(|arg| arg.to_vec())
+                        .collect(),
+                )),
+            )),
+            MessagePayload::Script(..) => None,
+        };
+        let mut session = self.create_session(
+            api,
+            env,
+            move_resolver,
+            table_resolver,
+            user_transaction_context_opt,
+        );
 
         match payload {
             MessagePayload::Script(script) => {
@@ -448,7 +591,6 @@ impl InitiaVM {
                     &function,
                     entry_fn.is_json(),
                 )?;
-
                 // first execution does not execute `charge_call`, so need to record call here
                 gas_meter.record_call(entry_fn.module());
 

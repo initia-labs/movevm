@@ -23,6 +23,11 @@ bytes = { workspace = true }
 bigdecimal = { workspace = true }
 bech32 = { workspace = true }
 base64 = { workspace = true }
+ed25519-consensus = { workspace = true }
+rand_core = { workspace = true }
+libsecp256k1 = { workspace = true }
+tiny-keccak = { workspace = true }
+bs58 = { workspace = true }
 
 initia-move-types = { workspace = true }
 initia-move-vm = { workspace = true }

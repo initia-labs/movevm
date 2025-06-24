@@ -52,6 +52,164 @@ func BcsDeserializeAbilitySet(input []byte) (AbilitySet, error) {
 	return obj, err
 }
 
+type AbstractionAuthData interface {
+	isAbstractionAuthData()
+	Serialize(serializer serde.Serializer) error
+	BcsSerialize() ([]byte, error)
+}
+
+func DeserializeAbstractionAuthData(deserializer serde.Deserializer) (AbstractionAuthData, error) {
+	index, err := deserializer.DeserializeVariantIndex()
+	if err != nil { return nil, err }
+
+	switch index {
+	case 0:
+		if val, err := load_AbstractionAuthData__V1(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
+	case 1:
+		if val, err := load_AbstractionAuthData__DerivableV1(deserializer); err == nil {
+			return &val, nil
+		} else {
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf("Unknown variant index for AbstractionAuthData: %d", index)
+	}
+}
+
+func BcsDeserializeAbstractionAuthData(input []byte) (AbstractionAuthData, error) {
+	if input == nil {
+		var obj AbstractionAuthData
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeAbstractionAuthData(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type AbstractionAuthData__V1 struct {
+	SigningMessageDigest []uint8
+	Authenticator []uint8
+}
+
+func (*AbstractionAuthData__V1) isAbstractionAuthData() {}
+
+func (obj *AbstractionAuthData__V1) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(0)
+	if err := serialize_vector_u8(obj.SigningMessageDigest, serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.Authenticator, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *AbstractionAuthData__V1) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_AbstractionAuthData__V1(deserializer serde.Deserializer) (AbstractionAuthData__V1, error) {
+	var obj AbstractionAuthData__V1
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.SigningMessageDigest = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Authenticator = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+type AbstractionAuthData__DerivableV1 struct {
+	SigningMessageDigest []uint8
+	AbstractSignature []uint8
+	AbstractPublicKey []uint8
+}
+
+func (*AbstractionAuthData__DerivableV1) isAbstractionAuthData() {}
+
+func (obj *AbstractionAuthData__DerivableV1) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	serializer.SerializeVariantIndex(1)
+	if err := serialize_vector_u8(obj.SigningMessageDigest, serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.AbstractSignature, serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.AbstractPublicKey, serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *AbstractionAuthData__DerivableV1) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func load_AbstractionAuthData__DerivableV1(deserializer serde.Deserializer) (AbstractionAuthData__DerivableV1, error) {
+	var obj AbstractionAuthData__DerivableV1
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.SigningMessageDigest = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.AbstractSignature = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.AbstractPublicKey = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+type AbstractionData struct {
+	FunctionInfo FunctionInfo
+	AuthData AbstractionAuthData
+}
+
+func (obj *AbstractionData) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := obj.FunctionInfo.Serialize(serializer); err != nil { return err }
+	if err := obj.AuthData.Serialize(serializer); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *AbstractionData) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeAbstractionData(deserializer serde.Deserializer) (AbstractionData, error) {
+	var obj AbstractionData
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeFunctionInfo(deserializer); err == nil { obj.FunctionInfo = val } else { return obj, err }
+	if val, err := DeserializeAbstractionAuthData(deserializer); err == nil { obj.AuthData = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeAbstractionData(input []byte) (AbstractionData, error) {
+	if input == nil {
+		var obj AbstractionData
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeAbstractionData(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
 type Account struct {
 	Address AccountAddress
 	AccountNumber uint64
@@ -654,6 +812,7 @@ func BcsDeserializeEntryFunction(input []byte) (EntryFunction, error) {
 }
 
 type Env struct {
+	ChainId string
 	BlockHeight uint64
 	BlockTimestamp uint64
 	NextAccountNumber uint64
@@ -663,6 +822,7 @@ type Env struct {
 
 func (obj *Env) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := serializer.SerializeStr(obj.ChainId); err != nil { return err }
 	if err := serializer.SerializeU64(obj.BlockHeight); err != nil { return err }
 	if err := serializer.SerializeU64(obj.BlockTimestamp); err != nil { return err }
 	if err := serializer.SerializeU64(obj.NextAccountNumber); err != nil { return err }
@@ -684,6 +844,7 @@ func (obj *Env) BcsSerialize() ([]byte, error) {
 func DeserializeEnv(deserializer serde.Deserializer) (Env, error) {
 	var obj Env
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.ChainId = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.BlockHeight = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.BlockTimestamp = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.NextAccountNumber = val } else { return obj, err }
@@ -753,6 +914,53 @@ func BcsDeserializeExecutionResult(input []byte) (ExecutionResult, error) {
 	}
 	deserializer := bcs.NewDeserializer(input);
 	obj, err := DeserializeExecutionResult(deserializer)
+	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
+		return obj, fmt.Errorf("Some input bytes were not read")
+	}
+	return obj, err
+}
+
+type FunctionInfo struct {
+	ModuleAddress AccountAddress
+	ModuleName string
+	FunctionName string
+}
+
+func (obj *FunctionInfo) Serialize(serializer serde.Serializer) error {
+	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
+	if err := obj.ModuleAddress.Serialize(serializer); err != nil { return err }
+	if err := serializer.SerializeStr(obj.ModuleName); err != nil { return err }
+	if err := serializer.SerializeStr(obj.FunctionName); err != nil { return err }
+	serializer.DecreaseContainerDepth()
+	return nil
+}
+
+func (obj *FunctionInfo) BcsSerialize() ([]byte, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("Cannot serialize null object")
+	}
+	serializer := bcs.NewSerializer();
+	if err := obj.Serialize(serializer); err != nil { return nil, err }
+	return serializer.GetBytes(), nil
+}
+
+func DeserializeFunctionInfo(deserializer serde.Deserializer) (FunctionInfo, error) {
+	var obj FunctionInfo
+	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
+	if val, err := DeserializeAccountAddress(deserializer); err == nil { obj.ModuleAddress = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.ModuleName = val } else { return obj, err }
+	if val, err := deserializer.DeserializeStr(); err == nil { obj.FunctionName = val } else { return obj, err }
+	deserializer.DecreaseContainerDepth()
+	return obj, nil
+}
+
+func BcsDeserializeFunctionInfo(input []byte) (FunctionInfo, error) {
+	if input == nil {
+		var obj FunctionInfo
+		return obj, fmt.Errorf("Cannot deserialize null array")
+	}
+	deserializer := bcs.NewDeserializer(input);
+	obj, err := DeserializeFunctionInfo(deserializer)
 	if err == nil && deserializer.GetBufferOffset() < uint64(len(input)) {
 		return obj, fmt.Errorf("Some input bytes were not read")
 	}

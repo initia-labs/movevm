@@ -65,6 +65,14 @@ module std::error {
         (category << 16) + reason
     }
 
+    spec canonical {
+        pragma opaque = true;
+        let shl_res = category << 16;
+        ensures [concrete] result == shl_res + reason;
+        aborts_if [abstract] false;
+        ensures [abstract] result == category;
+    }
+
     /// Functions to construct a canonical error code of the given category.
     public fun invalid_argument(r: u64): u64 {
         canonical(INVALID_ARGUMENT, r)

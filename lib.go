@@ -183,3 +183,42 @@ func (vm *VM) ExecuteScript(
 	execRes, err := types.BcsDeserializeExecutionResult(res)
 	return execRes, err
 }
+
+func (vm *VM) ExecuteAuthenticate(
+	gasBalance *uint64,
+	kvStore api.KVStore,
+	goApi api.GoAPI,
+	env types.Env,
+	sender types.AccountAddress,
+	abstractionData types.AbstractionData,
+) (string, error) {
+	envBz, err := env.BcsSerialize()
+	if err != nil {
+		return "", err
+	}
+
+	abstractionDataBz, err := abstractionData.BcsSerialize()
+	if err != nil {
+		return "", err
+	}
+
+	senderBz, err := sender.BcsSerialize()
+	if err != nil {
+		return "", err
+	}
+
+	res, err := api.ExecuteAuthenticate(
+		vm.inner,
+		gasBalance,
+		kvStore,
+		goApi,
+		envBz,
+		senderBz,
+		abstractionDataBz,
+	)
+
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
+}

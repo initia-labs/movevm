@@ -5,6 +5,7 @@ use serde_reflection::{Tracer, TracerConfig};
 
 use initia_move_types::{
     account::Account,
+    authenticator::{AbstractionAuthData, AbstractionData},
     compiler::{
         CompilerArguments, CompilerBuildConfig, CompilerCoverageBytecodeOptions,
         CompilerCoverageSourceOptions, CompilerCoverageSummaryOptions, CompilerDocgenOptions,
@@ -62,6 +63,8 @@ fn main() {
         .unwrap();
     tracer.trace_simple_type::<CompilerDocgenOptions>().unwrap();
     tracer.trace_simple_type::<CompilerTestOptions>().unwrap();
+    tracer.trace_simple_type::<AbstractionAuthData>().unwrap();
+    tracer.trace_simple_type::<AbstractionData>().unwrap();
 
     // aliases within StructTag
     tracer

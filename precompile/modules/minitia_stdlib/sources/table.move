@@ -31,109 +31,107 @@ module minitia_std::table {
     }
 
     /// Destroy a table. The table must be empty to succeed.
-    public fun destroy_empty<K: copy + drop, V>(table: Table<K, V>) {
+    public fun destroy_empty<K: copy + drop, V>(self: Table<K, V>) {
         assert!(
-            table.length == 0,
+            self.length == 0,
             error::invalid_state(ENOT_EMPTY)
         );
-        destroy_empty_box<K, V, Box<V>>(&table);
-        drop_unchecked_box<K, V, Box<V>>(table)
+        destroy_empty_box<K, V, Box<V>>(&self);
+        drop_unchecked_box<K, V, Box<V>>(self)
     }
 
     /// Return a table handle address.
-    public fun handle<K: copy + drop, V>(table: &Table<K, V>): address {
-        table.handle
+    public fun handle<K: copy + drop, V>(self: &Table<K, V>): address {
+        self.handle
     }
 
     /// Add a new entry to the table. Aborts if an entry for this
     /// key already exists. The entry itself is not stored in the
     /// table, and cannot be discovered from it.
-    public fun add<K: copy + drop, V>(
-        table: &mut Table<K, V>, key: K, val: V
-    ) {
-        add_box<K, V, Box<V>>(table, key, Box { val });
-        table.length = table.length + 1
+    public fun add<K: copy + drop, V>(self: &mut Table<K, V>, key: K, val: V) {
+        add_box<K, V, Box<V>>(self, key, Box { val });
+        self.length = self.length + 1
     }
 
     /// Acquire an immutable reference to the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow<K: copy + drop, V>(table: &Table<K, V>, key: K): &V {
-        &borrow_box<K, V, Box<V>>(table, key).val
+    public fun borrow<K: copy + drop, V>(self: &Table<K, V>, key: K): &V {
+        &borrow_box<K, V, Box<V>>(self, key).val
     }
 
     /// Acquire an immutable reference to the value which `key` maps to.
     /// Returns specified default value if there is no entry for `key`.
     public fun borrow_with_default<K: copy + drop, V>(
-        table: &Table<K, V>, key: K, default: &V
+        self: &Table<K, V>, key: K, default: &V
     ): &V {
-        if (!contains(table, copy key)) {
+        if (!self.contains(copy key)) {
             default
         } else {
-            borrow(table, copy key)
+            self.borrow(copy key)
         }
     }
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow_mut<K: copy + drop, V>(table: &mut Table<K, V>, key: K): &mut V {
-        &mut borrow_box_mut<K, V, Box<V>>(table, key).val
+    public fun borrow_mut<K: copy + drop, V>(self: &mut Table<K, V>, key: K): &mut V {
+        &mut borrow_box_mut<K, V, Box<V>>(self, key).val
     }
 
     /// Returns the length of the table, i.e. the number of entries.
-    public fun length<K: copy + drop, V>(table: &Table<K, V>): u64 {
-        table.length
+    public fun length<K: copy + drop, V>(self: &Table<K, V>): u64 {
+        self.length
     }
 
     /// Returns true if this table is empty.
-    public fun empty<K: copy + drop, V>(table: &Table<K, V>): bool {
-        table.length == 0
+    public fun empty<K: copy + drop, V>(self: &Table<K, V>): bool {
+        self.length == 0
     }
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Insert the pair (`key`, `default`) first if there is no entry for `key`.
     public fun borrow_mut_with_default<K: copy + drop, V: drop>(
-        table: &mut Table<K, V>,
+        self: &mut Table<K, V>,
         key: K,
         default: V
     ): &mut V {
-        if (!contains(table, copy key)) {
-            add(table, copy key, default)
+        if (!self.contains(copy key)) {
+            self.add(copy key, default)
         };
-        borrow_mut(table, key)
+        self.borrow_mut(key)
     }
 
     /// Insert the pair (`key`, `value`) if there is no entry for `key`.
     /// update the value of the entry for `key` to `value` otherwise
     public fun upsert<K: copy + drop, V: drop>(
-        table: &mut Table<K, V>,
+        self: &mut Table<K, V>,
         key: K,
         value: V
     ) {
-        if (!contains(table, copy key)) {
-            add(table, copy key, value)
+        if (!self.contains(copy key)) {
+            self.add(copy key, value)
         } else {
-            let ref = borrow_mut(table, key);
+            let ref = self.borrow_mut(key);
             *ref = value;
         };
     }
 
     /// Remove from `table` and return the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun remove<K: copy + drop, V>(table: &mut Table<K, V>, key: K): V {
-        let Box { val } = remove_box<K, V, Box<V>>(table, key);
-        table.length = table.length - 1;
+    public fun remove<K: copy + drop, V>(self: &mut Table<K, V>, key: K): V {
+        let Box { val } = remove_box<K, V, Box<V>>(self, key);
+        self.length = self.length - 1;
         val
     }
 
     /// Returns true iff `table` contains an entry for `key`.
-    public fun contains<K: copy + drop, V>(table: &Table<K, V>, key: K): bool {
-        contains_box<K, V, Box<V>>(table, key)
+    public fun contains<K: copy + drop, V>(self: &Table<K, V>, key: K): bool {
+        contains_box<K, V, Box<V>>(self, key)
     }
 
     #[test_only]
     /// Testing only: allows to drop a table even if it is not empty.
-    public fun drop_unchecked<K: copy + drop, V>(table: Table<K, V>) {
-        drop_unchecked_box<K, V, Box<V>>(table)
+    public fun drop_unchecked<K: copy + drop, V>(self: Table<K, V>) {
+        drop_unchecked_box<K, V, Box<V>>(self)
     }
 
     /// Create iterator for `table`.
@@ -141,11 +139,11 @@ module minitia_std::table {
     ///
     /// let iter = table::iter(&t, start, end, order);
     /// loop {
-    ///     if (!table::prepare<K, V>(&mut iter)) {
+    ///     if (!table::prepare(iter)) {
     ///         break;
     ///     }
     ///
-    ///     let (key, value) = table::next<K, V>(&mut iter);
+    ///     let (key, value) = table::next(iter);
     /// }
     ///
     /// NOTE: The default BCS number encoding follows the Little Endian method.
@@ -154,34 +152,34 @@ module minitia_std::table {
     /// functions to obtain the Big Endian key bytes of a number.
     ///
     public fun iter<K: copy + drop, V>(
-        table: &Table<K, V>,
+        self: &Table<K, V>,
         start: Option<K>, /* inclusive */
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */
     ): &TableIter<K, V> {
         let start_bytes: vector<u8> =
             if (option::is_some(&start)) {
-                bcs::to_bytes<K>(&option::extract(&mut start))
+                bcs::to_bytes<K>(&start.extract())
             } else {
                 vector::empty()
             };
 
         let end_bytes: vector<u8> =
             if (option::is_some(&end)) {
-                bcs::to_bytes<K>(&option::extract(&mut end))
+                bcs::to_bytes<K>(&end.extract())
             } else {
                 vector::empty()
             };
 
-        new_table_iter<K, V, Box<V>>(table, start_bytes, end_bytes, order)
+        new_table_iter<K, V, Box<V>>(self, start_bytes, end_bytes, order)
     }
 
-    public fun prepare<K: copy + drop, V>(table_iter: &TableIter<K, V>): bool {
-        prepare_box<K, V, Box<V>>(table_iter)
+    public fun prepare<K: copy + drop, V>(self: &TableIter<K, V>): bool {
+        prepare_box<K, V, Box<V>>(self)
     }
 
-    public fun next<K: copy + drop, V>(table_iter: &TableIter<K, V>): (K, &V) {
-        let (key, box) = next_box<K, V, Box<V>>(table_iter);
+    public fun next<K: copy + drop, V>(self: &TableIter<K, V>): (K, &V) {
+        let (key, box) = next_box<K, V, Box<V>>(self);
         (key, &box.val)
     }
 
@@ -203,50 +201,57 @@ module minitia_std::table {
     /// functions to obtain the Big Endian key bytes of a number.
     ///
     public fun iter_mut<K: copy + drop, V>(
-        table: &mut Table<K, V>,
+        self: &mut Table<K, V>,
         start: Option<K>, /* inclusive */
         end: Option<K>, /* exclusive */
         order: u8 /* 1: Ascending, 2: Descending */
     ): &mut TableIter<K, V> {
         let start_bytes: vector<u8> =
-            if (option::is_some(&start)) {
-                bcs::to_bytes<K>(&option::extract(&mut start))
+            if (start.is_some()) {
+                bcs::to_bytes<K>(&start.extract())
             } else {
                 vector::empty()
             };
 
         let end_bytes: vector<u8> =
-            if (option::is_some(&end)) {
-                bcs::to_bytes<K>(&option::extract(&mut end))
+            if (end.is_some()) {
+                bcs::to_bytes<K>(&end.extract())
             } else {
                 vector::empty()
             };
 
-        new_table_iter_mut<K, V, Box<V>>(table, start_bytes, end_bytes, order)
+        new_table_iter_mut<K, V, Box<V>>(self, start_bytes, end_bytes, order)
     }
 
-    public fun prepare_mut<K: copy + drop, V>(
-        table_iter: &mut TableIter<K, V>
-    ): bool {
-        prepare_box_mut<K, V, Box<V>>(table_iter)
+    public fun prepare_mut<K: copy + drop, V>(self: &mut TableIter<K, V>): bool {
+        prepare_box_mut<K, V, Box<V>>(self)
     }
 
-    public fun next_mut<K: copy + drop, V>(table_iter: &mut TableIter<K, V>): (K, &mut V) {
-        let (key, box) = next_box_mut<K, V, Box<V>>(table_iter);
+    public fun next_mut<K: copy + drop, V>(self: &mut TableIter<K, V>): (K, &mut V) {
+        let (key, box) = next_box_mut<K, V, Box<V>>(self);
         (key, &mut box.val)
     }
 
     public fun to_simple_map<K: store + copy + drop, V: store + copy>(
-        table: &Table<K, V>
+        self: &Table<K, V>
     ): std::simple_map::SimpleMap<K, V> {
         let map = std::simple_map::new();
-        let iter = iter(table, option::none(), option::none(), 1);
+        let iter = self.iter(option::none(), option::none(), 1);
         while (prepare(iter)) {
-            let (key, value) = next(iter);
-            std::simple_map::add(&mut map, key, *value);
+            let (key, value) = iter.next();
+            map.add(key, *value);
         };
 
         map
+    }
+
+    /// Table cannot know if it is empty or not, so this method is not public,
+    /// and can be used only in modules that know by themselves that table is empty.
+    friend fun destroy_known_empty_unsafe<K: copy + drop, V>(
+        self: Table<K, V>
+    ) {
+        destroy_empty_box<K, V, Box<V>>(&self);
+        drop_unchecked_box<K, V, Box<V>>(self)
     }
 
     // ======================================================================================================

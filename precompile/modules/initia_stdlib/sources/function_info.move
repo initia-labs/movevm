@@ -5,6 +5,7 @@ module initia_std::function_info {
 
     friend initia_std::fungible_asset;
     friend initia_std::dispatchable_fungible_asset;
+    friend initia_std::account_abstraction;
 
     /// String is not a valid Move identifier
     const EINVALID_IDENTIFIER: u64 = 1;

@@ -1,4 +1,7 @@
 module minitia_std::transaction_context {
+    use std::option::Option;
+    use std::string::String;
+
     /// Return a transaction hash of this execution.
     native public fun get_transaction_hash(): vector<u8>;
 
@@ -9,6 +12,65 @@ module minitia_std::transaction_context {
     /// the sequence number and generates a new unique address.
     native public fun generate_unique_address(): address;
 
+    /// Represents the entry function payload.
+    struct EntryFunctionPayload has copy, drop {
+        account_address: address,
+        module_name: String,
+        function_name: String,
+        ty_args_names: vector<String>,
+        args: vector<vector<u8>>
+    }
+
+    /// Returns the entry function payload if the current transaction has such a payload. Otherwise, return `None`.
+    /// This function aborts if called outside of the transaction prologue, execution, or epilogue phases.
+    public fun entry_function_payload(): Option<EntryFunctionPayload> {
+        entry_function_payload_internal()
+    }
+
+    native fun entry_function_payload_internal(): Option<EntryFunctionPayload>;
+
+    /// Returns the account address of the entry function payload.
+    public fun account_address(payload: &EntryFunctionPayload): address {
+        payload.account_address
+    }
+
+    /// Returns the module name of the entry function payload.
+    public fun module_name(payload: &EntryFunctionPayload): String {
+        payload.module_name
+    }
+
+    /// Returns the function name of the entry function payload.
+    public fun function_name(payload: &EntryFunctionPayload): String {
+        payload.function_name
+    }
+
+    /// Returns the type arguments names of the entry function payload.
+    public fun type_arg_names(payload: &EntryFunctionPayload): vector<String> {
+        payload.ty_args_names
+    }
+
+    /// Returns the arguments of the entry function payload.
+    public fun args(payload: &EntryFunctionPayload): vector<vector<u8>> {
+        payload.args
+    }
+
+    #[test_only]
+    public fun new_entry_function_payload(
+        account_address: address,
+        module_name: String,
+        function_name: String,
+        ty_args_names: vector<String>,
+        args: vector<vector<u8>>
+    ): EntryFunctionPayload {
+        EntryFunctionPayload {
+            account_address,
+            module_name,
+            function_name,
+            ty_args_names,
+            args
+        }
+    }
+
     #[test_only]
     native fun get_session_id(): vector<u8>;
 
@@ -18,7 +80,6 @@ module minitia_std::transaction_context {
     #[test_only]
     public fun set_transaction_hash(transaction_hash: vector<u8>) {
         assert!(vector::length(&transaction_hash) == 32, 100);
-
         set_transaction_hash_internal(transaction_hash);
     }
 

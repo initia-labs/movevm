@@ -1398,7 +1398,9 @@ module minitia_std::fungible_asset {
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
-    fun test_transfer_with_ref(creator: &signer, aaron: &signer) acquires FungibleStore, Supply, DispatchFunctionStore {
+    fun test_transfer_with_ref(
+        creator: &signer, aaron: &signer
+    ) acquires FungibleStore, Supply, DispatchFunctionStore {
         let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
             create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
