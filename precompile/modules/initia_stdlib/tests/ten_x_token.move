@@ -46,7 +46,9 @@ module 0xcafe::ten_x_token {
         // Derived supply is 10x.
         if (option::is_some(&fungible_asset::supply_without_sanity_check(metadata))) {
             return option::some(
-                option::extract(&mut fungible_asset::supply_without_sanity_check(metadata)) * 10
+                option::extract(
+                    &mut fungible_asset::supply_without_sanity_check(metadata)
+                ) * 10
             )
         };
         option::none()
