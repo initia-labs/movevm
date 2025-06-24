@@ -27,7 +27,7 @@ func TestAbstractionData_MarshalUnmarshalJSON(t *testing.T) {
 		// Marshal
 		jsonData, err := json.Marshal(original)
 		require.NoError(t, err)
-		require.Equal(t, `{"function_info":{"module_address":"0x1","module_name":"test_module","function_name":"test_function"},"auth_data":{"V1":{"signing_message_digest":"c2lnbmluZ19tZXNzYWdlX2RpZ2VzdF92MQ==","authenticator":"YXV0aGVudGljYXRvcl92MQ=="}}}`, string(jsonData))
+		require.Equal(t, `{"function_info":{"module_address":"0x1","module_name":"test_module","function_name":"test_function"},"auth_data":{"v1":{"signing_message_digest":"c2lnbmluZ19tZXNzYWdlX2RpZ2VzdF92MQ==","authenticator":"YXV0aGVudGljYXRvcl92MQ=="}}}`, string(jsonData))
 
 		// Unmarshal
 		var unmarshalled AbstractionData
@@ -70,7 +70,7 @@ func TestAbstractionData_MarshalUnmarshalJSON(t *testing.T) {
 		// Marshal
 		jsonData, err := json.Marshal(original)
 		require.NoError(t, err)
-		require.Equal(t, `{"function_info":{"module_address":"0x2","module_name":"test_module_derivable","function_name":"test_function_derivable"},"auth_data":{"DerivableV1":{"signing_message_digest":"c2lnbmluZ19tZXNzYWdlX2RpZ2VzdF9kZXJpdmFibGVfdjE=","abstract_signature":"YWJzdHJhY3Rfc2lnbmF0dXJlX2Rlcml2YWJsZV92MQ==","abstract_public_key":"YWJzdHJhY3RfcHVibGljX2tleV9kZXJpdmFibGVfdjE="}}}`, string(jsonData))
+		require.Equal(t, `{"function_info":{"module_address":"0x2","module_name":"test_module_derivable","function_name":"test_function_derivable"},"auth_data":{"derivable_v1":{"signing_message_digest":"c2lnbmluZ19tZXNzYWdlX2RpZ2VzdF9kZXJpdmFibGVfdjE=","abstract_signature":"YWJzdHJhY3Rfc2lnbmF0dXJlX2Rlcml2YWJsZV92MQ==","abstract_public_key":"YWJzdHJhY3RfcHVibGljX2tleV9kZXJpdmFibGVfdjE="}}}`, string(jsonData))
 
 		// Unmarshal
 		var unmarshalled AbstractionData
