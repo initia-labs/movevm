@@ -21,8 +21,8 @@ type functionInfo struct {
 
 // abstractionAuthData is a helper type for marshaling and unmarshaling AbstractionAuthData to/from JSON.
 type abstractionAuthData struct {
-	V1          *v1AuthData          `json:"V1,omitempty"`
-	DerivableV1 *derivableV1AuthData `json:"DerivableV1,omitempty"`
+	V1          *v1AuthData          `json:"v1,omitempty"`
+	DerivableV1 *derivableV1AuthData `json:"derivable_v1,omitempty"`
 }
 
 // v1AuthData is a helper type for marshaling and unmarshaling V1AuthData to/from JSON.
