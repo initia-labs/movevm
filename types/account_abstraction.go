@@ -90,6 +90,14 @@ func (ad *AbstractionData) UnmarshalJSON(data []byte) error {
 		FunctionName:  adData.FunctionInfo.FunctionName,
 	}
 
+	// validate auth data
+	if adData.AuthData.V1 != nil && adData.AuthData.DerivableV1 != nil {
+		return fmt.Errorf("both v1 and derivable v1 auth data are not allowed")
+	} else if adData.AuthData.V1 == nil && adData.AuthData.DerivableV1 == nil {
+		return fmt.Errorf("auth data is required")
+	}
+
+	// set auth data
 	if adData.AuthData.V1 != nil {
 		ad.AuthData = &AbstractionAuthData__V1{
 			SigningMessageDigest: adData.AuthData.V1.SigningMessageDigest,
@@ -101,8 +109,6 @@ func (ad *AbstractionData) UnmarshalJSON(data []byte) error {
 			AbstractSignature:    adData.AuthData.DerivableV1.AbstractSignature,
 			AbstractPublicKey:    adData.AuthData.DerivableV1.AbstractPublicKey,
 		}
-	} else {
-		return fmt.Errorf("unknown auth data type")
 	}
 
 	return nil
