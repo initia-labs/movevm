@@ -91,7 +91,9 @@ module initia_std::solana_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(b" You are approving to execute transaction on Initia blockchain (");
+        message.append(
+            b" You are approving to execute transaction on Initia blockchain ("
+        );
         message.append(*chain_id.bytes());
         message.append(b").");
         message.append(b"\n\nNonce: ");
@@ -278,7 +280,10 @@ module initia_std::solana_derivable_account {
 
         let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-           67, 138, 242, 5, 161, 9, 103, 196, 20, 157, 41, 6, 237, 0, 198, 41, 134, 103, 139, 241, 96, 137, 92, 183, 206, 160, 220, 234, 114, 125, 19, 216, 77, 241, 203, 160, 208, 178, 95, 143, 139, 18, 67, 41, 194, 7, 236, 162, 230, 100, 80, 104, 14, 61, 92, 105, 101, 136, 218, 246, 130, 177, 12, 8
+            67, 138, 242, 5, 161, 9, 103, 196, 20, 157, 41, 6, 237, 0, 198, 41, 134, 103,
+            139, 241, 96, 137, 92, 183, 206, 160, 220, 234, 114, 125, 19, 216, 77, 241,
+            203, 160, 208, 178, 95, 143, 139, 18, 67, 41, 194, 7, 236, 162, 230, 100, 80,
+            104, 14, 61, 92, 105, 101, 136, 218, 246, 130, 177, 12, 8
         ];
         let abstract_signature = create_message_v1_signature(signature);
         let base58_public_key = b"9esYstnVPwmABy9tzqimrLjSHQQxWG9wKC1wV4yU2NUY";
