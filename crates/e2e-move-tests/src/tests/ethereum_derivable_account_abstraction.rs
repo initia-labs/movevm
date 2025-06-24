@@ -20,7 +20,7 @@ fn construct_message(
     scheme: &str,
     chain_id: &str,
 ) -> Vec<u8> {
-    let message = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain.\n\nURI: {}://{}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}", domain, ethereum_address, domain, scheme, domain, chain_id, digest_utf8, issued_at);
+    let message = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain ({}).\n\nURI: {}://{}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}", domain, ethereum_address, domain, chain_id, scheme, domain, chain_id, digest_utf8, issued_at);
     let msg_len = message.len();
 
     let prefix = b"\x19Ethereum Signed Message:\n";
@@ -161,7 +161,7 @@ fn test_ethereum_derivable_account() {
         "localhost:3001",
         digest_hex.as_str(),
         "2025-01-01T00:00:00.000Z",
-        "http",
+        "https",
         "test",
     );
 
@@ -177,7 +177,7 @@ fn test_ethereum_derivable_account() {
     signature_vec.push(recovery_id.serialize() + 27);
 
     let abstract_signature = create_raw_signature(
-        "http".to_string(),
+        "https".to_string(),
         "2025-01-01T00:00:00.000Z".to_string(),
         signature_vec.clone(),
     );

@@ -5,7 +5,7 @@
 /// <domain> wants you to sign in with your Solana account:
 /// <base58_public_key>
 ///
-/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<network_name>).
+/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<chain_id>).
 ///
 /// Nonce: <initia_txn_digest>
 ///
@@ -20,6 +20,7 @@ module initia_std::solana_derivable_account {
     use initia_std::auth_data::AbstractionAuthData;
     use std::ed25519::{Self, signature_from_bytes, public_key_from_bytes};
     use std::bcs_stream::{Self, deserialize_u8};
+    use std::block::get_chain_id;
     use std::string_utils;
     use std::vector;
 
@@ -82,6 +83,7 @@ module initia_std::solana_derivable_account {
     fun construct_message(
         base58_public_key: &vector<u8>, domain: &vector<u8>, digest_utf8: &vector<u8>
     ): vector<u8> {
+        let chain_id = get_chain_id();
         let message = &mut vector[];
         message.append(*domain);
         message.append(b" wants you to sign in with your Solana account:\n");
@@ -89,7 +91,11 @@ module initia_std::solana_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(b" You are approving to execute transaction on Initia blockchain.");
+        message.append(
+            b" You are approving to execute transaction on Initia blockchain ("
+        );
+        message.append(*chain_id.bytes());
+        message.append(b").");
         message.append(b"\n\nNonce: ");
         message.append(*digest_utf8);
         *message
@@ -249,7 +255,7 @@ module initia_std::solana_derivable_account {
         let message = construct_message(&base58_public_key, &domain, &digest_utf8);
         assert!(
             message
-                == b"localhost:3001 wants you to sign in with your Solana account:\n8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction on Initia blockchain.\n\nNonce: 0x68656c6c6f20776f726c64"
+                == b"localhost:3001 wants you to sign in with your Solana account:\n8vCbXW8GKbnYZkKKU8rWb5K8MVf9WbNosBXJ1vx987Kp\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction on Initia blockchain (test).\n\nNonce: 0x68656c6c6f20776f726c64"
         );
     }
 
@@ -274,13 +280,13 @@ module initia_std::solana_derivable_account {
 
         let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-            163, 85, 79, 24, 106, 80, 133, 46, 201, 128, 156, 243, 169, 98, 40, 235, 181,
-            236, 18, 160, 47, 122, 94, 204, 144, 160, 3, 145, 176, 133, 126, 111, 162, 163,
-            22, 241, 184, 188, 108, 218, 49, 6, 89, 80, 185, 137, 27, 160, 115, 252, 223,
-            207, 151, 219, 231, 167, 165, 224, 77, 161, 45, 225, 165, 9
+            67, 138, 242, 5, 161, 9, 103, 196, 20, 157, 41, 6, 237, 0, 198, 41, 134, 103,
+            139, 241, 96, 137, 92, 183, 206, 160, 220, 234, 114, 125, 19, 216, 77, 241,
+            203, 160, 208, 178, 95, 143, 139, 18, 67, 41, 194, 7, 236, 162, 230, 100, 80,
+            104, 14, 61, 92, 105, 101, 136, 218, 246, 130, 177, 12, 8
         ];
         let abstract_signature = create_message_v1_signature(signature);
-        let base58_public_key = b"EUAiyK55BYghKCpQJdjchvnBzGxFb6KsgVaHZkzBoxz6";
+        let base58_public_key = b"9esYstnVPwmABy9tzqimrLjSHQQxWG9wKC1wV4yU2NUY";
         let domain = b"localhost:3001";
         let abstract_public_key =
             create_abstract_public_key(utf8(base58_public_key), utf8(domain));

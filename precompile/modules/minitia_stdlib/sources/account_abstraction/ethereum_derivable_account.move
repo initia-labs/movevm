@@ -5,7 +5,7 @@
 /// <domain> wants you to sign in with your Ethereum account:
 /// <ethereum_address>
 ///
-/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<network_name>).
+/// Please confirm you explicitly initiated this request from <domain>. You are approving to execute transaction on Initia blockchain (<chain_id>).
 ///
 /// URI: <scheme>://<domain>
 /// Version: 1
@@ -28,7 +28,7 @@ module minitia_std::ethereum_derivable_account {
     use minitia_std::base16::base16_utf8_to_vec_u8;
     use std::secp256k1;
     use std::option;
-    use std::aptos_hash;
+    use std::keccak::keccak256;
     use std::bcs_stream::{Self, deserialize_u8};
     use std::block::get_chain_id;
     use std::string_utils;
@@ -125,6 +125,7 @@ module minitia_std::ethereum_derivable_account {
         issued_at: &vector<u8>,
         scheme: &vector<u8>
     ): vector<u8> {
+        let chain_id = get_chain_id();
         let message = &mut vector[];
         message.append(*domain);
         message.append(b" wants you to sign in with your Ethereum account:\n");
@@ -132,14 +133,18 @@ module minitia_std::ethereum_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(b" You are approving to execute transaction on Initia blockchain.");
+        message.append(
+            b" You are approving to execute transaction on Initia blockchain ("
+        );
+        message.append(*chain_id.bytes());
+        message.append(b").");
         message.append(b"\n\nURI: ");
         message.append(*scheme);
         message.append(b"://");
         message.append(*domain);
         message.append(b"\nVersion: 1");
         message.append(b"\nChain ID: ");
-        message.append(*get_chain_id().bytes());
+        message.append(*chain_id.bytes());
         message.append(b"\nNonce: ");
         message.append(*digest_utf8);
         message.append(b"\nIssued At: ");
@@ -204,7 +209,7 @@ module minitia_std::ethereum_derivable_account {
                 issued_at,
                 scheme
             );
-        let hashed_message = aptos_hash::keccak256(message);
+        let hashed_message = keccak256(message);
         let public_key_bytes =
             recover_public_key(&abstract_signature.signature, &hashed_message);
 
@@ -213,7 +218,7 @@ module minitia_std::ethereum_derivable_account {
             &public_key_bytes, 1, vector::length(&public_key_bytes)
         );
         // 2. Run Keccak256 on the public key (without the 0x04 prefix)
-        let kexHash = aptos_hash::keccak256(public_key_without_prefix);
+        let kexHash = keccak256(public_key_without_prefix);
         // 3. Slice the last 20 bytes (this is the Ethereum address)
         let recovered_addr = vector::slice(&kexHash, 12, 32);
         // 4. Remove the 0x prefix from the utf8 account address
@@ -347,14 +352,14 @@ module minitia_std::ethereum_derivable_account {
                 &scheme
             );
         let expected_message =
-            b"\x19Ethereum Signed Message:\n417localhost:3001 wants you to sign in with your Ethereum account:\n0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction on Initia blockchain.\n\nURI: https://localhost:3001\nVersion: 1\nChain ID: interwoven-1\nNonce: 0x2a2f07c32382a94aa90ddfdb97076b77d779656bb9730c4f3e4d22a30df298dd\nIssued At: 2025-01-01T00:00:00.000Z";
+            b"\x19Ethereum Signed Message:\n432localhost:3001 wants you to sign in with your Ethereum account:\n0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a\n\nPlease confirm you explicitly initiated this request from localhost:3001. You are approving to execute transaction on Initia blockchain (interwoven-1).\n\nURI: https://localhost:3001\nVersion: 1\nChain ID: interwoven-1\nNonce: 0x2a2f07c32382a94aa90ddfdb97076b77d779656bb9730c4f3e4d22a30df298dd\nIssued At: 2025-01-01T00:00:00.000Z";
         assert!(message == expected_message);
     }
 
     #[test]
     fun test_recover_public_key() {
         set_chain_id_for_test(string::utf8(b"test"));
-        let ethereum_address = b"0x7a41798bf3ad885b2c9398a4577f14b3cbbecffa";
+        let ethereum_address = b"0xfe9d103fe5e9f0eb55c654174a4b3d9d6a75d2cd";
         let domain = b"localhost:3001";
         let digest = b"0x68656c6c6f20776f726c64";
         let issued_at = b"2025-01-01T00:00:00.000Z";
@@ -367,22 +372,22 @@ module minitia_std::ethereum_derivable_account {
                 &issued_at,
                 &scheme
             );
-        let hashed_message = aptos_hash::keccak256(message);
+        let hashed_message = keccak256(message);
         let signature_bytes = vector[
-            34, 169, 33, 109, 117, 142, 149, 215, 221, 121, 246, 60, 161, 65, 217, 35, 153,
-            137, 199, 61, 213, 20, 35, 182, 47, 53, 255, 212, 136, 83, 44, 94, 75, 54, 25,
-            237, 80, 220, 241, 208, 139, 240, 86, 195, 63, 5, 110, 243, 72, 254, 88, 133,
-            241, 237, 17, 80, 73, 6, 154, 87, 163, 198, 46, 146, 28
+            146, 244, 18, 219, 201, 64, 65, 209, 118, 141, 224, 9, 205, 17, 201, 42, 188,
+            231, 125, 218, 214, 69, 105, 66, 4, 212, 131, 234, 226, 144, 9, 189, 65, 131,
+            126, 86, 221, 17, 221, 193, 109, 129, 139, 83, 109, 163, 88, 108, 244, 140, 77,
+            181, 197, 79, 156, 10, 238, 95, 79, 140, 167, 216, 226, 2, 27
         ];
         let base64_public_key = recover_public_key(&signature_bytes, &hashed_message);
         assert!(
             base64_public_key
                 == vector[
-                    4, 183, 122, 255, 244, 11, 111, 113, 20, 29, 195, 46, 82, 172, 174,
-                    191, 245, 153, 180, 240, 220, 105, 65, 141, 18, 218, 82, 224, 180, 51,
-                    156, 3, 173, 59, 127, 235, 81, 113, 162, 199, 161, 33, 171, 48, 189,
-                    23, 99, 68, 101, 71, 85, 65, 10, 65, 32, 241, 152, 107, 4, 149, 191, 8,
-                    226, 136, 197
+                    4, 148, 150, 223, 27, 162, 228, 138, 169, 39, 173, 25, 198, 189, 68,
+                    144, 21, 144, 62, 13, 253, 189, 67, 220, 2, 253, 21, 22, 39, 210, 27,
+                    9, 255, 142, 148, 255, 85, 235, 2, 44, 126, 177, 161, 163, 27, 107,
+                    215, 19, 94, 233, 237, 78, 153, 253, 214, 121, 252, 27, 82, 106, 16,
+                    118, 145, 59, 58
                 ]
         );
     }
@@ -393,16 +398,16 @@ module minitia_std::ethereum_derivable_account {
 
         let digest = vector[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
         let signature = vector[
-            34, 169, 33, 109, 117, 142, 149, 215, 221, 121, 246, 60, 161, 65, 217, 35, 153,
-            137, 199, 61, 213, 20, 35, 182, 47, 53, 255, 212, 136, 83, 44, 94, 75, 54, 25,
-            237, 80, 220, 241, 208, 139, 240, 86, 195, 63, 5, 110, 243, 72, 254, 88, 133,
-            241, 237, 17, 80, 73, 6, 154, 87, 163, 198, 46, 146, 28
+            146, 244, 18, 219, 201, 64, 65, 209, 118, 141, 224, 9, 205, 17, 201, 42, 188,
+            231, 125, 218, 214, 69, 105, 66, 4, 212, 131, 234, 226, 144, 9, 189, 65, 131,
+            126, 86, 221, 17, 221, 193, 109, 129, 139, 83, 109, 163, 88, 108, 244, 140, 77,
+            181, 197, 79, 156, 10, 238, 95, 79, 140, 167, 216, 226, 2, 27
         ];
         let abstract_signature =
             create_raw_signature(
                 utf8(b"https"), utf8(b"2025-01-01T00:00:00.000Z"), signature
             );
-        let ethereum_address = b"0x7a41798bf3ad885b2c9398a4577f14b3cbbecffa";
+        let ethereum_address = b"0xfe9d103fe5e9f0eb55c654174a4b3d9d6a75d2cd";
         let domain = b"localhost:3001";
         let abstract_public_key = create_abstract_public_key(ethereum_address, domain);
         let auth_data =

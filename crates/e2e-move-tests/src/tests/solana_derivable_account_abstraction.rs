@@ -11,8 +11,13 @@ use move_core_types::vm_status::VMStatus;
 use rand_core::OsRng;
 use serde::Serialize;
 
-fn construct_message(base58_public_key: &str, domain: &str, digest_utf8: &str) -> Vec<u8> {
-    format!("{} wants you to sign in with your Solana account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain.\n\nNonce: {}", domain, base58_public_key, domain, digest_utf8).into()
+fn construct_message(
+    base58_public_key: &str,
+    domain: &str,
+    digest_utf8: &str,
+    chain_id: &str,
+) -> Vec<u8> {
+    format!("{} wants you to sign in with your Solana account:\n{}\n\nPlease confirm you explicitly initiated this request from {}. You are approving to execute transaction on Initia blockchain ({}).\n\nNonce: {}", domain, base58_public_key, domain, chain_id, digest_utf8).into()
 }
 
 #[derive(Serialize)]
@@ -128,6 +133,7 @@ fn test_solana_derivable_account() {
         solana_address.as_str(),
         "localhost:3001",
         digest_hex.as_str(),
+        "test",
     );
 
     let signature = sk.sign(message.as_slice());
