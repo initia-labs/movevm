@@ -96,8 +96,8 @@ func BcsDeserializeAbstractionAuthData(input []byte) (AbstractionAuthData, error
 }
 
 type AbstractionAuthData__V1 struct {
-	SigningMessageDigest []byte
-	Authenticator []byte
+	SigningMessageDigest []uint8
+	Authenticator []uint8
 }
 
 func (*AbstractionAuthData__V1) isAbstractionAuthData() {}
@@ -105,8 +105,8 @@ func (*AbstractionAuthData__V1) isAbstractionAuthData() {}
 func (obj *AbstractionAuthData__V1) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	serializer.SerializeVariantIndex(0)
-	if err := serializer.SerializeBytes(obj.SigningMessageDigest); err != nil { return err }
-	if err := serializer.SerializeBytes(obj.Authenticator); err != nil { return err }
+	if err := serialize_vector_u8(obj.SigningMessageDigest, serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.Authenticator, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -123,16 +123,16 @@ func (obj *AbstractionAuthData__V1) BcsSerialize() ([]byte, error) {
 func load_AbstractionAuthData__V1(deserializer serde.Deserializer) (AbstractionAuthData__V1, error) {
 	var obj AbstractionAuthData__V1
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := deserializer.DeserializeBytes(); err == nil { obj.SigningMessageDigest = val } else { return obj, err }
-	if val, err := deserializer.DeserializeBytes(); err == nil { obj.Authenticator = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.SigningMessageDigest = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.Authenticator = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
 
 type AbstractionAuthData__DerivableV1 struct {
-	SigningMessageDigest []byte
-	AbstractSignature []byte
-	AbstractPublicKey []byte
+	SigningMessageDigest []uint8
+	AbstractSignature []uint8
+	AbstractPublicKey []uint8
 }
 
 func (*AbstractionAuthData__DerivableV1) isAbstractionAuthData() {}
@@ -140,9 +140,9 @@ func (*AbstractionAuthData__DerivableV1) isAbstractionAuthData() {}
 func (obj *AbstractionAuthData__DerivableV1) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	serializer.SerializeVariantIndex(1)
-	if err := serializer.SerializeBytes(obj.SigningMessageDigest); err != nil { return err }
-	if err := serializer.SerializeBytes(obj.AbstractSignature); err != nil { return err }
-	if err := serializer.SerializeBytes(obj.AbstractPublicKey); err != nil { return err }
+	if err := serialize_vector_u8(obj.SigningMessageDigest, serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.AbstractSignature, serializer); err != nil { return err }
+	if err := serialize_vector_u8(obj.AbstractPublicKey, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -159,9 +159,9 @@ func (obj *AbstractionAuthData__DerivableV1) BcsSerialize() ([]byte, error) {
 func load_AbstractionAuthData__DerivableV1(deserializer serde.Deserializer) (AbstractionAuthData__DerivableV1, error) {
 	var obj AbstractionAuthData__DerivableV1
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
-	if val, err := deserializer.DeserializeBytes(); err == nil { obj.SigningMessageDigest = val } else { return obj, err }
-	if val, err := deserializer.DeserializeBytes(); err == nil { obj.AbstractSignature = val } else { return obj, err }
-	if val, err := deserializer.DeserializeBytes(); err == nil { obj.AbstractPublicKey = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.SigningMessageDigest = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.AbstractSignature = val } else { return obj, err }
+	if val, err := deserialize_vector_u8(deserializer); err == nil { obj.AbstractPublicKey = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }

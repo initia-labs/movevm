@@ -55,20 +55,3 @@ impl EntryFunctionPayload {
         }
     }
 }
-
-#[derive(Debug, Clone)]
-pub struct MultisigPayload {
-    pub multisig_address: AccountAddress,
-    pub entry_function_payload: Option<EntryFunctionPayload>,
-}
-impl MultisigPayload {
-    pub fn new(
-        multisig_address: AccountAddress,
-        entry_function_payload: Option<EntryFunctionPayload>,
-    ) -> Self {
-        Self {
-            multisig_address,
-            entry_function_payload,
-        }
-    }
-}
