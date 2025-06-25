@@ -1089,6 +1089,49 @@ module initia_std::minitswap {
         )
     }
 
+    // deregister pool
+    public entry fun deregister_pool(
+        chain: &signer, ibc_op_init_metadata: Object<Metadata>
+    ) acquires ModuleStore, VirtualPool {
+        assert_is_chain(chain, false);
+
+        // load virtual pool
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let pools = table::borrow(&mut module_store.pools, ibc_op_init_metadata);
+        let pool =
+            borrow_global_mut<VirtualPool>(
+                object::object_address(option::borrow(&pools.virtual_pool))
+            );
+
+        // 1. peg keeper swap until 5:5
+        let peg_keeper_offer_amount = pool.pool_size - pool.init_pool_amount;
+        let peg_keeper_return_amount = pool.ibc_op_init_pool_amount - pool.pool_size;
+
+        // update pool amounts
+        pool.init_pool_amount = pool.pool_size;
+        pool.ibc_op_init_pool_amount = pool.pool_size;
+
+        // update peg keeper amounts
+        pool.virtual_init_balance = pool.virtual_init_balance + peg_keeper_offer_amount;
+        pool.virtual_ibc_op_init_balance =
+            pool.virtual_ibc_op_init_balance + peg_keeper_return_amount;
+        pool.peg_keeper_owned_ibc_op_init_balance =
+            pool.peg_keeper_owned_ibc_op_init_balance + peg_keeper_return_amount;
+
+        // 2. initiate arb process with 0 trigger fee
+        let (_, timestamp) = block::get_block_info();
+        init_arb(
+            module_store,
+            pool,
+            ibc_op_init_metadata,
+            timestamp,
+            0
+        );
+
+        // 3. deactivate pool
+        deactivate(chain, ibc_op_init_metadata);
+    }
+
     // set emergency state
     public entry fun set_emergency_state(chain: &signer, state: bool) acquires ModuleStore {
         assert_is_chain(chain, true);
@@ -1522,8 +1565,6 @@ module initia_std::minitswap {
                 &mut pool.arb_batch_map,
                 table_key::encode_u64(arb_index)
             );
-
-        assert!(pool.active, error::invalid_state(EINACTIVE));
 
         let pool_signer = object::generate_signer_for_extending(&pool.extend_ref);
 
@@ -2182,6 +2223,23 @@ module initia_std::minitswap {
         let (_, timestamp) = block::get_block_info();
         if (timestamp < module_store.min_arb_interval + last_arb_timestamp) { return };
 
+        let trigger_fee = module_store.trigger_fee;
+        init_arb(
+            module_store,
+            pool,
+            ibc_op_init_metadata,
+            timestamp,
+            trigger_fee
+        );
+    }
+
+    fun init_arb(
+        module_store: &mut ModuleStore,
+        pool: &mut VirtualPool,
+        ibc_op_init_metadata: Object<Metadata>,
+        timestamp: u64,
+        trigger_fee: u64
+    ) {
         // get new arb batch index
         let arb_index = module_store.arb_batch_index;
         module_store.arb_batch_index = module_store.arb_batch_index + 1;
@@ -2191,7 +2249,7 @@ module initia_std::minitswap {
             executed_time: timestamp,
             init_used: pool.virtual_init_balance,
             ibc_op_init_sent: pool.virtual_ibc_op_init_balance,
-            triggering_fee: module_store.trigger_fee
+            triggering_fee: trigger_fee
         };
 
         // reset peg keeper balance
@@ -3243,6 +3301,107 @@ module initia_std::minitswap {
             excutor_balance_after - excutor_balance_before == arb_info.triggering_fee,
             0
         );
+    }
+
+    #[test(chain = @0x1)]
+    fun deregister_test(chain: signer) acquires ModuleStore, VirtualPool {
+        initia_std::primary_fungible_store::init_module_for_test();
+        init_module(&chain);
+        block::set_block_info(0, 100);
+        let chain_addr = signer::address_of(&chain);
+
+        let (_, _, initia_mint_cap) = initialized_coin(&chain, string::utf8(b"uinit"));
+        let (_, _, ibc_op_init_mint_cap) =
+            initialized_coin(
+                &chain,
+                string::utf8(
+                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
+                )
+            );
+        let init_metadata = coin::metadata(chain_addr, string::utf8(b"uinit"));
+        let ibc_op_init_metadata =
+            coin::metadata(
+                chain_addr,
+                string::utf8(
+                    b"ibc/82EB1C694C571F954E68BFD68CFCFCD6123B0EBB69AAA8BAB7A082939B45E802"
+                )
+            );
+        coin::mint_to(&initia_mint_cap, chain_addr, 1000000000);
+        coin::mint_to(&ibc_op_init_mint_cap, chain_addr, 1000000000);
+        provide(&chain, 15000000, option::none());
+
+        create_pool(
+            &chain,
+            ibc_op_init_metadata,
+            bigdecimal::from_ratio_u64(100000, 1),
+            10000000,
+            3000,
+            bigdecimal::from_ratio_u64(7, 10),
+            bigdecimal::from_ratio_u64(2, 1),
+            MOVE,
+            string::utf8(b"0x1"),
+            1,
+            string::utf8(b"channel-0")
+        );
+
+        swap(
+            &chain,
+            ibc_op_init_metadata,
+            init_metadata,
+            10000000,
+            option::none()
+        );
+
+        // deregister
+        deregister_pool(&chain, ibc_op_init_metadata);
+
+        let arb_info = get_arb_info(0);
+
+        // finalize arb
+        let str = string::utf8(b"");
+
+        finalize_arb_mock(
+            &chain,
+            0,
+            1,
+            1,
+            vector[],
+            @0x1,
+            1,
+            arb_info.ibc_op_init_sent,
+            str,
+            str,
+            str,
+            str,
+            &initia_mint_cap
+        );
+
+        // check pool
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let pools = table::borrow(&module_store.pools, ibc_op_init_metadata);
+        let pool =
+            borrow_global<VirtualPool>(
+                object::object_address(option::borrow(&pools.virtual_pool))
+            );
+
+        // check peg keeper balance
+        assert!(
+            (
+                pool.virtual_init_balance + pool.virtual_ibc_op_init_balance
+                    + pool.peg_keeper_owned_ibc_op_init_balance
+            ) == 0,
+            0
+        );
+
+        // check pool balance
+        assert!(
+            (pool.init_pool_amount == pool.pool_size)
+                && (pool.ibc_op_init_pool_amount == pool.pool_size),
+            1
+        );
+
+        // deactive
+        assert!(!pool.active, 2);
     }
 
     #[test(chain = @0x1)]
