@@ -1128,7 +1128,7 @@ module initia_std::minitswap {
             0
         );
 
-        // 3. deactive pool
+        // 3. deactivate pool
         deactivate(chain, ibc_op_init_metadata);
     }
 
