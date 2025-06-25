@@ -56,25 +56,25 @@ test-safety:
 test-rust: test-compiler test-lib test-e2e test-movevm test-json test-storage
 
 test-compiler:
-	cargo test -p initia-move-compiler
+	RUST_MIN_STACK=8388608 cargo test -p initia-move-compiler
 
 test-movevm:
-	cargo test -p movevm
+	RUST_MIN_STACK=8388608 cargo test -p movevm
 
 test-json:
-	cargo test -p initia-move-json
+	RUST_MIN_STACK=8388608 cargo test -p initia-move-json
 
 test-lib:
-	cargo test -p initia-move-vm
+	RUST_MIN_STACK=8388608 cargo test -p initia-move-vm
 
 test-storage:
-	cargo test -p initia-move-storage
+	RUST_MIN_STACK=8388608 cargo test -p initia-move-storage
 
 test-e2e: 
-	cargo test -p e2e-move-tests --features testing
+	RUST_MIN_STACK=8388608 cargo test -p e2e-move-tests --features testing
 
 test-unit: 
-	cargo test stdlib_move_unit_tests --features testing -p e2e-move-tests
+	RUST_MIN_STACK=8388608 cargo test stdlib_move_unit_tests --features testing -p e2e-move-tests
 
 build: precompile build-rust build-go
 

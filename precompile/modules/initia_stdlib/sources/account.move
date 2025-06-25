@@ -9,6 +9,8 @@ module initia_std::account {
     friend initia_std::staking;
     friend initia_std::object;
     friend initia_std::table;
+    friend initia_std::permissioned_signer;
+    friend initia_std::account_abstraction;
 
     /// Account Types
     const ACCOUNT_TYPE_BASE: u8 = 0;

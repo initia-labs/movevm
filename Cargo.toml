@@ -78,6 +78,7 @@ codespan-reporting = "0.11.1"
 dialoguer = "0.10.2"
 ed25519-consensus = { version = "2.0.1", features = ["serde"] }
 errno = "0.3.0"
+either = "1.6.1"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.13"
 libsecp256k1 = { version = "0.7.1" }
@@ -116,6 +117,7 @@ bech32 = "0.11"
 triomphe = "0.1.9"
 ripemd = "0.1.1"
 tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
+bs58 = "0.5.1"
 
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES

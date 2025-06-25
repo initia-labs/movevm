@@ -6,9 +6,9 @@ use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
 use sha3::{Digest, Sha3_256};
 
-const STD_COIN_SYMBOL: &[u8] = b"STDC";
+pub(crate) const STD_COIN_SYMBOL: &[u8] = b"STDC";
 
-fn std_coin_metadata() -> AccountAddress {
+pub(crate) fn std_coin_metadata() -> AccountAddress {
     let mut hasher = Sha3_256::new();
     hasher.update(AccountAddress::TWO.to_vec());
     hasher.update(STD_COIN_SYMBOL);
@@ -23,6 +23,7 @@ type TestInput<'a> = (
     Vec<Vec<u8>>,
     ExpectedOutput,
 );
+
 fn run_tests(tests: Vec<TestInput>) {
     let minter_addr =
         AccountAddress::from_hex_literal("0x2").expect("0x2 account should be created");

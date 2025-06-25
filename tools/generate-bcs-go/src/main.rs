@@ -5,6 +5,7 @@ use serde_reflection::{Tracer, TracerConfig};
 
 use initia_move_types::{
     account::Account,
+    authenticator::{AbstractionAuthData, AbstractionData},
     compiler::{
         CompilerArguments, CompilerBuildConfig, CompilerCoverageBytecodeOptions,
         CompilerCoverageSourceOptions, CompilerCoverageSummaryOptions, CompilerDocgenOptions,
@@ -21,6 +22,7 @@ use initia_move_types::{
     table::TableInfo,
     view_function::{ViewFunction, ViewOutput},
     vm_config::InitiaVMConfig,
+    function_info::FunctionInfo,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -62,6 +64,9 @@ fn main() {
         .unwrap();
     tracer.trace_simple_type::<CompilerDocgenOptions>().unwrap();
     tracer.trace_simple_type::<CompilerTestOptions>().unwrap();
+    tracer.trace_simple_type::<AbstractionAuthData>().unwrap();
+    tracer.trace_simple_type::<AbstractionData>().unwrap();
+    tracer.trace_simple_type::<FunctionInfo>().unwrap();
 
     // aliases within StructTag
     tracer

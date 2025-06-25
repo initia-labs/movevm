@@ -4,6 +4,7 @@
 use bytes::Bytes;
 use initia_move_compiler::built_package::BuiltPackage;
 use initia_move_natives::code::UpgradePolicy;
+use initia_move_types::authenticator::AbstractionData;
 use initia_move_types::env::Env;
 use initia_move_types::view_function::{ViewFunction, ViewOutput};
 use move_core_types::account_address::AccountAddress;
@@ -16,7 +17,7 @@ use crate::test_utils::parser::MemberId;
 use initia_move_gas::Gas;
 use initia_move_storage::state_view::StateView;
 use initia_move_types::access_path::AccessPath;
-use initia_move_types::message::{Message, MessageOutput};
+use initia_move_types::message::{AuthenticateMessage, Message, MessageOutput};
 use initia_move_types::module::ModuleBundle;
 use initia_move_types::{entry_function::EntryFunction, script::Script};
 use initia_move_vm::InitiaVM;
@@ -73,6 +74,7 @@ impl MoveHarness {
         let mut table_resolver = MockTableState::new(&state);
 
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,
@@ -114,6 +116,15 @@ impl MoveHarness {
         let code = self.compile_package(path);
         let msg = self.create_publish_message(*acc, code, upgrade_policy);
         self.run_message(msg)
+    }
+
+    pub fn authenticate(
+        &mut self,
+        sender: AccountAddress,
+        abstraction_data: AbstractionData,
+    ) -> Result<String, VMStatus> {
+        let msg = self.create_authenticate_message(sender, abstraction_data);
+        self.run_authenticate(msg)
     }
 
     pub fn run_entry_function(
@@ -165,6 +176,7 @@ impl MoveHarness {
         let mut gas_meter = self.vm.create_gas_meter(gas_limit);
 
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,
@@ -273,6 +285,14 @@ impl MoveHarness {
         Message::execute(senders, entry_function)
     }
 
+    pub fn create_authenticate_message(
+        &mut self,
+        sender: AccountAddress,
+        abstraction_data: AbstractionData,
+    ) -> AuthenticateMessage {
+        AuthenticateMessage::new(sender, abstraction_data)
+    }
+
     pub fn create_view_function(
         &mut self,
         fun: MemberId,
@@ -304,8 +324,35 @@ impl MoveHarness {
         ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 
+    pub fn run_authenticate(&mut self, message: AuthenticateMessage) -> Result<String, VMStatus> {
+        let env = Env::new(
+            "test".to_string(),
+            0,
+            0,
+            1,
+            Self::generate_random_hash().try_into().unwrap(),
+            Self::generate_random_hash().try_into().unwrap(),
+        );
+
+        let state = self.chain.create_state();
+        let mut table_resolver = MockTableState::new(&state);
+
+        let gas_limit: initia_move_gas::GasQuantity<initia_move_gas::GasUnit> =
+            Gas::new(100_000_000u64);
+        let mut gas_meter = self.vm.create_gas_meter(gas_limit);
+        self.vm.execute_authenticate(
+            &mut gas_meter,
+            &self.api,
+            &env,
+            &state,
+            &mut table_resolver,
+            message,
+        )
+    }
+
     pub fn run_message(&mut self, message: Message) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,
@@ -335,6 +382,7 @@ impl MoveHarness {
         message: Message,
     ) -> Result<MessageOutput, VMStatus> {
         let env = Env::new(
+            "test".to_string(),
             0,
             0,
             1,

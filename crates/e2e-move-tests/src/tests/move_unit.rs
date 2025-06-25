@@ -39,11 +39,11 @@ fn unit_test_extensions_hook(exts: &mut NativeContextExtensions) {
     exts.add(NativeTableContext::new([0; 32], unsafe {
         addr_of_mut!(BLANK_TABLE_RESOLVER).as_mut().unwrap()
     }));
-    exts.add(NativeBlockContext::new(0, 0));
+    exts.add(NativeBlockContext::new("test".to_string(), 0, 0));
     exts.add(NativeCodeContext::default());
     exts.add(NativeStakingContext::new(&BLANK_API.staking_api));
     exts.add(NativeCosmosContext::default());
-    exts.add(NativeTransactionContext::new([0; 32], [0; 32]));
+    exts.add(NativeTransactionContext::new([0; 32], [0; 32], None));
     exts.add(NativeEventContext::default());
     exts.add(NativeOracleContext::new(&BLANK_API.oracle_api));
     exts.add(NativeQueryContext::new(&BLANK_API.query_api));

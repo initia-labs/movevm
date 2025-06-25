@@ -28,8 +28,8 @@ module initia_std::biguint {
         BigUint { bytes: num_bytes }
     }
 
-    public fun to_u64(num: BigUint): u64 {
-        cast_internal<u64>(num.bytes)
+    public fun to_u64(self: BigUint): u64 {
+        cast_internal<u64>(self.bytes)
     }
 
     public fun from_u128(num: u128): BigUint {
@@ -37,8 +37,8 @@ module initia_std::biguint {
         BigUint { bytes: num_bytes }
     }
 
-    public fun to_u128(num: BigUint): u128 {
-        cast_internal<u128>(num.bytes)
+    public fun to_u128(self: BigUint): u128 {
+        cast_internal<u128>(self.bytes)
     }
 
     public fun from_u256(num: u256): BigUint {
@@ -46,124 +46,124 @@ module initia_std::biguint {
         BigUint { bytes: num_bytes }
     }
 
-    public fun to_u256(num: BigUint): u256 {
-        cast_internal<u256>(num.bytes)
+    public fun to_u256(self: BigUint): u256 {
+        cast_internal<u256>(self.bytes)
     }
 
-    public fun to_le_bytes(num: BigUint): vector<u8> {
-        num.bytes
+    public fun to_le_bytes(self: BigUint): vector<u8> {
+        self.bytes
     }
 
     // arithmetic
 
-    public fun add(num1: BigUint, num2: BigUint): BigUint {
-        let result_bytes = add_internal(num1.bytes, num2.bytes);
+    public fun add(self: BigUint, num2: BigUint): BigUint {
+        let result_bytes = add_internal(self.bytes, num2.bytes);
         BigUint { bytes: result_bytes }
     }
 
-    public fun add_by_u64(num1: BigUint, num2: u64): BigUint {
+    public fun add_by_u64(self: BigUint, num2: u64): BigUint {
         let num2 = from_u64(num2);
-        add(num1, num2)
+        self.add(num2)
     }
 
-    public fun add_by_u128(num1: BigUint, num2: u128): BigUint {
+    public fun add_by_u128(self: BigUint, num2: u128): BigUint {
         let num2 = from_u128(num2);
-        add(num1, num2)
+        self.add(num2)
     }
 
-    public fun add_by_u256(num1: BigUint, num2: u256): BigUint {
+    public fun add_by_u256(self: BigUint, num2: u256): BigUint {
         let num2 = from_u256(num2);
-        add(num1, num2)
+        self.add(num2)
     }
 
-    public fun sub(num1: BigUint, num2: BigUint): BigUint {
-        let result_bytes = sub_internal(num1.bytes, num2.bytes);
+    public fun sub(self: BigUint, num2: BigUint): BigUint {
+        let result_bytes = sub_internal(self.bytes, num2.bytes);
         BigUint { bytes: result_bytes }
     }
 
-    public fun sub_by_u64(num1: BigUint, num2: u64): BigUint {
+    public fun sub_by_u64(self: BigUint, num2: u64): BigUint {
         let num2 = from_u64(num2);
-        sub(num1, num2)
+        self.sub(num2)
     }
 
-    public fun sub_by_u128(num1: BigUint, num2: u128): BigUint {
+    public fun sub_by_u128(self: BigUint, num2: u128): BigUint {
         let num2 = from_u128(num2);
-        sub(num1, num2)
+        self.sub(num2)
     }
 
-    public fun sub_by_u256(num1: BigUint, num2: u256): BigUint {
+    public fun sub_by_u256(self: BigUint, num2: u256): BigUint {
         let num2 = from_u256(num2);
-        sub(num1, num2)
+        self.sub(num2)
     }
 
-    public fun mul(num1: BigUint, num2: BigUint): BigUint {
-        let result_bytes = mul_internal(num1.bytes, num2.bytes);
+    public fun mul(self: BigUint, num2: BigUint): BigUint {
+        let result_bytes = mul_internal(self.bytes, num2.bytes);
         BigUint { bytes: result_bytes }
     }
 
-    public fun mul_by_u64(num1: BigUint, num2: u64): BigUint {
+    public fun mul_by_u64(self: BigUint, num2: u64): BigUint {
         let num2 = from_u64(num2);
-        mul(num1, num2)
+        self.mul(num2)
     }
 
-    public fun mul_by_u128(num1: BigUint, num2: u128): BigUint {
+    public fun mul_by_u128(self: BigUint, num2: u128): BigUint {
         let num2 = from_u128(num2);
-        mul(num1, num2)
+        self.mul(num2)
     }
 
-    public fun mul_by_u256(num1: BigUint, num2: u256): BigUint {
+    public fun mul_by_u256(self: BigUint, num2: u256): BigUint {
         let num2 = from_u256(num2);
-        mul(num1, num2)
+        self.mul(num2)
     }
 
-    public fun div(num1: BigUint, num2: BigUint): BigUint {
-        let result_bytes = div_internal(num1.bytes, num2.bytes);
+    public fun div(self: BigUint, num2: BigUint): BigUint {
+        let result_bytes = div_internal(self.bytes, num2.bytes);
         BigUint { bytes: result_bytes }
     }
 
-    public fun div_by_u64(num1: BigUint, num2: u64): BigUint {
+    public fun div_by_u64(self: BigUint, num2: u64): BigUint {
         let num2 = from_u64(num2);
-        div(num1, num2)
+        self.div(num2)
     }
 
-    public fun div_by_u128(num1: BigUint, num2: u128): BigUint {
+    public fun div_by_u128(self: BigUint, num2: u128): BigUint {
         let num2 = from_u128(num2);
-        div(num1, num2)
+        self.div(num2)
     }
 
-    public fun div_by_u256(num1: BigUint, num2: u256): BigUint {
+    public fun div_by_u256(self: BigUint, num2: u256): BigUint {
         let num2 = from_u256(num2);
-        div(num1, num2)
+        self.div(num2)
     }
 
     // cmp
 
-    public fun eq(num1: BigUint, num2: BigUint): bool {
-        num1.bytes == num2.bytes
+    public fun eq(self: BigUint, num2: BigUint): bool {
+        self.bytes == num2.bytes
     }
 
-    public fun lt(num1: BigUint, num2: BigUint): bool {
-        lt_internal(num1.bytes, num2.bytes)
+    public fun lt(self: BigUint, num2: BigUint): bool {
+        lt_internal(self.bytes, num2.bytes)
     }
 
-    public fun le(num1: BigUint, num2: BigUint): bool {
-        le_internal(num1.bytes, num2.bytes)
+    public fun le(self: BigUint, num2: BigUint): bool {
+        le_internal(self.bytes, num2.bytes)
     }
 
-    public fun gt(num1: BigUint, num2: BigUint): bool {
-        gt_internal(num1.bytes, num2.bytes)
+    public fun gt(self: BigUint, num2: BigUint): bool {
+        gt_internal(self.bytes, num2.bytes)
     }
 
-    public fun ge(num1: BigUint, num2: BigUint): bool {
-        ge_internal(num1.bytes, num2.bytes)
+    public fun ge(self: BigUint, num2: BigUint): bool {
+        ge_internal(self.bytes, num2.bytes)
     }
 
-    public fun is_zero(num: BigUint): bool {
-        eq(num, zero())
+    public fun is_zero(self: BigUint): bool {
+        self.eq(zero())
     }
 
-    public fun is_one(num: BigUint): bool {
-        eq(num, one())
+    public fun is_one(self: BigUint): bool {
+        self.eq(one())
     }
 
     native fun add_internal(

@@ -78,7 +78,6 @@ func Test_CleanContract(t *testing.T) {
 func Test_BuildContract(t *testing.T) {
 	initia_arg := compiler.NewCompilerArgumentWithBuildOption(packagePath, false,
 		buildtypes.WithInstallDir(path.Join(packagePath, "build-release")),
-		buildtypes.WithBytecodeVersion(6),
 		buildtypes.WithSkipFetchLatestGitDeps(),
 	)
 	res, err := BuildContract(initia_arg)
