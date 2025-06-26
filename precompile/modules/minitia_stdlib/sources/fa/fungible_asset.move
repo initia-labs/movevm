@@ -194,11 +194,23 @@ module minitia_std::fungible_asset {
     }
 
     #[event]
+    /// Emitted when fungible assets are deposited into a store.
+    struct DepositOwnerEvent has drop {
+        owner: address
+    }
+
+    #[event]
     /// Emitted when fungible assets are withdrawn from a store.
     struct WithdrawEvent has drop, store {
         store_addr: address,
         metadata_addr: address,
         amount: u64
+    }
+
+    #[event]
+    /// Emitted when fungible assets are withdrawn from a store.
+    struct WithdrawOwnerEvent has drop {
+        owner: address
     }
 
     #[event]
@@ -1154,6 +1166,9 @@ module minitia_std::fungible_asset {
         // emit event
         let metadata_addr = object::object_address(&metadata);
         event::emit(DepositEvent { store_addr, metadata_addr, amount });
+        let fungible_store = object::address_to_object<FungibleStore>(store_addr);
+        let owner_addr = object::owner(fungible_store);
+        event::emit(DepositOwnerEvent { owner: owner_addr });
     }
 
     /// Extract `amount` of the fungible asset from `store`.
@@ -1173,6 +1188,9 @@ module minitia_std::fungible_asset {
         // emit event
         let metadata_addr = object::object_address(&metadata);
         event::emit(WithdrawEvent { store_addr, metadata_addr, amount });
+        let fungible_store = object::address_to_object<FungibleStore>(store_addr);
+        let owner_addr = object::owner(fungible_store);
+        event::emit(WithdrawOwnerEvent { owner: owner_addr });
 
         FungibleAsset { metadata, amount }
     }
