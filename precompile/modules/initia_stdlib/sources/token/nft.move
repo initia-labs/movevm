@@ -180,9 +180,9 @@ module initia_std::nft {
     }
 
     // Transfers an nft based on the collection object and token id
-    public fun transfer<T: key>(
+    public fun transfer(
         owner: &signer,
-        collection: Object<T>,
+        collection: Object<Collection>,
         token_id: String,
         to: address
     ) {
