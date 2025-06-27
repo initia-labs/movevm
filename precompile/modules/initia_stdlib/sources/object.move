@@ -161,6 +161,13 @@ module initia_std::object {
         to: address
     }
 
+    #[event]
+    // Emitteed at the object deletion.
+    struct DeleteEvent has drop {
+        object: address,
+        owner: address
+    }
+
     /// Produces an ObjectId from the given address. This is not verified.
     public fun address_to_object<T: key>(object: address): Object<T> {
         assert!(
@@ -375,13 +382,15 @@ module initia_std::object {
             error::permission_denied(EVERSION_MISMATCH)
         );
 
-        let ObjectCore { owner: _, allow_ungated_transfer: _, version } = object_core;
+        let ObjectCore { owner, allow_ungated_transfer: _, version } = object_core;
 
         // set tombstone
         move_to<Tombstone>(
             &account::create_signer(ref.self),
             Tombstone { version }
         );
+
+        event::emit(DeleteEvent { object: ref.self, owner });
     }
 
     // Extension helpers
