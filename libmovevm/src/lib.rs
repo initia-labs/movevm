@@ -7,7 +7,7 @@ mod error;
 mod interface;
 mod iterator;
 mod memory;
-mod move_api;
+pub mod move_api;
 mod result;
 mod storage;
 mod table_storage;

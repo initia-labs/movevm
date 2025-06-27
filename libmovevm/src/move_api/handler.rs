@@ -17,7 +17,7 @@ struct ModuleInfoResponse {
     pub name: String,
 }
 
-pub(crate) fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, Error> {
+pub fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, Error> {
     let m = CompiledModule::deserialize_with_config(compiled, &DeserializerConfig::default())
         .map_err(|e| Error::backend_failure(e.to_string()))?;
 
@@ -76,7 +76,7 @@ pub(crate) fn decode_move_value(
     serde_json::to_vec(&value).map_err(|e| Error::BackendFailure { msg: e.to_string() })
 }
 
-pub(crate) fn decode_script_bytes(script_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
+pub fn decode_script_bytes(script_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
     let script: MoveScriptBytecode = MoveScriptBytecode::new(script_bytes);
     let abi = script
         .try_parse_abi()
@@ -86,7 +86,7 @@ pub(crate) fn decode_script_bytes(script_bytes: Vec<u8>) -> Result<Vec<u8>, Erro
     serde_json::to_vec(&abi).map_err(|e| Error::BackendFailure { msg: e.to_string() })
 }
 
-pub(crate) fn decode_module_bytes(module_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
+pub fn decode_module_bytes(module_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
     // deserialized request from the json
     let module: MoveModuleBytecode = MoveModuleBytecode::new(module_bytes);
     let abi = module
