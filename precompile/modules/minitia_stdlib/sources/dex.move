@@ -2780,9 +2780,6 @@ module minitia_std::dex {
     #[test]
     fun test_adjust_provide_fee() {
         // Test case 1: coin_a_balance_ratio_with_fee == coin_b_balance_ratio_with_fee (no fee)
-        // Test case 2: coin_a_balance_ratio_with_fee < coin_b_balance_ratio_with_fee (no fee)
-        // Test case 3: coin_a_balance_ratio_with_fee > coin_b_balance_ratio_with_fee (fee)
-
         let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
         let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
         let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
