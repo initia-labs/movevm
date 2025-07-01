@@ -117,7 +117,7 @@ module initia_std::dex {
     }
 
     #[event]
-    /// DEPRECATED
+    #[deprecated]
     struct SingleAssetProvideEvent has drop, store {
         coin_a: address,
         coin_b: address,
@@ -1123,7 +1123,7 @@ module initia_std::dex {
 
     /// Single asset provide liquidity directly
     /// CONTRACT: not allow until LBP is ended
-    /// DEPRECATED, to maintain the interface, use provide_liquidity internally
+    #[deprecated]
     public fun single_asset_provide_liquidity(
         pair: Object<Config>,
         provide_coin: FungibleAsset,
