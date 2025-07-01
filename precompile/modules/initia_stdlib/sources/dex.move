@@ -961,7 +961,7 @@ module initia_std::dex {
 
         // if total share is zero, must provide both coin_a and coin_b
         assert!(
-            total_share != 0 || (coin_a_amount != 0 && coin_b_amount != 0),
+            total_share != 0 || (coin_a_amount_in != 0 && coin_b_amount_in != 0),
             error::invalid_state(EZERO_AMOUNT_IN)
         );
 
