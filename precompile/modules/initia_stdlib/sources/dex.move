@@ -954,9 +954,6 @@ module initia_std::dex {
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
     ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
-        let pair_addr = object::object_address(&pair);
-        let pool = borrow_global<Pool>(pair_addr);
-        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
         // if total share is zero, must provide both coin_a and coin_b
@@ -1121,9 +1118,9 @@ module initia_std::dex {
         )
     }
 
+    #[deprecated]
     /// Single asset provide liquidity directly
     /// CONTRACT: not allow until LBP is ended
-    #[deprecated]
     public fun single_asset_provide_liquidity(
         pair: Object<Config>,
         provide_coin: FungibleAsset,
@@ -2778,5 +2775,88 @@ module initia_std::dex {
 
         coin::deposit(borrower_addr, a_fa);
         coin::deposit(borrower_addr, b_fa);
+    }
+
+    #[test]
+    fun test_adjust_provide_fee() {
+        // Test case 1: coin_a_balance_ratio_with_fee == coin_b_balance_ratio_with_fee (no fee)
+        // Test case 2: coin_a_balance_ratio_with_fee < coin_b_balance_ratio_with_fee (no fee)
+        // Test case 3: coin_a_balance_ratio_with_fee > coin_b_balance_ratio_with_fee (fee)
+
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 100;
+        let coin_amount = 1000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        assert!(adjusted_coin_amount_in == 100, 0);
+
+        // Test case 2: coin_a_balance_ratio_with_fee < coin_b_balance_ratio_with_fee (no fee)
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1000, 1000); // 1.0
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 0;
+        let coin_amount = 1000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        assert!(adjusted_coin_amount_in == 0, 1);
+
+        // Test case 3: coin_a_balance_ratio_with_fee > coin_b_balance_ratio_with_fee (fee)
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1200, 1000); // 1.2
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 200;
+        let coin_amount = 1000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        assert!(adjusted_coin_amount_in == 199, 2);
+
+        // Test case 4: coin_a_balance_ratio_with_fee > coin_b_balance_ratio_with_fee (fee) with big amount
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1200, 1000); // 1.2
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 20000;
+        let coin_amount = 100000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        // fee charged only for taxable amount (10000 * 0.003 = 30)
+        assert!(adjusted_coin_amount_in == 19970, 3);
     }
 }
