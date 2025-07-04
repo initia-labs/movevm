@@ -51,7 +51,11 @@ impl ByteSliceView {
     /// Provides a reference to the included data to be parsed or copied elsewhere
     /// This is safe as long as the `ByteSliceView` is constructed correctly.
     pub fn read(&self) -> Option<&[u8]> {
-        if self.is_nil { None } else { Some(unsafe { slice::from_raw_parts(self.ptr, self.len) }) }
+        if self.is_nil {
+            None
+        } else {
+            Some(unsafe { slice::from_raw_parts(self.ptr, self.len) })
+        }
     }
 
     /// Creates an owned copy that can safely be stored and mutated.
@@ -81,31 +85,36 @@ impl From<ByteSliceView> for Option<Vec<String>> {
 
 impl From<ByteSliceView> for Option<PathBuf> {
     fn from(val: ByteSliceView) -> Self {
-        val.read().map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf())
+        val.read()
+            .map(|s| Path::new(&String::from_utf8(s.to_vec()).unwrap()).to_path_buf())
     }
 }
 
 impl From<ByteSliceView> for Option<TypeTag> {
     fn from(val: ByteSliceView) -> Self {
-        val.read().map(|s| parse_type_tag(std::str::from_utf8(s).unwrap()).unwrap())
+        val.read()
+            .map(|s| parse_type_tag(std::str::from_utf8(s).unwrap()).unwrap())
     }
 }
 
 impl From<ByteSliceView> for Option<Vec<TypeTag>> {
     fn from(val: ByteSliceView) -> Self {
-        val.read().map(|s| parse_type_tags(std::str::from_utf8(s).unwrap()).unwrap())
+        val.read()
+            .map(|s| parse_type_tags(std::str::from_utf8(s).unwrap()).unwrap())
     }
 }
 
 impl From<ByteSliceView> for Option<TransactionArgument> {
     fn from(val: ByteSliceView) -> Self {
-        val.read().map(|s| parse_transaction_argument(std::str::from_utf8(s).unwrap()).unwrap())
+        val.read()
+            .map(|s| parse_transaction_argument(std::str::from_utf8(s).unwrap()).unwrap())
     }
 }
 
 impl From<ByteSliceView> for Option<Vec<TransactionArgument>> {
     fn from(val: ByteSliceView) -> Self {
-        val.read().map(|s| parse_transaction_arguments(std::str::from_utf8(s).unwrap()).unwrap())
+        val.read()
+            .map(|s| parse_transaction_arguments(std::str::from_utf8(s).unwrap()).unwrap())
     }
 }
 
@@ -123,18 +132,16 @@ pub struct U8SliceView {
 impl U8SliceView {
     pub fn new(source: Option<&[u8]>) -> Self {
         match source {
-            Some(data) =>
-                Self {
-                    is_none: false,
-                    ptr: data.as_ptr(),
-                    len: data.len(),
-                },
-            None =>
-                Self {
-                    is_none: true,
-                    ptr: std::ptr::null::<u8>(),
-                    len: 0,
-                },
+            Some(data) => Self {
+                is_none: false,
+                ptr: data.as_ptr(),
+                len: data.len(),
+            },
+            None => Self {
+                is_none: true,
+                ptr: std::ptr::null::<u8>(),
+                len: 0,
+            },
         }
     }
 }
@@ -201,13 +208,12 @@ impl UnmanagedVector {
                     cap,
                 }
             }
-            None =>
-                Self {
-                    is_none: true,
-                    ptr: std::ptr::null_mut::<u8>(),
-                    len: 0,
-                    cap: 0,
-                },
+            None => Self {
+                is_none: true,
+                ptr: std::ptr::null_mut::<u8>(),
+                len: 0,
+                cap: 0,
+            },
         }
     }
 
@@ -251,7 +257,7 @@ impl Default for UnmanagedVector {
 pub extern "C" fn new_unmanaged_vector(
     nil: bool,
     ptr: *const u8,
-    length: usize
+    length: usize,
 ) -> UnmanagedVector {
     if nil {
         UnmanagedVector::new(None)

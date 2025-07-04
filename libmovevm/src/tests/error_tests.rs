@@ -40,17 +40,23 @@ fn go_error_into_result_works() {
     let error = GoError::User;
     let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
     let a = unsafe { error.into_result(error_msg, default) };
-    assert_eq!(a.unwrap_err(), BackendError::UserErr {
-        msg: "kaputt".to_string(),
-    });
+    assert_eq!(
+        a.unwrap_err(),
+        BackendError::UserErr {
+            msg: "kaputt".to_string(),
+        }
+    );
 
     // GoError::User with some message too long message
     let error = GoError::User;
     let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
     let a = unsafe { error.into_result(error_msg, default) };
-    assert_eq!(a.unwrap_err(), BackendError::UserErr {
-        msg: "a".repeat(8192),
-    });
+    assert_eq!(
+        a.unwrap_err(),
+        BackendError::UserErr {
+            msg: "a".repeat(8192),
+        }
+    );
 
     // GoError::Other with none message
     let error = GoError::Other;
@@ -62,23 +68,29 @@ fn go_error_into_result_works() {
     let error = GoError::Other;
     let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
     let a = unsafe { error.into_result(error_msg, default) };
-    assert_eq!(a.unwrap_err(), BackendError::Unknown {
-        msg: "kaputt".to_string(),
-    });
+    assert_eq!(
+        a.unwrap_err(),
+        BackendError::Unknown {
+            msg: "kaputt".to_string(),
+        }
+    );
 
     // GoError::Other with some message too long message
     let error = GoError::Other;
     let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
     let a = unsafe { error.into_result(error_msg, default) };
-    assert_eq!(a.unwrap_err(), BackendError::Unknown {
-        msg: "a".repeat(8192),
-    });
+    assert_eq!(
+        a.unwrap_err(),
+        BackendError::Unknown {
+            msg: "a".repeat(8192),
+        }
+    );
 }
 
 // RustError tests
 
 use crate::{
-    error::{ handle_c_error_binary, handle_c_error_default, ErrnoValue, Error as RustError },
+    error::{handle_c_error_binary, handle_c_error_default, ErrnoValue, Error as RustError},
     memory::UnmanagedVector,
 };
 use errno::errno;
@@ -145,7 +157,9 @@ fn vm_err_works_for_strings() {
 #[test]
 fn from_std_str_utf8error_works() {
     #[allow(invalid_from_utf8)]
-    let error: RustError = str::from_utf8(b"Hello \xF0\x90\x80World").unwrap_err().into();
+    let error: RustError = str::from_utf8(b"Hello \xF0\x90\x80World")
+        .unwrap_err()
+        .into();
     match error {
         RustError::InvalidUtf8 { msg, .. } => {
             assert_eq!(msg, "invalid utf-8 sequence of 3 bytes from index 6")

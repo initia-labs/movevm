@@ -1,11 +1,9 @@
-use move_backend::{
-    error::GoError,
-    memory::{ U8SliceView, UnmanagedVector },
-};
+use crate::error::GoError;
+use crate::memory::{U8SliceView, UnmanagedVector};
 
 use anyhow::anyhow;
 use initia_move_natives::oracle::OracleAPI;
-use initia_move_natives::{ account::AccountAPI, query::QueryAPI, staking::StakingAPI };
+use initia_move_natives::{account::AccountAPI, query::QueryAPI, staking::StakingAPI};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::u256::U256;
 
@@ -27,46 +25,46 @@ pub struct GoApi_vtable {
         u64,
         *mut UnmanagedVector, // response
         *mut u64,
-        *mut UnmanagedVector // error_msg
+        *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub get_account_info: extern "C" fn(
         *const api_t,
-        U8SliceView, // addr
-        *mut bool, // found
-        *mut u64, // account_number
-        *mut u64, // sequence
-        *mut u8, // account_type
-        *mut bool, // is_blocked
-        *mut UnmanagedVector // error_msg
+        U8SliceView,          // addr
+        *mut bool,            // found
+        *mut u64,             // account_number
+        *mut u64,             // sequence
+        *mut u8,              // account_type
+        *mut bool,            // is_blocked
+        *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub amount_to_share: extern "C" fn(
         *const api_t,
-        U8SliceView, // validator
-        U8SliceView, // metadata
-        u64, // amount
+        U8SliceView,          // validator
+        U8SliceView,          // metadata
+        u64,                  // amount
         *mut UnmanagedVector, // share
-        *mut UnmanagedVector // error_msg
+        *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub share_to_amount: extern "C" fn(
         *const api_t,
-        U8SliceView, // validator
-        U8SliceView, // metadata
-        U8SliceView, // share
-        *mut u64, // amount
-        *mut UnmanagedVector // error_msg
+        U8SliceView,          // validator
+        U8SliceView,          // metadata
+        U8SliceView,          // share
+        *mut u64,             // amount
+        *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub unbond_timestamp: extern "C" fn(
         *const api_t,
-        *mut u64, // unbond_timestamp
-        *mut UnmanagedVector // error_msg
+        *mut u64,             // unbond_timestamp
+        *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub get_price: extern "C" fn(
         *const api_t,
-        U8SliceView, // pair_id
+        U8SliceView,          // pair_id
         *mut UnmanagedVector, // price
-        *mut u64, // updated_at
-        *mut u64, // decimals
-        *mut UnmanagedVector // error_msg
+        *mut u64,             // updated_at
+        *mut u64,             // decimals
+        *mut UnmanagedVector, // error_msg
     ) -> i32,
 }
 
@@ -98,18 +96,17 @@ impl AccountAPI for GoApi {
         let mut is_blocked = false;
         let mut error_msg = UnmanagedVector::default();
 
-        let go_error: GoError = (self.vtable
-            .get_account_info)(
-                self.state,
-                addr,
-                &mut found as *mut bool,
-                &mut account_number as *mut u64,
-                &mut sequence as *mut u64,
-                &mut account_type as *mut u8,
-                &mut is_blocked as *mut bool,
-                &mut error_msg as *mut UnmanagedVector
-            )
-            .into();
+        let go_error: GoError = (self.vtable.get_account_info)(
+            self.state,
+            addr,
+            &mut found as *mut bool,
+            &mut account_number as *mut u64,
+            &mut sequence as *mut u64,
+            &mut account_type as *mut u8,
+            &mut is_blocked as *mut bool,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to get account info".to_string();
@@ -128,7 +125,7 @@ impl StakingAPI for GoApi {
         &self,
         validator: &[u8],
         metadata: AccountAddress,
-        amount: u64
+        amount: u64,
     ) -> anyhow::Result<String> {
         // DO NOT DELETE; same reason with KeepAlive in go
         let metadata_bytes = metadata.into_bytes();
@@ -138,16 +135,15 @@ impl StakingAPI for GoApi {
         let mut share = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
 
-        let go_error: GoError = (self.vtable
-            .amount_to_share)(
-                self.state,
-                validator,
-                metadata,
-                amount,
-                &mut share as *mut UnmanagedVector,
-                &mut error_msg as *mut UnmanagedVector
-            )
-            .into();
+        let go_error: GoError = (self.vtable.amount_to_share)(
+            self.state,
+            validator,
+            metadata,
+            amount,
+            &mut share as *mut UnmanagedVector,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         let share = share.consume();
 
@@ -166,7 +162,7 @@ impl StakingAPI for GoApi {
         &self,
         validator: &[u8],
         metadata: AccountAddress,
-        share: String
+        share: String,
     ) -> anyhow::Result<u64> {
         let mut amount = 0_u64;
 
@@ -179,16 +175,15 @@ impl StakingAPI for GoApi {
 
         let mut error_msg = UnmanagedVector::default();
 
-        let go_error: GoError = (self.vtable
-            .share_to_amount)(
-                self.state,
-                validator,
-                metadata,
-                share,
-                &mut amount as *mut u64,
-                &mut error_msg as *mut UnmanagedVector
-            )
-            .into();
+        let go_error: GoError = (self.vtable.share_to_amount)(
+            self.state,
+            validator,
+            metadata,
+            share,
+            &mut amount as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to convert share to amount".to_string();
@@ -205,13 +200,12 @@ impl StakingAPI for GoApi {
         let mut unbond_timestamp = 0_u64;
         let mut error_msg = UnmanagedVector::default();
 
-        let go_error: GoError = (self.vtable
-            .unbond_timestamp)(
-                self.state,
-                &mut unbond_timestamp as *mut u64,
-                &mut error_msg as *mut UnmanagedVector
-            )
-            .into();
+        let go_error: GoError = (self.vtable.unbond_timestamp)(
+            self.state,
+            &mut unbond_timestamp as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to convert share to amount".to_string();
@@ -233,16 +227,15 @@ impl OracleAPI for GoApi {
         let mut decimals = 0_u64;
         let mut error_msg = UnmanagedVector::default();
 
-        let go_error: GoError = (self.vtable
-            .get_price)(
-                self.state,
-                pair_id,
-                &mut price as *mut UnmanagedVector,
-                &mut updated_at as *mut u64,
-                &mut decimals as *mut u64,
-                &mut error_msg as *mut UnmanagedVector
-            )
-            .into();
+        let go_error: GoError = (self.vtable.get_price)(
+            self.state,
+            pair_id,
+            &mut price as *mut UnmanagedVector,
+            &mut updated_at as *mut u64,
+            &mut decimals as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         // We destruct the UnmanagedVector here, no matter if we need the data.
         let price = price.consume();
@@ -269,16 +262,15 @@ impl QueryAPI for GoApi {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
 
-        let go_error: GoError = (self.vtable
-            .query)(
-                self.state,
-                request,
-                gas_balance,
-                &mut response as *mut UnmanagedVector,
-                &mut used_gas as *mut u64,
-                &mut error_msg as *mut UnmanagedVector
-            )
-            .into();
+        let go_error: GoError = (self.vtable.query)(
+            self.state,
+            request,
+            gas_balance,
+            &mut response as *mut UnmanagedVector,
+            &mut used_gas as *mut u64,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
 
         // We destruct the UnmanagedVector here, no matter if we need the data.
         let output = response.consume();

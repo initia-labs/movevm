@@ -1429,13 +1429,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "initia-move-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs 0.1.4",
+ "bigdecimal",
+ "bytes",
+ "errno",
+ "hex",
+ "initia-move-gas",
+ "initia-move-natives",
+ "initia-move-resource-viewer",
+ "initia-move-storage",
+ "initia-move-types",
+ "initia-move-vm",
+ "log",
+ "move-binary-format",
+ "move-core-types",
+ "move-resource-viewer",
+ "move-vm-runtime",
+ "move-vm-types",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "initia-move-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap 4.5.15",
+ "initia-move-api",
  "initia-move-compiler",
- "move-api",
  "movevm",
  "serde",
  "serde_json",
@@ -1916,59 +1944,6 @@ dependencies = [
  "move-core-types",
  "move-model",
  "serde",
-]
-
-[[package]]
-name = "move-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bcs 0.1.4",
- "bigdecimal",
- "bytes",
- "errno",
- "hex",
- "initia-move-gas",
- "initia-move-natives",
- "initia-move-resource-viewer",
- "initia-move-storage",
- "initia-move-types",
- "initia-move-vm",
- "log",
- "move-backend",
- "move-binary-format",
- "move-core-types",
- "move-resource-viewer",
- "move-vm-runtime",
- "move-vm-types",
- "serde",
- "serde_bytes",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "move-backend"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bcs 0.1.4",
- "bigdecimal",
- "bytes",
- "errno",
- "hex",
- "initia-move-gas",
- "initia-move-natives",
- "initia-move-resource-viewer",
- "initia-move-storage",
- "initia-move-types",
- "initia-move-vm",
- "log",
- "move-core-types",
- "serde",
- "serde_bytes",
- "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -2587,6 +2562,7 @@ dependencies = [
  "cbindgen",
  "errno",
  "hex",
+ "initia-move-api",
  "initia-move-gas",
  "initia-move-natives",
  "initia-move-resource-viewer",
@@ -2594,8 +2570,6 @@ dependencies = [
  "initia-move-types",
  "initia-move-vm",
  "log",
- "move-api",
- "move-backend",
  "move-binary-format",
  "move-core-types",
  "move-resource-viewer",

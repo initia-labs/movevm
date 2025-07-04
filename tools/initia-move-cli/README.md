@@ -85,6 +85,7 @@ docker run --rm \
 ```
 
 Example commands:
+
 ```bash
 # Build Move modules
 docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:latest build
@@ -97,11 +98,13 @@ docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:l
 ```
 
 For easier use, you can create an alias in your shell:
+
 ```bash
 alias initia-move='docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:latest'
 ```
 
 Then use it like the native command:
+
 ```bash
 initia-move build
 initia-move test

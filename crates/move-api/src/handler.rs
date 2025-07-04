@@ -1,15 +1,26 @@
-use crate::convert::MoveConverter;
-use crate::move_types::{ MoveModuleBytecode, MoveScriptBytecode };
-
-use move_backend::db::Db;
-use move_backend::error::Error;
-use move_backend::storage::GoStorage;
-use move_binary_format::access::ModuleAccess;
-use move_binary_format::deserializer::DeserializerConfig;
-use move_binary_format::CompiledModule;
-use move_core_types::language_storage::{ StructTag, TypeTag };
-use move_core_types::parser::parse_struct_tag;
+use move_binary_format::{
+    access::ModuleAccess as _, deserializer::DeserializerConfig, CompiledModule,
+};
+use move_core_types::{language_storage::StructTag, parser::parse_struct_tag};
 use serde::Serialize;
+
+use crate::move_types::{MoveModuleBytecode, MoveScriptBytecode};
+
+pub fn decode_script_bytes(script_bytes: Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
+    let script: MoveScriptBytecode = MoveScriptBytecode::new(script_bytes);
+    let abi = script.try_parse_abi()?;
+
+    // serialize response as json
+    serde_json::to_vec(&abi).map_err(anyhow::Error::msg)
+}
+
+pub fn decode_module_bytes(module_bytes: Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
+    // deserialized request from the json
+    let module: MoveModuleBytecode = MoveModuleBytecode::new(module_bytes);
+    let abi = module.try_parse_abi()?;
+    // serialize response as json
+    serde_json::to_vec(&abi).map_err(anyhow::Error::msg)
+}
 
 #[derive(Serialize)]
 struct ModuleInfoResponse {
@@ -18,86 +29,33 @@ struct ModuleInfoResponse {
     pub name: String,
 }
 
-pub fn to_vec<T>(data: &T) -> Result<Vec<u8>, Error> where T: Serialize + ?Sized {
-    bcs::to_bytes(data).map_err(|_| Error::invalid_utf8("failed to serialize"))
-}
-
-pub fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, Error> {
-    let m = CompiledModule::deserialize_with_config(
-        compiled,
-        &DeserializerConfig::default()
-    ).map_err(|e| Error::backend_failure(e.to_string()))?;
+pub fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
+    let m = CompiledModule::deserialize_with_config(compiled, &DeserializerConfig::default())?;
 
     let module_info = ModuleInfoResponse {
         address: m.address().to_vec(),
         name: m.name().to_string(),
     };
-    serde_json::to_vec(&module_info).map_err(|e| Error::backend_failure(e.to_string()))
+    serde_json::to_vec(&module_info).map_err(|e| anyhow::Error::msg(e.to_string()))
 }
 
-pub fn struct_tag_to_string(struct_tag: &[u8]) -> Result<Vec<u8>, Error> {
-    let struct_tag: StructTag = bcs
-        ::from_bytes(struct_tag)
-        .map_err(|e| Error::backend_failure(e.to_string()))?;
+pub fn struct_tag_to_string(struct_tag: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
+    let struct_tag: StructTag =
+        bcs::from_bytes(struct_tag).map_err(|e| anyhow::Error::msg(e.to_string()))?;
     Ok(struct_tag.to_string().as_bytes().to_vec())
 }
 
-pub fn struct_tag_from_string(struct_tag_str: &[u8]) -> Result<Vec<u8>, Error> {
-    let struct_tag_str = std::str
-        ::from_utf8(struct_tag_str)
-        .map_err(|e| Error::invalid_utf8(e.to_string()))?;
-    let struct_tag = parse_struct_tag(struct_tag_str).map_err(|e|
-        Error::backend_failure(e.to_string())
-    )?;
+pub fn struct_tag_from_string(struct_tag_str: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
+    let struct_tag_str =
+        std::str::from_utf8(struct_tag_str).map_err(|e| anyhow::Error::msg(e.to_string()))?;
+    let struct_tag =
+        parse_struct_tag(struct_tag_str).map_err(|e| anyhow::Error::msg(e.to_string()))?;
     to_vec(&struct_tag)
 }
 
-pub fn decode_move_resource(
-    db_handle: Db,
-    struct_tag: &[u8],
-    blob: &[u8]
-) -> Result<Vec<u8>, Error> {
-    let storage = GoStorage::new(&db_handle);
-    let struct_tag: StructTag = bcs::from_bytes(struct_tag).unwrap();
-
-    let converter = MoveConverter::new(&storage);
-    let resource = converter
-        .try_into_resource(&struct_tag, blob)
-        .map_err(|e| Error::BackendFailure { msg: e.to_string() })?;
-
-    // serialize response as json
-    serde_json::to_vec(&resource).map_err(|e| Error::BackendFailure { msg: e.to_string() })
-}
-
-pub fn decode_move_value(
-    db_handle: Db,
-    type_tag: &[u8],
-    blob: &[u8]
-) -> Result<Vec<u8>, Error> {
-    let storage = GoStorage::new(&db_handle);
-    let type_tag: TypeTag = bcs::from_bytes(type_tag).unwrap();
-
-    let converter = MoveConverter::new(&storage);
-    let value = converter
-        .try_into_value(&type_tag, blob)
-        .map_err(|e| Error::BackendFailure { msg: e.to_string() })?;
-
-    // serialize response as json
-    serde_json::to_vec(&value).map_err(|e| Error::BackendFailure { msg: e.to_string() })
-}
-
-pub fn decode_script_bytes(script_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
-    let script: MoveScriptBytecode = MoveScriptBytecode::new(script_bytes);
-    let abi = script.try_parse_abi().map_err(|e| Error::BackendFailure { msg: e.to_string() })?;
-
-    // serialize response as json
-    serde_json::to_vec(&abi).map_err(|e| Error::BackendFailure { msg: e.to_string() })
-}
-
-pub fn decode_module_bytes(module_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
-    // deserialized request from the json
-    let module: MoveModuleBytecode = MoveModuleBytecode::new(module_bytes);
-    let abi = module.try_parse_abi().map_err(|e| Error::BackendFailure { msg: e.to_string() })?;
-    // serialize response as json
-    serde_json::to_vec(&abi).map_err(|e| Error::BackendFailure { msg: e.to_string() })
+pub fn to_vec<T>(data: &T) -> Result<Vec<u8>, anyhow::Error>
+where
+    T: Serialize + ?Sized,
+{
+    bcs::to_bytes(data).map_err(|_| anyhow::Error::msg("failed to serialize"))
 }

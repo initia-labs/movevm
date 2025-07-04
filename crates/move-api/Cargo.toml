@@ -1,5 +1,5 @@
 [package]
-name = "move-api"
+name = "initia-move-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -38,4 +38,3 @@ move-vm-types = { workspace = true }
 move-resource-viewer = { workspace = true }
 move-binary-format = { workspace = true }
 move-vm-runtime = { workspace = true }
-move-backend = {workspace = true }
