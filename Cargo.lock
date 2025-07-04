@@ -1464,7 +1464,6 @@ dependencies = [
  "clap 4.5.15",
  "initia-move-api",
  "initia-move-compiler",
- "movevm",
  "serde",
  "serde_json",
 ]

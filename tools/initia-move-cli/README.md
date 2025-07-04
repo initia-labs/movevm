@@ -94,7 +94,7 @@ docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:l
 docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:latest test
 
 # Decode Move module
-docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:latest decode read my_package my_module
+docker run --rm -v "$(pwd):/code" -w /code ghcr.io/initia-labs/initia-move-cli:latest decode ./path/to/module.mv
 ```
 
 For easier use, you can create an alias in your shell:

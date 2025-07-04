@@ -22,5 +22,3 @@ serde_json = { workspace = true }
 
 initia-move-compiler = { workspace = true }
 initia-move-api = { workspace = true }
-
-movevm = { workspace = true }

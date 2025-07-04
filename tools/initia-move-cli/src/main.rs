@@ -35,7 +35,7 @@ pub enum InitiaCommand {
 }
 
 #[derive(Parser)]
-#[command(name = "initia-move", about = "Initia Move CLI", version = VERSION)]
+#[command(name = "initia-move-cli", about = "Initia Move CLI", version = VERSION)]
 pub struct InitiaCLI {
     #[clap(subcommand)]
     pub cmd: InitiaCommand,
