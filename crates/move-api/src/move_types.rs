@@ -29,7 +29,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::move_api::{
+use crate::{
     address::Address, bytecode::Bytecode, wrappers::IdentifierWrapper, VerifyInput,
     VerifyInputWithRecursion,
 };

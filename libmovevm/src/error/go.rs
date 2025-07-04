@@ -56,6 +56,9 @@ impl GoError {
     /// to protect against long externally generated error messages.
     ///
     /// The `error_msg` is always consumed here and must not be used afterwards.
+    /// # Safety
+    /// The caller must ensure that `error_msg` is a valid `UnmanagedVector` produced by FFI boundary,
+    /// and that it is not used after this function consumes it.
     pub unsafe fn into_result<F>(
         self,
         error_msg: UnmanagedVector,

@@ -10,6 +10,8 @@ on:
       version:
         description: 'Version tag (e.g. v0.1.0)'
         required: true
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   linux-build:
@@ -46,7 +48,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4 
         with:
-          name: ${{ matrix.target }}-build
+          name: initia-move-cli-${{ matrix.target }}
           path: initia-move-cli-*-${{ matrix.suffix }}.tar.gz
 
   macos-build:
@@ -54,7 +56,7 @@ jobs:
       (github.event_name == 'workflow_run' && startsWith(github.event.workflow_run.head_branch, 'v')) ||
       (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
     name: Build on macOS (native)
-    runs-on: macos-latest
+    runs-on: macos-14
     strategy:
       matrix:
         target:
@@ -85,17 +87,17 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4 
         with:
-          name: ${{ matrix.target }}-build
+          name: initia-move-cli-${{ matrix.target }}
           path: initia-move-cli-*-${{ matrix.suffix }}.tar.gz
 
   create-release:
     needs: [linux-build, macos-build]
     if: ${{github.event.workflow_run.head_branch}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: '*-build'
+          pattern: 'initia-move-cli-*'
           merge-multiple: true
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -103,3 +105,47 @@ jobs:
           tag_name: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
           files: initia-move-cli-*.tar.gz
 
+  docker-build-push:
+    needs: [linux-build]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux AMD64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: initia-move-cli-x86_64-unknown-linux-gnu
+          path: tools/initia-move-cli
+
+      - name: Extract binary
+        run: |
+          cd tools/initia-move-cli
+          tar -xzvf initia-move-cli-*.tar.gz
+          rm initia-move-cli-*.tar.gz
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/initia-move-cli
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: tools/initia-move-cli
+          file: tools/initia-move-cli/Dockerfile
+          push: true
+          provenance: false
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

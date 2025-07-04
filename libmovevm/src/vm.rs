@@ -1,11 +1,10 @@
 use crate::api::GoApi;
-use crate::error::Error;
+use crate::db::Db;
 use crate::result::generate_result;
 use crate::result::to_vec;
+use crate::storage::GoStorage;
 use crate::storage::Storage;
-use crate::table_storage::GoTableStorage;
-use crate::Db;
-use crate::GoStorage;
+use crate::{error::Error, table_storage::GoTableStorage};
 
 use initia_move_gas::InitiaGasMeter;
 use initia_move_types::access_path::AccessPath;

@@ -12,7 +12,7 @@ use move_binary_format::{
 };
 use move_core_types::{account_address::AccountAddress, identifier::IdentStr};
 
-use crate::move_api::move_types::{
+use crate::move_types::{
     MoveAbility, MoveFunction, MoveFunctionGenericTypeParam, MoveStruct, MoveStructField,
     MoveStructGenericTypeParam, MoveStructTag, MoveType,
 };

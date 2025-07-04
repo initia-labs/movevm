@@ -252,6 +252,7 @@ impl Default for UnmanagedVector {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn new_unmanaged_vector(
     nil: bool,
@@ -282,9 +283,9 @@ mod test {
 
     #[test]
     fn byte_slice_view_read_works() {
-        let data = vec![0xAA, 0xBB, 0xCC];
+        let data = vec![0xaa, 0xbb, 0xcc];
         let view = ByteSliceView::new(&data);
-        assert_eq!(view.read().unwrap(), &[0xAA, 0xBB, 0xCC]);
+        assert_eq!(view.read().unwrap(), &[0xaa, 0xbb, 0xcc]);
 
         let data = vec![];
         let view = ByteSliceView::new(&data);
@@ -296,9 +297,9 @@ mod test {
 
     #[test]
     fn byte_slice_view_to_owned_works() {
-        let data = vec![0xAA, 0xBB, 0xCC];
+        let data = vec![0xaa, 0xbb, 0xcc];
         let view = ByteSliceView::new(&data);
-        assert_eq!(view.to_owned().unwrap(), vec![0xAA, 0xBB, 0xCC]);
+        assert_eq!(view.to_owned().unwrap(), vec![0xaa, 0xbb, 0xcc]);
 
         let data = vec![];
         let view = ByteSliceView::new(&data);

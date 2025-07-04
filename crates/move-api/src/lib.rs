@@ -1,11 +1,11 @@
-pub mod handler;
-
 mod address;
 mod bytecode;
-mod convert;
 mod metadata;
-pub(crate) mod move_types;
+mod move_types;
 mod wrappers;
+
+pub mod convert;
+pub mod handler;
 
 /// For verifying a given struct
 pub trait VerifyInput {

@@ -1,7 +1,3 @@
-use crate::{
-    error::{handle_c_error_binary, handle_c_error_default, GoError},
-    UnmanagedVector,
-};
 use initia_move_types::errors::BackendError;
 
 // GoError test
@@ -47,7 +43,7 @@ fn go_error_into_result_works() {
     assert_eq!(
         a.unwrap_err(),
         BackendError::UserErr {
-            msg: "kaputt".to_string()
+            msg: "kaputt".to_string(),
         }
     );
 
@@ -58,7 +54,7 @@ fn go_error_into_result_works() {
     assert_eq!(
         a.unwrap_err(),
         BackendError::UserErr {
-            msg: "a".repeat(8192)
+            msg: "a".repeat(8192),
         }
     );
 
@@ -75,7 +71,7 @@ fn go_error_into_result_works() {
     assert_eq!(
         a.unwrap_err(),
         BackendError::Unknown {
-            msg: "kaputt".to_string()
+            msg: "kaputt".to_string(),
         }
     );
 
@@ -86,16 +82,21 @@ fn go_error_into_result_works() {
     assert_eq!(
         a.unwrap_err(),
         BackendError::Unknown {
-            msg: "a".repeat(8192)
+            msg: "a".repeat(8192),
         }
     );
 }
 
 // RustError tests
 
-use crate::error::{ErrnoValue, Error as RustError};
+use crate::{
+    error::{handle_c_error_binary, handle_c_error_default, ErrnoValue, Error as RustError},
+    memory::UnmanagedVector,
+};
 use errno::errno;
 use std::str;
+
+use crate::error::GoError;
 
 #[test]
 fn invalid_utf8_works_for_strings() {
@@ -184,11 +185,11 @@ fn from_std_string_fromutf8error_works() {
 fn handle_c_error_binary_works() {
     // Ok (non-empty vector)
     let mut error_msg = UnmanagedVector::default();
-    let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
+    let res: Result<Vec<u8>, RustError> = Ok(vec![0xf0, 0x0b, 0xaa]);
     let data = handle_c_error_binary(res, Some(&mut error_msg));
     assert_eq!(errno().0, ErrnoValue::Success as i32);
     assert!(error_msg.is_none());
-    assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
+    assert_eq!(data, vec![0xf0, 0x0b, 0xaa]);
     let _ = error_msg.consume();
 
     // Ok (empty vector)
@@ -250,11 +251,11 @@ fn handle_c_error_binary_clears_an_old_error() {
 
     // Ok
     let mut error_msg = UnmanagedVector::default();
-    let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
+    let res: Result<Vec<u8>, RustError> = Ok(vec![0xf0, 0x0b, 0xaa]);
     let data = handle_c_error_binary(res, Some(&mut error_msg));
     assert_eq!(errno().0, ErrnoValue::Success as i32);
     assert!(error_msg.is_none());
-    assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
+    assert_eq!(data, vec![0xf0, 0x0b, 0xaa]);
     let _ = error_msg.consume();
 }
 
@@ -262,11 +263,11 @@ fn handle_c_error_binary_clears_an_old_error() {
 fn handle_c_error_default_works() {
     // Ok (non-empty vector)
     let mut error_msg = UnmanagedVector::default();
-    let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
+    let res: Result<Vec<u8>, RustError> = Ok(vec![0xf0, 0x0b, 0xaa]);
     let data = handle_c_error_default(res, Some(&mut error_msg));
     assert_eq!(errno().0, ErrnoValue::Success as i32);
     assert!(error_msg.is_none());
-    assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
+    assert_eq!(data, vec![0xf0, 0x0b, 0xaa]);
     let _ = error_msg.consume();
 
     // Ok (empty vector)
@@ -344,10 +345,10 @@ fn handle_c_error_default_clears_an_old_error() {
 
     // Ok
     let mut error_msg = UnmanagedVector::default();
-    let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
+    let res: Result<Vec<u8>, RustError> = Ok(vec![0xf0, 0x0b, 0xaa]);
     let data = handle_c_error_default(res, Some(&mut error_msg));
     assert_eq!(errno().0, ErrnoValue::Success as i32);
     assert!(error_msg.is_none());
-    assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
+    assert_eq!(data, vec![0xf0, 0x0b, 0xaa]);
     let _ = error_msg.consume();
 }

@@ -14,12 +14,6 @@
 #include <stdlib.h>
 
 
-/**
- * Maximum number of recursive types - Same as (non-public)
- * move_core_types::safe_serialize::MAX_TYPE_TAG_NESTING
- */
-#define MAX_RECURSIVE_TYPES_ALLOWED 8
-
 enum ErrnoValue {
   ErrnoValue_Success = 0,
   ErrnoValue_Other = 1,
