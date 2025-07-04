@@ -1,11 +1,8 @@
 use crate::api::GoApi;
-use crate::error::Error;
+
 use crate::result::generate_result;
 use crate::result::to_vec;
-use crate::storage::Storage;
-use crate::table_storage::GoTableStorage;
-use crate::Db;
-use crate::GoStorage;
+
 
 use initia_move_gas::InitiaGasMeter;
 use initia_move_types::access_path::AccessPath;
@@ -14,9 +11,13 @@ use initia_move_types::errors::BackendError;
 use initia_move_types::message::AuthenticateMessage;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_types::write_set::WriteSet;
-use initia_move_types::{message::Message, module::ModuleBundle};
+use initia_move_types::{ message::Message, module::ModuleBundle };
 use initia_move_vm::InitiaVM;
 
+use move_backend::db::Db;
+use move_backend::storage::GoStorage;
+use move_backend::storage::Storage;
+use move_backend::{ error::Error, table_storage::GoTableStorage };
 use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
 
@@ -26,7 +27,7 @@ pub(crate) fn initialize_vm(
     api: GoApi,
     env: Env,
     module_bundle: ModuleBundle,
-    allowed_publishers: Vec<AccountAddress>,
+    allowed_publishers: Vec<AccountAddress>
 ) -> Result<Vec<u8>, Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
@@ -37,7 +38,7 @@ pub(crate) fn initialize_vm(
         &storage,
         &mut table_storage,
         module_bundle,
-        allowed_publishers,
+        allowed_publishers
     )?;
 
     // write state change to storage
@@ -53,13 +54,12 @@ pub(crate) fn execute_contract(
     db_handle: Db,
     api: GoApi,
     env: Env,
-    message: Message,
+    message: Message
 ) -> Result<Vec<u8>, Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
-    let output =
-        vm.execute_message(gas_meter, &api, &env, &storage, &mut table_storage, message)?;
+    let output = vm.execute_message(gas_meter, &api, &env, &storage, &mut table_storage, message)?;
 
     // push write set to storage
     push_write_set(&mut storage, output.write_set())?;
@@ -74,14 +74,13 @@ pub(crate) fn execute_script(
     db_handle: Db,
     api: GoApi,
     env: Env,
-    message: Message,
+    message: Message
 ) -> Result<Vec<u8>, Error> {
     let mut storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
     // NOTE - storage passed as mut for iterator implementation
-    let output =
-        vm.execute_message(gas_meter, &api, &env, &storage, &mut table_storage, message)?;
+    let output = vm.execute_message(gas_meter, &api, &env, &storage, &mut table_storage, message)?;
 
     // push write set to storage
     push_write_set(&mut storage, output.write_set())?;
@@ -96,7 +95,7 @@ pub(crate) fn execute_authenticate(
     db_handle: Db,
     api: GoApi,
     env: Env,
-    authenticate_message: AuthenticateMessage,
+    authenticate_message: AuthenticateMessage
 ) -> Result<Vec<u8>, Error> {
     let storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
@@ -107,7 +106,7 @@ pub(crate) fn execute_authenticate(
         &env,
         &storage,
         &mut table_storage,
-        authenticate_message,
+        authenticate_message
     )?;
 
     to_vec(&output)
@@ -120,7 +119,7 @@ pub(crate) fn execute_view_function(
     db_handle: Db,
     api: GoApi,
     env: Env,
-    view_fn: ViewFunction,
+    view_fn: ViewFunction
 ) -> Result<Vec<u8>, Error> {
     let storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
@@ -131,7 +130,7 @@ pub(crate) fn execute_view_function(
         &env,
         &storage,
         &mut table_storage,
-        &view_fn,
+        &view_fn
     )?;
 
     to_vec(&output)
@@ -144,11 +143,9 @@ pub(crate) fn execute_view_function(
 fn write_op(
     go_storage: &mut GoStorage,
     ap: &AccessPath,
-    blob_opt: &Op<Vec<u8>>,
+    blob_opt: &Op<Vec<u8>>
 ) -> Result<(), BackendError> {
-    let key = ap
-        .to_bytes()
-        .map_err(|_| BackendError::unknown("failed to encode access path"))?;
+    let key = ap.to_bytes().map_err(|_| BackendError::unknown("failed to encode access path"))?;
     match blob_opt {
         Op::New(blob) | Op::Modify(blob) => go_storage.set(&key, blob),
         Op::Delete => go_storage.remove(&key),
@@ -157,7 +154,7 @@ fn write_op(
 
 pub fn push_write_set(
     go_storage: &mut GoStorage,
-    write_set: &WriteSet,
+    write_set: &WriteSet
 ) -> Result<(), BackendError> {
     for (ap, blob_opt) in write_set {
         write_op(go_storage, ap, blob_opt)?;

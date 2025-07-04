@@ -1,8 +1,8 @@
-use crate::{InitiaCLI, InitiaCommand};
+use crate::{ InitiaCLI, InitiaCommand };
 use anyhow::Context;
-use clap::{Parser, Subcommand};
-use movevm::move_api::handler::{decode_module_bytes, decode_script_bytes, read_module_info};
-use std::{fs, path::PathBuf};
+use clap::{ Parser, Subcommand };
+use move_api::handler::{ decode_module_bytes, decode_script_bytes, read_module_info };
+use std::{ fs, path::PathBuf };
 
 #[derive(Parser)]
 #[command(
@@ -22,8 +22,7 @@ pub enum DecodeCommands {
         about = "Read Move module info from bytecode",
         long_about = "Read and display basic information about a Move module from its bytecode file.\n\
         Example: initia-move decode read ./build/package/bytecode_modules/my_module.mv"
-    )]
-    Read {
+    )] Read {
         #[arg(value_name = "PACKAGE_NAME")]
         package_name: String,
         #[arg(value_name = "MODULE_NAME")]
@@ -42,8 +41,7 @@ pub enum DecodeCommands {
         about = "Decode Move script bytecode",
         long_about = "Decode Move script bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move decode script ./build/package/scripts/my_script.mv"
-    )]
-    Script {
+    )] Script {
         #[arg(value_name = "PACKAGE_NAME")]
         package_name: String,
         #[arg(value_name = "SCRIPT_NAME")]
@@ -62,8 +60,7 @@ pub enum DecodeCommands {
         about = "Decode Move module bytecode",
         long_about = "Decode Move module bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move decode module ./build/package/bytecode_modules/my_module.mv"
-    )]
-    Module {
+    )] Module {
         #[arg(value_name = "PACKAGE_NAME")]
         package_name: String,
         #[arg(value_name = "MODULE_NAME")]
@@ -95,13 +92,12 @@ impl Decoder for InitiaCLI {
         match &self.cmd {
             InitiaCommand::Decode(cmd) => {
                 match &cmd.command {
-                    DecodeCommands::Read {
-                        package_name,
-                        module_name,
-                        package_path,
-                    } => {
-                        let path =
-                            format!("build/{}/bytecode_modules/{}.mv", package_name, module_name);
+                    DecodeCommands::Read { package_name, module_name, package_path } => {
+                        let path = format!(
+                            "build/{}/bytecode_modules/{}.mv",
+                            package_name,
+                            module_name
+                        );
                         let bytes = read_file(package_path, &path)?;
                         let result = read_module_info(&bytes)?;
                         let mut json: serde_json::Value = serde_json::from_slice(&result)?;
@@ -121,27 +117,23 @@ impl Decoder for InitiaCLI {
                         }
                         println!("{}", serde_json::to_string_pretty(&json)?);
                     }
-                    DecodeCommands::Script {
-                        package_name,
-                        script_name,
-                        package_path,
-                    } => {
+                    DecodeCommands::Script { package_name, script_name, package_path } => {
                         let path = format!(
                             "build/{}/scripts/bytecode_scripts/{}.mv",
-                            package_name, script_name
+                            package_name,
+                            script_name
                         );
                         let bytes = read_file(package_path, &path)?;
                         let result = decode_script_bytes(bytes)?;
                         let json: serde_json::Value = serde_json::from_slice(&result)?;
                         println!("{}", serde_json::to_string_pretty(&json)?);
                     }
-                    DecodeCommands::Module {
-                        package_name,
-                        module_name,
-                        package_path,
-                    } => {
-                        let path =
-                            format!("build/{}/bytecode_modules/{}.mv", package_name, module_name);
+                    DecodeCommands::Module { package_name, module_name, package_path } => {
+                        let path = format!(
+                            "build/{}/bytecode_modules/{}.mv",
+                            package_name,
+                            module_name
+                        );
                         let bytes = read_file(package_path, &path)?;
                         let result = decode_module_bytes(bytes)?;
                         let json: serde_json::Value = serde_json::from_slice(&result)?;

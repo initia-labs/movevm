@@ -1,27 +1,12 @@
 [package]
-name = "movevm"
-version = "0.1.0"
-publish = false
-description = "Initia Move VM Engine"
-homepage = "https://initia.xyz/"
-repository = "https://github.com/initia-labs/movevm"
-exclude = [".gitignore"]
-
-edition = { workspace = true }
-rust-version = { workspace = true }
-
-# the example is to allow us to compile a muslc static lib with the same codebase as we compile the
-# normal dynamic libs (best workaround I could find to override crate-type on the command line)
-[[example]]
-name = "movevmstatic"
-path = "src/examples/movevmstatic.rs"
-crate-type = ["staticlib"]
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = []
+name = "move-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+license-file.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 bigdecimal = { workspace = true }
@@ -39,6 +24,8 @@ log = { workspace = true, features = [
     "release_max_level_warn",
 ] }
 
+
+# initia
 initia-move-vm = { workspace = true }
 initia-move-natives = { workspace = true }
 initia-move-types = { workspace = true }
@@ -51,8 +38,4 @@ move-vm-types = { workspace = true }
 move-resource-viewer = { workspace = true }
 move-binary-format = { workspace = true }
 move-vm-runtime = { workspace = true }
-move-api = { workspace = true }
-move-backend = { workspace = true }
-
-[build-dependencies]
-cbindgen = { workspace = true }
+move-backend = {workspace = true }

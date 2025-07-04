@@ -1,0 +1,34 @@
+[package]
+name = "move-backend"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+license-file.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bigdecimal = { workspace = true }
+anyhow = { workspace = true }
+bytes = { workspace = true }
+bcs = { workspace = true }
+errno = { workspace = true }
+hex = { workspace = true }
+serde = { workspace = true, features = ["derive", "alloc"] }
+serde_bytes = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true, features = [
+    "max_level_debug",
+    "release_max_level_warn",
+] }
+
+initia-move-vm = { workspace = true }
+initia-move-natives = { workspace = true }
+initia-move-types = { workspace = true }
+initia-move-gas = { workspace = true }
+initia-move-storage = { workspace = true }
+initia-move-resource-viewer = { workspace = true }
+
+move-core-types = { workspace = true }
