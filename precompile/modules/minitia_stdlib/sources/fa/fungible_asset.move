@@ -1398,7 +1398,6 @@ module minitia_std::fungible_asset {
         );
         assert!(name(metadata) == string::utf8(b"mutated_name"), 8);
         assert!(symbol(metadata) == string::utf8(b"mutated_symbol"), 9);
-        assert!(decimals(metadata) == 0, 10);
         assert!(raw_symbol(metadata) == string::utf8(b"@@"), 10);
         assert!(decimals(metadata) == 0, 11);
         assert!(
