@@ -12,10 +12,11 @@ members = [
     "crates/vm",
     "crates/types",
     "crates/storage",
+    "crates/move-api",
     "crates/e2e-move-tests",
     "tools/generate-bcs-go",
     "tools/precompile",
-    "tools/initia-move-cli",
+    "tools/initia-move-cli", 
 ]
     
 [profile.release]
@@ -63,7 +64,7 @@ initia-move-gas = { path = "crates/gas" }
 initia-move-compiler = { path = "crates/compiler" }
 initia-move-json = { path = "crates/json" }
 initia-move-resource-viewer = { path = "crates/resource-viewer" }
-
+initia-move-api = {path = "crates/move-api"}
 # External crate dependencies.
 # Please do not add any test features here: they should be declared by the individual crate.
 ambassador = "0.4.1"

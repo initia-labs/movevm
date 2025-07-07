@@ -2,7 +2,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use crate::args::{GAS_BALANCE_ARG, VM_ARG};
 use crate::error::{handle_c_error_binary, Error};
-use crate::move_api::handler as api_handler;
+use crate::move_api as api_handler;
 use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
 
 use initia_move_types::entry_function::EntryFunction;
@@ -13,6 +13,7 @@ use initia_move_types::script::Script;
 use initia_move_types::view_function::ViewFunction;
 use initia_move_types::vm_config::InitiaVMConfig;
 use initia_move_vm::InitiaVM;
+
 use move_core_types::account_address::AccountAddress;
 
 #[allow(non_camel_case_types)]

@@ -12,7 +12,7 @@ use move_core_types::identifier::{IdentStr, Identifier};
 use serde::{Deserialize, Serialize};
 use std::{convert::From, fmt, ops::Deref, str::FromStr};
 
-use crate::move_api::VerifyInput;
+use crate::VerifyInput;
 
 /// A wrapper of a Move identifier
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]

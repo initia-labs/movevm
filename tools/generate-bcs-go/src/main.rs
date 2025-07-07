@@ -14,6 +14,7 @@ use initia_move_types::{
     cosmos::CosmosMessage,
     entry_function::EntryFunction,
     env::Env,
+    function_info::FunctionInfo,
     gas_usage::GasUsage,
     module::ModuleBundle,
     result::ExecutionResult,
@@ -22,7 +23,6 @@ use initia_move_types::{
     table::TableInfo,
     view_function::{ViewFunction, ViewOutput},
     vm_config::InitiaVMConfig,
-    function_info::FunctionInfo,
 };
 use move_core_types::{
     account_address::AccountAddress,

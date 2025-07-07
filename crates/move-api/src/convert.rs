@@ -1,4 +1,4 @@
-use crate::move_api::move_types::{MoveResource, MoveValue};
+use crate::move_types::{MoveResource, MoveValue};
 
 use anyhow::Result;
 
