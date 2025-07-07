@@ -1,10 +1,10 @@
 use anyhow::Context;
-use clap::{Parser, Subcommand};
-use std::{fs, path::PathBuf};
+use clap::{ Parser, Subcommand };
+use std::{ fs, path::PathBuf };
 
-use crate::{InitiaCLI, InitiaCommand};
+use crate::{ InitiaCLI, InitiaCommand };
 
-use initia_move_api::handler::{decode_module_bytes, decode_script_bytes};
+use initia_move_api::handler::{ decode_module_bytes, decode_script_bytes, read_module_info };
 
 #[derive(Parser)]
 #[command(
@@ -20,12 +20,21 @@ pub struct Decode {
 #[derive(Subcommand)]
 pub enum DecodeCommands {
     #[command(
+        name = "read",
+        about = "Read Move module info from bytecode",
+        long_about = "Read and display basic information(name and address) about a Move module from its bytecode file.\n\
+        Example: initia-move decode read ./build/package/bytecode_modules/my_module.mv"
+    )] Read {
+        #[arg(value_name = "PATH")]
+        path: String,
+    },
+
+    #[command(
         name = "script",
         about = "Decode Move script bytecode",
         long_about = "Decode Move script bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move-cli decode script ./build/package/scripts/my_script.mv"
-    )]
-    Script {
+    )] Script {
         #[arg(value_name = "PATH")]
         path: String,
     },
@@ -35,8 +44,7 @@ pub enum DecodeCommands {
         about = "Decode Move module bytecode",
         long_about = "Decode Move module bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move-cli decode module ./build/package/bytecode_modules/my_module.mv"
-    )]
-    Module {
+    )] Module {
         #[arg(value_name = "PATH")]
         path: String,
     },
@@ -56,6 +64,26 @@ impl Decoder for InitiaCLI {
         match &self.cmd {
             InitiaCommand::Decode(cmd) => {
                 match &cmd.command {
+                    DecodeCommands::Read { path } => {
+                        let bytes = read_file(path)?;
+                        let result = read_module_info(&bytes)?;
+                        let mut json: serde_json::Value = serde_json::from_slice(&result)?;
+
+                        if let Some(address) = json.get_mut("address") {
+                            if let serde_json::Value::Array(bytes) = address {
+                                let hex = format!(
+                                    "0x{}",
+                                    bytes
+                                        .iter()
+                                        .filter_map(|b| b.as_u64())
+                                        .map(|b| format!("{:02x}", b))
+                                        .collect::<String>()
+                                );
+                                *address = serde_json::json!(hex);
+                            }
+                        }
+                        println!("{}", serde_json::to_string_pretty(&json)?);
+                    }
                     DecodeCommands::Script { path } => {
                         let bytes = read_file(path)?;
                         let result = decode_script_bytes(bytes)?;
