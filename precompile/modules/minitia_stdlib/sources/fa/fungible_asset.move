@@ -543,12 +543,18 @@ module minitia_std::fungible_asset {
 
     #[view]
     /// Get the symbol of the fungible asset from the `metadata` object.
+    public fun raw_symbol<T: key>(metadata: Object<T>): String acquires Metadata {
+        borrow_fungible_metadata(&metadata).symbol
+    }
+
+    #[view]
+    /// Get the symbol of the fungible asset from the `extra_metadata`, if not exists, get from the `metadata` object.
     public fun symbol<T: key>(metadata: Object<T>): String acquires Metadata, ExtraMetadata {
         if (exists<ExtraMetadata>(object::object_address(&metadata))) {
             return borrow_global<ExtraMetadata>(object::object_address(&metadata)).symbol
         };
 
-        borrow_fungible_metadata(&metadata).symbol
+        raw_symbol(metadata)
     }
 
     #[view]
@@ -1392,14 +1398,15 @@ module minitia_std::fungible_asset {
         );
         assert!(name(metadata) == string::utf8(b"mutated_name"), 8);
         assert!(symbol(metadata) == string::utf8(b"mutated_symbol"), 9);
-        assert!(decimals(metadata) == 0, 10);
+        assert!(raw_symbol(metadata) == string::utf8(b"@@"), 10);
+        assert!(decimals(metadata) == 0, 11);
         assert!(
             icon_uri(metadata) == string::utf8(b"http://www.example.com/favicon.ico"),
-            11
+            12
         );
         assert!(
             project_uri(metadata) == string::utf8(b"http://www.example.com"),
-            12
+            13
         );
     }
 
