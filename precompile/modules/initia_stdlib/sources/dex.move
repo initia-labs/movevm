@@ -117,6 +117,7 @@ module initia_std::dex {
     }
 
     #[event]
+    #[deprecated]
     struct SingleAssetProvideEvent has drop, store {
         coin_a: address,
         coin_b: address,
@@ -234,6 +235,7 @@ module initia_std::dex {
     const ESAME_COIN_TYPE: u64 = 19;
 
     /// Zero amount in the swap simulation is not allowed
+    /// Or if initial provide, must provide both coin a and coin b
     const EZERO_AMOUNT_IN: u64 = 20;
 
     /// Weights sum must be 1.0
@@ -411,7 +413,7 @@ module initia_std::dex {
     #[view]
     public fun get_provide_simulation(
         pair: Object<Config>, coin_a_amount_in: u64, coin_b_amount_in: u64
-    ): u64 acquires Pool, FlashSwapLock {
+    ): u64 acquires Config, Pool, FlashSwapLock {
         let pool_addr = object::object_address(&pair);
         let pool = borrow_global<Pool>(pool_addr);
 
@@ -424,15 +426,22 @@ module initia_std::dex {
     public fun get_single_asset_provide_simulation(
         pair: Object<Config>, offer_asset_metadata: Object<Metadata>, amount_in: u64
     ): u64 acquires Config, Pool, FlashSwapLock {
-        let pair_addr = object::object_address(&pair);
-        let pool = borrow_global<Pool>(pair_addr);
+        let (coin_a_metadata, coin_b_metadata) = pool_metadata(pair);
 
-        let (liquidity_amount, _, _) =
-            calculate_single_asset_provide_liquidity_return_amount(
-                pool, pair, offer_asset_metadata, amount_in
-            );
+        assert!(
+            coin_a_metadata == offer_asset_metadata
+                || coin_b_metadata == offer_asset_metadata,
+            error::invalid_argument(ECOIN_TYPE)
+        );
 
-        liquidity_amount
+        let (coin_a_amount_in, coin_b_amount_in) =
+            if (coin_a_metadata == offer_asset_metadata) {
+                (amount_in, 0)
+            } else {
+                (0, amount_in)
+            };
+
+        get_provide_simulation(pair, coin_a_amount_in, coin_b_amount_in)
     }
 
     #[view]
@@ -945,57 +954,23 @@ module initia_std::dex {
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
     ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
-        let pair_addr = object::object_address(&pair);
-        let pool = borrow_global<Pool>(pair_addr);
-        let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
-        // calculate the best coin amount
-        let (coin_a, coin_b) =
-            if (total_share == 0) {
-                (
-                    coin::withdraw(
-                        account,
-                        fungible_asset::store_metadata(pool.coin_a_store),
-                        coin_a_amount_in
-                    ),
-                    coin::withdraw(
-                        account,
-                        fungible_asset::store_metadata(pool.coin_b_store),
-                        coin_b_amount_in
-                    )
-                )
-            } else {
-                let coin_a_share_ratio =
-                    bigdecimal::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-                let coin_b_share_ratio =
-                    bigdecimal::from_ratio_u64(coin_b_amount_in, coin_b_amount);
-                if (bigdecimal::gt(coin_a_share_ratio, coin_b_share_ratio)) {
-                    coin_a_amount_in = bigdecimal::mul_by_u64_truncate(
-                        coin_b_share_ratio, coin_a_amount
-                    );
-                } else {
-                    coin_b_amount_in = bigdecimal::mul_by_u64_truncate(
-                        coin_a_share_ratio, coin_b_amount
-                    );
-                };
+        // if total share is zero, must provide both coin_a and coin_b
+        assert!(
+            total_share != 0 || (coin_a_amount_in != 0 && coin_b_amount_in != 0),
+            error::invalid_state(EZERO_AMOUNT_IN)
+        );
 
-                (
-                    coin::withdraw(
-                        account,
-                        fungible_asset::store_metadata(pool.coin_a_store),
-                        coin_a_amount_in
-                    ),
-                    coin::withdraw(
-                        account,
-                        fungible_asset::store_metadata(pool.coin_b_store),
-                        coin_b_amount_in
-                    )
-                )
-            };
+        // withdraw coins
+        let (coin_a_metadata, coin_b_metadata) = pool_metadata(pair);
+        let coin_a = coin::withdraw(account, coin_a_metadata, coin_a_amount_in);
+        let coin_b = coin::withdraw(account, coin_b_metadata, coin_b_amount_in);
 
+        // provide liquidity
         let liquidity_token = provide_liquidity(pair, coin_a, coin_b, min_liquidity);
 
+        // deposit liquidity token
         let liquidity_token_amount = fungible_asset::amount(&liquidity_token);
         coin::deposit(signer::address_of(account), liquidity_token);
 
@@ -1143,64 +1118,29 @@ module initia_std::dex {
         )
     }
 
+    #[deprecated]
     /// Single asset provide liquidity directly
-    /// CONTRACT: cannot provide more than the pool amount to prevent huge price impact
     /// CONTRACT: not allow until LBP is ended
     public fun single_asset_provide_liquidity(
         pair: Object<Config>,
         provide_coin: FungibleAsset,
         min_liquidity_amount: Option<u64>
     ): FungibleAsset acquires Config, CoinCapabilities, Pool, FlashSwapLock {
-        let pair_addr = object::object_address(&pair);
-
-        // check pool is not locked by flash swap
-        assert_pool_unlocked(pair_addr);
-
-        let pool = borrow_global<Pool>(pair_addr);
-
         let provide_metadata = fungible_asset::metadata_from_asset(&provide_coin);
-        let provide_amount = fungible_asset::amount(&provide_coin);
+        let (coin_a_metadata, coin_b_metadata) = pool_metadata(pair);
 
-        let (liquidity, fee_amount, is_provide_a) =
-            calculate_single_asset_provide_liquidity_return_amount(
-                pool, pair, provide_metadata, provide_amount
-            );
-
-        // deposit token
-        if (is_provide_a) {
-            dispatchable_fungible_asset::deposit(pool.coin_a_store, provide_coin);
-        } else {
-            dispatchable_fungible_asset::deposit(pool.coin_b_store, provide_coin);
-        };
-
-        let pair_key = generate_pair_key(pair);
-
-        // check min liquidity assertion
         assert!(
-            option::is_none(&min_liquidity_amount)
-                || *option::borrow(&min_liquidity_amount) <= liquidity,
-            error::invalid_state(EMIN_LIQUIDITY)
+            coin_a_metadata == provide_metadata || coin_b_metadata == provide_metadata,
+            error::invalid_argument(ECOIN_TYPE)
         );
+        let (coin_a, coin_b) =
+            if (coin_a_metadata == provide_metadata) {
+                (provide_coin, fungible_asset::zero(coin_b_metadata))
+            } else {
+                (fungible_asset::zero(coin_a_metadata), provide_coin)
+            };
 
-        // emit events
-        event::emit<SingleAssetProvideEvent>(
-            SingleAssetProvideEvent {
-                coin_a: pair_key.coin_a,
-                coin_b: pair_key.coin_b,
-                provide_coin: object::object_address(&provide_metadata),
-                liquidity_token: pair_addr,
-                provide_amount,
-                fee_amount,
-                liquidity
-            }
-        );
-
-        // mint liquidity tokens to provider
-        let liquidity_token_capabilities = borrow_global<CoinCapabilities>(pair_addr);
-        coin::mint(
-            &liquidity_token_capabilities.mint_cap,
-            liquidity
-        )
+        provide_liquidity(pair, coin_a, coin_b, min_liquidity_amount)
     }
 
     /// Swap directly
@@ -1656,7 +1596,7 @@ module initia_std::dex {
         pair: Object<Config>,
         coin_a_amount_in: u64,
         coin_b_amount_in: u64
-    ): u64 acquires FlashSwapLock {
+    ): u64 acquires Config, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
         let (coin_a_amount, coin_b_amount) = pool_amounts(pool, pair_addr);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
@@ -1668,93 +1608,114 @@ module initia_std::dex {
                 coin_b_amount_in
             }
         } else {
-            let coin_a_share_ratio =
-                bigdecimal::from_ratio_u64(coin_a_amount_in, coin_a_amount);
-            let coin_b_share_ratio =
-                bigdecimal::from_ratio_u64(coin_b_amount_in, coin_b_amount);
-            if (bigdecimal::gt(coin_a_share_ratio, coin_b_share_ratio)) {
-                (bigdecimal::mul_by_u128_truncate(coin_b_share_ratio, total_share) as u64)
-            } else {
-                (bigdecimal::mul_by_u128_truncate(coin_a_share_ratio, total_share) as u64)
-            }
+            // calculate invariant ratio
+            let pair_addr = object::object_address(&pair);
+            let config = borrow_global<Config>(pair_addr);
+
+            // get normalized weight
+            let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
+            let weight_sum = bigdecimal::add(coin_a_weight, coin_b_weight);
+            let coin_a_normalized_weight = bigdecimal::div(coin_a_weight, weight_sum);
+            let coin_b_normalized_weight = bigdecimal::div(coin_b_weight, weight_sum);
+
+            // sum((pool_amount + amount_in) / pool_amount * normalized_weight)
+            // calculate balance ratio
+            let coin_a_balance_ratio_with_fee =
+                bigdecimal::from_ratio_u64(
+                    coin_a_amount + coin_a_amount_in, coin_a_amount
+                );
+            let coin_b_balance_ratio_with_fee =
+                bigdecimal::from_ratio_u64(
+                    coin_b_amount + coin_b_amount_in, coin_b_amount
+                );
+            // calculate weight average balance ratio
+            // sum((pool_amount + amount_in) / pool_amount * normalized_weight)
+            let average_balance_ratio =
+                bigdecimal::add(
+                    bigdecimal::mul(
+                        coin_a_balance_ratio_with_fee,
+                        coin_a_normalized_weight
+                    ),
+                    bigdecimal::mul(
+                        coin_b_balance_ratio_with_fee,
+                        coin_b_normalized_weight
+                    )
+                );
+
+            let coin_a_amount_in_without_fee =
+                adjust_provide_fee(
+                    coin_a_balance_ratio_with_fee,
+                    average_balance_ratio,
+                    config.swap_fee_rate,
+                    coin_a_amount_in,
+                    coin_a_amount
+                );
+            let coin_b_amount_in_without_fee =
+                adjust_provide_fee(
+                    coin_b_balance_ratio_with_fee,
+                    average_balance_ratio,
+                    config.swap_fee_rate,
+                    coin_b_amount_in,
+                    coin_b_amount
+                );
+
+            // calculate invariant (a^w_a * b^w_b) increase ratio
+            let coin_a_balance_ratio_without_fee =
+                bigdecimal::from_ratio_u64(
+                    coin_a_amount + coin_a_amount_in_without_fee, coin_a_amount
+                );
+            let coin_b_balance_ratio_without_fee =
+                bigdecimal::from_ratio_u64(
+                    coin_b_amount + coin_b_amount_in_without_fee, coin_b_amount
+                );
+
+            let invariant_ratio =
+                bigdecimal::mul(
+                    pow(coin_a_balance_ratio_without_fee, coin_a_normalized_weight),
+                    pow(coin_b_balance_ratio_without_fee, coin_b_normalized_weight)
+                );
+
+            // calculate liquidity amount
+            let one = bigdecimal::one();
+            if (bigdecimal::gt(invariant_ratio, one)) {
+                (
+                    bigdecimal::mul_by_u128_truncate(
+                        bigdecimal::sub(invariant_ratio, one), total_share
+                    ) as u64
+                )
+            } else { 0 }
         }
     }
 
-    fun calculate_single_asset_provide_liquidity_return_amount(
-        pool: &Pool,
-        pair: Object<Config>,
-        provide_metadata: Object<Metadata>,
-        amount_in: u64
-    ): (u64, u64, bool) acquires Config, FlashSwapLock {
-        let pair_addr = object::object_address(&pair);
-        let config = borrow_global<Config>(pair_addr);
-        check_lbp_ended(&config.weights);
+    fun adjust_provide_fee(
+        coin_balance_ratio_with_fee: BigDecimal,
+        average_balance_ratio: BigDecimal,
+        swap_fee_rate: BigDecimal,
+        coin_amount_in: u64,
+        coin_amount: u64
+    ): u64 {
+        let one = bigdecimal::one();
+        let coin_amount_in_without_fee =
+            if (bigdecimal::gt(coin_balance_ratio_with_fee, average_balance_ratio)) {
+                let non_taxable_amount =
+                    if (bigdecimal::gt(average_balance_ratio, one)) {
+                        bigdecimal::mul_by_u64_truncate(
+                            bigdecimal::sub(average_balance_ratio, one),
+                            coin_amount
+                        )
+                    } else { 0 };
 
-        // provide coin type must be one of coin a or coin b coin type
-        assert!(
-            provide_metadata == fungible_asset::store_metadata(pool.coin_a_store)
-                || provide_metadata
-                    == fungible_asset::store_metadata(pool.coin_b_store),
-            error::invalid_argument(ECOIN_TYPE)
-        );
-        let is_provide_a =
-            provide_metadata == fungible_asset::store_metadata(pool.coin_a_store);
-
-        let total_share = option::extract(&mut fungible_asset::supply(pair));
-        assert!(
-            total_share != 0,
-            error::invalid_state(EZERO_LIQUIDITY)
-        );
-
-        // load values for fee and increased liquidity amount calculation
-        let (coin_a_weight, coin_b_weight) = get_weight(&config.weights);
-        let (pool_amount_a, pool_amount_b) = pool_amounts(pool, pair_addr);
-        let (normalized_weight, pool_amount_in) =
-            if (is_provide_a) {
-                let normalized_weight =
-                    bigdecimal::div(
-                        coin_a_weight,
-                        bigdecimal::add(coin_a_weight, coin_b_weight)
+                let swap_fee =
+                    bigdecimal::mul_by_u64_ceil(
+                        swap_fee_rate,
+                        coin_amount_in - non_taxable_amount
                     );
-
-                (normalized_weight, pool_amount_a)
+                coin_amount_in - swap_fee
             } else {
-                let normalized_weight =
-                    bigdecimal::div(
-                        coin_b_weight,
-                        bigdecimal::add(coin_a_weight, coin_b_weight)
-                    );
-
-                (normalized_weight, pool_amount_b)
+                coin_amount_in
             };
 
-        // CONTRACT: cannot provide more than the pool amount to prevent huge price impact
-        assert!(
-            pool_amount_in >= amount_in,
-            error::invalid_argument(EPRICE_IMPACT)
-        );
-
-        // compute fee amount with the assumption that we will swap (1 - normalized_weight) of amount_in
-        let adjusted_swap_amount =
-            bigdecimal::mul_by_u64_truncate(
-                bigdecimal::sub(bigdecimal::one(), normalized_weight),
-                amount_in
-            );
-        let fee_amount =
-            calculate_fee_with_minimum(config.swap_fee_rate, adjusted_swap_amount);
-
-        // actual amount in after deducting fee amount
-        let adjusted_amount_in = amount_in - fee_amount;
-
-        // calculate new total share and new liquidity
-        let base =
-            bigdecimal::from_ratio_u64(
-                adjusted_amount_in + pool_amount_in,
-                pool_amount_in
-            );
-        let pool_ratio = pow(base, normalized_weight);
-        let new_total_share = bigdecimal::mul_by_u128_truncate(pool_ratio, total_share);
-        ((new_total_share - total_share as u64), fee_amount, is_provide_a)
+        return coin_amount_in_without_fee
     }
 
     /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
@@ -2106,7 +2067,7 @@ module initia_std::dex {
             option::none()
         );
         assert!(
-            coin::balance(chain_addr, lp_metadata) == 40000000 + 79491,
+            coin::balance(chain_addr, lp_metadata) == 40000000 + 79490,
             9
         );
 
@@ -2120,7 +2081,7 @@ module initia_std::dex {
             option::none()
         );
         assert!(
-            coin::balance(chain_addr, lp_metadata) == 40000000 + 79491 + 80090,
+            coin::balance(chain_addr, lp_metadata) == 40000000 + 79490 + 80090,
             10
         );
 
@@ -2798,24 +2759,6 @@ module initia_std::dex {
 
     #[test(chain = @0x1, borrower = @0x1782)]
     #[expected_failure(abort_code = 0x30016, location = Self)]
-    fun test_dex_flash_swap_block_single_asset_provide_liquidity(
-        chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
-        let (test_metadata, offer_fa, return_fa, receipt) =
-            test_setup_flash_swap(chain, borrower, 1000, 1000);
-        let borrower_addr = signer::address_of(borrower);
-        coin::deposit(borrower_addr, return_fa);
-        let FlashSwapReceipt { pair_addr: _ } = receipt;
-
-        // execute provide_liquidity
-        let pair = object::convert<Metadata, Config>(test_metadata.lp_metadata);
-        let lp_fa = single_asset_provide_liquidity(pair, offer_fa, option::none());
-
-        coin::deposit(borrower_addr, lp_fa);
-    }
-
-    #[test(chain = @0x1, borrower = @0x1782)]
-    #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_withdraw_liquidity(
         chain: &signer, borrower: &signer
     ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
@@ -2832,5 +2775,85 @@ module initia_std::dex {
 
         coin::deposit(borrower_addr, a_fa);
         coin::deposit(borrower_addr, b_fa);
+    }
+
+    #[test]
+    fun test_adjust_provide_fee() {
+        // Test case 1: coin_a_balance_ratio_with_fee == coin_b_balance_ratio_with_fee (no fee)
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 100;
+        let coin_amount = 1000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        assert!(adjusted_coin_amount_in == 100, 0);
+
+        // Test case 2: coin_a_balance_ratio_with_fee < coin_b_balance_ratio_with_fee (no fee)
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1000, 1000); // 1.0
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 0;
+        let coin_amount = 1000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        assert!(adjusted_coin_amount_in == 0, 1);
+
+        // Test case 3: coin_a_balance_ratio_with_fee > coin_b_balance_ratio_with_fee (fee)
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1200, 1000); // 1.2
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 200;
+        let coin_amount = 1000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        assert!(adjusted_coin_amount_in == 199, 2);
+
+        // Test case 4: coin_a_balance_ratio_with_fee > coin_b_balance_ratio_with_fee (fee) with big amount
+        let coin_balance_ratio_with_fee = bigdecimal::from_ratio_u64(1200, 1000); // 1.2
+        let average_balance_ratio = bigdecimal::from_ratio_u64(1100, 1000); // 1.1
+        let swap_fee_rate = bigdecimal::from_ratio_u64(3, 1000); // 0.3%
+
+        let coin_amount_in = 20000;
+        let coin_amount = 100000;
+
+        let adjusted_coin_amount_in =
+            adjust_provide_fee(
+                coin_balance_ratio_with_fee,
+                average_balance_ratio,
+                swap_fee_rate,
+                coin_amount_in,
+                coin_amount
+            );
+
+        // fee charged only for taxable amount (10000 * 0.003 = 30)
+        assert!(adjusted_coin_amount_in == 19970, 3);
     }
 }
