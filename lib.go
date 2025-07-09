@@ -191,20 +191,20 @@ func (vm *VM) ExecuteAuthenticate(
 	env types.Env,
 	sender types.AccountAddress,
 	abstractionData types.AbstractionData,
-) (string, error) {
+) (*types.AccountAddress, error) {
 	envBz, err := env.BcsSerialize()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	abstractionDataBz, err := abstractionData.BcsSerialize()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	senderBz, err := sender.BcsSerialize()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	res, err := api.ExecuteAuthenticate(
@@ -216,9 +216,14 @@ func (vm *VM) ExecuteAuthenticate(
 		senderBz,
 		abstractionDataBz,
 	)
-
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(res), nil
+
+	signerAddr, err := types.NewAccountAddressFromBytes(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &signerAddr, nil
 }

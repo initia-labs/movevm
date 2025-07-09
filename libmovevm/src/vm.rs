@@ -97,7 +97,7 @@ pub(crate) fn execute_authenticate(
     api: GoApi,
     env: Env,
     authenticate_message: AuthenticateMessage,
-) -> Result<Vec<u8>, Error> {
+) -> Result<AccountAddress, Error> {
     let storage = GoStorage::new(&db_handle);
     let mut table_storage = GoTableStorage::new(&db_handle);
 
@@ -110,7 +110,7 @@ pub(crate) fn execute_authenticate(
         authenticate_message,
     )?;
 
-    to_vec(&output)
+    Ok(output)
 }
 
 // execute view function

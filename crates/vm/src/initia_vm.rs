@@ -1,4 +1,3 @@
-use hex::ToHex;
 use move_binary_format::{
     deserializer::DeserializerConfig,
     errors::{Location, PartialVMError, VMResult},
@@ -372,7 +371,7 @@ impl InitiaVM {
         storage: &S,
         table_resolver: &mut T,
         msg: AuthenticateMessage,
-    ) -> Result<String, VMStatus> {
+    ) -> Result<AccountAddress, VMStatus> {
         let runtime_environment = self.runtime_environment();
 
         let sender = msg.sender();
@@ -438,7 +437,7 @@ impl InitiaVM {
                     .ok_or_else(|| invalid_signer_err.clone())?;
                 let signer_move_value = signer_value.as_move_value(&signer_layout);
                 if let MoveValue::Signer(addr) = signer_move_value {
-                    Ok(addr.to_vec())
+                    Ok(addr)
                 } else {
                     Err(invalid_signer_err)
                 }
@@ -451,7 +450,9 @@ impl InitiaVM {
                 vm_error
             })??;
 
-        Ok(res.encode_hex::<String>())
+        session.finish_with_assert_pure(&code_storage)?;
+
+        Ok(res)
     }
 
     #[allow(clippy::too_many_arguments)]
