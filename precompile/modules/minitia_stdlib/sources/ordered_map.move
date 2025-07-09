@@ -278,6 +278,12 @@ module minitia_std::ordered_map {
                 if (ord.is_eq()) {
                     // we skip the entries one, and below put in the result one from other.
                     overwritten.push_back(self.entries.pop_back());
+                    if (cur_i == 0) {
+                        self.entries.append(other_entries);
+                        break;
+                    } else {
+                        cur_i -= 1;
+                    };
                 };
 
                 reverse_result.push_back(other_entries.pop_back());
@@ -1104,6 +1110,57 @@ module minitia_std::ordered_map {
             map.append(other);
             assert!(map == new_from(vector[1], vector[11]), 7);
         }
+    }
+
+    #[test]
+    fun test_append_with_equal_keys() {
+        // Test case specifically for the bug fix where equal keys are encountered during merge
+        // This triggers the ord.is_eq() condition in append_impl
+
+        // Case 1: Multiple equal keys in the middle
+        {
+            let map = new_from(vector[1, 3, 5, 7], vector[10, 30, 50, 70]);
+            let other = new_from(vector[2, 3, 4, 6], vector[20, 33, 40, 60]);
+            map.append(other);
+            assert!(
+                map
+                    == new_from(
+                        vector[1, 2, 3, 4, 5, 6, 7],
+                        vector[10, 20, 33, 40, 50, 60, 70]
+                    ),
+                1
+            );
+        };
+
+        // Case 2: Equal keys at the beginning
+        {
+            let map = new_from(vector[1, 3, 5], vector[10, 30, 50]);
+            let other = new_from(vector[1, 2, 4], vector[11, 20, 40]);
+            map.append(other);
+            assert!(
+                map == new_from(vector[1, 2, 3, 4, 5], vector[11, 20, 30, 40, 50]),
+                2
+            );
+        };
+
+        // Case 3: Equal keys at the end
+        {
+            let map = new_from(vector[1, 3, 5], vector[10, 30, 50]);
+            let other = new_from(vector[2, 4, 5], vector[20, 40, 55]);
+            map.append(other);
+            assert!(
+                map == new_from(vector[1, 2, 3, 4, 5], vector[10, 20, 30, 40, 55]),
+                3
+            );
+        };
+
+        // Case 4: Equal keys with cur_i reaching 0 (edge case for the fix)
+        {
+            let map = new_from(vector[1], vector[10]);
+            let other = new_from(vector[1, 2], vector[11, 20]);
+            map.append(other);
+            assert!(map == new_from(vector[1, 2], vector[11, 20]), 5);
+        };
     }
 
     #[test]

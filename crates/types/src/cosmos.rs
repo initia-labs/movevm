@@ -19,6 +19,10 @@ impl CosmosMessages {
     pub fn into_inner(self) -> Vec<CosmosMessage> {
         self.0
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]

@@ -49,7 +49,7 @@ fn run_tests(tests: Vec<TestInput>, authenticator_path: &str) {
             if authenticate.is_some() {
                 let (vm_status, abstraction_data) = authenticate.unwrap();
                 match h.authenticate(senders[0], abstraction_data) {
-                    Ok(output) => assert!(output == senders[0].to_hex()),
+                    Ok(output) => assert!(output == senders[0]),
                     Err(e) => assert!(e == vm_status),
                 }
             }
