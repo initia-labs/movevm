@@ -93,17 +93,7 @@ module initia_std::ethereum_derivable_account {
     fun deserialize_abstract_signature(abstract_signature: &vector<u8>): SIWEAbstractSignature {
         let stream = bcs_stream::new(*abstract_signature);
         let signature_type = bcs_stream::deserialize_u8(&mut stream);
-        if (signature_type == 0x00) {
-            let issued_at =
-                bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
-            let signature =
-                bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
-            assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
-            SIWEAbstractSignature::MessageV1 {
-                issued_at: string::utf8(issued_at),
-                signature
-            }
-        } else if (signature_type == 0x01) {
+        if (signature_type == 0x01) {
             let scheme =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
             let issued_at =
@@ -470,5 +460,29 @@ module initia_std::ethereum_derivable_account {
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
         authenticate_auth_data(auth_data);
+    }
+
+    #[test_only]
+    fun create_raw_signature_message_v1(
+        issued_at: String, signature: vector<u8>
+    ): vector<u8> {
+        let abstract_signature = SIWEAbstractSignature::MessageV1 { issued_at, signature };
+        bcs::to_bytes(&abstract_signature)
+    }
+
+    #[test]
+    #[expected_failure(abort_code = EINVALID_SIGNATURE_TYPE)]
+    fun test_deserialize_abstract_signature_failure() {
+        let signature_bytes = vector[
+            1, 252, 18, 58, 243, 10, 152, 94, 33, 5, 76, 133, 39, 188, 25, 92, 242, 39, 32,
+            84, 181, 94, 231, 9, 49, 141, 131, 20, 108, 93, 76, 144, 47, 20, 83, 177, 107,
+            22, 148, 93, 191, 165, 86, 42, 181, 226, 116, 136, 133, 84, 35, 222, 24, 36,
+            176, 143, 15, 14, 182, 135, 153, 141, 238, 238, 28
+        ];
+        let abstract_signature =
+            create_raw_signature_message_v1(
+                utf8(b"2025-05-08T23:39:00.000Z"), signature_bytes
+            );
+        deserialize_abstract_signature(&abstract_signature);
     }
 }
