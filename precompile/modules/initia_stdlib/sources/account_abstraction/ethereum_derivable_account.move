@@ -45,6 +45,8 @@ module initia_std::ethereum_derivable_account {
     const EADDR_MISMATCH: u64 = 4;
     /// Unexpected v value.
     const EUNEXPECTED_V: u64 = 5;
+    /// Out of bytes.
+    const EOUT_OF_BYTES: u64 = 6;
 
     enum SIWEAbstractSignature has drop {
         /// Deprecated, use MessageV2 instead
@@ -82,6 +84,7 @@ module initia_std::ethereum_derivable_account {
         let domain = bcs_stream::deserialize_vector<u8>(
             &mut stream, |x| deserialize_u8(x)
         );
+        assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
         SIWEAbstractPublicKey { ethereum_address, domain }
     }
 
@@ -95,6 +98,7 @@ module initia_std::ethereum_derivable_account {
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
             let signature =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
+            assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
             SIWEAbstractSignature::MessageV1 {
                 issued_at: string::utf8(issued_at),
                 signature
@@ -106,6 +110,7 @@ module initia_std::ethereum_derivable_account {
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
             let signature =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
+            assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
             SIWEAbstractSignature::MessageV2 {
                 scheme: string::utf8(scheme),
                 issued_at: string::utf8(issued_at),
@@ -280,6 +285,16 @@ module initia_std::ethereum_derivable_account {
     }
 
     #[test]
+    #[expected_failure(abort_code = EOUT_OF_BYTES)]
+    fun test_deserialize_abstract_public_key_out_of_bytes() {
+        let ethereum_address = b"0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a";
+        let domain = b"localhost:3001";
+        let abstract_public_key = create_abstract_public_key(ethereum_address, domain);
+        abstract_public_key.push_back(0x00);
+        deserialize_abstract_public_key(&abstract_public_key);
+    }
+
+    #[test]
     fun test_deserialize_abstract_signature_with_https() {
         let signature_bytes = vector[
             68, 116, 14, 62, 103, 37, 164, 62, 150, 32, 164, 140, 18, 204, 35, 202, 82, 57,
@@ -304,6 +319,24 @@ module initia_std::ethereum_derivable_account {
                 assert!(signature == signature_bytes);
             }
         };
+    }
+
+    #[test]
+    #[expected_failure(abort_code = EOUT_OF_BYTES)]
+    fun test_deserialize_abstract_signature_out_of_bytes() {
+        let signature_bytes = vector[
+            68, 116, 14, 62, 103, 37, 164, 62, 150, 32, 164, 140, 18, 204, 35, 202, 82, 57,
+            138, 5, 28, 221, 39, 70, 14, 152, 236, 207, 245, 173, 212, 75, 81, 111, 72,
+            105, 103, 67, 118, 27, 199, 157, 151, 101, 230, 130, 217, 56, 74, 78, 13, 198,
+            131, 2, 20, 81, 77, 37, 44, 76, 12, 151, 178, 150, 28
+        ];
+
+        let abstract_signature =
+            create_raw_signature(
+                utf8(b"http"), utf8(b"2025-05-08T23:39:00.000Z"), signature_bytes
+            );
+        abstract_signature.push_back(0x00);
+        deserialize_abstract_signature(&abstract_signature);
     }
 
     #[test]
