@@ -41,10 +41,14 @@ module minitia_std::ethereum_derivable_account {
     const EMISSING_ENTRY_FUNCTION_PAYLOAD: u64 = 2;
     /// Invalid signature type.
     const EINVALID_SIGNATURE_TYPE: u64 = 3;
+    /// Invalid signature length.
+    const EINVALID_SIGNATURE_LENGTH: u64 = 4;
     /// Address mismatch.
-    const EADDR_MISMATCH: u64 = 4;
+    const EADDR_MISMATCH: u64 = 5;
     /// Unexpected v value.
-    const EUNEXPECTED_V: u64 = 5;
+    const EUNEXPECTED_V: u64 = 6;
+    /// Out of bytes.
+    const EOUT_OF_BYTES: u64 = 7;
 
     enum SIWEAbstractSignature has drop {
         /// Deprecated, use MessageV2 instead
@@ -82,6 +86,7 @@ module minitia_std::ethereum_derivable_account {
         let domain = bcs_stream::deserialize_vector<u8>(
             &mut stream, |x| deserialize_u8(x)
         );
+        assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
         SIWEAbstractPublicKey { ethereum_address, domain }
     }
 
@@ -90,22 +95,15 @@ module minitia_std::ethereum_derivable_account {
     fun deserialize_abstract_signature(abstract_signature: &vector<u8>): SIWEAbstractSignature {
         let stream = bcs_stream::new(*abstract_signature);
         let signature_type = bcs_stream::deserialize_u8(&mut stream);
-        if (signature_type == 0x00) {
-            let issued_at =
-                bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
-            let signature =
-                bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
-            SIWEAbstractSignature::MessageV1 {
-                issued_at: string::utf8(issued_at),
-                signature
-            }
-        } else if (signature_type == 0x01) {
+        if (signature_type == 0x01) {
             let scheme =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
             let issued_at =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
             let signature =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
+            assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
+            assert!(signature.length() == 65, EINVALID_SIGNATURE_LENGTH);
             SIWEAbstractSignature::MessageV2 {
                 scheme: string::utf8(scheme),
                 issued_at: string::utf8(issued_at),
@@ -280,6 +278,16 @@ module minitia_std::ethereum_derivable_account {
     }
 
     #[test]
+    #[expected_failure(abort_code = EOUT_OF_BYTES)]
+    fun test_deserialize_abstract_public_key_out_of_bytes() {
+        let ethereum_address = b"0xC7B576Ead6aFb962E2DEcB35814FB29723AEC98a";
+        let domain = b"localhost:3001";
+        let abstract_public_key = create_abstract_public_key(ethereum_address, domain);
+        abstract_public_key.push_back(0x00);
+        deserialize_abstract_public_key(&abstract_public_key);
+    }
+
+    #[test]
     fun test_deserialize_abstract_signature_with_https() {
         let signature_bytes = vector[
             68, 116, 14, 62, 103, 37, 164, 62, 150, 32, 164, 140, 18, 204, 35, 202, 82, 57,
@@ -304,6 +312,24 @@ module minitia_std::ethereum_derivable_account {
                 assert!(signature == signature_bytes);
             }
         };
+    }
+
+    #[test]
+    #[expected_failure(abort_code = EOUT_OF_BYTES)]
+    fun test_deserialize_abstract_signature_out_of_bytes() {
+        let signature_bytes = vector[
+            68, 116, 14, 62, 103, 37, 164, 62, 150, 32, 164, 140, 18, 204, 35, 202, 82, 57,
+            138, 5, 28, 221, 39, 70, 14, 152, 236, 207, 245, 173, 212, 75, 81, 111, 72,
+            105, 103, 67, 118, 27, 199, 157, 151, 101, 230, 130, 217, 56, 74, 78, 13, 198,
+            131, 2, 20, 81, 77, 37, 44, 76, 12, 151, 178, 150, 28
+        ];
+
+        let abstract_signature =
+            create_raw_signature(
+                utf8(b"http"), utf8(b"2025-05-08T23:39:00.000Z"), signature_bytes
+            );
+        abstract_signature.push_back(0x00);
+        deserialize_abstract_signature(&abstract_signature);
     }
 
     #[test]
@@ -437,5 +463,29 @@ module minitia_std::ethereum_derivable_account {
         let auth_data =
             create_derivable_auth_data(digest, abstract_signature, abstract_public_key);
         authenticate_auth_data(auth_data);
+    }
+
+    #[test_only]
+    fun create_raw_signature_message_v1(
+        issued_at: String, signature: vector<u8>
+    ): vector<u8> {
+        let abstract_signature = SIWEAbstractSignature::MessageV1 { issued_at, signature };
+        bcs::to_bytes(&abstract_signature)
+    }
+
+    #[test]
+    #[expected_failure(abort_code = EINVALID_SIGNATURE_TYPE)]
+    fun test_deserialize_abstract_signature_failure() {
+        let signature_bytes = vector[
+            1, 252, 18, 58, 243, 10, 152, 94, 33, 5, 76, 133, 39, 188, 25, 92, 242, 39, 32,
+            84, 181, 94, 231, 9, 49, 141, 131, 20, 108, 93, 76, 144, 47, 20, 83, 177, 107,
+            22, 148, 93, 191, 165, 86, 42, 181, 226, 116, 136, 133, 84, 35, 222, 24, 36,
+            176, 143, 15, 14, 182, 135, 153, 141, 238, 238, 28
+        ];
+        let abstract_signature =
+            create_raw_signature_message_v1(
+                utf8(b"2025-05-08T23:39:00.000Z"), signature_bytes
+            );
+        deserialize_abstract_signature(&abstract_signature);
     }
 }

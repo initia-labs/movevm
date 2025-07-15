@@ -38,6 +38,10 @@ impl Accounts {
             })
             .collect()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl AsRef<Vec<(AccountAddress, u64, u8)>> for Accounts {

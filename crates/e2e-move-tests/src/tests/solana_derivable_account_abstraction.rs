@@ -182,7 +182,7 @@ fn test_solana_derivable_account() {
                 let output = h
                     .authenticate(senders[0], abstraction_data.unwrap())
                     .expect("should success");
-                assert!(output == senders[0].to_hex());
+                assert!(output == senders[0]);
             }
             let exec_output =
                 h.run_entry_function(senders, str::parse(entry).unwrap(), ty_args.clone(), args);

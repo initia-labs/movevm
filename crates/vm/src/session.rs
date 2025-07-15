@@ -246,4 +246,25 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         }
         Ok(WriteSet::new_with_write_set(module_write_set))
     }
+
+    /// Asserts that the session is pure, i.e. it does not write to storage.
+    ///
+    /// This is used to ensure that the session is pure, i.e. it does not write to storage.
+    pub fn finish_with_assert_pure(self, module_storage: &impl ModuleStorage) -> VMResult<()> {
+        let (events, write_set, staking_change_set, cosmos_messages, accounts) =
+            self.finish(module_storage)?;
+
+        if !(events.is_empty()
+            && write_set.is_empty()
+            && staking_change_set.is_empty()
+            && cosmos_messages.is_empty()
+            && accounts.is_empty())
+        {
+            return Err(
+                PartialVMError::new(StatusCode::REJECTED_WRITE_SET).finish(Location::Undefined)
+            );
+        }
+
+        Ok(())
+    }
 }

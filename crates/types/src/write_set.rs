@@ -44,6 +44,10 @@ impl WriteSet {
 
         Ok(Self(write_set))
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl Extend<(AccessPath, WriteOp)> for WriteSet {
