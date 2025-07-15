@@ -41,12 +41,14 @@ module initia_std::ethereum_derivable_account {
     const EMISSING_ENTRY_FUNCTION_PAYLOAD: u64 = 2;
     /// Invalid signature type.
     const EINVALID_SIGNATURE_TYPE: u64 = 3;
+    /// Invalid signature length.
+    const EINVALID_SIGNATURE_LENGTH: u64 = 4;
     /// Address mismatch.
-    const EADDR_MISMATCH: u64 = 4;
+    const EADDR_MISMATCH: u64 = 5;
     /// Unexpected v value.
-    const EUNEXPECTED_V: u64 = 5;
+    const EUNEXPECTED_V: u64 = 6;
     /// Out of bytes.
-    const EOUT_OF_BYTES: u64 = 6;
+    const EOUT_OF_BYTES: u64 = 7;
 
     enum SIWEAbstractSignature has drop {
         /// Deprecated, use MessageV2 instead
@@ -101,6 +103,7 @@ module initia_std::ethereum_derivable_account {
             let signature =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
             assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
+            assert!(signature.length() == 65, EINVALID_SIGNATURE_LENGTH);
             SIWEAbstractSignature::MessageV2 {
                 scheme: string::utf8(scheme),
                 issued_at: string::utf8(issued_at),

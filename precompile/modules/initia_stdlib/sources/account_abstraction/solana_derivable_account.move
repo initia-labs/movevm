@@ -233,6 +233,7 @@ module initia_std::solana_derivable_account {
         assert!(domain == domain);
     }
 
+    #[test]
     #[expected_failure(abort_code = EOUT_OF_BYTES)]
     fun test_deserialize_abstract_public_key_out_of_bytes() {
         let base58_public_key = b"G56zT1K6AQab7FzwHdQ8hiHXusR14Rmddw6Vz5MFbbmV";
@@ -259,6 +260,7 @@ module initia_std::solana_derivable_account {
         };
     }
 
+    #[test]
     #[expected_failure(abort_code = EOUT_OF_BYTES)]
     fun test_deserialize_abstract_signature_out_of_bytes() {
         let signature_bytes = vector[
