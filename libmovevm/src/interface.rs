@@ -235,7 +235,7 @@ pub extern "C" fn execute_authenticate(
                 .and_then(|gas_balance| {
                     catch_unwind(AssertUnwindSafe(move || {
                         let mut gas_meter = vm.create_gas_meter(*gas_balance);
-                        let res = vm::execute_authenticate(
+                        let res: Result<AccountAddress, Error> = vm::execute_authenticate(
                             vm,
                             &mut gas_meter,
                             db,

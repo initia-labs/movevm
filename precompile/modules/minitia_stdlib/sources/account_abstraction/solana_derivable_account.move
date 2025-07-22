@@ -36,6 +36,8 @@ module minitia_std::solana_derivable_account {
     const EINVALID_PUBLIC_KEY: u64 = 5;
     /// Invalid public key length.
     const EINVALID_PUBLIC_KEY_LENGTH: u64 = 6;
+    /// Out of bytes.
+    const EOUT_OF_BYTES: u64 = 7;
 
     // a 58-character alphabet consisting of numbers (1-9) and almost all (A-Z, a-z) letters,
     // excluding 0, O, I, and l to avoid confusion between similar-looking characters.
@@ -64,6 +66,7 @@ module minitia_std::solana_derivable_account {
         let domain = bcs_stream::deserialize_vector<u8>(
             &mut stream, |x| deserialize_u8(x)
         );
+        assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
         (base58_public_key, domain)
     }
 
@@ -74,6 +77,7 @@ module minitia_std::solana_derivable_account {
         if (signature_type == 0x00) {
             let signature =
                 bcs_stream::deserialize_vector<u8>(&mut stream, |x| deserialize_u8(x));
+            assert!(!bcs_stream::has_remaining(&mut stream), EOUT_OF_BYTES);
             SIWSAbstractSignature::MessageV1 { signature }
         } else {
             abort(EINVALID_SIGNATURE_TYPE)
@@ -230,6 +234,17 @@ module minitia_std::solana_derivable_account {
     }
 
     #[test]
+    #[expected_failure(abort_code = EOUT_OF_BYTES)]
+    fun test_deserialize_abstract_public_key_out_of_bytes() {
+        let base58_public_key = b"G56zT1K6AQab7FzwHdQ8hiHXusR14Rmddw6Vz5MFbbmV";
+        let domain = b"app.initia.xyz";
+        let abstract_public_key =
+            create_abstract_public_key(utf8(base58_public_key), utf8(domain));
+        abstract_public_key.push_back(0x00);
+        deserialize_abstract_public_key(&abstract_public_key);
+    }
+
+    #[test]
     fun test_deserialize_abstract_signature() {
         let signature_bytes = vector[
             126, 104, 169, 255, 105, 84, 6, 159, 29, 109, 158, 115, 83, 122, 199, 32, 132,
@@ -243,6 +258,20 @@ module minitia_std::solana_derivable_account {
         match(siws_abstract_signature) {
             SIWSAbstractSignature::MessageV1 { signature } => assert!(signature == signature_bytes)
         };
+    }
+
+    #[test]
+    #[expected_failure(abort_code = EOUT_OF_BYTES)]
+    fun test_deserialize_abstract_signature_out_of_bytes() {
+        let signature_bytes = vector[
+            126, 104, 169, 255, 105, 84, 6, 159, 29, 109, 158, 115, 83, 122, 199, 32, 132,
+            10, 182, 86, 248, 88, 206, 122, 246, 49, 198, 82, 101, 92, 252, 172, 169, 100,
+            68, 26, 63, 76, 10, 95, 200, 70, 98, 166, 221, 66, 246, 37, 80, 50, 65, 16,
+            222, 125, 158, 100, 158, 48, 127, 227, 18, 210, 162, 9
+        ];
+        let abstract_signature = create_message_v1_signature(signature_bytes);
+        abstract_signature.push_back(0x00);
+        deserialize_abstract_signature(&abstract_signature);
     }
 
     #[test]
