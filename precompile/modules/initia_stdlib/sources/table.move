@@ -174,6 +174,12 @@ module initia_std::table {
         new_table_iter<K, V, Box<V>>(self, start_bytes, end_bytes, order)
     }
 
+    /// Prepares the next key-value pair from the iterator for reading.
+    /// Returns true if a next item exists, false if iteration is complete.
+    /// 
+    /// CONTRACT: After calling prepare() and getting true, the caller MUST call next() 
+    /// to consume the prepared item before doing any other operations on the table,
+    /// since values are borrowed internally and block access until consumed.
     public fun prepare<K: copy + drop, V>(self: &TableIter<K, V>): bool {
         prepare_box<K, V, Box<V>>(self)
     }
