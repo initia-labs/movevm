@@ -105,11 +105,9 @@ module minitia_std::simple_map {
         keys: vector<Key>,
         values: vector<Value>
     ) {
-        keys.zip(
-            values, |key, value| {
-                self.add(key, value);
-            }
-        );
+        keys.zip(values, |key, value| {
+            self.add(key, value);
+        });
     }
 
     /// Insert key/value pair or update an existing key to a new value
@@ -151,11 +149,13 @@ module minitia_std::simple_map {
         let keys: vector<Key> = vector::empty();
         let values: vector<Value> = vector::empty();
         let SimpleMap { data } = self;
-        data.for_each(|e| {
-            let Element { key, value } = e;
-            keys.push_back(key);
-            values.push_back(value);
-        });
+        data.for_each(
+            |e| {
+                let Element { key, value } = e;
+                keys.push_back(key);
+                values.push_back(value);
+            }
+        );
         (keys, values)
     }
 
@@ -233,9 +233,7 @@ module minitia_std::simple_map {
         let map = create<u64, u64>();
 
         assert!(map.length() == 0, 0);
-        map.add_all(
-            vector[1, 2, 3], vector[10, 20, 30]
-        );
+        map.add_all(vector[1, 2, 3], vector[10, 20, 30]);
         assert!(map.length() == 3, 1);
         assert!(map.borrow(&1) == &10, 2);
         assert!(map.borrow(&2) == &20, 3);

@@ -388,11 +388,9 @@ module initia_std::big_ordered_map {
     ) {
         // TODO: Can be optimized, both in insertion order (largest first, then from smallest),
         // as well as on initializing inner_max_degree/leaf_max_degree better
-        keys.zip(
-            values, |key, value| {
-                self.add(key, value);
-            }
-        );
+        keys.zip(values, |key, value| {
+            self.add(key, value);
+        });
     }
 
     public fun pop_front<K: drop + copy + store, V: store>(
@@ -636,11 +634,13 @@ module initia_std::big_ordered_map {
     public(friend) inline fun for_each_ref_friend<K: drop + copy + store, V: store>(
         self: &BigOrderedMap<K, V>, f: |&K, &V|
     ) {
-        self.for_each_leaf_node_ref(|node| {
-            node.children.for_each_ref_friend(|k: &K, v: &Child<V>| {
-                f(k, &v.value);
-            });
-        })
+        self.for_each_leaf_node_ref(
+            |node| {
+                node.children.for_each_ref_friend(|k: &K, v: &Child<V>| {
+                    f(k, &v.value);
+                });
+            }
+        )
     }
 
     /// Apply the function to a mutable reference of each key-value pair in the map.
@@ -930,7 +930,9 @@ module initia_std::big_ordered_map {
                     break;
                 };
                 let last_value =
-                    current_node.children.new_end_iter().iter_prev(&current_node.children)
+                    current_node.children
+                        .new_end_iter()
+                        .iter_prev(&current_node.children)
                         .iter_remove(&mut current_node.children);
                 current = last_value.node_index.stored_to_index();
                 current_node.children.add(key, last_value);
@@ -938,7 +940,10 @@ module initia_std::big_ordered_map {
         };
 
         self.add_at(
-            path_to_leaf, key, new_leaf_child(value), allow_overwrite
+            path_to_leaf,
+            key,
+            new_leaf_child(value),
+            allow_overwrite
         )
     }
 
@@ -1351,7 +1356,10 @@ module initia_std::big_ordered_map {
 
         // Add new Child (i.e. pointer to the left node) in the parent.
         self.add_at(
-            path_to_node, max_left_key, new_inner_child(left_node_slot), false
+            path_to_node,
+            max_left_key,
+            new_inner_child(left_node_slot),
+            false
         ).destroy_none();
         option::none()
     }
@@ -1472,8 +1480,11 @@ module initia_std::big_ordered_map {
             // If we are the largest node from the parent, we merge with the `prev`
             // (which is then guaranteed to have the same parent, as any node has >1 children),
             // otherwise we merge with `next`.
-            if (parent_children.new_end_iter().iter_prev(parent_children).iter_borrow(parent_children).node_index
-            .stored_to_index() == node_index) { prev }
+            if (parent_children.new_end_iter()
+                .iter_prev(parent_children)
+                .iter_borrow(parent_children)
+                .node_index
+                .stored_to_index() == node_index) { prev }
             else { next }
         };
 
@@ -1653,9 +1664,12 @@ module initia_std::big_ordered_map {
         initia_std::debug::print(node);
 
         if (!node.is_leaf) {
-            node.children.for_each_ref_friend(|_key, node| {
-                self.print_map_for_node(node.node_index.stored_to_index(), level + 1);
-            });
+            node.children.for_each_ref_friend(
+                |_key, node| {
+                    self.print_map_for_node(node.node_index.stored_to_index(), level
+                        + 1);
+                }
+            );
         };
     }
 
@@ -1755,8 +1769,10 @@ module initia_std::big_ordered_map {
                         option::some(*key)
                     );
                 } else {
-                    assert!((child is Child::Leaf<V>),
-                    error::invalid_state(EINTERNAL_INVARIANT_BROKEN));
+                    assert!(
+                        (child is Child::Leaf<V>),
+                        error::invalid_state(EINTERNAL_INVARIANT_BROKEN)
+                    );
                 };
                 previous_max_key = option::some(*key);
             }
@@ -1766,9 +1782,10 @@ module initia_std::big_ordered_map {
             let expected_max_key = expected_max_key.extract();
             assert!(
                 &expected_max_key
-                    == node.children.new_end_iter().iter_prev(&node.children).iter_borrow_key(
-                        &node.children
-                    ),
+                    == node.children
+                        .new_end_iter()
+                        .iter_prev(&node.children)
+                        .iter_borrow_key(&node.children),
                 error::invalid_state(EINTERNAL_INVARIANT_BROKEN)
             );
         };
@@ -1878,7 +1895,8 @@ module initia_std::big_ordered_map {
     fun test_for_each() {
         let map = new_with_config<u64, u64>(4, 3, false);
         map.add_all(
-            vector[1, 3, 6, 2, 9, 5, 7, 4, 8], vector[1, 3, 6, 2, 9, 5, 7, 4, 8]
+            vector[1, 3, 6, 2, 9, 5, 7, 4, 8],
+            vector[1, 3, 6, 2, 9, 5, 7, 4, 8]
         );
 
         let expected = vector[1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -1896,7 +1914,8 @@ module initia_std::big_ordered_map {
     fun test_for_each_ref() {
         let map = new_with_config<u64, u64>(4, 3, false);
         map.add_all(
-            vector[1, 3, 6, 2, 9, 5, 7, 4, 8], vector[1, 3, 6, 2, 9, 5, 7, 4, 8]
+            vector[1, 3, 6, 2, 9, 5, 7, 4, 8],
+            vector[1, 3, 6, 2, 9, 5, 7, 4, 8]
         );
 
         let expected = vector[1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -1919,26 +1938,32 @@ module initia_std::big_ordered_map {
         let map = new_from(keys, values);
 
         let index = 0;
-        map.for_each_ref(|k, v| {
-            assert!(keys[index] == *k);
-            assert!(values[index] == *v);
-            index += 1;
-        });
+        map.for_each_ref(
+            |k, v| {
+                assert!(keys[index] == *k);
+                assert!(values[index] == *v);
+                index += 1;
+            }
+        );
 
         let index = 0;
-        map.for_each_mut(|k, v| {
-            assert!(keys[index] == *k);
-            assert!(values[index] == *v);
-            *v += 1;
-            index += 1;
-        });
+        map.for_each_mut(
+            |k, v| {
+                assert!(keys[index] == *k);
+                assert!(values[index] == *v);
+                *v += 1;
+                index += 1;
+            }
+        );
 
         let index = 0;
-        map.for_each(|k, v| {
-            assert!(keys[index] == k);
-            assert!(values[index] + 1 == v);
-            index += 1;
-        });
+        map.for_each(
+            |k, v| {
+                assert!(keys[index] == k);
+                assert!(values[index] + 1 == v);
+                index += 1;
+            }
+        );
     }
 
     #[test]
@@ -1959,9 +1984,7 @@ module initia_std::big_ordered_map {
         map.add(vector[4], vector[4]);
         map.print_map();
         map.validate_map();
-        let r2 = map.upsert(
-            vector[4], vector[8, 8, 8]
-        );
+        let r2 = map.upsert(vector[4], vector[8, 8, 8]);
         map.print_map();
         map.validate_map();
         assert!(r2 == option::some(vector[4]), 2);
@@ -2132,9 +2155,7 @@ module initia_std::big_ordered_map {
     fun test_contains() {
         let map = new_with_config(4, 3, false);
         let data = vector[3, 1, 9, 7, 5];
-        map.add_all(
-            vector[3, 1, 9, 7, 5], vector[3, 1, 9, 7, 5]
-        );
+        map.add_all(vector[3, 1, 9, 7, 5], vector[3, 1, 9, 7, 5]);
 
         data.for_each_ref(|i| assert!(map.contains(i), *i));
 
@@ -2222,9 +2243,7 @@ module initia_std::big_ordered_map {
     /// EKEY_ALREADY_EXISTS
     fun test_abort_add_existing_value_to_non_leaf() {
         let map = new_with_config(4, 4, false);
-        map.add_all(
-            vector_range(1, 10), vector_range(1, 10)
-        );
+        map.add_all(vector_range(1, 10), vector_range(1, 10));
         map.add(3, 3);
         map.destroy_and_validate();
     }
@@ -2243,9 +2262,7 @@ module initia_std::big_ordered_map {
     /// EKEY_NOT_FOUND
     fun test_abort_remove_missing_value_to_non_leaf() {
         let map = new_with_config(4, 4, false);
-        map.add_all(
-            vector_range(1, 10), vector_range(1, 10)
-        );
+        map.add_all(vector_range(1, 10), vector_range(1, 10));
         map.remove(&4);
         map.remove(&4);
         map.destroy_and_validate();
@@ -2256,9 +2273,7 @@ module initia_std::big_ordered_map {
     /// EKEY_NOT_FOUND
     fun test_abort_remove_largest_missing_value_to_non_leaf() {
         let map = new_with_config(4, 4, false);
-        map.add_all(
-            vector_range(1, 10), vector_range(1, 10)
-        );
+        map.add_all(vector_range(1, 10), vector_range(1, 10));
         map.remove(&11);
         map.destroy_and_validate();
     }

@@ -186,11 +186,9 @@ module initia_std::ordered_map {
         values: vector<V>
     ) {
         // TODO: Can be optimized, by sorting keys and values, and then creating map.
-        keys.zip(
-            values, |key, value| {
-                self.add(key, value);
-            }
-        );
+        keys.zip(values, |key, value| {
+            self.add(key, value);
+        });
     }
 
     /// Add multiple key/value pairs to the map, overwrites values if they exist already,
@@ -201,11 +199,9 @@ module initia_std::ordered_map {
         values: vector<V>
     ) {
         // TODO: Can be optimized, by sorting keys and values, and then creating map.
-        keys.zip(
-            values, |key, value| {
-                self.upsert(key, value);
-            }
-        );
+        keys.zip(values, |key, value| {
+            self.upsert(key, value);
+        });
     }
 
     /// Takes all elements from `other` and adds them to `self`,
@@ -603,11 +599,13 @@ module initia_std::ordered_map {
         let keys: vector<K> = vector::empty();
         let values: vector<V> = vector::empty();
         let OrderedMap::SortedVectorMap { entries } = self;
-        entries.for_each(|e| {
-            let Entry { key, value } = e;
-            keys.push_back(key);
-            values.push_back(value);
-        });
+        entries.for_each(
+            |e| {
+                let Entry { key, value } = e;
+                keys.push_back(key);
+                values.push_back(value);
+            }
+        );
         (keys, values)
     }
 
@@ -626,9 +624,7 @@ module initia_std::ordered_map {
     /// Apply the function to each key-value pair in the map, consuming it.
     public inline fun for_each<K, V>(self: OrderedMap<K, V>, f: |K, V|) {
         let (keys, values) = self.to_vec_pair();
-        keys.zip(
-            values, |k, v| f(k, v)
-        );
+        keys.zip(values, |k, v| f(k, v));
     }
 
     /// Apply the function to a reference of each key-value pair in the map.
@@ -778,8 +774,9 @@ module initia_std::ordered_map {
         let i = 1;
         while (i < len) {
             assert!(
-                cmp::compare(&self.entries.borrow(i).key, &self.entries.borrow(i - 1).key)
-                .is_gt(),
+                cmp::compare(
+                    &self.entries.borrow(i).key, &self.entries.borrow(i - 1).key
+                ).is_gt(),
                 1
             );
             i += 1;
@@ -889,9 +886,7 @@ module initia_std::ordered_map {
         let map = new<u64, u64>();
 
         assert!(map.length() == 0, 0);
-        map.add_all(
-            vector[2, 1, 3], vector[20, 10, 30]
-        );
+        map.add_all(vector[2, 1, 3], vector[20, 10, 30]);
 
         assert!(
             map == new_from(vector[1, 2, 3], vector[10, 20, 30]),
@@ -914,9 +909,7 @@ module initia_std::ordered_map {
     #[test]
     fun test_upsert_all() {
         let map = new_from(vector[1, 3, 5], vector[10, 30, 50]);
-        map.upsert_all(
-            vector[7, 2, 3], vector[70, 20, 35]
-        );
+        map.upsert_all(vector[7, 2, 3], vector[70, 20, 35]);
         assert!(
             map == new_from(vector[1, 2, 3, 5, 7], vector[10, 20, 35, 50, 70]),
             1
@@ -940,9 +933,7 @@ module initia_std::ordered_map {
 
     #[test]
     fun test_to_vec_pair() {
-        let (keys, values) = new_from(
-            vector[3, 1, 5], vector[30, 10, 50]
-        ).to_vec_pair();
+        let (keys, values) = new_from(vector[3, 1, 5], vector[30, 10, 50]).to_vec_pair();
         assert!(keys == vector[1, 3, 5], 1);
         assert!(values == vector[10, 30, 50], 2);
     }
@@ -974,26 +965,32 @@ module initia_std::ordered_map {
         let map = new_from(keys, values);
 
         let index = 0;
-        map.for_each_ref(|k, v| {
-            assert!(keys[index] == *k);
-            assert!(values[index] == *v);
-            index += 1;
-        });
+        map.for_each_ref(
+            |k, v| {
+                assert!(keys[index] == *k);
+                assert!(values[index] == *v);
+                index += 1;
+            }
+        );
 
         let index = 0;
-        map.for_each_mut(|k, v| {
-            assert!(keys[index] == *k);
-            assert!(values[index] == *v);
-            *v += 1;
-            index += 1;
-        });
+        map.for_each_mut(
+            |k, v| {
+                assert!(keys[index] == *k);
+                assert!(values[index] == *v);
+                *v += 1;
+                index += 1;
+            }
+        );
 
         let index = 0;
-        map.for_each(|k, v| {
-            assert!(keys[index] == k);
-            assert!(values[index] + 1 == v);
-            index += 1;
-        });
+        map.for_each(
+            |k, v| {
+                assert!(keys[index] == k);
+                assert!(values[index] + 1 == v);
+                index += 1;
+            }
+        );
     }
 
     #[test]

@@ -142,13 +142,19 @@ module minitia_std::storage_slots_allocator {
     public fun borrow<T: store>(
         self: &StorageSlotsAllocator<T>, slot_index: u64
     ): &T {
-        &self.slots.borrow().borrow(slot_index).value
+        &self.slots
+            .borrow()
+            .borrow(slot_index)
+            .value
     }
 
     public fun borrow_mut<T: store>(
         self: &mut StorageSlotsAllocator<T>, slot_index: u64
     ): &mut T {
-        &mut self.slots.borrow_mut().borrow_mut(slot_index).value
+        &mut self.slots
+            .borrow_mut()
+            .borrow_mut(slot_index)
+            .value
     }
 
     // We also provide here operations where `add()` is split into `reserve_slot`,
