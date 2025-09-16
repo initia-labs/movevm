@@ -471,6 +471,25 @@ module initia_std::collection {
         borrow_global_mut<Collection>(mutator_ref.self)
     }
 
+    public fun set_name(
+        mutator_ref: &MutatorRef, name: String
+    ) acquires Collection {
+        assert!(
+            string::length(&name) <= MAX_COLLECTION_NAME_LENGTH,
+            error::out_of_range(ECOLLECTION_NAME_TOO_LONG)
+        );
+        let collection = borrow_mut(mutator_ref);
+        event::emit(
+            MutationEvent {
+                collection: mutator_ref.self,
+                mutated_field_name: string::utf8(b"name"),
+                old_value: collection.name,
+                new_value: name
+            }
+        );
+        collection.name = name;
+    }
+
     public fun set_description(
         mutator_ref: &MutatorRef, description: String
     ) acquires Collection {

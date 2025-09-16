@@ -251,6 +251,28 @@ module minitia_std::table {
         map
     }
 
+    /// Return all keys in the table. This requires keys to be copyable and droppable.
+    public fun keys<K: copy + drop, V>(self: &Table<K, V>): vector<K> {
+        let iter = self.iter(option::none(), option::none(), 1);
+        let keys = vector::empty();
+        while (prepare(iter)) {
+            let (key, _) = iter.next();
+            vector::push_back(&mut keys, key);
+        };
+        keys
+    }
+
+    /// Return all values in the table. This requires values to be copyable and droppable.
+    public fun values<K: copy + drop, V: copy>(self: &Table<K, V>): vector<V> {
+        let iter = self.iter(option::none(), option::none(), 1);
+        let values = vector::empty();
+        while (prepare(iter)) {
+            let (_, value) = iter.next();
+            vector::push_back(&mut values, *value);
+        };
+        values
+    }
+
     /// Table cannot know if it is empty or not, so this method is not public,
     /// and can be used only in modules that know by themselves that table is empty.
     friend fun destroy_known_empty_unsafe<K: copy + drop, V>(
