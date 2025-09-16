@@ -1,39 +1,7 @@
 module initia_std::query {
     use initia_std::string::{Self, String};
     use initia_std::json;
-
-    /*
-    type QueryProposalResponse struct {
-        Proposal *Proposal `protobuf:"bytes,1,opt,name=proposal,proto3" json:"proposal,omitempty"`
-    }
-
-    type Proposal struct {
-        Id uint64 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-        Messages []*types1.Any `protobuf:"bytes,2,rep,name=messages,proto3" json:"messages,omitempty"`
-        Status v1.ProposalStatus `protobuf:"varint,3,opt,name=status,proto3,enum=cosmos.gov.v1.ProposalStatus" json:"status,omitempty"`
-        FinalTallyResult *v1.TallyResult `protobuf:"bytes,4,opt,name=final_tally_result,json=finalTallyResult,proto3" json:"final_tally_result,omitempty"`
-        SubmitTime *time.Time `protobuf:"bytes,5,opt,name=submit_time,json=submitTime,proto3,stdtime" json:"submit_time,omitempty"`
-        DepositEndTime *time.Time `protobuf:"bytes,6,opt,name=deposit_end_time,json=depositEndTime,proto3,stdtime" json:"deposit_end_time,omitempty"`
-        TotalDeposit []types.Coin `protobuf:"bytes,7,rep,name=total_deposit,json=totalDeposit,proto3" json:"total_deposit"`
-        VotingStartTime *time.Time `protobuf:"bytes,8,opt,name=voting_start_time,json=votingStartTime,proto3,stdtime" json:"voting_start_time,omitempty"`
-        VotingEndTime          *time.Time `protobuf:"bytes,9,opt,name=voting_end_time,json=votingEndTime,proto3,stdtime" json:"voting_end_time,omitempty"`
-        EmergencyStartTime     *time.Time `protobuf:"bytes,10,opt,name=emergency_start_time,json=emergencyStartTime,proto3,stdtime" json:"emergency_start_time,omitempty"`
-        EmergencyNextTallyTime *time.Time `protobuf:"bytes,11,opt,name=emergency_next_tally_time,json=emergencyNextTallyTime,proto3,stdtime" json:"emergency_next_tally_time,omitempty"`
-        Metadata string `protobuf:"bytes,12,opt,name=metadata,proto3" json:"metadata,omitempty"`
-
-        Title string `protobuf:"bytes,13,opt,name=title,proto3" json:"title,omitempty"`
-
-        Summary string `protobuf:"bytes,14,opt,name=summary,proto3" json:"summary,omitempty"`
-
-        Proposer string `protobuf:"bytes,15,opt,name=proposer,proto3" json:"proposer,omitempty"`
-
-        Expedited bool `protobuf:"varint,16,opt,name=expedited,proto3" json:"expedited,omitempty"`
-        Emergency bool `protobuf:"varint,17,opt,name=emergency,proto3" json:"emergency,omitempty"`
-
-        FailedReason string `protobuf:"bytes,18,opt,name=failed_reason,json=failedReason,proto3" json:"failed_reason,omitempty"`
-    }
-
-    */
+    use initia_std::option;
 
     struct ProposalRequest has copy, drop {
         proposal_id: u64
@@ -48,6 +16,17 @@ module initia_std::query {
         emergency: bool
     }
 
+    fun unmarshal_proposal_response(response: vector<u8>): ProposalResponse {
+        json::unmarshal_json_value<ProposalResponse>(
+            option::destroy_some(
+                json::get_elem(
+                    &json::unmarshal<json::JSONObject>(response),
+                    string::utf8(b"proposal")
+                )
+            )
+        )
+    }
+
     #[view]
     public fun get_proposal(proposal_id: u64): (u64, String, String, String) {
         let response =
@@ -55,8 +34,9 @@ module initia_std::query {
                 b"/initia.gov.v1.Query/Proposal",
                 json::marshal(&ProposalRequest { proposal_id })
             );
-        let res = json::unmarshal<ProposalResponse>(response);
-        (res.id, res.title, res.summary, string::utf8(response))
+
+        let res = unmarshal_proposal_response(response);
+        (res.id, res.title, res.summary, res.status)
     }
 
     #[view]
@@ -66,7 +46,7 @@ module initia_std::query {
                 b"/initia.gov.v1.Query/Proposal",
                 json::marshal(&ProposalRequest { proposal_id })
             );
-        let res = json::unmarshal<ProposalResponse>(response);
+        let res = unmarshal_proposal_response(response);
         (res.id, res.status, res.submit_time, res.emergency)
     }
 
@@ -98,6 +78,28 @@ module initia_std::query {
 
         let res = query_stargate(b"path", b"data123");
         assert!(res == b"output", 0);
+    }
+
+    #[test]
+    fun test_get_proposal() {
+        let req = json::marshal(&ProposalRequest { proposal_id: 40 });
+        set_query_response(
+            b"/initia.gov.v1.Query/Proposal",
+            req,
+            b"{\"proposal\":{\"id\":\"40\",\"messages\":[{\"@type\":\"/initia.move.v1.MsgGovExecute\",\"authority\":\"init10d07y265gmmuvt4z0w9aw880jnsr700j55nka3\",\"sender\":\"init182yxkv4gqfvz7tjyde6dfgjdr4ldqxklgmf23aju2u3cslnss7ys6dy6w8\",\"module_address\":\"init182yxkv4gqfvz7tjyde6dfgjdr4ldqxklgmf23aju2u3cslnss7ys6dy6w8\",\"module_name\":\"vip\",\"function_name\":\"update_l2_score_contract\",\"type_args\":[],\"args\":[\"HQAAAAAAAAA=\",\"KjB4MzllMTAyZjYxMEEyMzI2MEFkQTA5MzQ1N2ZCN0NkN0MzMTIwM0JCOQ==\"]}],\"status\":\"PROPOSAL_STATUS_PASSED\",\"final_tally_result\":{\"tally_height\":\"2941401\",\"total_staking_power\":\"58870777897045\",\"total_vesting_power\":\"0\",\"v1_tally_result\":{\"yes_count\":\"38322200084968\",\"abstain_count\":\"36826705051\",\"no_count\":\"69745588282\",\"no_with_veto_count\":\"0\"}},\"submit_time\":\"2025-05-21T16:35:32.434456966Z\",\"deposit_end_time\":\"2025-05-22T16:35:32.434456966Z\",\"total_deposit\":[{\"denom\":\"uinit\",\"amount\":\"100000000000\"}],\"voting_start_time\":\"2025-05-21T17:28:48.761350570Z\",\"voting_end_time\":\"2025-05-22T17:28:48.761350570Z\",\"emergency_start_time\":null,\"emergency_next_tally_time\":null,\"metadata\":\"https://forum.initia.xyz/t/update-embr-fun-vip-score-contract-address/188\",\"title\":\"Update Embr.fun VIP Score Contract Address\",\"summary\":\"This proposal is submitted by the Initia Foundation on behalf of Embr. Please see the following statement by the team below.\",\"expedited\":true,\"emergency\":false,\"failed_reason\":\"\"}}"
+        );
+
+        let (id, title, summary, status) = get_proposal(40);
+        assert!(id == 40, 0);
+        assert!(title == string::utf8(b"Update Embr.fun VIP Score Contract Address"), 0);
+        assert!(
+            summary
+                == string::utf8(
+                    b"This proposal is submitted by the Initia Foundation on behalf of Embr. Please see the following statement by the team below."
+                ),
+            0
+        );
+        assert!(status == string::utf8(b"PROPOSAL_STATUS_PASSED"), 0);
     }
 
     #[test]

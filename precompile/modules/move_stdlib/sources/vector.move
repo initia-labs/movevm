@@ -399,9 +399,7 @@ module std::vector {
         // We need to reverse the vectors to consume it efficiently
         self.reverse();
         v2.reverse();
-        self.zip_reverse(
-            v2, |e1, e2| f(e1, e2)
-        );
+        self.zip_reverse(v2, |e1, e2| f(e1, e2));
     }
 
     /// Apply the function to each pair of elements in the two given vectors in the reverse order, consuming them.
@@ -541,9 +539,7 @@ module std::vector {
         assert!(self.length() == v2.length(), 0x20002);
 
         let result = vector<NewElement>[];
-        self.zip_ref(
-            v2, |e1, e2| result.push_back(f(e1, e2))
-        );
+        self.zip_ref(v2, |e1, e2| result.push_back(f(e1, e2)));
         result
     }
 
@@ -567,9 +563,7 @@ module std::vector {
         assert!(self.length() == v2.length(), 0x20002);
 
         let result = vector<NewElement>[];
-        self.zip(
-            v2, |e1, e2| result.push_back(f(e1, e2))
-        );
+        self.zip(v2, |e1, e2| result.push_back(f(e1, e2)));
         result
     }
 

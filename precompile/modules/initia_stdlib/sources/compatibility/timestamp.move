@@ -50,6 +50,6 @@ module initia_std::timestamp {
     #[test_only]
     public fun fast_forward_seconds(seconds: u64) {
         let (height, timestamp) = get_block_info();
-        set_block_info(height+1, timestamp + seconds);
+        set_block_info(height + 1, timestamp + seconds);
     }
 }
