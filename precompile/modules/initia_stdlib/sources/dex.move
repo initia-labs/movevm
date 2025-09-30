@@ -1696,7 +1696,7 @@ module initia_std::dex {
                     } else {
                         // (coin_b_ratio - 1) * amount_a
                         let coin_a_increase_amount =
-                            coin_a_balance_ratio_without_fee.sub(bigdecimal::one()).mul_by_u64(
+                            coin_b_balance_ratio_without_fee.sub(bigdecimal::one()).mul_by_u64(
                                 coin_a_amount
                             ).ceil_u64();
                         if (coin_a_increase_amount > coin_a_amount_in_without_fee) {
@@ -1742,8 +1742,7 @@ module initia_std::dex {
                     )
                 );
 
-            let invariant_ratio =
-                invariant_ratio.div(inv_non_proportional_invariant_ratio);
+            invariant_ratio = invariant_ratio.div(inv_non_proportional_invariant_ratio);
 
             // calculate liquidity amount
             let one = bigdecimal::one();
