@@ -115,8 +115,8 @@ module initia_std::object_code_deployment {
         seeds
     }
 
-    /// Upgrades the existing modules at the `code_object` address with the new modules passed in `code`,
-    /// along with the metadata `metadata_serialized`.
+    #[deprecated]
+    /// Upgrades the existing modules at the `code_object` address with the new modules passed in `code`.
     /// Note: If the modules were deployed as immutable when calling `publish`, the upgrade will fail.
     /// Requires the publisher to be the owner of the `code_object`.
     public entry fun upgrade(
