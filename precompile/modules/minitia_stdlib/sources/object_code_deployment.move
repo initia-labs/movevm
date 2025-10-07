@@ -132,9 +132,7 @@ module minitia_std::object_code_deployment {
     /// Note: If the modules were deployed as immutable when calling `publish`, the upgrade will fail.
     /// Requires the publisher to be the owner of the `code_object`.
     public entry fun upgrade_v2(
-        publisher: &signer,
-        code: vector<vector<u8>>,
-        code_object: Object<MetadataStore>
+        publisher: &signer, code: vector<vector<u8>>, code_object: Object<MetadataStore>
     ) acquires ManagingRefs {
         let publisher_address = signer::address_of(publisher);
         assert!(
