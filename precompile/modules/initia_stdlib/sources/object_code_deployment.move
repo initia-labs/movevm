@@ -115,15 +115,24 @@ module initia_std::object_code_deployment {
         seeds
     }
 
-    /// Upgrades the existing modules at the `code_object` address with the new modules passed in `code`,
-    /// along with the metadata `metadata_serialized`.
+    #[deprecated]
+    /// Upgrades the existing modules at the `code_object` address with the new modules passed in `code`.
     /// Note: If the modules were deployed as immutable when calling `publish`, the upgrade will fail.
     /// Requires the publisher to be the owner of the `code_object`.
     public entry fun upgrade(
         publisher: &signer,
-        module_ids: vector<String>,
+        _module_ids: vector<String>,
         code: vector<vector<u8>>,
         code_object: Object<MetadataStore>
+    ) acquires ManagingRefs {
+        upgrade_v2(publisher, code, code_object);
+    }
+
+    /// Upgrades the existing modules at the `code_object` address with the new modules passed in `code`.
+    /// Note: If the modules were deployed as immutable when calling `publish`, the upgrade will fail.
+    /// Requires the publisher to be the owner of the `code_object`.
+    public entry fun upgrade_v2(
+        publisher: &signer, code: vector<vector<u8>>, code_object: Object<MetadataStore>
     ) acquires ManagingRefs {
         let publisher_address = signer::address_of(publisher);
         assert!(
@@ -139,7 +148,7 @@ module initia_std::object_code_deployment {
 
         let extend_ref = &borrow_global<ManagingRefs>(code_object_address).extend_ref;
         let code_signer = &object::generate_signer_for_extending(extend_ref);
-        code::publish(code_signer, module_ids, code, 1);
+        code::publish_v2(code_signer, code, 1);
 
         event::emit(Upgrade { object_address: signer::address_of(code_signer) });
     }
