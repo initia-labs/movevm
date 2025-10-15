@@ -563,15 +563,15 @@ module initia_std::incentive {
             )
         };
 
-        let sechdule = incentive.schedules.borrow_mut(key);
+        let schedule = incentive.schedules.borrow_mut(key);
 
-        if (sechdule.is_increase) {
-            sechdule.gradient_diff = sechdule.gradient_diff.add(gradient_diff);
-        } else if (sechdule.gradient_diff.gt(gradient_diff)) {
-            sechdule.gradient_diff = sechdule.gradient_diff.sub(gradient_diff);
+        if (schedule.is_increase) {
+            schedule.gradient_diff = schedule.gradient_diff.add(gradient_diff);
+        } else if (schedule.gradient_diff.gt(gradient_diff)) {
+            schedule.gradient_diff = schedule.gradient_diff.sub(gradient_diff);
         } else {
-            sechdule.is_increase = true;
-            sechdule.gradient_diff = gradient_diff.sub(sechdule.gradient_diff);
+            schedule.is_increase = true;
+            schedule.gradient_diff = gradient_diff.sub(schedule.gradient_diff);
         };
     }
 
@@ -585,15 +585,15 @@ module initia_std::incentive {
             )
         };
 
-        let sechdule = incentive.schedules.borrow_mut(key);
+        let schedule = incentive.schedules.borrow_mut(key);
 
-        if (!sechdule.is_increase) {
-            sechdule.gradient_diff = sechdule.gradient_diff.add(gradient_diff);
-        } else if (sechdule.gradient_diff.gt(gradient_diff)) {
-            sechdule.gradient_diff = sechdule.gradient_diff.sub(gradient_diff);
+        if (!schedule.is_increase) {
+            schedule.gradient_diff = schedule.gradient_diff.add(gradient_diff);
+        } else if (schedule.gradient_diff.gt(gradient_diff)) {
+            schedule.gradient_diff = schedule.gradient_diff.sub(gradient_diff);
         } else {
-            sechdule.is_increase = false;
-            sechdule.gradient_diff = gradient_diff.sub(sechdule.gradient_diff);
+            schedule.is_increase = false;
+            schedule.gradient_diff = gradient_diff.sub(schedule.gradient_diff);
         };
     }
 
