@@ -296,9 +296,13 @@ module initia_std::incentive {
     ) acquires ModuleStore, IncentiveStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let incentive_store = borrow_global_mut<IncentiveStore>(@initia_std);
+        let (_, timestamp) = get_block_info();
+        let current_epoch = get_epoch(module_store, timestamp);
 
         assert!(
-            start_epoch != 0 && end_epoch >= start_epoch,
+            start_epoch != 0
+                && end_epoch >= start_epoch
+                && start_epoch >= current_epoch,
             error::invalid_argument(EINVALID_EPOCH)
         );
 
@@ -320,13 +324,22 @@ module initia_std::incentive {
         apply_schedules(module_store, incentive, incentive_entity.staked_amount);
 
         // calculate gradient
-        let incentive_duration = get_duration(module_store, start_epoch, end_epoch);
+        let start_timestamp =
+            if (current_epoch == start_epoch) {
+                timestamp
+            } else {
+                let (start_timestamp, _) =
+                    get_epoch_timestamp_range(module_store, start_epoch);
+                start_timestamp
+            };
+        let (_, end_timestamp) = get_epoch_timestamp_range(module_store, end_epoch);
+
+        let incentive_duration = end_timestamp - start_timestamp;
         // reward amount / duration
         let gradient_diff = bigdecimal::from_ratio_u64(amount, incentive_duration);
 
         // update schedules
         // if start epoch is current epoch, increase gradient directly
-        let (_, timestamp) = get_block_info();
         let current_epoch = get_epoch(module_store, timestamp);
         if (start_epoch == current_epoch) {
             incentive.gradient = incentive.gradient.add(gradient_diff);
@@ -433,7 +446,7 @@ module initia_std::incentive {
 
         // transfer stake token to user
         coin::transfer(
-            &get_module_singer(module_store),
+            &get_module_signer(module_store),
             addr,
             stake_token_metadata,
             amount
@@ -605,26 +618,6 @@ module initia_std::incentive {
         (timestamp - module_store.epoch_start_timestamp) / EPOCH_DURATION + 1
     }
 
-    fun get_duration(
-        module_store: &ModuleStore, start_epoch: u64, end_epoch: u64
-    ): u64 {
-        let (_, timestamp) = get_block_info();
-        let current_epoch = get_epoch(module_store, timestamp);
-        assert!(start_epoch >= current_epoch, error::invalid_argument(EINVALID_EPOCH));
-
-        let start_timestamp =
-            if (current_epoch == start_epoch) {
-                timestamp
-            } else {
-                let (start_timestamp, _) =
-                    get_epoch_timestamp_range(module_store, start_epoch);
-                start_timestamp
-            };
-        let (_, end_timestamp) = get_epoch_timestamp_range(module_store, end_epoch);
-
-        end_timestamp - start_timestamp
-    }
-
     fun get_epoch_timestamp_range(
         module_store: &ModuleStore, epoch: u64
     ): (u64, u64) {
@@ -639,7 +632,7 @@ module initia_std::incentive {
         object::address_from_extend_ref(&module_store.extend_ref)
     }
 
-    fun get_module_singer(module_store: &ModuleStore): signer {
+    fun get_module_signer(module_store: &ModuleStore): signer {
         object::generate_signer_for_extending(&module_store.extend_ref)
     }
 
@@ -670,7 +663,7 @@ module initia_std::incentive {
             *user_index = current_index;
 
             coin::transfer(
-                &get_module_singer(module_store),
+                &get_module_signer(module_store),
                 addr,
                 reward_token_metadata,
                 reward_amount
@@ -711,18 +704,6 @@ module initia_std::incentive {
         assert!(
             get_epoch(module_store, 1000 + EPOCH_DURATION) == 2,
             3
-        );
-
-        assert!(
-            get_duration(module_store, 1, 4) == EPOCH_DURATION * 4,
-            4
-        );
-
-        // if current time is in middle
-        set_block_info(0, 1500);
-        assert!(
-            get_duration(module_store, 1, 4) == EPOCH_DURATION * 4 - 500,
-            4
         );
     }
 
