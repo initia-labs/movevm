@@ -24,6 +24,10 @@ module initia_std::incentive {
 
     const EMAX_LIMIT: u64 = 5;
 
+    const EINSUFFICIENT_STAKE: u64 = 6;
+
+    const EZERO_AMOUNT: u64 = 7;
+
     // Constants
 
     // NOTE: epoch duration must be constant. If it change, it affect to schedules that already exists
@@ -130,7 +134,13 @@ module initia_std::incentive {
         let incentive_store = borrow_global<IncentiveStore>(@initia_std);
         let user_store = borrow_global<UserStore>(addr);
 
+        if (!user_store.stake_infos.contains(stake_token_metadata)) {
+            return vector[];
+        };
         let stake_info = user_store.stake_infos.borrow(stake_token_metadata);
+        if (!incentive_store.incentive_entities.contains(stake_token_metadata)) {
+            return vector[];
+        };
         let incentive_entity =
             incentive_store.incentive_entities.borrow(stake_token_metadata);
 
@@ -234,7 +244,7 @@ module initia_std::incentive {
         module_store.admin = new_admin;
     }
 
-    public entry fun add_reward_token(
+    public entry fun register_token_pair(
         admin: &signer,
         stake_token_metadata: Object<Metadata>,
         reward_token_metadata: Object<Metadata>
@@ -287,7 +297,10 @@ module initia_std::incentive {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let incentive_store = borrow_global_mut<IncentiveStore>(@initia_std);
 
-        assert!(start_epoch != 0 && end_epoch >= start_epoch, error::invalid_argument(EINVALID_EPOCH));
+        assert!(
+            start_epoch != 0 && end_epoch >= start_epoch,
+            error::invalid_argument(EINVALID_EPOCH)
+        );
 
         // transfer reward token to module
         coin::transfer(
@@ -409,6 +422,10 @@ module initia_std::incentive {
 
         // remove stake amount
         let stake_info = user_store.stake_infos.borrow_mut(stake_token_metadata);
+        assert!(amount > 0, error::invalid_argument(EZERO_AMOUNT));
+        assert!(
+            stake_info.amount >= amount, error::invalid_argument(EINSUFFICIENT_STAKE)
+        );
         stake_info.amount -= amount;
         let incentive_entity =
             incentive_store.incentive_entities.borrow_mut(stake_token_metadata);
@@ -501,7 +518,11 @@ module initia_std::incentive {
 
             let duration = start_timestamp - last_updated_timestamp;
             let index_increase =
-                incentive.gradient.mul_by_u64(duration).div_by_u64(staked_amount);
+                if (staked_amount == 0) {
+                    bigdecimal::zero()
+                } else {
+                    incentive.gradient.mul_by_u64(duration).div_by_u64(staked_amount)
+                };
 
             // update index
             index = index.add(index_increase);
@@ -577,11 +598,11 @@ module initia_std::incentive {
     }
 
     fun get_epoch(module_store: &ModuleStore, timestamp: u64): u64 {
-        if (timestamp + EPOCH_DURATION < module_store.epoch_start_timestamp) {
+        if (timestamp < module_store.epoch_start_timestamp) {
             return 0
         };
 
-        (timestamp + EPOCH_DURATION - module_store.epoch_start_timestamp) / EPOCH_DURATION
+        (timestamp - module_store.epoch_start_timestamp) / EPOCH_DURATION + 1
     }
 
     fun get_duration(
@@ -589,9 +610,7 @@ module initia_std::incentive {
     ): u64 {
         let (_, timestamp) = get_block_info();
         let current_epoch = get_epoch(module_store, timestamp);
-        assert!(
-            start_epoch >= current_epoch, error::invalid_argument(EINVALID_EPOCH)
-        );
+        assert!(start_epoch >= current_epoch, error::invalid_argument(EINVALID_EPOCH));
 
         let start_timestamp =
             if (current_epoch == start_epoch) {
@@ -749,7 +768,7 @@ module initia_std::incentive {
         );
         let coin_c_metadata = coin::metadata(chain_addr, string::utf8(b"C"));
 
-        add_reward_token(chain, coin_a_metadata, coin_b_metadata);
+        register_token_pair(chain, coin_a_metadata, coin_b_metadata);
 
         managed_coin::mint_to(
             chain,
@@ -929,7 +948,7 @@ module initia_std::incentive {
         );
 
         // test5, multiple incentive test
-        add_reward_token(chain, coin_a_metadata, coin_c_metadata);
+        register_token_pair(chain, coin_a_metadata, coin_c_metadata);
         incentivize(
             chain,
             coin_a_metadata,
