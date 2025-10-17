@@ -340,7 +340,6 @@ module initia_std::incentive {
 
         // update schedules
         // if start epoch is current epoch, increase gradient directly
-        let current_epoch = get_epoch(module_store, timestamp);
         if (start_epoch == current_epoch) {
             incentive.gradient = incentive.gradient.add(gradient_diff);
         } else {
@@ -534,7 +533,7 @@ module initia_std::incentive {
                 if (staked_amount == 0) {
                     bigdecimal::zero()
                 } else {
-                    incentive.gradient.mul_by_u64(duration).div_by_u64(staked_amount)
+                    gradient.mul_by_u64(duration).div_by_u64(staked_amount)
                 };
 
             // update index
