@@ -1174,7 +1174,9 @@ module minitia_std::fungible_asset {
         event::emit(DepositEvent { store_addr, metadata_addr, amount });
         let fungible_store = object::address_to_object<FungibleStore>(store_addr);
         let owner_addr = object::owner(fungible_store);
-        event::emit(DepositOwnerEvent { owner: owner_addr });
+        if (is_primary_store(store_addr, owner_addr, metadata_addr)) {
+            event::emit(DepositOwnerEvent { owner: owner_addr });
+        };
     }
 
     /// Extract `amount` of the fungible asset from `store`.
@@ -1196,7 +1198,9 @@ module minitia_std::fungible_asset {
         event::emit(WithdrawEvent { store_addr, metadata_addr, amount });
         let fungible_store = object::address_to_object<FungibleStore>(store_addr);
         let owner_addr = object::owner(fungible_store);
-        event::emit(WithdrawOwnerEvent { owner: owner_addr });
+        if (is_primary_store(store_addr, owner_addr, metadata_addr)) {
+            event::emit(WithdrawOwnerEvent { owner: owner_addr });
+        };
 
         FungibleAsset { metadata, amount }
     }
@@ -1268,6 +1272,14 @@ module minitia_std::fungible_asset {
         store: &Object<T>
     ): &FungibleStore acquires FungibleStore {
         borrow_global<FungibleStore>(object::object_address(store))
+    }
+
+    public fun is_primary_store(
+        fungible_store_addr: address, owner_addr: address, metadata_addr: address
+    ): bool {
+        let primary_store_addr =
+            object::create_user_derived_object_address(owner_addr, metadata_addr);
+        fungible_store_addr == primary_store_addr
     }
 
     #[test_only]

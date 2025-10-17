@@ -530,4 +530,35 @@ module initia_std::primary_fungible_store {
         burn(&burn_ref, aaron_address, 50);
         assert!(balance(aaron_address, metadata) == 0, 7);
     }
+
+    #[test(creator = @0xcafe)]
+    fun test_is_primary_store(creator: &signer) acquires DeriveRefPod, ModuleStore {
+        let (creator_ref, metadata) = create_test_token(creator);
+        let metadata_addr = object::object_address(&metadata);
+        init_test_metadata_with_primary_store_enabled(&creator_ref);
+
+        let creator_address = signer::address_of(creator);
+        ensure_primary_store_exists(creator_address, metadata);
+
+        let primary_store_addr = primary_store_address(creator_address, metadata);
+        assert!(
+            fungible_asset::is_primary_store(
+                primary_store_addr, creator_address, metadata_addr
+            ),
+            1
+        );
+
+        // also check normal store
+        let constructor_ref = object::create_object(creator_address, false);
+        let fungible_store = fungible_asset::create_store(&constructor_ref, metadata);
+        let fungible_store_addr = object::object_address(&fungible_store);
+        assert!(
+            !fungible_asset::is_primary_store(
+                fungible_store_addr,
+                creator_address,
+                metadata_addr
+            ),
+            2
+        );
+    }
 }
