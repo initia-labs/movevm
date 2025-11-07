@@ -1,6 +1,0 @@
-repos:
-  - repo: https://github.com/movebit/movefmt
-    rev: v1.3.5 # or a newer version
-    hooks:
-      - id: movefmt
-        args: ["./precompile/modules/**/sources/*.move", "./precompile/modules/**/sources/**/*.move", "./precompile/modules/**/tests/*.move"]
