@@ -688,6 +688,11 @@ module initia_std::incentive {
     #[test_only]
     use initia_std::string;
 
+    #[test_only]
+    public fun init_module_for_test(chain: &signer) {
+        init_module(chain)
+    }
+
     #[test(chain = @initia_std)]
     fun epoch_test(chain: &signer) acquires ModuleStore {
         init_module(chain);
