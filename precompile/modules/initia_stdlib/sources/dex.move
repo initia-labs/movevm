@@ -1659,21 +1659,90 @@ module initia_std::dex {
                     coin_b_amount
                 );
 
+            let invariant_ratio = bigdecimal::one();
+
+            // calculate proportional amount first
+            if (coin_a_amount_in_without_fee != 0 && coin_b_amount_in_without_fee != 0) {
+                // select lower ratio
+                let coin_a_balance_ratio_without_fee =
+                    bigdecimal::from_ratio_u64(
+                        coin_a_amount + coin_a_amount_in_without_fee, coin_a_amount
+                    );
+                let coin_b_balance_ratio_without_fee =
+                    bigdecimal::from_ratio_u64(
+                        coin_b_amount + coin_b_amount_in_without_fee, coin_b_amount
+                    );
+
+                let (
+                    proportional_increase_ratio,
+                    coin_a_increase_amount,
+                    coin_b_increase_amount
+                ) =
+                    if (coin_a_balance_ratio_without_fee.lt(
+                        coin_b_balance_ratio_without_fee
+                    )) {
+                        let coin_b_increase_amount =
+                            coin_a_balance_ratio_without_fee.sub(bigdecimal::one()).mul_by_u64(
+                                coin_b_amount
+                            ).ceil_u64();
+                        if (coin_b_increase_amount > coin_b_amount_in_without_fee) {
+                            coin_b_increase_amount = coin_b_amount_in_without_fee
+                        };
+                        (
+                            coin_a_balance_ratio_without_fee,
+                            coin_a_amount_in_without_fee,
+                            coin_b_increase_amount
+                        )
+                    } else {
+                        // (coin_b_ratio - 1) * amount_a
+                        let coin_a_increase_amount =
+                            coin_b_balance_ratio_without_fee.sub(bigdecimal::one()).mul_by_u64(
+                                coin_a_amount
+                            ).ceil_u64();
+                        if (coin_a_increase_amount > coin_a_amount_in_without_fee) {
+                            coin_a_increase_amount = coin_a_amount_in_without_fee
+                        };
+                        (
+                            coin_b_balance_ratio_without_fee,
+                            coin_a_increase_amount,
+                            coin_b_amount_in_without_fee
+                        )
+                    };
+
+                // apply amounts
+                coin_a_amount += coin_a_increase_amount;
+                coin_b_amount += coin_b_increase_amount;
+                coin_a_amount_in_without_fee -= coin_a_increase_amount;
+                coin_b_amount_in_without_fee -= coin_b_increase_amount;
+
+                // update invariant ratio
+                invariant_ratio = proportional_increase_ratio;
+            };
+
             // calculate invariant (a^w_a * b^w_b) increase ratio
-            let coin_a_balance_ratio_without_fee =
+            // use inv ratio because pow function only allows base under 2
+            let inv_coin_a_balance_ratio_without_fee =
                 bigdecimal::from_ratio_u64(
-                    coin_a_amount + coin_a_amount_in_without_fee, coin_a_amount
+                    coin_a_amount, coin_a_amount + coin_a_amount_in_without_fee
                 );
-            let coin_b_balance_ratio_without_fee =
+            let inv_coin_b_balance_ratio_without_fee =
                 bigdecimal::from_ratio_u64(
-                    coin_b_amount + coin_b_amount_in_without_fee, coin_b_amount
+                    coin_b_amount, coin_b_amount + coin_b_amount_in_without_fee
                 );
 
-            let invariant_ratio =
+            let inv_non_proportional_invariant_ratio =
                 bigdecimal::mul(
-                    pow(coin_a_balance_ratio_without_fee, coin_a_normalized_weight),
-                    pow(coin_b_balance_ratio_without_fee, coin_b_normalized_weight)
+                    pow(
+                        inv_coin_a_balance_ratio_without_fee,
+                        coin_a_normalized_weight
+                    ),
+                    pow(
+                        inv_coin_b_balance_ratio_without_fee,
+                        coin_b_normalized_weight
+                    )
                 );
+
+            invariant_ratio = invariant_ratio.div(inv_non_proportional_invariant_ratio);
 
             // calculate liquidity amount
             let one = bigdecimal::one();
@@ -1848,7 +1917,8 @@ module initia_std::dex {
     /// k = x * ln(a)
     fun pow(base: BigDecimal, exp: BigDecimal): BigDecimal {
         assert!(
-            !bigdecimal::is_zero(base) && bigdecimal::lt(base, bigdecimal::from_u64(2)),
+            bigdecimal::gt(base, bigdecimal::from_ratio_u64(1, 100))
+                && bigdecimal::lt(base, bigdecimal::from_u64(2)), // 0.01 < base < 2
             error::invalid_argument(EOUT_OF_BASE_RANGE)
         );
 
@@ -2855,5 +2925,87 @@ module initia_std::dex {
 
         // fee charged only for taxable amount (10000 * 0.003 = 30)
         assert!(adjusted_coin_amount_in == 19970, 3);
+    }
+
+    #[test(chain = @initia_std)]
+    fun provide_test(
+        chain: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock {
+        init_module(chain);
+        initia_std::primary_fungible_store::init_module_for_test();
+
+        let chain_addr = signer::address_of(chain);
+
+        let (initia_burn_cap, initia_freeze_cap, initia_mint_cap) =
+            initialized_coin(chain, string::utf8(b"INIT"));
+        let (usdc_burn_cap, usdc_freeze_cap, usdc_mint_cap) =
+            initialized_coin(chain, string::utf8(b"USDC"));
+
+        coin::mint_to(&initia_mint_cap, chain_addr, 100000000);
+        coin::mint_to(&usdc_mint_cap, chain_addr, 100000000);
+
+        // spot price is 1
+        create_pair_script(
+            chain,
+            std::string::utf8(b"name"),
+            std::string::utf8(b"SYMBOL"),
+            bigdecimal::from_ratio_u64(3, 1000),
+            bigdecimal::from_ratio_u64(1, 2),
+            bigdecimal::from_ratio_u64(1, 2),
+            coin::metadata(chain_addr, string::utf8(b"INIT")),
+            coin::metadata(chain_addr, string::utf8(b"USDC")),
+            10000000,
+            10000000
+        );
+
+        move_to(
+            chain,
+            CoinCapsInit {
+                burn_cap: initia_burn_cap,
+                freeze_cap: initia_freeze_cap,
+                mint_cap: initia_mint_cap
+            }
+        );
+
+        move_to(
+            chain,
+            CoinCapsUsdc {
+                burn_cap: usdc_burn_cap,
+                freeze_cap: usdc_freeze_cap,
+                mint_cap: usdc_mint_cap
+            }
+        );
+
+        // check current supply
+        let lp_metadata = coin::metadata(chain_addr, string::utf8(b"SYMBOL"));
+        let pair = object::convert(lp_metadata);
+        assert!(coin::balance(chain_addr, lp_metadata) == 10000000, 1);
+
+        // proportional provide
+        provide_liquidity_script(chain, pair, 10000000, 10000000, option::none());
+        assert!(coin::balance(chain_addr, lp_metadata) == 20000000, 1);
+
+        // single asset provide
+        // current pool balance = (20000000, 20000000), k = 20000000
+        // if provide 60000000 on coin a, k = 40000000
+        provide_liquidity_script(chain, pair, 60000000, 0, option::none());
+        let lp_balance_1 = coin::balance(chain_addr, lp_metadata);
+        assert!(
+            lp_balance_1 >= 40000000 - 60000 && lp_balance_1 <= 40000000, // 20000000 + 20000000 - 20000000 * 0.003 <= lp_balance <= 20000000 + 20000000
+            2
+        );
+
+        // non-proportional provide
+        // current pool balance = (80000000, 20000000), k = 40000000
+        // if provide 10000000 on coin a 70000000 and , k = 90000000
+        provide_liquidity_script(chain, pair, 10000000, 70000000, option::none());
+        let lp_balance_2 = coin::balance(chain_addr, lp_metadata);
+        assert!(
+            lp_balance_2
+                >= lp_balance_1 * 90000000 / 40000000
+                    - lp_balance_1 * 90000 * 3 / 40000000
+                && lp_balance_2 <= lp_balance_1 * 90000000 / 40000000, // lp_balance_1 * 90000000 / 40000000 - lp_balance_1 * 50000000 / 40000000 * 0.003  <= lp_balance_2 <= lp_balance_1 * 90000000 / 40000000
+            2
+        )
     }
 }
