@@ -39,6 +39,7 @@ module minitia_std::object_code_deployment {
     use minitia_std::object;
     use minitia_std::object::{ExtendRef, Object};
     use minitia_std::string::String;
+    use minitia_std::block;
 
     /// Object code deployment feature not supported.
     const EOBJECT_CODE_DEPLOYMENT_NOT_SUPPORTED: u64 = 1;
@@ -107,11 +108,14 @@ module minitia_std::object_code_deployment {
 
     inline fun object_seed(publisher: address): vector<u8> {
         let sequence_number = account::get_sequence_number(publisher) + 1;
+        let timestamp = block::get_current_block_timestamp();
         let seeds = vector[];
         vector::append(
             &mut seeds, bcs::to_bytes(&OBJECT_CODE_DEPLOYMENT_DOMAIN_SEPARATOR)
         );
         vector::append(&mut seeds, bcs::to_bytes(&sequence_number));
+        vector::append(&mut seeds, bcs::to_bytes(&timestamp));
+
         seeds
     }
 
