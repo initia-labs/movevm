@@ -12,6 +12,10 @@ module initia_std::biguint {
 
     /// Create a new BigUint from little-endian bytes.
     public fun from_le_bytes(le_bytes: vector<u8>): BigUint {
+        if (le_bytes.length() == 0) {
+            return zero();
+        };
+
         BigUint { bytes: le_bytes }
     }
 
