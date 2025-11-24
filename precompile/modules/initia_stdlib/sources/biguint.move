@@ -143,7 +143,7 @@ module initia_std::biguint {
     // cmp
 
     public fun eq(self: BigUint, num2: BigUint): bool {
-        self.bytes == num2.bytes
+        eq_internal(self.bytes, num2.bytes)
     }
 
     public fun lt(self: BigUint, num2: BigUint): bool {
@@ -184,6 +184,9 @@ module initia_std::biguint {
     ): vector<u8>;
     native fun new_internal<T>(num: T): vector<u8>;
     native fun cast_internal<T>(num_bytes: vector<u8>): T;
+    native fun eq_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
     native fun lt_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): bool;

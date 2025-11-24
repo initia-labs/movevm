@@ -143,7 +143,7 @@ module minitia_std::biguint {
     // cmp
 
     public fun eq(self: BigUint, num2: BigUint): bool {
-        self.bytes == num2.bytes
+        eq_internal(self.bytes, num2.bytes)
     }
 
     public fun lt(self: BigUint, num2: BigUint): bool {
@@ -170,6 +170,9 @@ module minitia_std::biguint {
         self.eq(one())
     }
 
+    native fun eq_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
     native fun add_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): vector<u8>;
