@@ -109,7 +109,7 @@ module initia_std::object_code_deployment {
         );
     }
 
-    inline fun object_seed(publisher: &signer): vector<u8> {
+    inline fun object_seed(publisher: &signer): vector<u8> acquires DeploymentCounter {
         let publisher_address = signer::address_of(publisher);
         let sequence_number = account::get_sequence_number(publisher_address) + 1;
         let count = get_and_increment_deployment_count(publisher);
