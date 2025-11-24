@@ -235,7 +235,7 @@ fn native_cast(
             + gas_params.biguint_cast_per_byte * NumBytes::new(num_bytes.len() as u64),
     )?;
 
-    match ty_args[0] {
+    match &ty_args[0] {
         Type::U8 => {
             let num = BigUint::from_bytes_le(&num_bytes);
             let num: u8 = match num.try_into() {
