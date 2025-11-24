@@ -5,18 +5,16 @@ use bigdecimal::{
     num_bigint::{BigUint, ToBigInt},
     BigDecimal, Signed,
 };
-use bytes::Bytes;
 use initia_move_storage::{
     initia_storage::InitiaStorage, state_view::StateView, struct_resolver::StructResolver,
 };
-use move_binary_format::errors::{Location, PartialVMResult, VMResult};
+use move_binary_format::errors::{Location, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     ident_str,
     language_storage::{StructTag, TypeTag},
-    metadata::Metadata,
     u256::U256,
-    value::{MoveTypeLayout, MoveValue},
+    value::MoveValue,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type::{self, *},
@@ -307,19 +305,6 @@ fn verify_object<S: StateView>(
     Ok(())
 }
 
-pub struct DummyResolver {}
-impl ResourceResolver for DummyResolver {
-    fn get_resource_bytes_with_metadata_and_layout(
-        &self,
-        _address: &AccountAddress,
-        _struct_tag: &StructTag,
-        _metadata: &[Metadata],
-        _layout: Option<&MoveTypeLayout>,
-    ) -> PartialVMResult<(Option<Bytes>, usize)> {
-        Ok((None, 0))
-    }
-}
-
 //
 // helper functions for error handling
 //
@@ -334,7 +319,7 @@ mod json_arg_testing {
         module_cache::InitiaModuleCache, script_cache::InitiaScriptCache, state_view::StateView,
     };
     use initia_move_types::access_path::{AccessPath, DataPath};
-    use move_binary_format::errors::{Location, PartialVMError};
+    use move_binary_format::errors::{Location, PartialVMError, PartialVMResult};
     use move_core_types::{
         ability::{Ability, AbilitySet},
         ident_str,

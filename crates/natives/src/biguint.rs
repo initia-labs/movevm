@@ -175,7 +175,7 @@ fn native_new(
 
     context.charge(gas_params.biguint_new_base)?;
 
-    match ty_args[0] {
+    match &ty_args[0] {
         Type::U8 => {
             let num = safely_pop_arg!(arguments, u8);
             let num = BigUint::from(num);
@@ -204,6 +204,11 @@ fn native_new(
         Type::U256 => {
             let num = safely_pop_arg!(arguments, U256);
             let num = BigUint::from_bytes_le(&num.to_le_bytes());
+            Ok(smallvec![Value::vector_u8(num.to_bytes_le())])
+        }
+        Type::Vector(ty) if ty.as_ref() == &Type::U8 => {
+            let num_bytes = safely_pop_arg!(arguments, Vec<u8>);
+            let num = BigUint::from_bytes_le(&num_bytes);
             Ok(smallvec![Value::vector_u8(num.to_bytes_le())])
         }
         _ => Err(SafeNativeError::Abort {
