@@ -39,7 +39,6 @@ module minitia_std::object_code_deployment {
     use minitia_std::object;
     use minitia_std::object::{ExtendRef, Object};
     use minitia_std::string::String;
-    use minitia_std::block;
 
     /// Object code deployment feature not supported.
     const EOBJECT_CODE_DEPLOYMENT_NOT_SUPPORTED: u64 = 1;
@@ -54,6 +53,11 @@ module minitia_std::object_code_deployment {
     struct ManagingRefs has key {
         /// We need to keep the extend ref to be able to generate the signer to upgrade existing code.
         extend_ref: ExtendRef
+    }
+
+    /// Tracks the number of deployments per publisher
+    struct DeploymentCounter has key {
+        count: u64
     }
 
     #[event]
@@ -81,7 +85,7 @@ module minitia_std::object_code_deployment {
     /// the code to be published via `code`. This contains a vector of modules to be deployed on-chain.
     public entry fun publish(
         publisher: &signer, _module_ids: vector<String>, code: vector<vector<u8>>
-    ) {
+    ) acquires DeploymentCounter {
         publish_v2(publisher, code);
     }
 
@@ -91,9 +95,8 @@ module minitia_std::object_code_deployment {
     /// the code to be published via `code`. This contains a vector of modules to be deployed on-chain.
     public entry fun publish_v2(
         publisher: &signer, code: vector<vector<u8>>
-    ) {
-        let publisher_address = signer::address_of(publisher);
-        let object_seed = object_seed(publisher_address);
+    ) acquires DeploymentCounter {
+        let object_seed = object_seed(publisher);
         let constructor_ref = &object::create_named_object(publisher, object_seed);
         let code_signer = &object::generate_signer(constructor_ref);
         code::publish_v2(code_signer, code, 1);
@@ -106,17 +109,31 @@ module minitia_std::object_code_deployment {
         );
     }
 
-    inline fun object_seed(publisher: address): vector<u8> {
-        let sequence_number = account::get_sequence_number(publisher) + 1;
-        let timestamp = block::get_current_block_timestamp();
+    inline fun object_seed(publisher: &signer): vector<u8> {
+        let publisher_address = signer::address_of(publisher);
+        let sequence_number = account::get_sequence_number(publisher_address) + 1;
+        let count = get_and_increment_deployment_count(publisher);
         let seeds = vector[];
         vector::append(
             &mut seeds, bcs::to_bytes(&OBJECT_CODE_DEPLOYMENT_DOMAIN_SEPARATOR)
         );
         vector::append(&mut seeds, bcs::to_bytes(&sequence_number));
-        vector::append(&mut seeds, bcs::to_bytes(&timestamp));
+        vector::append(&mut seeds, bcs::to_bytes(&count));
 
         seeds
+    }
+
+    inline fun get_and_increment_deployment_count(
+        publisher: &signer
+    ): u64 acquires DeploymentCounter {
+        let publisher_address = signer::address_of(publisher);
+        if (!exists<DeploymentCounter>(publisher_address)) {
+            move_to(publisher, DeploymentCounter { count: 0 });
+        };
+        let counter = borrow_global_mut<DeploymentCounter>(publisher_address);
+        let current = counter.count;
+        counter.count = current + 1;
+        current
     }
 
     #[deprecated]
