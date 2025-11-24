@@ -1,10 +1,10 @@
 use anyhow::Context;
-use clap::{ Parser, Subcommand };
-use std::{ fs, path::PathBuf };
+use clap::{Parser, Subcommand};
+use std::{fs, path::PathBuf};
 
-use crate::{ InitiaCLI, InitiaCommand };
+use crate::{InitiaCLI, InitiaCommand};
 
-use initia_move_api::handler::{ decode_module_bytes, decode_script_bytes, read_module_info };
+use initia_move_api::handler::{decode_module_bytes, decode_script_bytes, read_module_info};
 
 #[derive(Parser)]
 #[command(
@@ -24,7 +24,8 @@ pub enum DecodeCommands {
         about = "Read Move module info from bytecode",
         long_about = "Read and display basic information(name and address) about a Move module from its bytecode file.\n\
         Example: initia-move decode read ./build/package/bytecode_modules/my_module.mv"
-    )] Read {
+    )]
+    Read {
         #[arg(value_name = "PATH")]
         path: String,
     },
@@ -34,7 +35,8 @@ pub enum DecodeCommands {
         about = "Decode Move script bytecode",
         long_about = "Decode Move script bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move-cli decode script ./build/package/scripts/my_script.mv"
-    )] Script {
+    )]
+    Script {
         #[arg(value_name = "PATH")]
         path: String,
     },
@@ -44,7 +46,8 @@ pub enum DecodeCommands {
         about = "Decode Move module bytecode",
         long_about = "Decode Move module bytecode and display its ABI (Application Binary Interface).\n\
         Example: initia-move-cli decode module ./build/package/bytecode_modules/my_module.mv"
-    )] Module {
+    )]
+    Module {
         #[arg(value_name = "PATH")]
         path: String,
     },
