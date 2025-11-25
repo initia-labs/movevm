@@ -12,7 +12,8 @@ module minitia_std::biguint {
 
     /// Create a new BigUint from little-endian bytes.
     public fun from_le_bytes(le_bytes: vector<u8>): BigUint {
-        BigUint { bytes: le_bytes }
+        let num_bytes = new_internal(le_bytes);
+        BigUint { bytes: num_bytes }
     }
 
     public fun zero(): BigUint {
@@ -139,7 +140,7 @@ module minitia_std::biguint {
     // cmp
 
     public fun eq(self: BigUint, num2: BigUint): bool {
-        self.bytes == num2.bytes
+        eq_internal(self.bytes, num2.bytes)
     }
 
     public fun lt(self: BigUint, num2: BigUint): bool {
@@ -166,6 +167,9 @@ module minitia_std::biguint {
         self.eq(one())
     }
 
+    native fun eq_internal(
+        num1_bytes: vector<u8>, num2_bytes: vector<u8>
+    ): bool;
     native fun add_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): vector<u8>;

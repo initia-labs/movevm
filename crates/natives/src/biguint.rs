@@ -175,7 +175,7 @@ fn native_new(
 
     context.charge(gas_params.biguint_new_base)?;
 
-    match ty_args[0] {
+    match &ty_args[0] {
         Type::U8 => {
             let num = safely_pop_arg!(arguments, u8);
             let num = BigUint::from(num);
@@ -206,6 +206,11 @@ fn native_new(
             let num = BigUint::from_bytes_le(&num.to_le_bytes());
             Ok(smallvec![Value::vector_u8(num.to_bytes_le())])
         }
+        Type::Vector(ty) if ty.as_ref() == &Type::U8 => {
+            let num_bytes = safely_pop_arg!(arguments, Vec<u8>);
+            let num = BigUint::from_bytes_le(&num_bytes);
+            Ok(smallvec![Value::vector_u8(num.to_bytes_le())])
+        }
         _ => Err(SafeNativeError::Abort {
             abort_code: INVALID_NUMERIC_TYPE,
         }),
@@ -230,7 +235,7 @@ fn native_cast(
             + gas_params.biguint_cast_per_byte * NumBytes::new(num_bytes.len() as u64),
     )?;
 
-    match ty_args[0] {
+    match &ty_args[0] {
         Type::U8 => {
             let num = BigUint::from_bytes_le(&num_bytes);
             let num: u8 = match num.try_into() {
@@ -340,6 +345,31 @@ fn native_lt(
 }
 
 #[allow(clippy::result_large_err)]
+fn native_eq(
+    context: &mut SafeNativeContext,
+    ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib;
+
+    debug_assert!(ty_args.is_empty());
+    debug_assert_eq!(arguments.len(), 2);
+
+    let num2_bytes = safely_pop_arg!(arguments, Vec<u8>);
+    let num1_bytes = safely_pop_arg!(arguments, Vec<u8>);
+    context.charge(
+        gas_params.biguint_eq_base
+            + gas_params.biguint_eq_per_byte
+                * NumBytes::new((num1_bytes.len() + num2_bytes.len()) as u64),
+    )?;
+
+    let num1 = BigUint::from_bytes_le(&num1_bytes);
+    let num2 = BigUint::from_bytes_le(&num2_bytes);
+
+    Ok(smallvec![Value::bool(num1 == num2)])
+}
+
+#[allow(clippy::result_large_err)]
 fn native_le(
     context: &mut SafeNativeContext,
     ty_args: Vec<Type>,
@@ -428,6 +458,7 @@ pub fn make_all(
         ("div_internal", native_div),
         ("new_internal", native_new),
         ("cast_internal", native_cast),
+        ("eq_internal", native_eq),
         ("lt_internal", native_lt),
         ("le_internal", native_le),
         ("gt_internal", native_gt),

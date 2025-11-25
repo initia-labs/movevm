@@ -324,7 +324,10 @@ impl MoveHarness {
         ViewFunction::new(module_id, function_id, ty_args, args, true)
     }
 
-    pub fn run_authenticate(&mut self, message: AuthenticateMessage) -> Result<AccountAddress, VMStatus> {
+    pub fn run_authenticate(
+        &mut self,
+        message: AuthenticateMessage,
+    ) -> Result<AccountAddress, VMStatus> {
         let env = Env::new(
             "test".to_string(),
             0,

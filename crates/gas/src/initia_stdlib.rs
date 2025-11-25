@@ -126,6 +126,8 @@ crate::macros::define_gas_parameters!(
     [biguint_new_base: InternalGas, "biguint.new.base", 441],
     [biguint_cast_base: InternalGas, "biguint.cast.base", 441],
     [biguint_cast_per_byte: InternalGasPerByte, "biguint.cast.per_byte", 3],
+    [biguint_eq_base: InternalGas, "biguint.eq.base", 588],
+    [biguint_eq_per_byte: InternalGasPerByte, "biguint.eq.per_byte", 3],
     [biguint_lt_base: InternalGas, "biguint.lt.base", 588],
     [biguint_lt_per_byte: InternalGasPerByte, "biguint.lt.per_byte", 3],
     [biguint_gt_base: InternalGas, "biguint.gt.base", 588],
