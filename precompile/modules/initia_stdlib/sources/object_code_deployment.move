@@ -55,6 +55,11 @@ module initia_std::object_code_deployment {
         extend_ref: ExtendRef
     }
 
+    /// Tracks the number of deployments per publisher
+    struct DeploymentCounter has key {
+        count: u64
+    }
+
     #[event]
     /// Event emitted when code is published to an object.
     struct Publish has drop, store {
@@ -80,7 +85,7 @@ module initia_std::object_code_deployment {
     /// the code to be published via `code`. This contains a vector of modules to be deployed on-chain.
     public entry fun publish(
         publisher: &signer, _module_ids: vector<String>, code: vector<vector<u8>>
-    ) {
+    ) acquires DeploymentCounter {
         publish_v2(publisher, code);
     }
 
@@ -90,9 +95,8 @@ module initia_std::object_code_deployment {
     /// the code to be published via `code`. This contains a vector of modules to be deployed on-chain.
     public entry fun publish_v2(
         publisher: &signer, code: vector<vector<u8>>
-    ) {
-        let publisher_address = signer::address_of(publisher);
-        let object_seed = object_seed(publisher_address);
+    ) acquires DeploymentCounter {
+        let object_seed = object_seed(publisher);
         let constructor_ref = &object::create_named_object(publisher, object_seed);
         let code_signer = &object::generate_signer(constructor_ref);
         code::publish_v2(code_signer, code, 1);
@@ -105,14 +109,31 @@ module initia_std::object_code_deployment {
         );
     }
 
-    inline fun object_seed(publisher: address): vector<u8> {
-        let sequence_number = account::get_sequence_number(publisher) + 1;
+    inline fun object_seed(publisher: &signer): vector<u8> acquires DeploymentCounter {
+        let publisher_address = signer::address_of(publisher);
+        let sequence_number = account::get_sequence_number(publisher_address) + 1;
+        let count = get_and_increment_deployment_count(publisher);
         let seeds = vector[];
         vector::append(
             &mut seeds, bcs::to_bytes(&OBJECT_CODE_DEPLOYMENT_DOMAIN_SEPARATOR)
         );
         vector::append(&mut seeds, bcs::to_bytes(&sequence_number));
+        vector::append(&mut seeds, bcs::to_bytes(&count));
+
         seeds
+    }
+
+    inline fun get_and_increment_deployment_count(
+        publisher: &signer
+    ): u64 acquires DeploymentCounter {
+        let publisher_address = signer::address_of(publisher);
+        if (!exists<DeploymentCounter>(publisher_address)) {
+            move_to(publisher, DeploymentCounter { count: 0 });
+        };
+        let counter = borrow_global_mut<DeploymentCounter>(publisher_address);
+        let current = counter.count;
+        counter.count = current + 1;
+        current
     }
 
     #[deprecated]
