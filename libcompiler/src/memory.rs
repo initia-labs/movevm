@@ -214,7 +214,7 @@ impl Default for UnmanagedVector {
     }
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_new_unmanaged_vector"]
 pub extern "C" fn new_unmanaged_vector(
     nil: bool,
     ptr: *const u8,
@@ -231,7 +231,7 @@ pub extern "C" fn new_unmanaged_vector(
     }
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_destroy_unmanaged_vector"]
 pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
     let _ = v.consume();
 }
