@@ -55,7 +55,7 @@ include = [
     "UnmanagedVector",
     "ByteSliceView",
     "U8SliceView",
-    "Db",
+    "GoDb",
     "DbVTable",
     "DbT",
     "GoError",
