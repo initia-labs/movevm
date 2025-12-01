@@ -3,7 +3,7 @@ use initia_move_storage::state_view::StateView;
 use initia_move_types::access_path::AccessPath;
 use initia_move_types::errors::BackendError;
 
-use crate::db::Db;
+use crate::db::GoDb;
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
@@ -30,11 +30,11 @@ pub trait Storage {
 }
 
 pub struct GoStorage<'r> {
-    db: &'r Db,
+    db: &'r GoDb,
 }
 
 impl<'r> GoStorage<'r> {
-    pub fn new(db: &'r Db) -> Self {
+    pub fn new(db: &'r GoDb) -> Self {
         GoStorage { db }
     }
 }

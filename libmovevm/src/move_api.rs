@@ -1,4 +1,4 @@
-use crate::db::Db;
+use crate::db::GoDb;
 use crate::error::Error;
 use crate::storage::GoStorage;
 
@@ -8,7 +8,7 @@ use initia_move_api::handler as api_handler;
 use move_core_types::language_storage::{StructTag, TypeTag};
 
 pub fn decode_move_resource(
-    db_handle: Db,
+    db_handle: GoDb,
     struct_tag: &[u8],
     blob: &[u8],
 ) -> Result<Vec<u8>, Error> {
@@ -24,7 +24,7 @@ pub fn decode_move_resource(
     serde_json::to_vec(&resource).map_err(|e| Error::BackendFailure { msg: e.to_string() })
 }
 
-pub fn decode_move_value(db_handle: Db, type_tag: &[u8], blob: &[u8]) -> Result<Vec<u8>, Error> {
+pub fn decode_move_value(db_handle: GoDb, type_tag: &[u8], blob: &[u8]) -> Result<Vec<u8>, Error> {
     let storage = GoStorage::new(&db_handle);
     let type_tag: TypeTag = bcs::from_bytes(type_tag).unwrap();
 

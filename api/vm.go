@@ -10,12 +10,12 @@ import (
 )
 
 type VM struct {
-	ptr *C.vm_t
+	ptr *C.libmovevm_VmT
 }
 
 // ReleaseVM call ffi(`release_vm`) to release vm instance
 func ReleaseVM(vm VM) {
-	C.release_vm(vm.ptr)
+	C.libmovevm_release_vm(vm.ptr)
 }
 
 // AllocateVM call ffi(`allocate_vm`) to allocate vm instance
@@ -24,7 +24,7 @@ func AllocateVM(config []byte) VM {
 	defer runtime.KeepAlive(c)
 
 	return VM{
-		ptr: C.allocate_vm(c),
+		ptr: C.libmovevm_allocate_vm(c),
 	}
 }
 
@@ -59,8 +59,8 @@ func Initialize(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.initialize(vm.ptr, db, _api, e, mb, ap, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_initialize(vm.ptr, db, _api, e, mb, ap, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}
 
@@ -95,8 +95,8 @@ func ExecuteContract(
 	defer runtime.KeepAlive(msg)
 
 	errmsg := uninitializedUnmanagedVector()
-	res, err := C.execute_contract(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_execute_contract(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}
 
@@ -132,8 +132,8 @@ func ExecuteScript(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute_script(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_execute_script(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}
 
@@ -167,8 +167,8 @@ func ExecuteViewFunction(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute_view_function(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_execute_view_function(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, msg, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -203,8 +203,8 @@ func ExecuteAuthenticate(
 	defer runtime.KeepAlive(msg)
 
 	errmsg := uninitializedUnmanagedVector()
-	res, err := C.execute_authenticate(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, senderView, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_execute_authenticate(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, senderView, msg, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}
 

@@ -3,7 +3,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use crate::args::{GAS_BALANCE_ARG, VM_ARG};
 use crate::error::{handle_c_error_binary, Error};
 use crate::move_api as api_handler;
-use crate::{api::GoApi, vm, ByteSliceView, Db, UnmanagedVector};
+use crate::{api::GoApi, vm, ByteSliceView, GoDb, UnmanagedVector};
 
 use initia_move_types::entry_function::EntryFunction;
 use initia_move_types::env::Env;
@@ -18,9 +18,9 @@ use move_core_types::account_address::AccountAddress;
 
 #[allow(non_camel_case_types)]
 #[repr(C)]
-pub struct vm_t {}
+pub struct VmT {}
 
-pub fn to_vm(ptr: *mut vm_t) -> Option<&'static mut InitiaVM> {
+pub fn to_vm(ptr: *mut VmT) -> Option<&'static mut InitiaVM> {
     if ptr.is_null() {
         None
     } else {
@@ -38,26 +38,26 @@ pub fn to_gas_balance(ptr: *mut u64) -> Option<&'static mut u64> {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn release_vm(vm: *mut vm_t) {
+#[export_name = "libmovevm_release_vm"]
+pub extern "C" fn release_vm(vm: *mut VmT) {
     if !vm.is_null() {
         // this will free cache when it goes out of scope
         let _ = unsafe { Box::from_raw(vm as *mut InitiaVM) };
     }
 }
 
-#[no_mangle]
-pub extern "C" fn allocate_vm(config_payload: ByteSliceView) -> *mut vm_t {
+#[export_name = "libmovevm_allocate_vm"]
+pub extern "C" fn allocate_vm(config_payload: ByteSliceView) -> *mut VmT {
     let config: InitiaVMConfig = bcs::from_bytes(config_payload.read().unwrap()).unwrap();
     let vm = Box::into_raw(Box::new(InitiaVM::new(config)));
-    vm as *mut vm_t
+    vm as *mut VmT
 }
 
 // VM initializer
-#[no_mangle]
+#[export_name = "libmovevm_initialize"]
 pub extern "C" fn initialize(
-    vm_ptr: *mut vm_t,
-    db: Db,
+    vm_ptr: *mut VmT,
+    db: GoDb,
     api: GoApi,
     env_payload: ByteSliceView,
     module_bundle_payload: ByteSliceView,
@@ -83,11 +83,11 @@ pub extern "C" fn initialize(
 }
 
 // exported function to execute (an entrypoint of) contract
-#[no_mangle]
+#[export_name = "libmovevm_execute_contract"]
 pub extern "C" fn execute_contract(
-    vm_ptr: *mut vm_t,
+    vm_ptr: *mut VmT,
     gas_balance_ptr: *mut u64,
-    db: Db,
+    db: GoDb,
     api: GoApi,
     env_payload: ByteSliceView,
     senders: ByteSliceView,
@@ -124,11 +124,11 @@ pub extern "C" fn execute_contract(
 }
 
 // exported function to execute (an entrypoint of) script
-#[no_mangle]
+#[export_name = "libmovevm_execute_script"]
 pub extern "C" fn execute_script(
-    vm_ptr: *mut vm_t,
+    vm_ptr: *mut VmT,
     gas_balance_ptr: *mut u64,
-    db: Db,
+    db: GoDb,
     api: GoApi,
     env_payload: ByteSliceView,
     senders: ByteSliceView,
@@ -164,11 +164,11 @@ pub extern "C" fn execute_script(
 }
 
 // exported function to execute #[view] function
-#[no_mangle]
+#[export_name = "libmovevm_execute_view_function"]
 pub extern "C" fn execute_view_function(
-    vm_ptr: *mut vm_t,
+    vm_ptr: *mut VmT,
     gas_balance_ptr: *mut u64,
-    db: Db,
+    db: GoDb,
     api: GoApi,
     env_payload: ByteSliceView,
     view_function_payload: ByteSliceView,
@@ -209,11 +209,11 @@ pub extern "C" fn execute_view_function(
 }
 
 // exported function to execute #[view] function
-#[no_mangle]
+#[export_name = "libmovevm_execute_authenticate"]
 pub extern "C" fn execute_authenticate(
-    vm_ptr: *mut vm_t,
+    vm_ptr: *mut VmT,
     gas_balance_ptr: *mut u64,
-    db: Db,
+    db: GoDb,
     api: GoApi,
     env_payload: ByteSliceView,
     sender: ByteSliceView,
@@ -257,7 +257,7 @@ pub extern "C" fn execute_authenticate(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_read_module_info"]
 pub extern "C" fn read_module_info(
     errmsg: Option<&mut UnmanagedVector>,
     compiled: ByteSliceView,
@@ -273,9 +273,9 @@ pub extern "C" fn read_module_info(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_decode_move_resource"]
 pub extern "C" fn decode_move_resource(
-    db: Db,
+    db: GoDb,
     errmsg: Option<&mut UnmanagedVector>,
     struct_tag: ByteSliceView,
     resource_bytes: ByteSliceView,
@@ -292,9 +292,9 @@ pub extern "C" fn decode_move_resource(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_decode_move_value"]
 pub extern "C" fn decode_move_value(
-    db: Db,
+    db: GoDb,
     errmsg: Option<&mut UnmanagedVector>,
     type_tag: ByteSliceView,
     value_bytes: ByteSliceView,
@@ -311,7 +311,7 @@ pub extern "C" fn decode_move_value(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_decode_module_bytes"]
 pub extern "C" fn decode_module_bytes(
     errmsg: Option<&mut UnmanagedVector>,
     module_bytes: ByteSliceView,
@@ -327,7 +327,7 @@ pub extern "C" fn decode_module_bytes(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_decode_script_bytes"]
 pub extern "C" fn decode_script_bytes(
     errmsg: Option<&mut UnmanagedVector>,
     script_bytes: ByteSliceView,
@@ -343,7 +343,7 @@ pub extern "C" fn decode_script_bytes(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_parse_struct_tag"]
 pub extern "C" fn parse_struct_tag(
     errmsg: Option<&mut UnmanagedVector>,
     struct_tag_str: ByteSliceView,
@@ -358,7 +358,7 @@ pub extern "C" fn parse_struct_tag(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_stringify_struct_tag"]
 pub extern "C" fn stringify_struct_tag(
     errmsg: Option<&mut UnmanagedVector>,
     struct_tag: ByteSliceView,

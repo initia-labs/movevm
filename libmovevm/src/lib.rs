@@ -13,10 +13,11 @@ mod storage;
 mod table_storage;
 mod vm;
 
-pub use api::{GoApi, GoApi_vtable};
-pub use db::{db_t, Db};
+pub use api::{ApiVTable, GoApi};
+pub use db::{DbT, GoDb};
 pub use error::GoError;
-pub use iterator::Iterator_vtable;
+pub use iterator::IteratorVTable;
+pub use iterator::{GoIter, IteratorT};
 pub use memory::{
     destroy_unmanaged_vector, new_unmanaged_vector, ByteSliceView, U8SliceView, UnmanagedVector,
 };

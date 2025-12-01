@@ -10,7 +10,7 @@ use move_core_types::u256::U256;
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
 #[repr(C)]
-pub struct api_t {
+pub struct ApiT {
     _private: [u8; 0],
 }
 
@@ -18,9 +18,9 @@ pub struct api_t {
 // and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct GoApi_vtable {
+pub struct ApiVTable {
     pub query: extern "C" fn(
-        *const api_t,
+        *const ApiT,
         U8SliceView, // request
         u64,
         *mut UnmanagedVector, // response
@@ -28,7 +28,7 @@ pub struct GoApi_vtable {
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub get_account_info: extern "C" fn(
-        *const api_t,
+        *const ApiT,
         U8SliceView,          // addr
         *mut bool,            // found
         *mut u64,             // account_number
@@ -38,7 +38,7 @@ pub struct GoApi_vtable {
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub amount_to_share: extern "C" fn(
-        *const api_t,
+        *const ApiT,
         U8SliceView,          // validator
         U8SliceView,          // metadata
         u64,                  // amount
@@ -46,7 +46,7 @@ pub struct GoApi_vtable {
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub share_to_amount: extern "C" fn(
-        *const api_t,
+        *const ApiT,
         U8SliceView,          // validator
         U8SliceView,          // metadata
         U8SliceView,          // share
@@ -54,12 +54,12 @@ pub struct GoApi_vtable {
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub unbond_timestamp: extern "C" fn(
-        *const api_t,
+        *const ApiT,
         *mut u64,             // unbond_timestamp
         *mut UnmanagedVector, // error_msg
     ) -> i32,
     pub get_price: extern "C" fn(
-        *const api_t,
+        *const ApiT,
         U8SliceView,          // pair_id
         *mut UnmanagedVector, // price
         *mut u64,             // updated_at
@@ -71,8 +71,8 @@ pub struct GoApi_vtable {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi {
-    pub state: *const api_t,
-    pub vtable: GoApi_vtable,
+    pub state: *const ApiT,
+    pub vtable: ApiVTable,
 }
 
 // We must declare that these are safe to Send, to use in wasm.

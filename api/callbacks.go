@@ -7,34 +7,34 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef GoError (*read_db_fn)(db_t *ptr, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
-typedef GoError (*write_db_fn)(db_t *ptr, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
-typedef GoError (*remove_db_fn)(db_t *ptr, U8SliceView key, UnmanagedVector *errOut);
-typedef GoError (*scan_db_fn)(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
+typedef libmovevm_GoError (*read_db_fn)(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *val, libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*write_db_fn)(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_U8SliceView val, libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*remove_db_fn)(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*scan_db_fn)(libmovevm_DbT *ptr, libmovevm_U8SliceView prefix, libmovevm_U8SliceView start, libmovevm_U8SliceView end, int32_t order, libmovevm_GoIter *out, libmovevm_UnmanagedVector *errOut);
 // and api
-typedef GoError (*query_fn)(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
-typedef GoError (*get_account_info_fn)(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence,  uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut);
-typedef GoError (*amount_to_share_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, UnmanagedVector *share,  UnmanagedVector *errOut);
-typedef GoError (*share_to_amount_fn)(api_t *ptr, U8SliceView validator, U8SliceView metadata, U8SliceView share, uint64_t *amount,  UnmanagedVector *errOut);
-typedef GoError (*unbond_timestamp_fn)(api_t *ptr, uint64_t *unbondTimestamp,  UnmanagedVector *errOut);
-typedef GoError (*get_price_fn)(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
+typedef libmovevm_GoError (*query_fn)(libmovevm_ApiT *ptr, libmovevm_U8SliceView request, uint64_t gasBalance, libmovevm_UnmanagedVector *response, uint64_t *usedGas, libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*get_account_info_fn)(libmovevm_ApiT *ptr, libmovevm_U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence,  uint8_t *account_type, bool *is_blocked, libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*amount_to_share_fn)(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView metadata, uint64_t amount, libmovevm_UnmanagedVector *share,  libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*share_to_amount_fn)(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView metadata, libmovevm_U8SliceView share, uint64_t *amount,  libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*unbond_timestamp_fn)(libmovevm_ApiT *ptr, uint64_t *unbondTimestamp,  libmovevm_UnmanagedVector *errOut);
+typedef libmovevm_GoError (*get_price_fn)(libmovevm_ApiT *ptr, libmovevm_U8SliceView pairId, libmovevm_UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, libmovevm_UnmanagedVector *errOut);
 // and iterator
-typedef GoError (*next_db_fn)(iterator_t ptr, UnmanagedVector *key, UnmanagedVector *errOut);
+typedef libmovevm_GoError (*next_db_fn)(libmovevm_IteratorT ptr, libmovevm_UnmanagedVector *key, libmovevm_UnmanagedVector *errOut);
 
 // forward declarations (db)
-GoError cGet_cgo(db_t *ptr, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
-GoError cSet_cgo(db_t *ptr, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
-GoError cDelete_cgo(db_t *ptr, U8SliceView key, UnmanagedVector *errOut);
-GoError cScan_cgo(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
+libmovevm_GoError cGet_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *val, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cSet_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_U8SliceView val, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cDelete_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cScan_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView prefix, libmovevm_U8SliceView start, libmovevm_U8SliceView end, int32_t order, libmovevm_GoIter *out, libmovevm_UnmanagedVector *errOut);
 // api
-GoError cQuery_cgo(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
-GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut);
-GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, UnmanagedVector *share, UnmanagedVector *errOut);
-GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView metadata, U8SliceView share, uint64_t *amount, UnmanagedVector *errOut);
-GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);
-GoError cGetPrice_cgo(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
+libmovevm_GoError cQuery_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView request, uint64_t gasBalance, libmovevm_UnmanagedVector *response, uint64_t *usedGas, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cGetAccountInfo_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cAmountToShare_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView metadata, uint64_t amount, libmovevm_UnmanagedVector *share, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cShareToAmount_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView metadata, libmovevm_U8SliceView share, uint64_t *amount, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cUnbondTimestamp_cgo(libmovevm_ApiT *ptr, uint64_t *unbondTimestamp, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cGetPrice_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView pairId, libmovevm_UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, libmovevm_UnmanagedVector *errOut);
 // iterator
-GoError cNext_cgo(iterator_t *ptr, UnmanagedVector *key, UnmanagedVector *errOut);
+libmovevm_GoError cNext_cgo(libmovevm_IteratorT ptr, libmovevm_UnmanagedVector *key, libmovevm_UnmanagedVector *errOut);
 */
 import "C"
 
@@ -52,11 +52,11 @@ import (
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
 // or get odd cgo build errors about duplicate definitions
 
-func recoverPanic(ret *C.GoError) {
+func recoverPanic(ret *C.libmovevm_GoError) {
 	if rec := recover(); rec != nil {
 		log.Printf("Panic in Go callback: %#v\n", rec)
 		debug.PrintStack()
-		*ret = C.GoError_Panic
+		*ret = C.libmovevm_GoError_Panic
 	}
 }
 
@@ -90,7 +90,7 @@ type KVStore interface {
 	ReverseIterator(start, end []byte) dbm.Iterator
 }
 
-var db_vtable = C.Db_vtable{
+var dbVTable = C.libmovevm_DbVTable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
 	write_db:  (C.write_db_fn)(C.cSet_cgo),
 	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
@@ -117,14 +117,14 @@ func buildDBState(kv KVStore, callID uint64) DBState {
 
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
-func buildDB(state *DBState) C.Db {
-	return C.Db{
-		state:  (*C.db_t)(unsafe.Pointer(state)),
-		vtable: db_vtable,
+func buildDB(state *DBState) C.libmovevm_GoDb {
+	return C.libmovevm_GoDb{
+		state:  (*C.libmovevm_DbT)(unsafe.Pointer(state)),
+		vtable: dbVTable,
 	}
 }
 
-var iterator_vtable = C.Iterator_vtable{
+var iteratorVTable = C.libmovevm_IteratorVTable{
 	next_db: (C.next_db_fn)(C.cNext_cgo),
 }
 
@@ -135,24 +135,24 @@ const frameLenLimit = 32768
 
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(callID uint64, it dbm.Iterator) (C.iterator_t, error) {
+func buildIterator(callID uint64, it dbm.Iterator) (C.libmovevm_IteratorT, error) {
 	idx, err := storeIterator(callID, it, frameLenLimit)
 	if err != nil {
-		return C.iterator_t{}, err
+		return C.libmovevm_IteratorT{}, err
 	}
-	return C.iterator_t{
+	return C.libmovevm_IteratorT{
 		call_id:        cu64(callID),
 		iterator_index: cu64(idx),
 	}, nil
 }
 
 //export cGet
-func cGet(ptr *C.db_t, key C.U8SliceView, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cGet(ptr *C.libmovevm_DbT, key C.libmovevm_U8SliceView, val *C.libmovevm_UnmanagedVector, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || val == nil || errOut == nil {
 		// we received an invalid pointer
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*val).is_none || !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -167,16 +167,16 @@ func cGet(ptr *C.db_t, key C.U8SliceView, val *C.UnmanagedVector, errOut *C.Unma
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
 	*val = newUnmanagedVector(v)
 
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cSet
-func cSet(ptr *C.db_t, key C.U8SliceView, val C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cSet(ptr *C.libmovevm_DbT, key C.libmovevm_U8SliceView, val C.libmovevm_U8SliceView, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || errOut == nil {
 		// we received an invalid pointer
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -188,16 +188,16 @@ func cSet(ptr *C.db_t, key C.U8SliceView, val C.U8SliceView, errOut *C.Unmanaged
 
 	kv.Set(k, v)
 
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cDelete
-func cDelete(ptr *C.db_t, key C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cDelete(ptr *C.libmovevm_DbT, key C.libmovevm_U8SliceView, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || errOut == nil {
 		// we received an invalid pointer
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -208,16 +208,16 @@ func cDelete(ptr *C.db_t, key C.U8SliceView, errOut *C.UnmanagedVector) (ret C.G
 
 	kv.Delete(k)
 
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cScan
-func cScan(ptr *C.db_t, prefix C.U8SliceView, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cScan(ptr *C.libmovevm_DbT, prefix C.libmovevm_U8SliceView, start C.libmovevm_U8SliceView, end C.libmovevm_U8SliceView, order ci32, out *C.libmovevm_GoIter, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || out == nil || errOut == nil {
 		// we received an invalid pointer
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -231,7 +231,7 @@ func cScan(ptr *C.db_t, prefix C.U8SliceView, start C.U8SliceView, end C.U8Slice
 
 	if len(p) == 0 {
 		*errOut = newUnmanagedVector([]byte(errors.New("iterator prefix should not be empty").Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	var endBytes []byte
@@ -248,23 +248,23 @@ func cScan(ptr *C.db_t, prefix C.U8SliceView, start C.U8SliceView, end C.U8Slice
 	case 2: // Descending
 		iter = kv.ReverseIterator(append(p, s...), endBytes)
 	default:
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 
 	cIterator, err := buildIterator(state.CallID, iter)
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	out.state = cIterator
-	out.vtable = iterator_vtable
-	return C.GoError_None
+	out.vtable = iteratorVTable
+	return C.libmovevm_GoError_None
 }
 
 //export cNext
-func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cNext(ref C.libmovevm_IteratorT, key *C.libmovevm_UnmanagedVector, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	// typical usage of iterator
 	// 	for ; itr.Valid(); itr.Next() {
 	// 		k, v := itr.Key(); itr.Value()
@@ -274,7 +274,7 @@ func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) 
 	defer recoverPanic(&ret)
 	if ref.call_id == 0 || key == nil || errOut == nil {
 		// we received an invalid pointer
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*key).is_none || !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -286,7 +286,7 @@ func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) 
 	}
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
-		return C.GoError_None
+		return C.libmovevm_GoError_None
 	}
 
 	// call Next at the end, upon creation we have first data loaded
@@ -295,7 +295,7 @@ func cNext(ref C.iterator_t, key *C.UnmanagedVector, errOut *C.UnmanagedVector) 
 	iter.Next()
 
 	*key = newUnmanagedVector(k)
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 /***** GoAPI *******/
@@ -309,7 +309,7 @@ type GoAPI interface {
 	GetPrice(string) ([]byte, uint64, uint64, error)
 }
 
-var api_vtable = C.GoApi_vtable{
+var apiVTable = C.libmovevm_ApiVTable{
 	query:            (C.query_fn)(C.cQuery_cgo),
 	get_account_info: (C.get_account_info_fn)(C.cGetAccountInfo_cgo),
 	amount_to_share:  (C.amount_to_share_fn)(C.cAmountToShare_cgo),
@@ -318,21 +318,21 @@ var api_vtable = C.GoApi_vtable{
 	get_price:        (C.get_price_fn)(C.cGetPrice_cgo),
 }
 
-// contract: original pointer/struct referenced must live longer than C.GoApi struct
+// contract: original pointer/struct referenced must live longer than C.libmovevm_GoApi struct
 // since this is only used internally, we can verify the code that this is the case
-func buildAPI(api *GoAPI) C.GoApi {
-	return C.GoApi{
-		state:  (*C.api_t)(unsafe.Pointer(api)),
-		vtable: api_vtable,
+func buildAPI(api *GoAPI) C.libmovevm_GoApi {
+	return C.libmovevm_GoApi{
+		state:  (*C.libmovevm_ApiT)(unsafe.Pointer(api)),
+		vtable: apiVTable,
 	}
 }
 
 //export cQuery
-func cQuery(ptr *C.api_t, request C.U8SliceView, gasBalance C.uint64_t, response *C.UnmanagedVector, usedGas *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cQuery(ptr *C.libmovevm_ApiT, request C.libmovevm_U8SliceView, gasBalance C.uint64_t, response *C.libmovevm_UnmanagedVector, usedGas *C.uint64_t, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if errOut == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*response).is_none || !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -344,39 +344,39 @@ func cQuery(ptr *C.api_t, request C.U8SliceView, gasBalance C.uint64_t, response
 	err := json.Unmarshal(req, &queryReq)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 	gb := uint64(gasBalance)
 
 	res, ug, err := api.Query(queryReq, gb)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 	*usedGas = C.uint64_t(ug)
 	*response = newUnmanagedVector(res)
 
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cGetAccountInfo
-func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_number *C.uint64_t, sequence *C.uint64_t, account_type *C.uint8_t, is_blocked *C.bool, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cGetAccountInfo(ptr *C.libmovevm_ApiT, addr C.libmovevm_U8SliceView, found *C.bool, account_number *C.uint64_t, sequence *C.uint64_t, account_type *C.uint8_t, is_blocked *C.bool, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if found == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if account_number == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if sequence == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if account_type == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if errOut == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -388,7 +388,7 @@ func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_nu
 	accAddr, err := types.NewAccountAddressFromBytes(a)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	f, an, seq, accType, isBlocked := api.GetAccountInfo(accAddr)
@@ -398,18 +398,18 @@ func cGetAccountInfo(ptr *C.api_t, addr C.U8SliceView, found *C.bool, account_nu
 	*account_type = C.uint8_t(accType)
 	*is_blocked = C.bool(isBlocked)
 
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cAmountToShare
-func cAmountToShare(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceView, amount C.uint64_t, share *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cAmountToShare(ptr *C.libmovevm_ApiT, validator C.libmovevm_U8SliceView, metadata C.libmovevm_U8SliceView, amount C.uint64_t, share *C.libmovevm_UnmanagedVector, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if share == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if errOut == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -424,28 +424,28 @@ func cAmountToShare(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceVie
 	t, err := types.BcsDeserializeAccountAddress(m)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	s, err := api.AmountToShare(v, t, a)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	*share = newUnmanagedVector([]byte(s))
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cShareToAmount
-func cShareToAmount(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceView, share C.U8SliceView, amount *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cShareToAmount(ptr *C.libmovevm_ApiT, validator C.libmovevm_U8SliceView, metadata C.libmovevm_U8SliceView, share C.libmovevm_U8SliceView, amount *C.uint64_t, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if amount == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if errOut == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -460,28 +460,28 @@ func cShareToAmount(ptr *C.api_t, validator C.U8SliceView, metadata C.U8SliceVie
 	t, err := types.BcsDeserializeAccountAddress(m)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	a, err := api.ShareToAmount(v, t, string(s))
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	*amount = C.uint64_t(a)
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cUnbondTimestamp
-func cUnbondTimestamp(ptr *C.api_t, unbondTimestamp *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cUnbondTimestamp(ptr *C.libmovevm_ApiT, unbondTimestamp *C.uint64_t, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if unbondTimestamp == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if errOut == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -491,18 +491,18 @@ func cUnbondTimestamp(ptr *C.api_t, unbondTimestamp *C.uint64_t, errOut *C.Unman
 
 	t := api.UnbondTimestamp()
 	*unbondTimestamp = C.uint64_t(t)
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }
 
 //export cGetPrice
-func cGetPrice(ptr *C.api_t, pairId C.U8SliceView, price *C.UnmanagedVector, updatedAt *C.uint64_t, decimals *C.uint64_t, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cGetPrice(ptr *C.libmovevm_ApiT, pairId C.libmovevm_U8SliceView, price *C.libmovevm_UnmanagedVector, updatedAt *C.uint64_t, decimals *C.uint64_t, errOut *C.libmovevm_UnmanagedVector) (ret C.libmovevm_GoError) {
 	defer recoverPanic(&ret)
 
 	if price == nil || updatedAt == nil || decimals == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if errOut == nil {
-		return C.GoError_BadArgument
+		return C.libmovevm_GoError_BadArgument
 	}
 	if !(*errOut).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
@@ -514,11 +514,11 @@ func cGetPrice(ptr *C.api_t, pairId C.U8SliceView, price *C.UnmanagedVector, upd
 	p, u, d, err := api.GetPrice(string(pid))
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+		return C.libmovevm_GoError_User
 	}
 
 	*price = newUnmanagedVector(p)
 	*updatedAt = C.uint64_t(u)
 	*decimals = C.uint64_t(d)
-	return C.GoError_None
+	return C.libmovevm_GoError_None
 }

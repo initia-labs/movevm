@@ -14,11 +14,11 @@
 #include <stdlib.h>
 
 
-enum ErrnoValue {
-  ErrnoValue_Success = 0,
-  ErrnoValue_Other = 1,
+enum libcompiler_ErrnoValue {
+  libcompiler_ErrnoValue_Success = 0,
+  libcompiler_ErrnoValue_Other = 1,
 };
-typedef int32_t ErrnoValue;
+typedef int32_t libcompiler_ErrnoValue;
 
 /**
  * An optional Vector type that requires explicit creation and destruction
@@ -63,7 +63,7 @@ typedef struct {
   uint8_t *ptr;
   size_t len;
   size_t cap;
-} UnmanagedVector;
+} libcompiler_UnmanagedVector;
 
 /**
  * A view into an externally owned byte slice (Go `[]byte`).
@@ -79,44 +79,47 @@ typedef struct {
   bool is_nil;
   const uint8_t *ptr;
   size_t len;
-} ByteSliceView;
+} libcompiler_ByteSliceView;
 
-UnmanagedVector build_move_package(UnmanagedVector *errmsg, ByteSliceView compiler_args_payload);
+libcompiler_UnmanagedVector libcompiler_build_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                           libcompiler_ByteSliceView compiler_args_payload);
 
-UnmanagedVector clean_move_package(UnmanagedVector *errmsg,
-                                   ByteSliceView compiler_args_payload,
-                                   bool clean_cache,
-                                   bool clean_byproduct,
-                                   bool force);
+libcompiler_UnmanagedVector libcompiler_clean_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                           libcompiler_ByteSliceView compiler_args_payload,
+                                                           bool clean_cache,
+                                                           bool clean_byproduct,
+                                                           bool force);
 
-UnmanagedVector coverage_bytecode_move_package(UnmanagedVector *errmsg,
-                                               ByteSliceView compiler_args_payload,
-                                               ByteSliceView coverage_opt_payload);
+libcompiler_UnmanagedVector libcompiler_coverage_bytecode_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                                       libcompiler_ByteSliceView compiler_args_payload,
+                                                                       libcompiler_ByteSliceView coverage_opt_payload);
 
-UnmanagedVector coverage_source_move_package(UnmanagedVector *errmsg,
-                                             ByteSliceView compiler_args_payload,
-                                             ByteSliceView coverage_opt_payload);
+libcompiler_UnmanagedVector libcompiler_coverage_source_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                                     libcompiler_ByteSliceView compiler_args_payload,
+                                                                     libcompiler_ByteSliceView coverage_opt_payload);
 
-UnmanagedVector coverage_summary_move_package(UnmanagedVector *errmsg,
-                                              ByteSliceView compiler_args_payload,
-                                              ByteSliceView coverage_opt_payload);
+libcompiler_UnmanagedVector libcompiler_coverage_summary_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                                      libcompiler_ByteSliceView compiler_args_payload,
+                                                                      libcompiler_ByteSliceView coverage_opt_payload);
 
-UnmanagedVector create_new_move_package(UnmanagedVector *errmsg,
-                                        ByteSliceView compiler_args_payload,
-                                        ByteSliceView name_view,
-                                        ByteSliceView movevm_version_view,
-                                        bool use_minlib);
+libcompiler_UnmanagedVector libcompiler_create_new_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                                libcompiler_ByteSliceView compiler_args_payload,
+                                                                libcompiler_ByteSliceView name_view,
+                                                                libcompiler_ByteSliceView movevm_version_view,
+                                                                bool use_minlib);
 
-void destroy_unmanaged_vector(UnmanagedVector v);
+void libcompiler_destroy_unmanaged_vector(libcompiler_UnmanagedVector v);
 
-UnmanagedVector docgen_move_package(UnmanagedVector *errmsg,
-                                    ByteSliceView compiler_args_payload,
-                                    ByteSliceView docgen_opt_payload);
+libcompiler_UnmanagedVector libcompiler_docgen_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                            libcompiler_ByteSliceView compiler_args_payload,
+                                                            libcompiler_ByteSliceView docgen_opt_payload);
 
-UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, size_t length);
+libcompiler_UnmanagedVector libcompiler_new_unmanaged_vector(bool nil,
+                                                             const uint8_t *ptr,
+                                                             size_t length);
 
-UnmanagedVector test_move_package(UnmanagedVector *errmsg,
-                                  ByteSliceView compiler_args_payload,
-                                  ByteSliceView test_opt_payload);
+libcompiler_UnmanagedVector libcompiler_test_move_package(libcompiler_UnmanagedVector *errmsg,
+                                                          libcompiler_ByteSliceView compiler_args_payload,
+                                                          libcompiler_ByteSliceView test_opt_payload);
 
 #endif /* __LIBCOMPILER__ */

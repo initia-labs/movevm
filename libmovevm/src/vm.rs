@@ -1,5 +1,5 @@
 use crate::api::GoApi;
-use crate::db::Db;
+use crate::db::GoDb;
 use crate::result::generate_result;
 use crate::result::to_vec;
 use crate::storage::GoStorage;
@@ -21,7 +21,7 @@ use move_core_types::effects::Op;
 
 pub(crate) fn initialize_vm(
     vm: &mut InitiaVM,
-    db_handle: Db,
+    db_handle: GoDb,
     api: GoApi,
     env: Env,
     module_bundle: ModuleBundle,
@@ -49,7 +49,7 @@ pub(crate) fn initialize_vm(
 pub(crate) fn execute_contract(
     vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
-    db_handle: Db,
+    db_handle: GoDb,
     api: GoApi,
     env: Env,
     message: Message,
@@ -70,7 +70,7 @@ pub(crate) fn execute_contract(
 pub(crate) fn execute_script(
     vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
-    db_handle: Db,
+    db_handle: GoDb,
     api: GoApi,
     env: Env,
     message: Message,
@@ -92,7 +92,7 @@ pub(crate) fn execute_script(
 pub(crate) fn execute_authenticate(
     vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
-    db_handle: Db,
+    db_handle: GoDb,
     api: GoApi,
     env: Env,
     authenticate_message: AuthenticateMessage,
@@ -116,7 +116,7 @@ pub(crate) fn execute_authenticate(
 pub(crate) fn execute_view_function(
     vm: &mut InitiaVM,
     gas_meter: &mut InitiaGasMeter,
-    db_handle: Db,
+    db_handle: GoDb,
     api: GoApi,
     env: Env,
     view_fn: ViewFunction,

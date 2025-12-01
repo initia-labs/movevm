@@ -24,7 +24,7 @@ type (
 
 /**** To error module ***/
 
-func errorWithMessage(err error, b C.UnmanagedVector) error {
+func errorWithMessage(err error, b C.libmovevm_UnmanagedVector) error {
 	msg := copyAndDestroyUnmanagedVector(b)
 	if msg == nil {
 		return err

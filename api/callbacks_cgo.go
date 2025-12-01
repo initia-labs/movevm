@@ -5,56 +5,56 @@ package api
 #include <stdio.h>
 
 // imports (db)
-GoError cGet(db_t *ptr, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
-GoError cSet(db_t *ptr, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
-GoError cDelete(db_t *ptr, U8SliceView key, UnmanagedVector *errOut);
-GoError cScan(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
+libmovevm_GoError cGet(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *val, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cSet(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_U8SliceView val, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cDelete(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cScan(libmovevm_DbT *ptr, libmovevm_U8SliceView prefix, libmovevm_U8SliceView start, libmovevm_U8SliceView end, int32_t order, libmovevm_GoIter *out, libmovevm_UnmanagedVector *errOut);
 // imports (api)
-GoError cQuery(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut);
-GoError cGetAccountInfo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut);
-GoError cAmountToShare(api_t *ptr, U8SliceView validator, U8SliceView metadata, uint64_t amount, UnmanagedVector *share, UnmanagedVector *errOut);
-GoError cShareToAmount(api_t *ptr, U8SliceView validator, U8SliceView metadata, U8SliceView share, uint64_t *amount, UnmanagedVector *errOut);
-GoError cUnbondTimestamp(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut);
-GoError cGetPrice(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut);
+libmovevm_GoError cQuery(libmovevm_ApiT *ptr, libmovevm_U8SliceView request, uint64_t gasBalance, libmovevm_UnmanagedVector *response, uint64_t *usedGas, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cGetAccountInfo(libmovevm_ApiT *ptr, libmovevm_U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cAmountToShare(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView metadata, uint64_t amount, libmovevm_UnmanagedVector *share, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cShareToAmount(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView metadata, libmovevm_U8SliceView share, uint64_t *amount, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cUnbondTimestamp(libmovevm_ApiT *ptr, uint64_t *unbondTimestamp, libmovevm_UnmanagedVector *errOut);
+libmovevm_GoError cGetPrice(libmovevm_ApiT *ptr, libmovevm_U8SliceView pairId, libmovevm_UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, libmovevm_UnmanagedVector *errOut);
 // imports (iterator)
-GoError cNext(iterator_t *ptr, UnmanagedVector *key, UnmanagedVector *errOut);
+libmovevm_GoError cNext(libmovevm_IteratorT ptr, libmovevm_UnmanagedVector *key, libmovevm_UnmanagedVector *errOut);
 
 // Gateway functions (db)
-GoError cGet_cgo(db_t *ptr, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut) {
+libmovevm_GoError cGet_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *val, libmovevm_UnmanagedVector *errOut) {
 	return cGet(ptr, key, val, errOut);
 }
-GoError cSet_cgo(db_t *ptr, U8SliceView key, U8SliceView val, UnmanagedVector *errOut) {
+libmovevm_GoError cSet_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_U8SliceView val, libmovevm_UnmanagedVector *errOut) {
 	return cSet(ptr, key, val, errOut);
 }
-GoError cDelete_cgo(db_t *ptr, U8SliceView key, UnmanagedVector *errOut) {
+libmovevm_GoError cDelete_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView key, libmovevm_UnmanagedVector *errOut) {
 	return cDelete(ptr, key, errOut);
 }
-GoError cScan_cgo(db_t *ptr, U8SliceView prefix, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut) {
+libmovevm_GoError cScan_cgo(libmovevm_DbT *ptr, libmovevm_U8SliceView prefix, libmovevm_U8SliceView start, libmovevm_U8SliceView end, int32_t order, libmovevm_GoIter *out, libmovevm_UnmanagedVector *errOut) {
 	return cScan(ptr, prefix, start, end, order, out, errOut);
 }
 
 // Gateway functions (iterator)
-GoError cNext_cgo(iterator_t *ptr, UnmanagedVector *key, UnmanagedVector *errOut) {
+libmovevm_GoError cNext_cgo(libmovevm_IteratorT ptr, libmovevm_UnmanagedVector *key, libmovevm_UnmanagedVector *errOut) {
 	return cNext(ptr, key, errOut);
 }
 
 // Gateway functions (api)
-GoError cQuery_cgo(api_t *ptr, U8SliceView request, uint64_t gasBalance, UnmanagedVector *response, uint64_t *usedGas, UnmanagedVector *errOut) {
+libmovevm_GoError cQuery_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView request, uint64_t gasBalance, libmovevm_UnmanagedVector *response, uint64_t *usedGas, libmovevm_UnmanagedVector *errOut) {
 	return cQuery(ptr, request, gasBalance, response, usedGas, errOut);
 }
-GoError cGetAccountInfo_cgo(api_t *ptr, U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, UnmanagedVector *errOut) {
+libmovevm_GoError cGetAccountInfo_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView addr, bool *found, uint64_t *account_number, uint64_t *sequence, uint8_t *account_type, bool *is_blocked, libmovevm_UnmanagedVector *errOut) {
     return cGetAccountInfo(ptr, addr, found, account_number, sequence, account_type, is_blocked, errOut);
 }
-GoError cAmountToShare_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinType, uint64_t amount, UnmanagedVector *share, UnmanagedVector *errOut) {
+libmovevm_GoError cAmountToShare_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView coinType, uint64_t amount, libmovevm_UnmanagedVector *share, libmovevm_UnmanagedVector *errOut) {
     return cAmountToShare(ptr, validator, coinType, amount, share, errOut);
 }
-GoError cShareToAmount_cgo(api_t *ptr, U8SliceView validator, U8SliceView coinType, U8SliceView share, uint64_t *amount, UnmanagedVector *errOut) {
+libmovevm_GoError cShareToAmount_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView validator, libmovevm_U8SliceView coinType, libmovevm_U8SliceView share, uint64_t *amount, libmovevm_UnmanagedVector *errOut) {
     return cShareToAmount(ptr, validator, coinType, share, amount, errOut);
 }
-GoError cUnbondTimestamp_cgo(api_t *ptr, uint64_t *unbondTimestamp, UnmanagedVector *errOut) {
+libmovevm_GoError cUnbondTimestamp_cgo(libmovevm_ApiT *ptr, uint64_t *unbondTimestamp, libmovevm_UnmanagedVector *errOut) {
     return cUnbondTimestamp(ptr, unbondTimestamp, errOut);
 }
-GoError cGetPrice_cgo(api_t *ptr, U8SliceView pairId, UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, UnmanagedVector *errOut) {
+libmovevm_GoError cGetPrice_cgo(libmovevm_ApiT *ptr, libmovevm_U8SliceView pairId, libmovevm_UnmanagedVector *price, uint64_t *updatedAt, uint64_t *decimals, libmovevm_UnmanagedVector *errOut) {
     return cGetPrice(ptr, pairId, price, updatedAt, decimals, errOut);
 }
 */

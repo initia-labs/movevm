@@ -13,7 +13,7 @@ use initia_move_compiler::{self, New};
 use move_cli::base::build::Build;
 use move_cli::base::test::Test;
 
-#[no_mangle]
+#[export_name = "libcompiler_build_move_package"]
 pub extern "C" fn build_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -31,7 +31,7 @@ pub extern "C" fn build_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_test_move_package"]
 pub extern "C" fn test_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -56,7 +56,7 @@ pub extern "C" fn test_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_coverage_summary_move_package"]
 pub extern "C" fn coverage_summary_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -77,7 +77,7 @@ pub extern "C" fn coverage_summary_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_coverage_source_move_package"]
 pub extern "C" fn coverage_source_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -98,7 +98,7 @@ pub extern "C" fn coverage_source_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_coverage_bytecode_move_package"]
 pub extern "C" fn coverage_bytecode_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -119,7 +119,7 @@ pub extern "C" fn coverage_bytecode_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_docgen_move_package"]
 pub extern "C" fn docgen_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -140,7 +140,7 @@ pub extern "C" fn docgen_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_create_new_move_package"]
 pub extern "C" fn create_new_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
@@ -168,7 +168,7 @@ pub extern "C" fn create_new_move_package(
     UnmanagedVector::new(Some(ret))
 }
 
-#[no_mangle]
+#[export_name = "libcompiler_clean_move_package"]
 pub extern "C" fn clean_move_package(
     errmsg: Option<&mut UnmanagedVector>,
     compiler_args_payload: ByteSliceView,
