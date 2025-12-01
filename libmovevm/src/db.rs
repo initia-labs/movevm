@@ -5,28 +5,28 @@ use crate::{
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
-pub struct db_t {
+pub struct DbT {
     _private: [u8; 0],
 }
 
 // These functions should return GoError but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoError manually
 #[repr(C)]
-pub struct Db_vtable {
+pub struct DbVTable {
     pub read_db: extern "C" fn(
-        *mut db_t,
+        *mut DbT,
         U8SliceView,
         *mut UnmanagedVector, // result output
         *mut UnmanagedVector, // error message output
     ) -> i32,
     pub write_db: extern "C" fn(
-        *mut db_t,
+        *mut DbT,
         U8SliceView,
         U8SliceView,
         *mut UnmanagedVector, // error message output
     ) -> i32,
     pub remove_db: extern "C" fn(
-        *mut db_t,
+        *mut DbT,
         U8SliceView,
         *mut UnmanagedVector, // error message output
     ) -> i32,
@@ -34,7 +34,7 @@ pub struct Db_vtable {
     // Note: we cannot set gas_meter on the returned GoIter due to cgo memory safety.
     // Since we have the pointer in rust already, we must set that manually
     pub scan_db: extern "C" fn(
-        *mut db_t,
+        *mut DbT,
         U8SliceView, // prefix bytes
         U8SliceView, // (optional) start bytes
         U8SliceView, // (optional) end bytes
@@ -45,7 +45,7 @@ pub struct Db_vtable {
 }
 
 #[repr(C)]
-pub struct Db {
-    pub state: *mut db_t,
-    pub vtable: Db_vtable,
+pub struct GoDb {
+    pub state: *mut DbT,
+    pub vtable: DbVTable,
 }

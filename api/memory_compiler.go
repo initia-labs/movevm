@@ -30,9 +30,9 @@ func uninitializedCompilerVector() C.libcompiler_UnmanagedVector {
 }
 
 // Creates a C.libcompiler_UnmanagedVector, which cannot be done in test files directly
-func constructCompilerVector(is_none cbool, ptr cu8_ptr, len cusize, cap cusize) C.libcompiler_UnmanagedVector {
+func constructCompilerVector(is_none bool, ptr cu8_ptr, len cusize, cap cusize) C.libcompiler_UnmanagedVector {
 	return C.libcompiler_UnmanagedVector{
-		is_none: is_none,
+		is_none: cbool(is_none),
 		ptr:     ptr,
 		len:     len,
 		cap:     cap,

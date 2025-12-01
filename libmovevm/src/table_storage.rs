@@ -5,7 +5,7 @@ use initia_move_types::access_path::AccessPath;
 use initia_move_types::iterator::Order;
 use initia_move_types::table::TableHandle;
 
-use crate::db::Db;
+use crate::db::GoDb;
 use crate::error::GoError;
 use crate::iterator::GoIter;
 use crate::memory::{U8SliceView, UnmanagedVector};
@@ -13,12 +13,12 @@ use crate::memory::{U8SliceView, UnmanagedVector};
 use anyhow::anyhow;
 
 pub struct GoTableStorage<'r> {
-    db: &'r Db,
+    db: &'r GoDb,
     iterators: HashMap<u32, GoIter>,
 }
 
 impl<'r> GoTableStorage<'r> {
-    pub fn new(db: &'r Db) -> Self {
+    pub fn new(db: &'r GoDb) -> Self {
         GoTableStorage {
             db,
             iterators: HashMap::new(),

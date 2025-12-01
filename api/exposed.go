@@ -29,8 +29,8 @@ func ReadModuleInfo(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.read_module_info(&errmsg, compiledView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_read_module_info(&errmsg, compiledView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return types.AccountAddress{}, "", errorWithMessage(err, errmsg)
 	}
@@ -72,8 +72,8 @@ func DecodeMoveResource(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.decode_move_resource(db, &errmsg, structTagView, resourceBytesView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_decode_move_resource(db, &errmsg, structTagView, resourceBytesView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -107,8 +107,8 @@ func DecodeMoveValue(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.decode_move_value(db, &errmsg, typeTagView, valueBytesView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_decode_move_value(db, &errmsg, typeTagView, valueBytesView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -128,8 +128,8 @@ func DecodeModuleBytes(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.decode_module_bytes(&errmsg, moduleBytesView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_decode_module_bytes(&errmsg, moduleBytesView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -149,8 +149,8 @@ func DecodeScriptBytes(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.decode_script_bytes(&errmsg, scriptBytesView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_decode_script_bytes(&errmsg, scriptBytesView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -173,8 +173,8 @@ func ParseStructTag(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.parse_struct_tag(&errmsg, structTagStrView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_parse_struct_tag(&errmsg, structTagStrView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return types.StructTag{}, errorWithMessage(err, errmsg)
 	}
@@ -198,8 +198,8 @@ func StringifyStructTag(
 
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.stringify_struct_tag(&errmsg, structTagView)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	res, err := C.libmovevm_stringify_struct_tag(&errmsg, structTagView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return "", errorWithMessage(err, errmsg)
 	}

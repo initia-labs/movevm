@@ -51,7 +51,7 @@ usize_is_size_t = true
 
 [export]
 # FIXME: not sure why they are not exported by default.
-include = ["ByteSliceView", "ErrnoValue"]
+include = ["UnmanagedVector", "ByteSliceView", "ErrnoValue"]
 exclude = []
 item_types = []
 renaming_overrides_prefixing = false

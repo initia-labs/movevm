@@ -253,7 +253,7 @@ impl Default for UnmanagedVector {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[export_name = "libmovevm_new_unmanaged_vector"]
 pub extern "C" fn new_unmanaged_vector(
     nil: bool,
     ptr: *const u8,
@@ -272,7 +272,7 @@ pub extern "C" fn new_unmanaged_vector(
     }
 }
 
-#[no_mangle]
+#[export_name = "libmovevm_destroy_unmanaged_vector"]
 pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
     let _ = v.consume();
 }

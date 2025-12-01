@@ -6,7 +6,7 @@ use anyhow::anyhow;
 // Iterator maintains integer references to some tables on the Go side
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
-pub struct iterator_t {
+pub struct IteratorT {
     /// An ID assigned to this contract call
     pub call_id: u64,
     pub iterator_index: u64,
@@ -16,10 +16,10 @@ pub struct iterator_t {
 // and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Default)]
-pub struct Iterator_vtable {
+pub struct IteratorVTable {
     pub next_db: Option<
         extern "C" fn(
-            iterator_t,
+            IteratorT,
             *mut UnmanagedVector, // key output
             *mut UnmanagedVector, // error message output
         ) -> i32,
@@ -28,16 +28,16 @@ pub struct Iterator_vtable {
 
 #[repr(C)]
 pub struct GoIter {
-    pub state: iterator_t,
-    pub vtable: Iterator_vtable,
+    pub state: IteratorT,
+    pub vtable: IteratorVTable,
     pub prefix_len: usize,
 }
 
 impl GoIter {
     pub fn new(prefix_len: usize) -> Self {
         GoIter {
-            state: iterator_t::default(),
-            vtable: Iterator_vtable::default(),
+            state: IteratorT::default(),
+            vtable: IteratorVTable::default(),
             prefix_len,
         }
     }

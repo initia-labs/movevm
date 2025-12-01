@@ -14,11 +14,11 @@
 #include <stdlib.h>
 
 
-enum ErrnoValue {
-  ErrnoValue_Success = 0,
-  ErrnoValue_Other = 1,
+enum libmovevm_ErrnoValue {
+  libmovevm_ErrnoValue_Success = 0,
+  libmovevm_ErrnoValue_Other = 1,
 };
-typedef int32_t ErrnoValue;
+typedef int32_t libmovevm_ErrnoValue;
 
 /**
  * This enum gives names to the status codes returned from Go callbacks to Rust.
@@ -27,38 +27,38 @@ typedef int32_t ErrnoValue;
  * 0 means no error, all the other cases are some sort of error.
  *
  */
-enum GoError {
-  GoError_None = 0,
+enum libmovevm_GoError {
+  libmovevm_GoError_None = 0,
   /**
    * Go panicked for an unexpected reason.
    */
-  GoError_Panic = 1,
+  libmovevm_GoError_Panic = 1,
   /**
    * Go received a bad argument from Rust
    */
-  GoError_BadArgument = 2,
+  libmovevm_GoError_BadArgument = 2,
   /**
    * Error while trying to serialize data in Go code (typically json.Marshal)
    */
-  GoError_CannotSerialize = 3,
+  libmovevm_GoError_CannotSerialize = 3,
   /**
    * An error happened during normal operation of a Go callback, which should be fed back to the contract
    */
-  GoError_User = 4,
+  libmovevm_GoError_User = 4,
   /**
    * Unimplemented
    */
-  GoError_Unimplemented = 5,
+  libmovevm_GoError_Unimplemented = 5,
   /**
    * An error type that should never be created by us. It only serves as a fallback for the i32 to GoError conversion.
    */
-  GoError_Other = -1,
+  libmovevm_GoError_Other = -1,
 };
-typedef int32_t GoError;
+typedef int32_t libmovevm_GoError;
 
 typedef struct {
 
-} vm_t;
+} libmovevm_VmT;
 
 /**
  * A view into an externally owned byte slice (Go `[]byte`).
@@ -74,7 +74,7 @@ typedef struct {
   bool is_nil;
   const uint8_t *ptr;
   size_t len;
-} ByteSliceView;
+} libmovevm_ByteSliceView;
 
 /**
  * An optional Vector type that requires explicit creation and destruction
@@ -119,11 +119,11 @@ typedef struct {
   uint8_t *ptr;
   size_t len;
   size_t cap;
-} UnmanagedVector;
+} libmovevm_UnmanagedVector;
 
 typedef struct {
   uint8_t _private[0];
-} db_t;
+} libmovevm_DbT;
 
 /**
  * A view into a `Option<&[u8]>`, created and maintained by Rust.
@@ -137,7 +137,7 @@ typedef struct {
   bool is_none;
   const uint8_t *ptr;
   size_t len;
-} U8SliceView;
+} libmovevm_U8SliceView;
 
 typedef struct {
   /**
@@ -145,150 +145,163 @@ typedef struct {
    */
   uint64_t call_id;
   uint64_t iterator_index;
-} iterator_t;
+} libmovevm_IteratorT;
 
 typedef struct {
-  int32_t (*next_db)(iterator_t, UnmanagedVector*, UnmanagedVector*);
-} Iterator_vtable;
+  int32_t (*next_db)(libmovevm_IteratorT, libmovevm_UnmanagedVector*, libmovevm_UnmanagedVector*);
+} libmovevm_IteratorVTable;
 
 typedef struct {
-  iterator_t state;
-  Iterator_vtable vtable;
+  libmovevm_IteratorT state;
+  libmovevm_IteratorVTable vtable;
   size_t prefix_len;
-} GoIter;
+} libmovevm_GoIter;
 
 typedef struct {
-  int32_t (*read_db)(db_t*, U8SliceView, UnmanagedVector*, UnmanagedVector*);
-  int32_t (*write_db)(db_t*, U8SliceView, U8SliceView, UnmanagedVector*);
-  int32_t (*remove_db)(db_t*, U8SliceView, UnmanagedVector*);
-  int32_t (*scan_db)(db_t*,
-                     U8SliceView,
-                     U8SliceView,
-                     U8SliceView,
+  int32_t (*read_db)(libmovevm_DbT*,
+                     libmovevm_U8SliceView,
+                     libmovevm_UnmanagedVector*,
+                     libmovevm_UnmanagedVector*);
+  int32_t (*write_db)(libmovevm_DbT*,
+                      libmovevm_U8SliceView,
+                      libmovevm_U8SliceView,
+                      libmovevm_UnmanagedVector*);
+  int32_t (*remove_db)(libmovevm_DbT*, libmovevm_U8SliceView, libmovevm_UnmanagedVector*);
+  int32_t (*scan_db)(libmovevm_DbT*,
+                     libmovevm_U8SliceView,
+                     libmovevm_U8SliceView,
+                     libmovevm_U8SliceView,
                      int32_t,
-                     GoIter*,
-                     UnmanagedVector*);
-} Db_vtable;
+                     libmovevm_GoIter*,
+                     libmovevm_UnmanagedVector*);
+} libmovevm_DbVTable;
 
 typedef struct {
-  db_t *state;
-  Db_vtable vtable;
-} Db;
+  libmovevm_DbT *state;
+  libmovevm_DbVTable vtable;
+} libmovevm_GoDb;
 
 typedef struct {
   uint8_t _private[0];
-} api_t;
+} libmovevm_ApiT;
 
 typedef struct {
-  int32_t (*query)(const api_t*,
-                   U8SliceView,
+  int32_t (*query)(const libmovevm_ApiT*,
+                   libmovevm_U8SliceView,
                    uint64_t,
-                   UnmanagedVector*,
+                   libmovevm_UnmanagedVector*,
                    uint64_t*,
-                   UnmanagedVector*);
-  int32_t (*get_account_info)(const api_t*,
-                              U8SliceView,
+                   libmovevm_UnmanagedVector*);
+  int32_t (*get_account_info)(const libmovevm_ApiT*,
+                              libmovevm_U8SliceView,
                               bool*,
                               uint64_t*,
                               uint64_t*,
                               uint8_t*,
                               bool*,
-                              UnmanagedVector*);
-  int32_t (*amount_to_share)(const api_t*,
-                             U8SliceView,
-                             U8SliceView,
+                              libmovevm_UnmanagedVector*);
+  int32_t (*amount_to_share)(const libmovevm_ApiT*,
+                             libmovevm_U8SliceView,
+                             libmovevm_U8SliceView,
                              uint64_t,
-                             UnmanagedVector*,
-                             UnmanagedVector*);
-  int32_t (*share_to_amount)(const api_t*,
-                             U8SliceView,
-                             U8SliceView,
-                             U8SliceView,
+                             libmovevm_UnmanagedVector*,
+                             libmovevm_UnmanagedVector*);
+  int32_t (*share_to_amount)(const libmovevm_ApiT*,
+                             libmovevm_U8SliceView,
+                             libmovevm_U8SliceView,
+                             libmovevm_U8SliceView,
                              uint64_t*,
-                             UnmanagedVector*);
-  int32_t (*unbond_timestamp)(const api_t*, uint64_t*, UnmanagedVector*);
-  int32_t (*get_price)(const api_t*,
-                       U8SliceView,
-                       UnmanagedVector*,
+                             libmovevm_UnmanagedVector*);
+  int32_t (*unbond_timestamp)(const libmovevm_ApiT*, uint64_t*, libmovevm_UnmanagedVector*);
+  int32_t (*get_price)(const libmovevm_ApiT*,
+                       libmovevm_U8SliceView,
+                       libmovevm_UnmanagedVector*,
                        uint64_t*,
                        uint64_t*,
-                       UnmanagedVector*);
-} GoApi_vtable;
+                       libmovevm_UnmanagedVector*);
+} libmovevm_ApiVTable;
 
 typedef struct {
-  const api_t *state;
-  GoApi_vtable vtable;
-} GoApi;
+  const libmovevm_ApiT *state;
+  libmovevm_ApiVTable vtable;
+} libmovevm_GoApi;
 
-vm_t *allocate_vm(ByteSliceView config_payload);
+libmovevm_VmT *libmovevm_allocate_vm(libmovevm_ByteSliceView config_payload);
 
-UnmanagedVector decode_module_bytes(UnmanagedVector *errmsg, ByteSliceView module_bytes);
+libmovevm_UnmanagedVector libmovevm_decode_module_bytes(libmovevm_UnmanagedVector *errmsg,
+                                                        libmovevm_ByteSliceView module_bytes);
 
-UnmanagedVector decode_move_resource(Db db,
-                                     UnmanagedVector *errmsg,
-                                     ByteSliceView struct_tag,
-                                     ByteSliceView resource_bytes);
+libmovevm_UnmanagedVector libmovevm_decode_move_resource(libmovevm_GoDb db,
+                                                         libmovevm_UnmanagedVector *errmsg,
+                                                         libmovevm_ByteSliceView struct_tag,
+                                                         libmovevm_ByteSliceView resource_bytes);
 
-UnmanagedVector decode_move_value(Db db,
-                                  UnmanagedVector *errmsg,
-                                  ByteSliceView type_tag,
-                                  ByteSliceView value_bytes);
+libmovevm_UnmanagedVector libmovevm_decode_move_value(libmovevm_GoDb db,
+                                                      libmovevm_UnmanagedVector *errmsg,
+                                                      libmovevm_ByteSliceView type_tag,
+                                                      libmovevm_ByteSliceView value_bytes);
 
-UnmanagedVector decode_script_bytes(UnmanagedVector *errmsg, ByteSliceView script_bytes);
+libmovevm_UnmanagedVector libmovevm_decode_script_bytes(libmovevm_UnmanagedVector *errmsg,
+                                                        libmovevm_ByteSliceView script_bytes);
 
-void destroy_unmanaged_vector(UnmanagedVector v);
+void libmovevm_destroy_unmanaged_vector(libmovevm_UnmanagedVector v);
 
-UnmanagedVector execute_authenticate(vm_t *vm_ptr,
-                                     uint64_t *gas_balance_ptr,
-                                     Db db,
-                                     GoApi api,
-                                     ByteSliceView env_payload,
-                                     ByteSliceView sender,
-                                     ByteSliceView authenticate_payload,
-                                     UnmanagedVector *errmsg);
+libmovevm_UnmanagedVector libmovevm_execute_authenticate(libmovevm_VmT *vm_ptr,
+                                                         uint64_t *gas_balance_ptr,
+                                                         libmovevm_GoDb db,
+                                                         libmovevm_GoApi api,
+                                                         libmovevm_ByteSliceView env_payload,
+                                                         libmovevm_ByteSliceView sender,
+                                                         libmovevm_ByteSliceView authenticate_payload,
+                                                         libmovevm_UnmanagedVector *errmsg);
 
-UnmanagedVector execute_contract(vm_t *vm_ptr,
-                                 uint64_t *gas_balance_ptr,
-                                 Db db,
-                                 GoApi api,
-                                 ByteSliceView env_payload,
-                                 ByteSliceView senders,
-                                 ByteSliceView entry_function_payload,
-                                 UnmanagedVector *errmsg);
+libmovevm_UnmanagedVector libmovevm_execute_contract(libmovevm_VmT *vm_ptr,
+                                                     uint64_t *gas_balance_ptr,
+                                                     libmovevm_GoDb db,
+                                                     libmovevm_GoApi api,
+                                                     libmovevm_ByteSliceView env_payload,
+                                                     libmovevm_ByteSliceView senders,
+                                                     libmovevm_ByteSliceView entry_function_payload,
+                                                     libmovevm_UnmanagedVector *errmsg);
 
-UnmanagedVector execute_script(vm_t *vm_ptr,
-                               uint64_t *gas_balance_ptr,
-                               Db db,
-                               GoApi api,
-                               ByteSliceView env_payload,
-                               ByteSliceView senders,
-                               ByteSliceView script_payload,
-                               UnmanagedVector *errmsg);
+libmovevm_UnmanagedVector libmovevm_execute_script(libmovevm_VmT *vm_ptr,
+                                                   uint64_t *gas_balance_ptr,
+                                                   libmovevm_GoDb db,
+                                                   libmovevm_GoApi api,
+                                                   libmovevm_ByteSliceView env_payload,
+                                                   libmovevm_ByteSliceView senders,
+                                                   libmovevm_ByteSliceView script_payload,
+                                                   libmovevm_UnmanagedVector *errmsg);
 
-UnmanagedVector execute_view_function(vm_t *vm_ptr,
-                                      uint64_t *gas_balance_ptr,
-                                      Db db,
-                                      GoApi api,
-                                      ByteSliceView env_payload,
-                                      ByteSliceView view_function_payload,
-                                      UnmanagedVector *errmsg);
+libmovevm_UnmanagedVector libmovevm_execute_view_function(libmovevm_VmT *vm_ptr,
+                                                          uint64_t *gas_balance_ptr,
+                                                          libmovevm_GoDb db,
+                                                          libmovevm_GoApi api,
+                                                          libmovevm_ByteSliceView env_payload,
+                                                          libmovevm_ByteSliceView view_function_payload,
+                                                          libmovevm_UnmanagedVector *errmsg);
 
-UnmanagedVector initialize(vm_t *vm_ptr,
-                           Db db,
-                           GoApi api,
-                           ByteSliceView env_payload,
-                           ByteSliceView module_bundle_payload,
-                           ByteSliceView allowed_publishers_payload,
-                           UnmanagedVector *errmsg);
+libmovevm_UnmanagedVector libmovevm_initialize(libmovevm_VmT *vm_ptr,
+                                               libmovevm_GoDb db,
+                                               libmovevm_GoApi api,
+                                               libmovevm_ByteSliceView env_payload,
+                                               libmovevm_ByteSliceView module_bundle_payload,
+                                               libmovevm_ByteSliceView allowed_publishers_payload,
+                                               libmovevm_UnmanagedVector *errmsg);
 
-UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, size_t length);
+libmovevm_UnmanagedVector libmovevm_new_unmanaged_vector(bool nil,
+                                                         const uint8_t *ptr,
+                                                         size_t length);
 
-UnmanagedVector parse_struct_tag(UnmanagedVector *errmsg, ByteSliceView struct_tag_str);
+libmovevm_UnmanagedVector libmovevm_parse_struct_tag(libmovevm_UnmanagedVector *errmsg,
+                                                     libmovevm_ByteSliceView struct_tag_str);
 
-UnmanagedVector read_module_info(UnmanagedVector *errmsg, ByteSliceView compiled);
+libmovevm_UnmanagedVector libmovevm_read_module_info(libmovevm_UnmanagedVector *errmsg,
+                                                     libmovevm_ByteSliceView compiled);
 
-void release_vm(vm_t *vm);
+void libmovevm_release_vm(libmovevm_VmT *vm);
 
-UnmanagedVector stringify_struct_tag(UnmanagedVector *errmsg, ByteSliceView struct_tag);
+libmovevm_UnmanagedVector libmovevm_stringify_struct_tag(libmovevm_UnmanagedVector *errmsg,
+                                                         libmovevm_ByteSliceView struct_tag);
 
 #endif /* __LIBMOVEVM__ */

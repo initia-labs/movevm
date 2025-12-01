@@ -29,14 +29,14 @@ func TestCopyDestroyUnmanagedVectorForCompiler(t *testing.T) {
 	{
 		// ptr, cap and len broken. Do not access those values when is_none is true
 		invalidPtr := unsafe.Pointer(uintptr(42))
-		uv := constructCompilerVector(cbool(true), cu8_ptr(invalidPtr), cusize(0xBB), cusize(0xAA))
+		uv := constructCompilerVector(true, cu8_ptr(invalidPtr), cusize(0xBB), cusize(0xAA))
 		copy := copyAndDestroyCompilerVector(uv)
 		require.Nil(t, copy)
 	}
 	{
 		// Capacity is 0, so no allocation happened. Do not access the pointer.
 		invalidPtr := unsafe.Pointer(uintptr(42))
-		uv := constructCompilerVector(cbool(false), cu8_ptr(invalidPtr), cusize(0), cusize(0))
+		uv := constructCompilerVector(false, cu8_ptr(invalidPtr), cusize(0), cusize(0))
 		copy := copyAndDestroyCompilerVector(uv)
 		require.Equal(t, []byte{}, copy)
 	}
