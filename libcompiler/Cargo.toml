@@ -1,14 +1,15 @@
 [package]
 name = "compiler"
-version = "0.1.0"
 publish = false
-description = "Initia Move Compiler"
-homepage = "https://initia.xyz/"
-repository = "https://github.com/initia-labs/movevm"
-exclude = [".gitignore"]
 
-edition = { workspace = true }
-rust-version = { workspace = true }
+# workspace settings
+version.workspace = true
+exclude.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license-file.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]

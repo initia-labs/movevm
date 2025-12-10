@@ -1,14 +1,15 @@
 [package]
 name = "movevm"
-version = "0.1.0"
 publish = false
-description = "Initia Move VM Engine"
-homepage = "https://initia.xyz/"
-repository = "https://github.com/initia-labs/movevm"
-exclude = [".gitignore"]
 
-edition = { workspace = true }
-rust-version = { workspace = true }
+# workspace settings
+version.workspace = true
+exclude.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license-file.workspace = true
 
 # the example is to allow us to compile a muslc static lib with the same codebase as we compile the
 # normal dynamic libs (best workaround I could find to override crate-type on the command line)

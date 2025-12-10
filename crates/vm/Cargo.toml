@@ -1,13 +1,14 @@
 [package]
 name = "initia-move-vm"
-version = "0.1.0"
-edition = "2021"
-rust-version = { workspace = true }
-description = "VM bindings to run move contracts on go"
-homepage = "https://www.initia.co"
-repository = "https://github.com/initia-labs/movevm/tree/main/crates/vm"
-license = "BUSL-1.1"
-exclude = [".gitignore"]
+
+# workspace settings
+version.workspace = true
+exclude.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license-file.workspace = true
 
 [features]
 default = []
