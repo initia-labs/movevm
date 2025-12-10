@@ -1279,65 +1279,6 @@ impl MoveScriptBytecode {
     }
 }
 
-/// Entry function id
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EntryFunctionId {
-    pub module: MoveModuleId,
-    pub name: IdentifierWrapper,
-}
-
-impl VerifyInput for EntryFunctionId {
-    fn verify(&self) -> anyhow::Result<()> {
-        self.module
-            .verify()
-            .map_err(|_| invalid_entry_function_id(self))?;
-        self.name
-            .verify()
-            .map_err(|_| invalid_entry_function_id(self))
-    }
-}
-
-impl FromStr for EntryFunctionId {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some((module, name)) = s.rsplit_once("::") {
-            return Ok(Self {
-                module: module.parse().map_err(|_| invalid_entry_function_id(s))?,
-                name: name.parse().map_err(|_| invalid_entry_function_id(s))?,
-            });
-        }
-        Err(invalid_entry_function_id(s))
-    }
-}
-
-#[inline]
-fn invalid_entry_function_id<S: Display + Sized>(s: S) -> anyhow::Error {
-    format_err!("Invalid entry function ID {}", s)
-}
-
-impl Serialize for EntryFunctionId {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.to_string().serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for EntryFunctionId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let entry_fun_id = <String>::deserialize(deserializer)?;
-        entry_fun_id.parse().map_err(D::Error::custom)
-    }
-}
-
-impl fmt::Display for EntryFunctionId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}::{}", self.module, self.name)
-    }
-}
-
 pub fn verify_module_identifier(module: &str) -> anyhow::Result<()> {
     verify_identifier(module).map_err(|_| format_err!("invalid Move module name: {}", module))
 }
@@ -1587,72 +1528,6 @@ mod tests {
             "Invalid Move module ID: 0x1::Initia::Initia",
             "0x1::Initia::Initia"
                 .parse::<MoveModuleId>()
-                .err()
-                .unwrap()
-                .to_string()
-        );
-    }
-
-    #[test]
-    fn test_serialize_deserialize_move_entry_function_id() {
-        test_serialize_deserialize(
-            EntryFunctionId {
-                module: MoveModuleId {
-                    address: "0x1".parse().unwrap(),
-                    name: "Initia".parse().unwrap(),
-                },
-                name: "Add".parse().unwrap(),
-            },
-            json!("0x1::Initia::Add"),
-        );
-    }
-
-    #[test]
-    fn test_parse_invalid_move_entry_function_id_string() {
-        assert_eq!(
-            "Invalid entry function ID 0x1",
-            "0x1".parse::<EntryFunctionId>().err().unwrap().to_string()
-        );
-        assert_eq!(
-            "Invalid entry function ID 0x1:",
-            "0x1:".parse::<EntryFunctionId>().err().unwrap().to_string()
-        );
-        assert_eq!(
-            "Invalid entry function ID 0x1:::",
-            "0x1:::"
-                .parse::<EntryFunctionId>()
-                .err()
-                .unwrap()
-                .to_string()
-        );
-        assert_eq!(
-            "Invalid entry function ID 0x1::???",
-            "0x1::???"
-                .parse::<EntryFunctionId>()
-                .err()
-                .unwrap()
-                .to_string()
-        );
-        assert_eq!(
-            "Invalid entry function ID Initia::Initia",
-            "Initia::Initia"
-                .parse::<EntryFunctionId>()
-                .err()
-                .unwrap()
-                .to_string()
-        );
-        assert_eq!(
-            "Invalid entry function ID Initia::Initia::??",
-            "Initia::Initia::??"
-                .parse::<EntryFunctionId>()
-                .err()
-                .unwrap()
-                .to_string()
-        );
-        assert_eq!(
-            "Invalid entry function ID 0x1::Initia::Initia::Initia",
-            "0x1::Initia::Initia::Initia"
-                .parse::<EntryFunctionId>()
                 .err()
                 .unwrap()
                 .to_string()

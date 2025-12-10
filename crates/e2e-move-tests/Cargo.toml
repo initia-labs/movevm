@@ -1,10 +1,13 @@
 [package]
 name = "e2e-move-tests"
-version = "0.1.0"
-edition = "2021"
-publish = false
-repository = "https://github.com/initia-labs/movevm/tree/main/crates/e2e-move-tests"
-rust-version = { workspace = true }
+
+version.workspace = true
+exclude.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license-file.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

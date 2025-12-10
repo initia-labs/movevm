@@ -137,7 +137,7 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         )
     }
 
-    pub fn finish(self, module_storage: &impl ModuleStorage) -> VMResult<SessionOutput> {
+    pub fn finish(self, module_storage: &impl ModuleStorage) -> VMResult<SessionOutput<'_>> {
         // let function_extension = module_storage.as_function_value_extension();
 
         // let resource_converter = |value: Value,
