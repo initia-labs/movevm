@@ -63,7 +63,7 @@ impl<'s, S: StateView> InitiaStorage<'s, S> {
         self.storage.runtime_environment()
     }
 
-    pub fn struct_resolver(&self) -> StructResolverImpl {
+    pub fn struct_resolver(&self) -> StructResolverImpl<'_> {
         StructResolverImpl::new(self.runtime_environment())
     }
 
