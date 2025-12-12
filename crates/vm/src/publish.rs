@@ -53,6 +53,9 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         } = publish_request;
 
         let modules = deserialize_module_bundle(&module_bundle, deserializer_config)?;
+        let (module_bundle, _, modules) = module_bundle
+            .sorted_code_and_modules(modules)
+            .map_err(|e| e.finish(Location::Undefined))?;
         let modules: &Vec<CompiledModule> =
             traversal_context.referenced_module_bundles.alloc(modules);
 
