@@ -83,19 +83,16 @@ impl ModuleBundle {
 
     pub fn sorted_code_and_modules(
         self,
-        compiled_modules: &[CompiledModule],
-    ) -> PartialVMResult<(Self, Vec<String>, Vec<&CompiledModule>)> {
-        let mut map: BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)> = BTreeMap::new();
+        compiled_modules: Vec<CompiledModule>,
+    ) -> PartialVMResult<(Self, Vec<String>, Vec<CompiledModule>)> {
+        let mut map: BTreeMap<ModuleId, (Vec<u8>, CompiledModule)> = BTreeMap::new();
 
         let ModuleBundle { codes } = self;
-        for (cm, m) in compiled_modules.iter().zip(codes.into_iter()) {
-            if map.insert(cm.self_id(), (m.code, cm)).is_some() {
-                return Err(
-                    PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME).with_message(format!(
-                        "Duplicate module name found: {}",
-                        cm.self_id().name()
-                    )),
-                );
+        for (cm, m) in compiled_modules.into_iter().zip(codes.into_iter()) {
+            let self_id = cm.self_id();
+            if map.insert(self_id.clone(), (m.code, cm)).is_some() {
+                return Err(PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME)
+                    .with_message(format!("Duplicate module name found: {}", self_id.name())));
             }
         }
 
@@ -126,7 +123,7 @@ impl ModuleBundle {
 }
 
 pub fn sort_by_deps(
-    map: &BTreeMap<ModuleId, (Vec<u8>, &CompiledModule)>,
+    map: &BTreeMap<ModuleId, (Vec<u8>, CompiledModule)>,
     order: &mut Vec<ModuleId>,
     order_set: &mut BTreeSet<ModuleId>,
     seen_modules: &mut BTreeSet<ModuleId>,
@@ -145,7 +142,7 @@ pub fn sort_by_deps(
     // mark as seen
     seen_modules.insert(id.clone());
 
-    let compiled = map.get(&id).unwrap().1;
+    let compiled = &map.get(&id).unwrap().1;
     for dep in compiled.immediate_dependencies() {
         // Only consider deps which are actually in this package. Deps for outside
         // packages are considered fine because of package deployment order. Note
@@ -184,5 +181,74 @@ impl IntoIterator for ModuleBundle {
 
     fn into_iter(self) -> Self::IntoIter {
         self.codes.into_iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use move_binary_format::file_format::empty_module_with_dependencies_and_friends;
+    use move_binary_format::file_format_common::VERSION_DEFAULT;
+
+    fn make_module<'a>(
+        name: &'a str,
+        dependencies: impl IntoIterator<Item = &'a str>,
+    ) -> (CompiledModule, Vec<u8>) {
+        let mut module = empty_module_with_dependencies_and_friends(name, dependencies, []);
+        module.version = VERSION_DEFAULT;
+
+        let mut bytes = vec![];
+        module.serialize(&mut bytes).unwrap();
+        (module, bytes)
+    }
+
+    #[test]
+    fn sorts_by_dependencies() {
+        let (module_a, bytes_a) = make_module("A", ["B", "C"]);
+        let (module_b, bytes_b) = make_module("B", ["C"]);
+        let (module_c, bytes_c) = make_module("C", []);
+
+        // Intentionally provide an unsorted bundle/order.
+        let bundle = ModuleBundle::new(vec![bytes_a.clone(), bytes_c.clone(), bytes_b.clone()]);
+        let (sorted_bundle, ids, modules) = bundle
+            .sorted_code_and_modules(vec![module_a, module_c, module_b])
+            .unwrap();
+
+        assert_eq!(
+            ids,
+            vec![
+                modules[0].self_id().short_str_lossless(),
+                modules[1].self_id().short_str_lossless(),
+                modules[2].self_id().short_str_lossless()
+            ]
+        );
+        assert_eq!(ids, vec!["0x0::C", "0x0::B", "0x0::A"]);
+        assert_eq!(sorted_bundle.into_inner(), vec![bytes_c, bytes_b, bytes_a]);
+    }
+
+    #[test]
+    fn detects_duplicate_names() {
+        let (module_a, bytes_a) = make_module("A", []);
+        let (module_a_dup, bytes_a_dup) = make_module("A", []);
+
+        let bundle = ModuleBundle::new(vec![bytes_a, bytes_a_dup]);
+        let err = bundle
+            .sorted_code_and_modules(vec![module_a, module_a_dup])
+            .unwrap_err();
+
+        assert_eq!(err.major_status(), StatusCode::DUPLICATE_MODULE_NAME);
+    }
+
+    #[test]
+    fn detects_cycles() {
+        let (module_a, bytes_a) = make_module("A", ["B"]);
+        let (module_b, bytes_b) = make_module("B", ["A"]);
+
+        let bundle = ModuleBundle::new(vec![bytes_a, bytes_b]);
+        let err = bundle
+            .sorted_code_and_modules(vec![module_a, module_b])
+            .unwrap_err();
+
+        assert_eq!(err.major_status(), StatusCode::CYCLIC_MODULE_DEPENDENCY);
     }
 }
