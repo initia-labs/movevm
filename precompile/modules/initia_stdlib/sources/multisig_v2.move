@@ -597,6 +597,7 @@ module initia_std::multisig_v2 {
     ) acquires MultisigWallet, ProposalStore {
         let multisig_addr = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        create_proposal_store(multisig_wallet); // for migration
 
         assert_uniqueness(new_members);
 
