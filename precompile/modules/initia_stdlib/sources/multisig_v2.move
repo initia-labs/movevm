@@ -1614,6 +1614,11 @@ module initia_std::multisig_v2 {
             yes_vote_score(&proposal.votes, &multisig_wallet.members) == 1,
             1
         );
+
+        // check if it is added to active proposals
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(table::contains(&proposal_store.active_proposals, key), 1);
     }
 
     // test proposal_to_proposal_response for weight multisig wallet
@@ -2270,11 +2275,25 @@ module initia_std::multisig_v2 {
             option::some(99)
         );
 
+        // check if it is added to active proposals
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let proposal = table::borrow(&multisig_wallet.proposals, 1);
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(table::contains(&proposal_store.active_proposals, key), 1);
+
         vote_proposal(&account1, multisig_addr, 1, true);
         vote_proposal(&account2, multisig_addr, 1, false);
         vote_proposal(&account3, multisig_addr, 1, true);
 
         execute_proposal(&account1, multisig_addr, 1);
+
+        // check if it is removed from active proposals
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let proposal = table::borrow(&multisig_wallet.proposals, 1);
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(!table::contains(&proposal_store.active_proposals, key), 1);
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
