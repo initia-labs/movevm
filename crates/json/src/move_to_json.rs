@@ -49,14 +49,23 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
             ))
         }
         MoveValue::Struct(s) => match s {
-            MoveStruct::Runtime(values) | MoveStruct::RuntimeVariant(_, values) => {
+            MoveStruct::Runtime(values) => {
                 let mut fields_array: Vec<JSONValue> = vec![];
                 for mv in values.iter() {
                     fields_array.push(convert_move_value_to_json_value(mv, depth + 1)?);
                 }
                 Ok(JSONValue::Array(fields_array))
             }
-            MoveStruct::WithFields(fields) | MoveStruct::WithVariantFields(_, _, fields) => {
+            MoveStruct::RuntimeVariant(idx, values) => {
+                let mut fields_array: Vec<JSONValue> = vec![];
+                for mv in values.iter() {
+                    fields_array.push(convert_move_value_to_json_value(mv, depth + 1)?);
+                }
+                Ok(JSONValue::Object(
+                    std::iter::once((idx.to_string(), JSONValue::Array(fields_array))).collect(),
+                ))
+            }
+            MoveStruct::WithFields(fields) => {
                 // The move compiler inserts a dummy field with the value of false
                 // for structs with no fields.
                 if fields.len() == 1 && fields[0].0.as_str() == "dummy_field" {
@@ -70,6 +79,23 @@ fn convert_move_value_to_json_value(val: &MoveValue, depth: usize) -> VMResult<J
                 }
 
                 Ok(JSONValue::Object(fields_map))
+            }
+            MoveStruct::WithVariantFields(_id, _, fields) => {
+                // The move compiler inserts a dummy field with the value of false
+                // for structs with no fields.
+                if fields.len() == 1 && fields[0].0.as_str() == "dummy_field" {
+                    return Ok(JSONValue::Object(Map::new()));
+                }
+
+                let mut fields_map: Map<String, JSONValue> = Map::new();
+                for (id, mv) in fields.iter() {
+                    let value = convert_move_value_to_json_value(mv, depth + 1)?;
+                    let _ = fields_map.insert(id.to_string(), value);
+                }
+
+                Ok(JSONValue::Object(
+                    std::iter::once((_id.to_string(), JSONValue::Object(fields_map))).collect(),
+                ))
             }
             MoveStruct::WithTypes { _type_, _fields } => {
                 // The move compiler inserts a dummy field with the value of false
@@ -615,5 +641,17 @@ mod move_to_json_tests {
                 "f": json!(null),
             })
         );
+    }
+
+    #[test]
+    fn test_convert_move_value_to_json_value_enum() {
+        // enum struct
+        let mv = MoveValue::Struct(MoveStruct::WithVariantFields(
+            ident_str!("Circle").into(),
+            0,
+            vec![(ident_str!("radius").into(), MoveValue::U64(42))],
+        ));
+        let val = convert_move_value_to_json_value(&mv, 1).unwrap();
+        assert_eq!(val, json!({"Circle": json!({"radius": "42"})}));
     }
 }

@@ -113,6 +113,9 @@ module initia_std::json {
     /// NOTE: key `_type_` is converted to `@type`
     /// NOTE: key `_move_` is converted to `move`
     /// NOTE: key `_signer_` is converted to `signer`
+    ///
+    /// Enums are currently marshaled as `{"<variant_index>": [<fields>...]}`.
+    /// Tracking: https://github.com/aptos-labs/aptos-core/issues/13806
     public fun marshal<T: drop>(value: &T): vector<u8> {
         marshal_internal(value)
     }
@@ -151,6 +154,8 @@ module initia_std::json {
     /// NOTE: key `@type` is converted to `_type_`
     /// NOTE: key `move` is converted to `_move_`
     /// NOTE: key `signer` is converted to `_signer_`
+    ///
+    /// Enum unmarshaling is intentionally unsupported for security reasons.
     public fun unmarshal<T: drop>(json: vector<u8>): T {
         unmarshal_internal(json)
     }
@@ -190,6 +195,24 @@ module initia_std::json {
     #[test_only]
     struct EmptyObject has copy, drop {}
 
+    #[test_only]
+    enum Shape has drop {
+        Circle {
+            radius: u64
+        },
+        Rectangle {
+            width: u64,
+            height: u64
+        }
+    }
+
+    #[test_only]
+    enum Color has drop {
+        Red,
+        Blue,
+        Green
+    }
+
     #[test]
     fun test_json_empty_marshal_unmarshal_empty() {
         let json = marshal(&EmptyObject {});
@@ -215,6 +238,17 @@ module initia_std::json {
 
         let val = unmarshal<vector<u8>>(json);
         assert!(val == vector[1u8, 2u8, 3u8], 2);
+    }
+
+    #[test]
+    fun test_json_marshal_enum() {
+        let json = marshal(&Shape::Circle { radius: 5u64 });
+        std::debug::print(&string::utf8(json));
+        assert!(json == b"{\"0\":[\"5\"]}", 1);
+
+        let json = marshal(&Shape::Rectangle { width: 5u64, height: 5u64 });
+        std::debug::print(&string::utf8(json));
+        assert!(json == b"{\"1\":[\"5\",\"5\"]}", 1);
     }
 
     #[test]

@@ -271,7 +271,9 @@ pub fn convert_json_value_to_value(
                     }
                 }
             }
-            _ => unimplemented!("Deserialization for type {:?} not implemented", layout),
+            _ => {
+                unimplemented!("Deserialization for type {:?} not implemented", layout)
+            }
         },
         _ => unimplemented!("Deserialization for type {:?} not implemented", layout),
     })
