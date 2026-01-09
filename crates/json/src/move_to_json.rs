@@ -646,6 +646,11 @@ mod move_to_json_tests {
     #[test]
     fn test_convert_move_value_to_json_value_enum() {
         // enum struct
+        let mv = MoveValue::Struct(MoveStruct::RuntimeVariant(0, vec![(MoveValue::U64(42))]));
+        let val = convert_move_value_to_json_value(&mv, 1).unwrap();
+        assert_eq!(val, json!({"0": json!(vec!["42"]) }));
+
+        // enum struct
         let mv = MoveValue::Struct(MoveStruct::WithVariantFields(
             ident_str!("Circle").into(),
             0,
