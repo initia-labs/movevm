@@ -814,7 +814,7 @@ func BcsDeserializeEntryFunction(input []byte) (EntryFunction, error) {
 type Env struct {
 	ChainId string
 	BlockHeight uint64
-	BlockTimestamp uint64
+	BlockTimestampNanos uint64
 	NextAccountNumber uint64
 	TxHash [32]uint8
 	SessionId [32]uint8
@@ -824,7 +824,7 @@ func (obj *Env) Serialize(serializer serde.Serializer) error {
 	if err := serializer.IncreaseContainerDepth(); err != nil { return err }
 	if err := serializer.SerializeStr(obj.ChainId); err != nil { return err }
 	if err := serializer.SerializeU64(obj.BlockHeight); err != nil { return err }
-	if err := serializer.SerializeU64(obj.BlockTimestamp); err != nil { return err }
+	if err := serializer.SerializeU64(obj.BlockTimestampNanos); err != nil { return err }
 	if err := serializer.SerializeU64(obj.NextAccountNumber); err != nil { return err }
 	if err := serialize_array32_u8_array(obj.TxHash, serializer); err != nil { return err }
 	if err := serialize_array32_u8_array(obj.SessionId, serializer); err != nil { return err }
@@ -846,7 +846,7 @@ func DeserializeEnv(deserializer serde.Deserializer) (Env, error) {
 	if err := deserializer.IncreaseContainerDepth(); err != nil { return obj, err }
 	if val, err := deserializer.DeserializeStr(); err == nil { obj.ChainId = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.BlockHeight = val } else { return obj, err }
-	if val, err := deserializer.DeserializeU64(); err == nil { obj.BlockTimestamp = val } else { return obj, err }
+	if val, err := deserializer.DeserializeU64(); err == nil { obj.BlockTimestampNanos = val } else { return obj, err }
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.NextAccountNumber = val } else { return obj, err }
 	if val, err := deserialize_array32_u8_array(deserializer); err == nil { obj.TxHash = val } else { return obj, err }
 	if val, err := deserialize_array32_u8_array(deserializer); err == nil { obj.SessionId = val } else { return obj, err }
