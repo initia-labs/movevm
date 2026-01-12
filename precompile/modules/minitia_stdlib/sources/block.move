@@ -25,7 +25,9 @@ module minitia_std::block {
     native public fun set_block_info(height: u64, timestamp: u64);
 
     #[test_only]
-    native public fun set_block_info_nanos(height: u64, timestamp_nanos: u64);
+    native public fun set_block_info_nanos(
+        height: u64, timestamp_nanos: u64
+    );
 
     #[test]
     public fun test_get_block_info() {
@@ -38,11 +40,11 @@ module minitia_std::block {
 
     #[test]
     public fun test_get_block_info_nanos() {
-        set_block_info_nanos(54321u64, 8888888u64*1000000000u64);
+        set_block_info_nanos(54321u64, 8888888u64 * 1000000000u64);
 
         let (height, timestamp_nanos) = get_block_info_nanos();
         assert!(height == 54321u64, 0);
-        assert!(timestamp_nanos == 8888888u64*1000000000u64, 1);
+        assert!(timestamp_nanos == 8888888u64 * 1000000000u64, 1);
 
         let (height, timestamp) = get_block_info();
         assert!(height == 54321u64, 2);

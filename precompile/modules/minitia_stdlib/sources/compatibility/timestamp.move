@@ -1,6 +1,11 @@
 /// Timestamp module exists to provide compatibility with aptos.
 module minitia_std::timestamp {
-    use minitia_std::block::{get_block_info, get_current_block_timestamp_milliseconds, get_current_block_timestamp_microseconds, get_current_block_timestamp_nanoseconds};
+    use minitia_std::block::{
+        get_block_info,
+        get_current_block_timestamp_milliseconds,
+        get_current_block_timestamp_microseconds,
+        get_current_block_timestamp_nanoseconds
+    };
 
     #[view]
     /// Gets the current time in seconds.
@@ -60,20 +65,29 @@ module minitia_std::timestamp {
 
     #[test_only]
     public fun fast_forward_seconds(seconds: u64) {
-        let (height, timestamp) = get_block_info();
-        set_block_info(height + 1, timestamp + seconds);
+        let (height, timestamp_nanos) = get_block_info_nanos();
+        set_block_info_nanos(
+            height + 1,
+            timestamp_nanos + seconds * 1000000000u64
+        );
     }
 
     #[test_only]
     public fun fast_forward_milliseconds(milliseconds: u64) {
         let (height, timestamp_nanos) = get_block_info_nanos();
-        set_block_info_nanos(height + 1, timestamp_nanos + milliseconds * 1000000u64);
+        set_block_info_nanos(
+            height + 1,
+            timestamp_nanos + milliseconds * 1000000u64
+        );
     }
 
     #[test_only]
     public fun fast_forward_microseconds(microseconds: u64) {
         let (height, timestamp_nanos) = get_block_info_nanos();
-        set_block_info_nanos(height + 1, timestamp_nanos + microseconds * 1000u64);
+        set_block_info_nanos(
+            height + 1,
+            timestamp_nanos + microseconds * 1000u64
+        );
     }
 
     #[test_only]
