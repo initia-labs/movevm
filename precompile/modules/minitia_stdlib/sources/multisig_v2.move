@@ -721,7 +721,10 @@ module minitia_std::multisig_v2 {
                             *vector::borrow(&multisig_wallet.members, new_idx);
                         if (om.tier != new_member.tier) {
                             let (_, vote) = simple_map::remove(&mut proposal.votes, &om);
-                            simple_map::add(&mut proposal.votes, new_member, vote);
+                            // To handle edge case
+                            if (!simple_map::contains_key(&proposal.votes, &new_member)) {
+                                simple_map::add(&mut proposal.votes, new_member, vote);
+                            }
                         }
                     }
                 }
