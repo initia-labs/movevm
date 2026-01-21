@@ -682,13 +682,15 @@ module initia_std::multisig_v2 {
                 option::none(),
                 1
             );
+
+        let total_weight = total_weight(&multisig_wallet.members);
         while (table::prepare(iter)) {
             let (key, _) = table::next(iter);
             let proposal_id = decode_u64(key.proposal_id);
             let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
 
             proposal.threshold = new_threshold;
-            proposal.total_weight = total_weight(&multisig_wallet.members);
+            proposal.total_weight = total_weight;
 
             // remove removed_members votes
             vector::for_each(
