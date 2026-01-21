@@ -700,6 +700,32 @@ module initia_std::multisig_v2 {
                     }
                 }
             );
+
+            // Update votes for members whose tier changed
+            let keys = simple_map::keys(&proposal.votes);
+            vector::for_each(
+                keys,
+                |old_member| {
+                    let om: Member = old_member;
+                    // Find corresponding new member by address
+                    let (found, new_idx) = vector::find(
+                        &multisig_wallet.members,
+                        |m| {
+                            let nm: &Member = m;
+                            nm.address == om.address
+                        }
+                    );
+                    // If member still exists and tier changed, update the vote entry
+                    if (found) {
+                        let new_member =
+                            *vector::borrow(&multisig_wallet.members, new_idx);
+                        if (om.tier != new_member.tier) {
+                            let (_, vote) = simple_map::remove(&mut proposal.votes, &om);
+                            simple_map::add(&mut proposal.votes, new_member, vote);
+                        }
+                    }
+                }
+            )
         };
 
         event::emit<UpdateConfigEvent>(
@@ -2554,6 +2580,129 @@ module initia_std::multisig_v2 {
                 &updated_proposal3.votes, &Member { address: addr3, tier: option::none() }
             ),
             1
+        );
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun update_config_preserves_votes_when_tier_changes(
+        account1: signer, account2: signer, account3: signer
+    ) acquires MultisigWallet, ProposalStore {
+        // create weighted multisig wallet with tiers: admin=2, member=1
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+
+        create_weighted_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[string::utf8(b"admin"), string::utf8(b"member")],
+            vector[2, 1],
+            vector[addr1, addr2, addr3],
+            vector[
+                string::utf8(b"admin"), // addr1 = admin (weight 2)
+                string::utf8(b"member"), // addr2 = member (weight 1)
+                string::utf8(b"member") // addr3 = member (weight 1)
+            ],
+            3 // threshold = 3, total_weight = 4
+        );
+
+        let multisig_addr = get_multisig_address(
+            &addr1, &string::utf8(b"multisig wallet")
+        );
+
+        set_block_info(100, 100);
+
+        // create a proposal
+        create_proposal(
+            &account1,
+            multisig_addr,
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
+            option::some(99)
+        );
+
+        // all members vote yes
+        vote_proposal(&account1, multisig_addr, 1, true); // admin votes yes (weight 2)
+        vote_proposal(&account2, multisig_addr, 1, true); // member votes yes (weight 1)
+        vote_proposal(&account3, multisig_addr, 1, true); // member votes yes (weight 1)
+
+        // verify initial yes_vote_score = 2 + 1 + 1 = 4
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let proposal = table::borrow(&multisig_wallet.proposals, 1);
+        let proposal_response =
+            proposal_to_proposal_response(multisig_wallet, multisig_addr, 1, proposal);
+        assert!(proposal_response.yes_vote_score == 4, 1);
+        assert!(proposal_response.total_weight == 4, 1);
+
+        // update_config: change addr2 from member to admin (weight 1 -> 2)
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        update_config(
+            multisig_signer,
+            vector[addr1, addr2, addr3],
+            option::some(
+                vector[string::utf8(b"admin"), string::utf8(b"member")]
+            ),
+            option::some(vector[2, 1]),
+            option::some(
+                vector[
+                    string::utf8(b"admin"), // addr1 = admin (weight 2)
+                    string::utf8(b"admin"), // addr2 = admin (weight 2) - CHANGED
+                    string::utf8(b"member") // addr3 = member (weight 1)
+                ]
+            ),
+            4 // new threshold = 4, new total_weight = 5
+        );
+
+        // verify votes are preserved with updated Member keys
+        let updated_multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let updated_proposal = table::borrow(&updated_multisig_wallet.proposals, 1);
+        let updated_proposal_response =
+            proposal_to_proposal_response(
+                updated_multisig_wallet,
+                multisig_addr,
+                1,
+                updated_proposal
+            );
+
+        // new yes_vote_score = 2 + 2 + 1 = 5 (addr2's weight changed from 1 to 2)
+        assert!(updated_proposal_response.yes_vote_score == 5, 2);
+        assert!(updated_proposal_response.total_weight == 5, 3);
+        assert!(updated_proposal_response.threshold == 4, 4);
+
+        // verify all votes are still present with new Member keys
+        let admin_tier = Tier { name: string::utf8(b"admin"), weight: 2 };
+        let member_tier = Tier { name: string::utf8(b"member"), weight: 1 };
+        assert!(
+            simple_map::contains_key(
+                &updated_proposal.votes,
+                &Member { address: addr1, tier: option::some(admin_tier) }
+            ),
+            5
+        );
+        assert!(
+            simple_map::contains_key(
+                &updated_proposal.votes,
+                &Member { address: addr2, tier: option::some(admin_tier) }
+            ),
+            6
+        );
+        assert!(
+            simple_map::contains_key(
+                &updated_proposal.votes,
+                &Member { address: addr3, tier: option::some(member_tier) }
+            ),
+            7
         );
     }
 }
