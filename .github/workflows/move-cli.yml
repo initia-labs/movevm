@@ -37,13 +37,17 @@ jobs:
         run: cargo install cross
 
       - name: Build binary
+        env:
+          VERSION: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
         run: |
-          CARGO_PKG_VERSION=${{ github.event.inputs.version || github.event.workflow_run.head_branch }} cross build --release --target ${{ matrix.target }}
+          CARGO_PKG_VERSION="$VERSION" cross build --release --target ${{ matrix.target }}
 
       - name: Create tar.gz
+        env:
+          VERSION: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../initia-move-cli-${{ github.event.inputs.version || github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move-cli
+          tar -czvf "../../../initia-move-cli-${VERSION}-${{ matrix.suffix }}.tar.gz" initia-move-cli
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4 
@@ -76,13 +80,17 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build binary
+        env:
+          VERSION: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
         run: |
-          CARGO_PKG_VERSION=${{ github.event.inputs.version || github.event.workflow_run.head_branch }} cargo build --release --target ${{ matrix.target }} --bin initia-move-cli
+          CARGO_PKG_VERSION="$VERSION" cargo build --release --target ${{ matrix.target }} --bin initia-move-cli
 
       - name: Create tar.gz
+        env:
+          VERSION: ${{ github.event.inputs.version || github.event.workflow_run.head_branch }}
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../initia-move-cli-${{ github.event.inputs.version || github.event.workflow_run.head_branch }}-${{ matrix.suffix }}.tar.gz initia-move-cli
+          tar -czvf "../../../initia-move-cli-${VERSION}-${{ matrix.suffix }}.tar.gz" initia-move-cli
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4 
