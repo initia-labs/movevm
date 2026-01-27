@@ -372,3 +372,19 @@ pub extern "C" fn stringify_struct_tag(
     let ret = handle_c_error_binary(res, errmsg);
     UnmanagedVector::new(Some(ret))
 }
+
+#[export_name = "libmovevm_sort_module_bundle"]
+pub extern "C" fn sort_module_bundle(
+    errmsg: Option<&mut UnmanagedVector>,
+    module_bundle_payload: ByteSliceView,
+) -> UnmanagedVector {
+    let module_bundle: ModuleBundle =
+        bcs::from_bytes(module_bundle_payload.read().unwrap()).unwrap();
+    let res = catch_unwind(AssertUnwindSafe(move || {
+        api_handler::sort_module_bundle(module_bundle)
+    }))
+    .unwrap_or_else(|_| Err(Error::panic()));
+
+    let ret = handle_c_error_binary(res, errmsg);
+    UnmanagedVector::new(Some(ret))
+}

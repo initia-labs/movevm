@@ -187,7 +187,10 @@ pub fn make_all(
 ) -> impl Iterator<Item = (String, NativeFunction)> + '_ {
     let mut natives = vec![];
     natives.extend([("get_block_info", native_get_block_info as RawSafeNative)]);
-    natives.extend([("get_block_info_nanos", native_get_block_info_nanos as RawSafeNative)]);
+    natives.extend([(
+        "get_block_info_nanos",
+        native_get_block_info_nanos as RawSafeNative,
+    )]);
     natives.extend([("get_chain_id", native_get_chain_id as RawSafeNative)]);
 
     #[cfg(feature = "testing")]

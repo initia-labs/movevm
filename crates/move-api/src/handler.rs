@@ -1,3 +1,4 @@
+use initia_move_types::module::ModuleBundle;
 use move_binary_format::{
     access::ModuleAccess as _, deserializer::DeserializerConfig, CompiledModule,
 };
@@ -39,6 +40,13 @@ pub fn read_module_info(compiled: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
     serde_json::to_vec(&module_info).map_err(|e| anyhow::Error::msg(e.to_string()))
 }
 
+pub fn sort_module_bundle(module_bundle: ModuleBundle) -> Result<ModuleBundle, anyhow::Error> {
+    let compiled_modules =
+        deserialize_module_bundle(&module_bundle, &DeserializerConfig::default())?;
+    let (sorted, _, _) = module_bundle.sorted_code_and_modules(compiled_modules)?;
+    Ok(sorted)
+}
+
 pub fn struct_tag_to_string(struct_tag: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
     let struct_tag: StructTag =
         bcs::from_bytes(struct_tag).map_err(|e| anyhow::Error::msg(e.to_string()))?;
@@ -58,4 +66,21 @@ where
     T: Serialize + ?Sized,
 {
     bcs::to_bytes(data).map_err(|_| anyhow::Error::msg("failed to serialize"))
+}
+
+fn deserialize_module_bundle(
+    module_bundle: &ModuleBundle,
+    deserializer_config: &DeserializerConfig,
+) -> Result<Vec<CompiledModule>, anyhow::Error> {
+    let mut result = vec![];
+    for module_blob in module_bundle.iter() {
+        match CompiledModule::deserialize_with_config(module_blob.code(), deserializer_config) {
+            Ok(module) => {
+                result.push(module);
+            }
+            Err(err) => return Err(anyhow::Error::msg(err.to_string())),
+        }
+    }
+
+    Ok(result)
 }

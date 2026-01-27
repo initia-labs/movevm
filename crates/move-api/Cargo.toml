@@ -25,6 +25,7 @@ log = { workspace = true, features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
+base64 = { workspace = true }
 
 
 # initia
