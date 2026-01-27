@@ -194,6 +194,7 @@ module minitia_std::json {
 
     #[test_only]
     enum Shape has drop {
+        Spot {},
         Circle {
             radius: u64
         },
@@ -239,11 +240,23 @@ module minitia_std::json {
 
     #[test]
     fun test_json_marshal_enum() {
+        let json = marshal(&Shape::Spot);
+        assert!(json == b"{\"Spot\":{}}", 1);
+
         let json = marshal(&Shape::Circle { radius: 5u64 });
         assert!(json == b"{\"Circle\":{\"radius\":\"5\"}}", 1);
 
         let json = marshal(&Shape::Rectangle { width: 5u64, height: 5u64 });
         assert!(json == b"{\"Rectangle\":{\"width\":\"5\",\"height\":\"5\"}}", 1);
+
+        let json = marshal(&Color::Red);
+        assert!(json == b"{\"Red\":{}}", 1);
+
+        let json = marshal(&Color::Blue);
+        assert!(json == b"{\"Blue\":{}}", 1);
+
+        let json = marshal(&Color::Green);
+        assert!(json == b"{\"Green\":{}}", 1);
     }
 
     #[test]
