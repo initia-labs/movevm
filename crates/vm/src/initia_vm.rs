@@ -172,7 +172,7 @@ impl InitiaVM {
         extensions.add(NativeBlockContext::new(
             env.chain_id().to_string(),
             env.block_height(),
-            env.block_timestamp(),
+            env.block_timestamp_nanos(),
         ));
         extensions.add(NativeCodeContext::default());
         extensions.add(NativeStakingContext::new(api));

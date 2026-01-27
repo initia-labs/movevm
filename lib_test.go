@@ -19,6 +19,10 @@ import (
 	"github.com/initia-labs/movevm/types"
 )
 
+func nanosToSeconds(nanos uint64) uint64 {
+	return nanos / 1_000_000_000
+}
+
 func generateRandomHash() [32]uint8 {
 	bz := make([]byte, 0, 32)
 	bz = binary.LittleEndian.AppendUint64(bz, rand.Uint64())
@@ -53,7 +57,7 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	stdlibFiles = append(stdlibFiles, types.NewModule(bz))
 
 	kvStore := api.NewLookup()
-	blockTime := uint64(time.Now().Unix())
+	blockTimeNanos := uint64(time.Now().UnixNano())
 
 	vm, err := vm.NewVM(types.InitiaVMConfig{
 		AllowUnstable:       true,
@@ -63,13 +67,13 @@ func initializeVM(t *testing.T, isMinitia bool) (vm.VM, *api.Lookup) {
 	require.NoError(t, err)
 	_, err = vm.Initialize(
 		kvStore,
-		api.NewEmptyMockAPI(blockTime),
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
 		types.Env{
-			BlockHeight:       100,
-			BlockTimestamp:    blockTime,
-			NextAccountNumber: 1,
-			TxHash:            [32]uint8(generateRandomHash()),
-			SessionId:         [32]uint8(generateRandomHash()),
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
 		},
 		types.NewModuleBundle(stdlibFiles...),
 		[]types.AccountAddress{},
@@ -116,18 +120,18 @@ func publishModuleBundle(
 	upgradePolicy, err := json.Marshal(uint8(1))
 	require.NoError(t, err)
 
-	blockTime := uint64(time.Now().Unix())
+	blockTimeNanos := uint64(time.Now().UnixNano())
 	gasBalance := uint64(100000000)
 	res, err := vm.ExecuteEntryFunction(
 		&gasBalance,
 		kvStore,
-		api.NewEmptyMockAPI(blockTime),
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
 		types.Env{
-			BlockHeight:       100,
-			BlockTimestamp:    blockTime,
-			NextAccountNumber: 1,
-			TxHash:            [32]uint8(generateRandomHash()),
-			SessionId:         [32]uint8(generateRandomHash()),
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
 		},
 		[]types.AccountAddress{testAccount},
 		types.EntryFunction{
@@ -175,19 +179,19 @@ func mintCoin(
 		IsJson:   true,
 	}
 
-	blockTime := uint64(time.Now().Unix())
+	blockTimeNanos := uint64(time.Now().UnixNano())
 
 	gasBalance := uint64(100000000)
 	res, err := vm.ExecuteEntryFunction(
 		&gasBalance,
 		kvStore,
-		api.NewEmptyMockAPI(blockTime),
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
 		types.Env{
-			BlockHeight:       100,
-			BlockTimestamp:    blockTime,
-			NextAccountNumber: 1,
-			TxHash:            [32]uint8(generateRandomHash()),
-			SessionId:         [32]uint8(generateRandomHash()),
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
 		},
 		[]types.AccountAddress{minter},
 		payload,
@@ -260,15 +264,15 @@ func Test_FailOnExecute(t *testing.T) {
 		IsJson:   true,
 	}
 
-	blockTime := uint64(time.Now().Unix())
+	blockTimeNanos := uint64(time.Now().UnixNano())
 	gasBalance := uint64(100000000)
-	_api := api.NewEmptyMockAPI(blockTime)
+	_api := api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos))
 	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
+		BlockHeight:         100,
+		BlockTimestampNanos: blockTimeNanos,
+		NextAccountNumber:   1,
+		TxHash:              [32]uint8(generateRandomHash()),
+		SessionId:           [32]uint8(generateRandomHash()),
 	}
 
 	_, err = vm.ExecuteEntryFunction(
@@ -308,15 +312,15 @@ func Test_OutOfGas(t *testing.T) {
 		IsJson:   true,
 	}
 
-	blockTime := uint64(time.Now().Unix())
+	blockTimeNanos := uint64(time.Now().UnixNano())
 	gasBalance := uint64(1)
-	_api := api.NewEmptyMockAPI(blockTime)
+	_api := api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos))
 	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
+		BlockHeight:         100,
+		BlockTimestampNanos: blockTimeNanos,
+		NextAccountNumber:   1,
+		TxHash:              [32]uint8(generateRandomHash()),
+		SessionId:           [32]uint8(generateRandomHash()),
 	}
 
 	_, err = vm.ExecuteEntryFunction(
@@ -359,14 +363,14 @@ func Test_QueryContract(t *testing.T) {
 		IsJson:   true,
 	}
 
-	blockTime := uint64(time.Now().Unix())
-	_api := api.NewEmptyMockAPI(blockTime)
+	blockTimeNanos := uint64(time.Now().UnixNano())
+	_api := api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos))
 	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
+		BlockHeight:         100,
+		BlockTimestampNanos: blockTimeNanos,
+		NextAccountNumber:   1,
+		TxHash:              [32]uint8(generateRandomHash()),
+		SessionId:           [32]uint8(generateRandomHash()),
 	}
 
 	gasBalance := uint64(10000)
@@ -449,14 +453,14 @@ func Test_ExecuteScript(t *testing.T) {
 		Args:   [][]byte{optionalUint64},
 	}
 
-	blockTime := uint64(time.Now().Unix())
-	_api := api.NewEmptyMockAPI(blockTime)
+	blockTimeNanos := uint64(time.Now().UnixNano())
+	_api := api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos))
 	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
+		BlockHeight:         100,
+		BlockTimestampNanos: blockTimeNanos,
+		NextAccountNumber:   1,
+		TxHash:              [32]uint8(generateRandomHash()),
+		SessionId:           [32]uint8(generateRandomHash()),
 	}
 
 	gasBalance := uint64(200000)
@@ -505,14 +509,14 @@ func Test_TableIterator(t *testing.T) {
 		Args:     [][]byte{},
 	}
 
-	blockTime := uint64(time.Now().Unix())
-	_api := api.NewEmptyMockAPI(blockTime)
+	blockTimeNanos := uint64(time.Now().UnixNano())
+	_api := api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos))
 	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
+		BlockHeight:         100,
+		BlockTimestampNanos: blockTimeNanos,
+		NextAccountNumber:   1,
+		TxHash:              [32]uint8(generateRandomHash()),
+		SessionId:           [32]uint8(generateRandomHash()),
 	}
 
 	gasBalance := uint64(100000000)
@@ -592,15 +596,15 @@ func Test_OracleAPI(t *testing.T) {
 	updatedAt := uint64(102310)
 	decimals := uint64(8)
 
-	blockTime := uint64(time.Now().Unix())
-	_api := api.NewEmptyMockAPI(blockTime)
+	blockTimeNanos := uint64(time.Now().UnixNano())
+	_api := api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos))
 	_api.OracleAPI.SetPrice(pairId, price, updatedAt, decimals)
 	env := types.Env{
-		BlockHeight:       100,
-		BlockTimestamp:    blockTime,
-		NextAccountNumber: 1,
-		TxHash:            [32]uint8(generateRandomHash()),
-		SessionId:         [32]uint8(generateRandomHash()),
+		BlockHeight:         100,
+		BlockTimestampNanos: blockTimeNanos,
+		NextAccountNumber:   1,
+		TxHash:              [32]uint8(generateRandomHash()),
+		SessionId:           [32]uint8(generateRandomHash()),
 	}
 
 	gasBalance := uint64(10000)

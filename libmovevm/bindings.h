@@ -301,6 +301,9 @@ libmovevm_UnmanagedVector libmovevm_read_module_info(libmovevm_UnmanagedVector *
 
 void libmovevm_release_vm(libmovevm_VmT *vm);
 
+libmovevm_UnmanagedVector libmovevm_sort_module_bundle(libmovevm_UnmanagedVector *errmsg,
+                                                       libmovevm_ByteSliceView module_bundle_payload);
+
 libmovevm_UnmanagedVector libmovevm_stringify_struct_tag(libmovevm_UnmanagedVector *errmsg,
                                                          libmovevm_ByteSliceView struct_tag);
 

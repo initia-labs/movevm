@@ -26,7 +26,6 @@ log = { workspace = true, features = [
     "release_max_level_warn",
 ] }
 
-
 # initia
 initia-move-vm = { workspace = true }
 initia-move-natives = { workspace = true }

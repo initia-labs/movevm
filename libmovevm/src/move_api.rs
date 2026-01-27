@@ -5,6 +5,7 @@ use crate::storage::GoStorage;
 use initia_move_api::convert::MoveConverter;
 use initia_move_api::handler as api_handler;
 
+use initia_move_types::module::ModuleBundle;
 use move_core_types::language_storage::{StructTag, TypeTag};
 
 pub fn decode_move_resource(
@@ -57,5 +58,14 @@ pub fn struct_tag_to_string(struct_tag: &[u8]) -> Result<Vec<u8>, Error> {
 
 pub fn struct_tag_from_string(struct_tag_str: &[u8]) -> Result<Vec<u8>, Error> {
     api_handler::struct_tag_from_string(struct_tag_str)
+        .map_err(|e| Error::backend_failure(e.to_string()))
+}
+
+pub fn sort_module_bundle(module_bundle: ModuleBundle) -> Result<Vec<u8>, Error> {
+    api_handler::sort_module_bundle(module_bundle)
+        .and_then(|sorted_bundle| {
+            bcs::to_bytes(&sorted_bundle)
+                .map_err(|e| anyhow::anyhow!("failed to serialize sorted bundle: {}", e))
+        })
         .map_err(|e| Error::backend_failure(e.to_string()))
 }

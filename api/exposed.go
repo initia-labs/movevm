@@ -207,6 +207,45 @@ func StringifyStructTag(
 	return string(copyAndDestroyUnmanagedVector(res)), nil
 }
 
+func SortModuleBundle(
+	codes [][]byte,
+) ([][]byte, error) {
+	modules := make([]types.Module, len(codes))
+	for i := range codes {
+		modules[i] = types.NewModule(codes[i])
+	}
+	moduleBundle := types.NewModuleBundle(modules...)
+	moduleBundleBz, err := moduleBundle.BcsSerialize()
+	if err != nil {
+		return nil, err
+	}
+
+	moduleBundleBzView := makeView(moduleBundleBz)
+	defer runtime.KeepAlive(moduleBundleBzView)
+
+	errmsg := uninitializedUnmanagedVector()
+
+	res, err := C.libmovevm_sort_module_bundle(&errmsg, moduleBundleBzView)
+	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	resBz := copyAndDestroyUnmanagedVector(res)
+
+	sortedModuleBundle, err := types.BcsDeserializeModuleBundle(resBz)
+	if err != nil {
+		return nil, err
+	}
+
+	sortedCodes := make([][]byte, len(sortedModuleBundle.Codes))
+	for i, module := range sortedModuleBundle.Codes {
+		sortedCodes[i] = module.Code
+	}
+
+	return sortedCodes, nil
+}
+
 /////////////////////////
 /// non-ffi functions ///
 /////////////////////////

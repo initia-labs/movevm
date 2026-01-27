@@ -11,6 +11,7 @@ module initia_std::multisig_v2 {
     use initia_std::object::{Self, ExtendRef};
     use initia_std::simple_map::{Self, SimpleMap};
     use initia_std::table::{Self, Table};
+    use initia_std::table_key::{decode_u64, encode_u64};
     use initia_std::type_info;
 
     // errors
@@ -46,6 +47,8 @@ module initia_std::multisig_v2 {
     const MAX_LIMIT: u8 = 30;
 
     const MAX_MULTISIG_NAME_LENGTH: u64 = 64;
+
+    const U64_MAX: u64 = 18_446_744_073_709_551_615;
 
     // structs
 
@@ -89,6 +92,15 @@ module initia_std::multisig_v2 {
         status: u8,
         is_json: bool,
         execute_messages: vector<ExecuteMessage>
+    }
+
+    struct ProposalStore has key {
+        active_proposals: Table<ActiveProposalKey, bool>
+    }
+
+    struct ActiveProposalKey has copy, drop {
+        expiry_timestamp: vector<u8>, // encoded u64
+        proposal_id: vector<u8> // encoded u64
     }
 
     // events
@@ -382,7 +394,7 @@ module initia_std::multisig_v2 {
         type_args_list: vector<vector<String>>,
         args_list: vector<vector<vector<u8>>>,
         expiry_duration: Option<u64>
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         assert!(
             vector::length(&module_address_list) == vector::length(&module_name_list)
                 && vector::length(&module_name_list)
@@ -433,7 +445,7 @@ module initia_std::multisig_v2 {
         type_args_list: vector<vector<String>>,
         args_list: vector<vector<String>>,
         expiry_duration: Option<u64>
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         assert!(
             vector::length(&module_address_list) == vector::length(&module_name_list)
                 && vector::length(&module_name_list)
@@ -483,6 +495,7 @@ module initia_std::multisig_v2 {
     ) acquires MultisigWallet {
         let voter_address = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        create_proposal_store(multisig_wallet); // for migration
         assert_multisig_member(&multisig_wallet.members, &voter_address);
 
         assert!(
@@ -504,9 +517,10 @@ module initia_std::multisig_v2 {
     /// Execute proposal
     public entry fun execute_proposal(
         account: &signer, multisig_addr: address, proposal_id: u64
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         let executor_address = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        create_proposal_store(multisig_wallet); // for migration
         let executor = get_member_by_address(multisig_wallet.members, executor_address);
         assert_multisig_member(&multisig_wallet.members, &executor_address);
 
@@ -529,6 +543,11 @@ module initia_std::multisig_v2 {
             &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
 
         proposal.status = 1; // change the status first in case of updating config
+
+        // remove from active proposals
+        let proposal_store = borrow_global_mut<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, proposal_id);
+        table::remove(&mut proposal_store.active_proposals, key);
 
         if (!proposal.is_json) {
             vector::for_each(
@@ -575,9 +594,10 @@ module initia_std::multisig_v2 {
         new_tier_weights: Option<vector<u64>>,
         new_member_tiers: Option<vector<String>>,
         new_threshold: u64
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         let multisig_addr = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        create_proposal_store(multisig_wallet); // for migration
 
         assert_uniqueness(new_members);
 
@@ -648,19 +668,24 @@ module initia_std::multisig_v2 {
         };
 
         // remove votes of the removed members from active proposals
+        let (_, timestamp) = get_block_info();
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
         let iter =
-            table::iter_mut(
-                &mut multisig_wallet.proposals,
+            table::iter(
+                &proposal_store.active_proposals,
+                option::some(
+                    ActiveProposalKey {
+                        expiry_timestamp: encode_u64(timestamp + 1),
+                        proposal_id: encode_u64(0)
+                    }
+                ),
                 option::none(),
-                option::none(),
-                2
+                1
             );
-        while (table::prepare<u64, Proposal>(iter)) {
-            let (_, proposal) = table::next_mut<u64, Proposal>(iter);
-            // only cares about active proposals
-            if (proposal.status != 0 || is_proposal_expired(proposal)) {
-                continue
-            };
+        while (table::prepare(iter)) {
+            let (key, _) = table::next(iter);
+            let proposal_id = decode_u64(key.proposal_id);
+            let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
 
             proposal.threshold = new_threshold;
             proposal.total_weight = total_weight(&multisig_wallet.members);
@@ -752,9 +777,10 @@ module initia_std::multisig_v2 {
         is_json: bool,
         execute_messages: vector<ExecuteMessage>,
         expiry_duration: Option<u64>
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         let addr = signer::address_of(account);
         let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        create_proposal_store(multisig_wallet); // for migration
         assert_multisig_member(&multisig_wallet.members, &addr);
 
         let (height, timestamp) = get_block_info();
@@ -791,6 +817,11 @@ module initia_std::multisig_v2 {
             proposal_id,
             proposal
         );
+
+        // add to active proposals
+        let proposal_store = borrow_global_mut<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(expiry_timestamp, proposal_id);
+        table::add(&mut proposal_store.active_proposals, key, true);
 
         event::emit<CreateProposalEvent>(
             CreateProposalEvent { multisig_addr, proposal_id, proposer, execute_messages }
@@ -870,6 +901,49 @@ module initia_std::multisig_v2 {
             status: string::utf8(*vector::borrow(&STATUS, (status_index as u64))),
             is_json: proposal.is_json,
             execute_messages: proposal.execute_messages
+        }
+    }
+
+    fun create_proposal_store(multisig_wallet: &mut MultisigWallet) {
+        let multisig_addr = object::address_from_extend_ref(&multisig_wallet.extend_ref);
+        if (exists<ProposalStore>(multisig_addr)) { return };
+
+        let proposal_store = ProposalStore { active_proposals: table::new() };
+        let iter =
+            table::iter(
+                &multisig_wallet.proposals,
+                option::none(),
+                option::none(),
+                1
+            );
+        while (table::prepare(iter)) {
+            let (proposal_id, proposal) = table::next(iter);
+            if (proposal.status != 0 || is_proposal_expired(proposal)) {
+                continue
+            };
+
+            let key = get_active_proposal_key(proposal.expiry_timestamp, proposal_id);
+            table::add(&mut proposal_store.active_proposals, key, true);
+        };
+
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        move_to(multisig_signer, proposal_store);
+    }
+
+    fun get_active_proposal_key(
+        expiry_timestamp_opt: Option<u64>, proposal_id: u64
+    ): ActiveProposalKey {
+        let expiry_timestamp =
+            if (option::is_some(&expiry_timestamp_opt)) {
+                *option::borrow(&expiry_timestamp_opt)
+            } else {
+                U64_MAX
+            };
+
+        ActiveProposalKey {
+            expiry_timestamp: encode_u64(expiry_timestamp),
+            proposal_id: encode_u64(proposal_id)
         }
     }
 
@@ -1359,7 +1433,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1404,7 +1478,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1448,7 +1522,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1541,6 +1615,11 @@ module initia_std::multisig_v2 {
             yes_vote_score(&proposal.votes, &multisig_wallet.members) == 1,
             1
         );
+
+        // check if it is added to active proposals
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(table::contains(&proposal_store.active_proposals, key), 1);
     }
 
     // test proposal_to_proposal_response for weight multisig wallet
@@ -1552,7 +1631,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1641,7 +1720,7 @@ module initia_std::multisig_v2 {
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
     fun proposal_with_json(
         account1: signer, account2: signer, account3: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1710,7 +1789,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1759,7 +1838,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1807,7 +1886,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1873,7 +1952,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1947,7 +2026,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -1998,7 +2077,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -2045,7 +2124,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -2096,7 +2175,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -2154,7 +2233,7 @@ module initia_std::multisig_v2 {
         account2: signer,
         account3: signer,
         account4: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -2197,18 +2276,32 @@ module initia_std::multisig_v2 {
             option::some(99)
         );
 
+        // check if it is added to active proposals
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let proposal = table::borrow(&multisig_wallet.proposals, 1);
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(table::contains(&proposal_store.active_proposals, key), 1);
+
         vote_proposal(&account1, multisig_addr, 1, true);
         vote_proposal(&account2, multisig_addr, 1, false);
         vote_proposal(&account3, multisig_addr, 1, true);
 
         execute_proposal(&account1, multisig_addr, 1);
+
+        // check if it is removed from active proposals
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let proposal = table::borrow(&multisig_wallet.proposals, 1);
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(!table::contains(&proposal_store.active_proposals, key), 1);
     }
 
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
     #[expected_failure(abort_code = 0x10001, location = simple_map)]
     fun update_config_duplicate_members(
         account1: signer, account2: signer, account3: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -2241,7 +2334,7 @@ module initia_std::multisig_v2 {
     #[expected_failure(abort_code = 0x10001, location = Self)]
     fun update_config_non_weighted_invalid_threshold(
         account1: signer, account2: signer, account3: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
@@ -2273,7 +2366,7 @@ module initia_std::multisig_v2 {
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
     fun update_config_non_weighted_successfully(
         account1: signer, account2: signer, account3: signer
-    ) acquires MultisigWallet {
+    ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
