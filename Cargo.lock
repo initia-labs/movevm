@@ -1433,7 +1433,6 @@ name = "initia-move-api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.21.7",
  "bcs 0.1.4",
  "bigdecimal",
  "bytes",

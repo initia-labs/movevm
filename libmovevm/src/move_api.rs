@@ -63,6 +63,9 @@ pub fn struct_tag_from_string(struct_tag_str: &[u8]) -> Result<Vec<u8>, Error> {
 
 pub fn sort_module_bundle(module_bundle: ModuleBundle) -> Result<Vec<u8>, Error> {
     api_handler::sort_module_bundle(module_bundle)
-        .map(|sorted_bundle| bcs::to_bytes(&sorted_bundle).unwrap())
+        .and_then(|sorted_bundle| {
+            bcs::to_bytes(&sorted_bundle)
+                .map_err(|e| anyhow::anyhow!("failed to serialize sorted bundle: {}", e))
+        })
         .map_err(|e| Error::backend_failure(e.to_string()))
 }
