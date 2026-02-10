@@ -475,6 +475,10 @@ module initia_std::dex {
 
         // To support skip api
         let clamm_pair_to_tokens = borrow_global<ClammTokenPairs>(@initia_std);
+        assert!(
+            table::contains(&clamm_pair_to_tokens.pair_to_tokens, addr),
+            error::not_found(ECOIN_TYPE) // or define a new error constant
+        );
         let token_addresses = clamm_pair_to_tokens.pair_to_tokens.borrow(addr);
         let coin_a_amount = coin::balance(addr, *token_addresses.borrow(0));
         let coin_b_amount = coin::balance(addr, *token_addresses.borrow(1));
@@ -783,9 +787,15 @@ module initia_std::dex {
         bigdecimal::from_ratio_u64(5, 100)
     }
 
-    public entry fun init_clamm_pair_index(chain: &signer, dex_clamm_package_addr: address) {
+    /// Initialize clamm pair index
+    public entry fun init_clamm_pair_index(
+        chain: &signer, dex_clamm_package_addr: address
+    ) {
         check_sudo(chain);
-        move_to(chain, ClammTokenPairs { dex_clamm_package_addr, pair_to_tokens: table::new() });
+        move_to(
+            chain,
+            ClammTokenPairs { dex_clamm_package_addr, pair_to_tokens: table::new() }
+        );
     }
 
     /// update swap fee rate
@@ -1357,46 +1367,49 @@ module initia_std::dex {
         weights: Weights
     ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
-        let clamm_pair_to_tokens = borrow_global_mut<ClammTokenPairs>(@initia_std);
 
         let coin_a_addr = coin_address(&coin_a);
         let coin_b_addr = coin_address(&coin_b);
 
         // To support skip api store clamm pairs
-        if (signer::address_of(creator) == clamm_pair_to_tokens.dex_clamm_package_addr) {
-            let pair_addr = initia_std::address::from_string(name);
-            module_store.pair_count = module_store.pair_count + 1;
+        if (exists<ClammTokenPairs>(@initia_std)) {
+            let clamm_pair_to_tokens = borrow_global_mut<ClammTokenPairs>(@initia_std);
+            if (signer::address_of(creator)
+                == clamm_pair_to_tokens.dex_clamm_package_addr) {
+                let pair_addr = initia_std::address::from_string(name);
+                module_store.pair_count = module_store.pair_count + 1;
 
-            let pair_key = PairKey {
-                coin_a: coin_a_addr,
-                coin_b: coin_b_addr,
-                liquidity_token: pair_addr
-            };
-
-            table::add(
-                &mut module_store.pairs,
-                pair_key,
-                PairResponse {
+                let pair_key = PairKey {
                     coin_a: coin_a_addr,
                     coin_b: coin_b_addr,
-                    liquidity_token: pair_addr,
-                    weights,
-                    swap_fee_rate
-                }
-            );
+                    liquidity_token: pair_addr
+                };
 
-            // add clamm index
-            clamm_pair_to_tokens.pair_to_tokens.add(
-                pair_addr,
-                vector[
-                    object::address_to_object(coin_a_addr),
-                    object::address_to_object(coin_b_addr)
-                ]
-            );
+                table::add(
+                    &mut module_store.pairs,
+                    pair_key,
+                    PairResponse {
+                        coin_a: coin_a_addr,
+                        coin_b: coin_b_addr,
+                        liquidity_token: pair_addr,
+                        weights,
+                        swap_fee_rate
+                    }
+                );
 
-            // destroy coin_b and just return coin a
-            fungible_asset::destroy_zero(coin_b);
-            return coin_a
+                // add clamm index
+                clamm_pair_to_tokens.pair_to_tokens.add(
+                    pair_addr,
+                    vector[
+                        object::address_to_object(coin_a_addr),
+                        object::address_to_object(coin_b_addr)
+                    ]
+                );
+
+                // destroy coin_b and just return coin a
+                fungible_asset::destroy_zero(coin_b);
+                return coin_a
+            }
         };
 
         let (mint_cap, burn_cap, freeze_cap, extend_ref) =
