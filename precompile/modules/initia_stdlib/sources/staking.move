@@ -67,7 +67,6 @@ module initia_std::staking {
     }
 
     // Events
-
     #[event]
     /// Event emitted when some amount of reward is claimed by entry function.
     struct RewardEvent has drop, store {
@@ -115,7 +114,6 @@ module initia_std::staking {
     }
 
     // Query responses
-
     struct DelegationResponse has drop {
         metadata: Object<Metadata>,
         validator: String,
@@ -196,16 +194,11 @@ module initia_std::staking {
     }
 
     // Module initialization
-
     fun init_module(chain: &signer) {
-        move_to(
-            chain,
-            ModuleStore { staking_states: table::new() }
-        );
+        move_to(chain, ModuleStore { staking_states: table::new() });
     }
 
     // Helper functions
-
     fun load_staking_state(
         staking_states: &Table<Object<Metadata>, Table<String, StakingState>>,
         metadata: Object<Metadata>,
@@ -329,9 +322,7 @@ module initia_std::staking {
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
-            &module_store.staking_states,
-            metadata,
-            validator
+            &module_store.staking_states, metadata, validator
         );
 
         let reward = calculate_reward(delegation, state);
@@ -370,17 +361,11 @@ module initia_std::staking {
 
         let delegation_store = borrow_global<DelegationStore>(addr);
         let delegation =
-            load_delegation(
-                &delegation_store.delegations,
-                metadata,
-                validator
-            );
+            load_delegation(&delegation_store.delegations, metadata, validator);
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
-            &module_store.staking_states,
-            metadata,
-            validator
+            &module_store.staking_states, metadata, validator
         );
 
         let reward = calculate_reward(delegation, state);
@@ -610,11 +595,7 @@ module initia_std::staking {
             !table::contains(&module_store.staking_states, metadata),
             error::already_exists(ESTAKING_STATE_ALREADY_EXISTS)
         );
-        table::add(
-            &mut module_store.staking_states,
-            metadata,
-            table::new()
-        );
+        table::add(&mut module_store.staking_states, metadata, table::new());
     }
 
     /// Slash unbonding coin
@@ -633,11 +614,7 @@ module initia_std::staking {
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let state =
-            load_staking_state_mut(
-                &mut module_store.staking_states,
-                metadata,
-                validator
-            );
+            load_staking_state_mut(&mut module_store.staking_states, metadata, validator);
 
         let unbonding_amount = fungible_asset::balance(state.unbonding_coin_store);
         let slash_amount = bigdecimal::mul_by_u64_truncate(fraction, unbonding_amount);
@@ -684,9 +661,7 @@ module initia_std::staking {
             let amount = *vector::borrow(&amounts, index);
             let state =
                 load_staking_state_mut(
-                    &mut module_store.staking_states,
-                    metadata,
-                    validator
+                    &mut module_store.staking_states, metadata, validator
                 );
 
             // calculate share
@@ -735,17 +710,11 @@ module initia_std::staking {
         while (index < vector::length(&validators)) {
             let validator = *vector::borrow(&validators, index);
             let reward_amount = *vector::borrow(&reward_amounts, index);
-            let reward = coin::withdraw(
-                &staking_module,
-                reward_metadata,
-                reward_amount
-            );
+            let reward = coin::withdraw(&staking_module, reward_metadata, reward_amount);
 
             let state =
                 load_staking_state_mut(
-                    &mut module_store.staking_states,
-                    metadata,
-                    validator
+                    &mut module_store.staking_states, metadata, validator
                 );
             state.reward_index = bigdecimal::add(
                 state.reward_index,
@@ -868,11 +837,7 @@ module initia_std::staking {
                 fungible_asset::amount(&fa)
             );
         let state =
-            load_staking_state_mut(
-                &mut module_store.staking_states,
-                metadata,
-                validator
-            );
+            load_staking_state_mut(&mut module_store.staking_states, metadata, validator);
         state.total_share = bigdecimal::add(state.total_share, share_diff);
 
         // deposit to relayer
@@ -931,11 +896,7 @@ module initia_std::staking {
 
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         let state =
-            load_staking_state_mut(
-                &mut module_store.staking_states,
-                metadata,
-                validator
-            );
+            load_staking_state_mut(&mut module_store.staking_states, metadata, validator);
 
         assert!(
             bigdecimal::ge(state.total_share, share),
@@ -945,7 +906,12 @@ module initia_std::staking {
 
         let unbonding_share =
             unbonding_share_from_amount(metadata, validator, unbonding_amount);
-        let unbonding = Unbonding { metadata, validator, unbonding_share, release_time };
+        let unbonding = Unbonding {
+            metadata,
+            validator,
+            unbonding_share,
+            release_time
+        };
 
         (reward, unbonding)
     }
@@ -995,11 +961,7 @@ module initia_std::staking {
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
         let delegation =
-            load_delegation_mut(
-                &mut delegation_store.delegations,
-                metadata,
-                validator
-            );
+            load_delegation_mut(&mut delegation_store.delegations, metadata, validator);
         let reward = claim_reward(delegation);
 
         event::emit(
@@ -1020,9 +982,7 @@ module initia_std::staking {
         let metadata = delegation.metadata;
         let validator = delegation.validator;
         let state = load_staking_state(
-            &module_store.staking_states,
-            metadata,
-            validator
+            &module_store.staking_states, metadata, validator
         );
 
         let reward_amount = calculate_reward(delegation, state);
@@ -1035,9 +995,7 @@ module initia_std::staking {
                         &state.reward_coin_store_ref
                     );
                 fungible_asset::withdraw(
-                    reward_coin_store_signer,
-                    state.reward_coin_store,
-                    reward_amount
+                    reward_coin_store_signer, state.reward_coin_store, reward_amount
                 )
             };
 
@@ -1110,11 +1068,7 @@ module initia_std::staking {
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
         if (!table::contains(&delegation_store.delegations, metadata)) {
-            table::add(
-                &mut delegation_store.delegations,
-                metadata,
-                table::new()
-            );
+            table::add(&mut delegation_store.delegations, metadata, table::new());
         };
 
         let delegations = table::borrow_mut(&mut delegation_store.delegations, metadata);
@@ -1136,11 +1090,7 @@ module initia_std::staking {
         );
 
         let dst_delegation =
-            load_delegation_mut(
-                &mut delegation_store.delegations,
-                metadata,
-                validator
-            );
+            load_delegation_mut(&mut delegation_store.delegations, metadata, validator);
 
         let rewards = merge_delegation(dst_delegation, delegation);
 
@@ -1167,11 +1117,7 @@ module initia_std::staking {
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
         let delegation =
-            load_delegation_mut(
-                &mut delegation_store.delegations,
-                metadata,
-                validator
-            );
+            load_delegation_mut(&mut delegation_store.delegations, metadata, validator);
 
         event::emit(
             DelegationWithdrawEvent { account: account_addr, metadata, share, validator }
@@ -1242,9 +1188,7 @@ module initia_std::staking {
 
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
-            &module_store.staking_states,
-            metadata,
-            validator
+            &module_store.staking_states, metadata, validator
         );
 
         let reward_amount = calculate_reward(&delegation, state);
@@ -1257,9 +1201,7 @@ module initia_std::staking {
                         &state.reward_coin_store_ref
                     );
                 fungible_asset::withdraw(
-                    reward_coin_store_signer,
-                    state.reward_coin_store,
-                    reward_amount
+                    reward_coin_store_signer, state.reward_coin_store, reward_amount
                 )
             };
 
@@ -1271,20 +1213,18 @@ module initia_std::staking {
 
     /// For unbonding object
     ///
-
     fun unbonding_share_from_amount(
         metadata: Object<Metadata>, validator: String, unbonding_amount: u64
     ): BigDecimal acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
-            &module_store.staking_states,
-            metadata,
-            validator
+            &module_store.staking_states, metadata, validator
         );
 
         let share_amount_ratio = unbonding_share_amount_ratio(state);
         bigdecimal::mul(
-            share_amount_ratio, bigdecimal::from_ratio_u64(unbonding_amount, 1)
+            share_amount_ratio,
+            bigdecimal::from_ratio_u64(unbonding_amount, 1)
         )
     }
 
@@ -1293,9 +1233,7 @@ module initia_std::staking {
     ): u64 acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@initia_std);
         let state = load_staking_state(
-            &module_store.staking_states,
-            metadata,
-            validator
+            &module_store.staking_states, metadata, validator
         );
 
         let amount_share_ratio = bigdecimal::rev(unbonding_share_amount_ratio(state));
@@ -1353,7 +1291,9 @@ module initia_std::staking {
     }
 
     /// Get `unbonding_amount` from `Unbonding`
-    public fun get_unbonding_amount_from_unbonding(unbonding: &Unbonding): u64 acquires ModuleStore {
+    public fun get_unbonding_amount_from_unbonding(
+        unbonding: &Unbonding
+    ): u64 acquires ModuleStore {
         unbonding_amount_from_share(
             unbonding.metadata,
             unbonding.validator,
@@ -1367,8 +1307,12 @@ module initia_std::staking {
             bigdecimal::is_zero(unbonding.unbonding_share),
             error::invalid_argument(ENOT_EMPTY)
         );
-        let Unbonding { metadata: _, validator: _, unbonding_share: _, release_time: _ } =
-            unbonding;
+        let Unbonding {
+            metadata: _,
+            validator: _,
+            unbonding_share: _,
+            release_time: _
+        } = unbonding;
     }
 
     /// Deposit the unbonding into recipient's account.
@@ -1388,11 +1332,7 @@ module initia_std::staking {
 
         let delegation_store = borrow_global_mut<DelegationStore>(account_addr);
         if (!table::contains(&delegation_store.unbondings, metadata)) {
-            table::add(
-                &mut delegation_store.unbondings,
-                metadata,
-                table::new()
-            );
+            table::add(&mut delegation_store.unbondings, metadata, table::new());
         };
 
         let unbondings = table::borrow_mut(&mut delegation_store.unbondings, metadata);
@@ -1459,10 +1399,7 @@ module initia_std::staking {
                 &mut delegation_store.unbondings, metadata
             );
 
-            table::remove(
-                unbondings,
-                UnbondingKey { validator, release_time }
-            )
+            table::remove(unbondings, UnbondingKey { validator, release_time })
         } else {
             // Else extract
             extract_unbonding(unbonding, share)
@@ -1509,17 +1446,18 @@ module initia_std::staking {
         dst_unbonding.unbonding_share = bigdecimal::add(
             dst_unbonding.unbonding_share, source_unbonding.unbonding_share
         );
-        let Unbonding { metadata: _, validator: _, unbonding_share: _, release_time: _ } =
-            source_unbonding;
+        let Unbonding {
+            metadata: _,
+            validator: _,
+            unbonding_share: _,
+            release_time: _
+        } = source_unbonding;
     }
 
     /// Claim `unbonding_coin` from expired unbonding.
     public fun claim_unbonding(unbonding: Unbonding): FungibleAsset acquires ModuleStore {
         let (_, timestamp) = block::get_block_info();
-        assert!(
-            unbonding.release_time <= timestamp,
-            error::invalid_state(ENOT_RELEASED)
-        );
+        assert!(unbonding.release_time <= timestamp, error::invalid_state(ENOT_RELEASED));
 
         let unbonding_amount = get_unbonding_amount_from_unbonding(&unbonding);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
@@ -1528,11 +1466,7 @@ module initia_std::staking {
 
         // extract coin
         let state =
-            load_staking_state_mut(
-                &mut module_store.staking_states,
-                metadata,
-                validator
-            );
+            load_staking_state_mut(&mut module_store.staking_states, metadata, validator);
         let unbonding_coin =
             if (unbonding_amount == 0) {
                 fungible_asset::zero(metadata)
@@ -1554,14 +1488,17 @@ module initia_std::staking {
         );
 
         // destroy empty
-        let Unbonding { metadata: _, validator: _, unbonding_share: _, release_time: _ } =
-            unbonding;
+        let Unbonding {
+            metadata: _,
+            validator: _,
+            unbonding_share: _,
+            release_time: _
+        } = unbonding;
 
         unbonding_coin
     }
 
     // Native functions
-
     native fun delegate_internal(
         validator: vector<u8>, metadata: &Object<Metadata>, amount: u64
     ): BigDecimal /* share amount */;
@@ -1699,10 +1636,7 @@ module initia_std::staking {
 
         delegate_script(user1, metadata, validator, 10000000);
 
-        assert!(
-            coin::balance(user1_addr, metadata) == 990000000,
-            0
-        );
+        assert!(coin::balance(user1_addr, metadata) == 990000000, 0);
 
         let delegation = get_delegation(user1_addr, metadata, validator);
         assert!(delegation.validator == validator, 1);
@@ -1730,19 +1664,13 @@ module initia_std::staking {
         let reward = deposit_delegation(user2_addr, withdrawn_delegation);
         assert!(fungible_asset::amount(&reward) == 0, 5);
         coin::deposit(user1_addr, reward);
-        assert!(
-            coin::balance(user2_addr, reward_metadata) == 500000,
-            51
-        );
+        assert!(coin::balance(user2_addr, reward_metadata) == 500000, 51);
 
         let delegation = get_delegation(user1_addr, metadata, validator);
         assert!(delegation.unclaimed_reward == 500000, 6);
 
         claim_reward_script(user1, metadata, validator);
-        assert!(
-            coin::balance(user1_addr, reward_metadata) == 500000,
-            8
-        );
+        assert!(coin::balance(user1_addr, reward_metadata) == 500000, 8);
         let delegation = get_delegation(user1_addr, metadata, validator);
         assert!(delegation.unclaimed_reward == 0, 8);
 
@@ -1757,10 +1685,7 @@ module initia_std::staking {
         assert!(delegation.unclaimed_reward == 500000, 9);
 
         undelegate_script(user1, metadata, validator, 5000000);
-        assert!(
-            coin::balance(user1_addr, reward_metadata) == 1000000,
-            10
-        );
+        assert!(coin::balance(user1_addr, reward_metadata) == 1000000, 10);
 
         // undelegate trigger `deposit_unbonding_coin_for_chain`
         deposit_unbonding_coin_for_chain(
@@ -1816,10 +1741,7 @@ module initia_std::staking {
             validator,
             unbonding.release_time
         );
-        assert!(
-            coin::balance(user1_addr, metadata) == 992500000,
-            13
-        );
+        assert!(coin::balance(user1_addr, metadata) == 992500000, 13);
     }
 
     #[test(chain = @0x1, user = @0x1234)]
@@ -1874,7 +1796,8 @@ module initia_std::staking {
         let delegations = get_delegations(user_addr, metadata, option::none(), 1);
         assert!(vector::length(&delegations) == 1, 4);
         assert!(
-            bigdecimal::truncate_u64(vector::borrow(&delegations, 0).share) == 50000, 4
+            bigdecimal::truncate_u64(vector::borrow(&delegations, 0).share) == 50000,
+            4
         );
 
         fund_reward_coin(chain, @relayer, 100000);
@@ -1920,14 +1843,8 @@ module initia_std::staking {
 
         // 1000000 (mint) - 100000 (delegate_script) - 100000 (delegate)
         // 99998 (rewards)
-        assert!(
-            coin::balance(user_addr, metadata) == 800000,
-            16
-        );
-        assert!(
-            coin::balance(user_addr, reward_metadata) == 99998,
-            17
-        );
+        assert!(coin::balance(user_addr, metadata) == 800000, 16);
+        assert!(coin::balance(user_addr, reward_metadata) == 99998, 17);
 
         let delegation = get_delegation(user_addr, metadata, validator);
         assert!(bigdecimal::truncate_u64(delegation.share) == 300000, 6);
@@ -1991,10 +1908,7 @@ module initia_std::staking {
         let release_time = unbonding.release_time;
         assert!(unbonding.unbonding_amount == 10000, 1);
         assert!(coin::balance(user_addr, metadata) == 900000, 2);
-        assert!(
-            coin::balance(user_addr, reward_metadata) == 10000,
-            3
-        );
+        assert!(coin::balance(user_addr, reward_metadata) == 10000, 3);
 
         // distribute reward
         fund_reward_coin(chain, @relayer, 90000);
@@ -2026,10 +1940,7 @@ module initia_std::staking {
         );
 
         coin::deposit(user_addr, reward);
-        assert!(
-            coin::balance(user_addr, reward_metadata) == 30000,
-            3
-        );
+        assert!(coin::balance(user_addr, reward_metadata) == 30000, 3);
 
         // extract unbonding
         let unbonding1 =
@@ -2058,10 +1969,7 @@ module initia_std::staking {
 
         // claim unbonding with script
         claim_unbonding_script(user, metadata, validator, release_time);
-        assert!(
-            coin::balance(user_addr, metadata) == 920000,
-            13
-        );
+        assert!(coin::balance(user_addr, metadata) == 920000, 13);
     }
 
     #[test(chain = @0x1, user1 = @0x1234, user2 = @0x4321)]
@@ -2110,10 +2018,7 @@ module initia_std::staking {
 
         // claim reward by script
         claim_reward_script(user1, metadata, validator);
-        assert!(
-            coin::balance(user1_addr, reward_metadata) == 100000,
-            0
-        );
+        assert!(coin::balance(user1_addr, reward_metadata) == 100000, 0);
 
         fund_reward_coin(chain, @relayer, 100000);
         deposit_reward_for_chain(
@@ -2139,10 +2044,7 @@ module initia_std::staking {
         assert!(fungible_asset::amount(&reward) == 0, 2);
         fungible_asset::destroy_zero(reward);
 
-        assert!(
-            coin::balance(user1_addr, reward_metadata) == 200000,
-            3
-        );
+        assert!(coin::balance(user1_addr, reward_metadata) == 200000, 3);
 
         delegate_script(
             user2,
@@ -2159,10 +2061,7 @@ module initia_std::staking {
             vector[100000]
         );
         claim_reward_script(user1, metadata, validator);
-        assert!(
-            coin::balance(user1_addr, reward_metadata) == 250000,
-            4
-        );
+        assert!(coin::balance(user1_addr, reward_metadata) == 250000, 4);
     }
 
     #[test]
@@ -2241,8 +2140,12 @@ module initia_std::staking {
         };
 
         merge_unbonding(&mut unbonding1, unbonding2);
-        let Unbonding { metadata: _, validator: _, unbonding_share, release_time: _ } =
-            unbonding1;
+        let Unbonding {
+            metadata: _,
+            validator: _,
+            unbonding_share,
+            release_time: _
+        } = unbonding1;
 
         assert!(bigdecimal::truncate_u64(unbonding_share) == 200, 1);
     }

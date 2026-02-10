@@ -56,7 +56,6 @@ module initia_std::biguint {
     }
 
     // arithmetic
-
     public fun add(self: BigUint, num2: BigUint): BigUint {
         let result_bytes = add_internal(self.bytes, num2.bytes);
         BigUint { bytes: result_bytes }
@@ -138,7 +137,6 @@ module initia_std::biguint {
     }
 
     // cmp
-
     public fun eq(self: BigUint, num2: BigUint): bool {
         eq_internal(self.bytes, num2.bytes)
     }
@@ -170,32 +168,32 @@ module initia_std::biguint {
     native fun add_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): vector<u8>;
+
     native fun sub_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): vector<u8>;
+
     native fun mul_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): vector<u8>;
+
     native fun div_internal(
         num1_bytes: vector<u8>, num2_bytes: vector<u8>
     ): vector<u8>;
+
     native fun new_internal<T>(num: T): vector<u8>;
+
     native fun cast_internal<T>(num_bytes: vector<u8>): T;
-    native fun eq_internal(
-        num1_bytes: vector<u8>, num2_bytes: vector<u8>
-    ): bool;
-    native fun lt_internal(
-        num1_bytes: vector<u8>, num2_bytes: vector<u8>
-    ): bool;
-    native fun le_internal(
-        num1_bytes: vector<u8>, num2_bytes: vector<u8>
-    ): bool;
-    native fun gt_internal(
-        num1_bytes: vector<u8>, num2_bytes: vector<u8>
-    ): bool;
-    native fun ge_internal(
-        num1_bytes: vector<u8>, num2_bytes: vector<u8>
-    ): bool;
+
+    native fun eq_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
+
+    native fun lt_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
+
+    native fun le_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
+
+    native fun gt_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
+
+    native fun ge_internal(num1_bytes: vector<u8>, num2_bytes: vector<u8>): bool;
 
     #[test]
     fun test_biguint_u64() {
@@ -226,33 +224,28 @@ module initia_std::biguint {
         let num2 = from_u128(18446744073709551615u128 * 2u128);
         let num3 = add(num1, num2);
         assert!(
-            to_u128(num3) == 18446744073709551615u128 * 4u128,
-            1
+            to_u128(num3) == 18446744073709551615u128 * 4u128, 1
         );
         let num4 = sub(num1, num2);
         assert!(to_u128(num4) == 0, 1);
         let num5 = mul(num1, from_u128(2));
         assert!(
-            to_u128(num5) == 18446744073709551615u128 * 4u128,
-            2
+            to_u128(num5) == 18446744073709551615u128 * 4u128, 2
         );
         let num6 = div(num1, from_u128(2));
         assert!(to_u128(num6) == 18446744073709551615u128, 3);
 
         let num7 = add_by_u128(num1, 1);
         assert!(
-            to_u128(num7) == 18446744073709551615u128 * 2u128 + 1u128,
-            4
+            to_u128(num7) == 18446744073709551615u128 * 2u128 + 1u128, 4
         );
         let num8 = sub_by_u128(num1, 1);
         assert!(
-            to_u128(num8) == 18446744073709551615u128 * 2u128 - 1u128,
-            5
+            to_u128(num8) == 18446744073709551615u128 * 2u128 - 1u128, 5
         );
         let num9 = mul_by_u128(num1, 2);
         assert!(
-            to_u128(num9) == 18446744073709551615u128 * 4u128,
-            6
+            to_u128(num9) == 18446744073709551615u128 * 4u128, 6
         );
         let num10 = div_by_u128(num1, 2);
         assert!(to_u128(num10) == 18446744073709551615u128, 7);

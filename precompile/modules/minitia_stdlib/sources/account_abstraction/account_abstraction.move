@@ -275,11 +275,7 @@ module minitia_std::account_abstraction {
             );
             current_map.add(auth_function, true);
             event::emit(
-                UpdateDispatchableAuthenticator {
-                    account: addr,
-                    update: b"add",
-                    auth_function
-                }
+                UpdateDispatchableAuthenticator { account: addr, update: b"add", auth_function }
             );
         } else {
             assert!(
@@ -306,8 +302,8 @@ module minitia_std::account_abstraction {
         };
     }
 
-    inline fun dispatchable_authenticator_internal(addr: address):
-        &OrderedMap<FunctionInfo, bool> {
+    inline fun dispatchable_authenticator_internal(addr: address)
+        : &OrderedMap<FunctionInfo, bool> {
         assert!(
             using_dispatchable_authenticator(addr),
             error::not_found(EDISPATCHABLE_AUTHENTICATOR_IS_NOT_USED)
@@ -315,8 +311,8 @@ module minitia_std::account_abstraction {
         &DispatchableAuthenticator[resource_addr(addr)].auth_functions
     }
 
-    inline fun dispatchable_derivable_authenticator_internal():
-        &BigOrderedMap<FunctionInfo, DerivableRegisterValue> {
+    inline fun dispatchable_derivable_authenticator_internal()
+        : &BigOrderedMap<FunctionInfo, DerivableRegisterValue> {
         assert!(
             exists<DerivableDispatchableAuthenticator>(@minitia_std),
             error::not_found(EDERIVABLE_AA_NOT_INITIALIZED)

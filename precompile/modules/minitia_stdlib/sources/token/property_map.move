@@ -79,9 +79,7 @@ module minitia_std::property_map {
 
     /// Helper for external entry functions to produce a valid container for property values.
     public fun prepare_input(
-        keys: vector<String>,
-        types: vector<String>,
-        values: vector<vector<u8>>
+        keys: vector<String>, types: vector<String>, values: vector<vector<u8>>
     ): PropertyMap {
         let length = vector::length(&keys);
         assert!(
@@ -157,9 +155,8 @@ module minitia_std::property_map {
         else if (type == string::utf8(b"u64")) { U64 }
         else if (type == string::utf8(b"u128")) { U128 }
         else if (type == string::utf8(b"u256")) { U256 }
-        else if (type == string::utf8(b"address")) {
-            ADDRESS
-        } else if (type == string::utf8(b"vector<u8>")) {
+        else if (type == string::utf8(b"address")) { ADDRESS }
+        else if (type == string::utf8(b"vector<u8>")) {
             BYTE_VECTOR
         } else if (type == string::utf8(b"0x1::string::String")) { STRING }
         else {
@@ -205,7 +202,6 @@ module minitia_std::property_map {
     }
 
     // Accessors
-
     public fun contains_key<T: key>(object: Object<T>, key: &String): bool acquires PropertyMap {
         assert_exists(object::object_address(&object));
         let property_map = borrow_global<PropertyMap>(object::object_address(&object));
@@ -299,10 +295,7 @@ module minitia_std::property_map {
     // Mutators
     /// Add a property, already bcs encoded as a `vector<u8>`
     public fun add(
-        ref: &MutatorRef,
-        key: String,
-        type: String,
-        value: vector<u8>
+        ref: &MutatorRef, key: String, type: String, value: vector<u8>
     ) acquires PropertyMap {
         let new_type = to_internal_type(type);
         validate_type(new_type, value);
@@ -316,10 +309,7 @@ module minitia_std::property_map {
     }
 
     inline fun add_internal(
-        ref: &MutatorRef,
-        key: String,
-        type: u8,
-        value: vector<u8>
+        ref: &MutatorRef, key: String, type: u8, value: vector<u8>
     ) acquires PropertyMap {
         assert_exists(ref.self);
         let property_map = borrow_global_mut<PropertyMap>(ref.self);
@@ -332,10 +322,7 @@ module minitia_std::property_map {
 
     /// Updates a property in place already bcs encoded
     public fun update(
-        ref: &MutatorRef,
-        key: &String,
-        type: String,
-        value: vector<u8>
+        ref: &MutatorRef, key: &String, type: String, value: vector<u8>
     ) acquires PropertyMap {
         let new_type = to_internal_type(type);
         validate_type(new_type, value);
@@ -351,10 +338,7 @@ module minitia_std::property_map {
     }
 
     inline fun update_internal(
-        ref: &MutatorRef,
-        key: &String,
-        type: u8,
-        value: vector<u8>
+        ref: &MutatorRef, key: &String, type: u8, value: vector<u8>
     ) acquires PropertyMap {
         assert_exists(ref.self);
         let property_map = borrow_global_mut<PropertyMap>(ref.self);
@@ -401,8 +385,7 @@ module minitia_std::property_map {
                     bcs::to_bytes<u64>(&0x1234567812345678),
                     bcs::to_bytes<u128>(&0x12345678123456781234567812345678),
                     bcs::to_bytes<u256>(
-                        &
-                        0x1234567812345678123456781234567812345678123456781234567812345678
+                        &0x1234567812345678123456781234567812345678123456781234567812345678
                     ),
                     bcs::to_bytes<vector<u8>>(&vector[0x01]),
                     bcs::to_bytes<String>(&string::utf8(b"a"))
@@ -412,22 +395,10 @@ module minitia_std::property_map {
         let mutator = generate_mutator_ref(&s);
 
         assert!(read_bool(object, &string::utf8(b"bool")), 0);
-        assert!(
-            read_u8(object, &string::utf8(b"u8")) == 0x12,
-            1
-        );
-        assert!(
-            read_u16(object, &string::utf8(b"u16")) == 0x1234,
-            2
-        );
-        assert!(
-            read_u32(object, &string::utf8(b"u32")) == 0x12345678,
-            3
-        );
-        assert!(
-            read_u64(object, &string::utf8(b"u64")) == 0x1234567812345678,
-            4
-        );
+        assert!(read_u8(object, &string::utf8(b"u8")) == 0x12, 1);
+        assert!(read_u16(object, &string::utf8(b"u16")) == 0x1234, 2);
+        assert!(read_u32(object, &string::utf8(b"u32")) == 0x12345678, 3);
+        assert!(read_u64(object, &string::utf8(b"u64")) == 0x1234567812345678, 4);
         assert!(
             read_u128(object, &string::utf8(b"u128"))
                 == 0x12345678123456781234567812345678,
@@ -443,10 +414,8 @@ module minitia_std::property_map {
             7
         );
         assert!(
-            read_string(
-                object,
-                &string::utf8(b"0x1::string::String")
-            ) == string::utf8(b"a"),
+            read_string(object, &string::utf8(b"0x1::string::String"))
+                == string::utf8(b"a"),
             8
         );
 
@@ -459,54 +428,27 @@ module minitia_std::property_map {
         update_typed<u64>(&mutator, &string::utf8(b"u64"), 0x24);
         update_typed<u128>(&mutator, &string::utf8(b"u128"), 0x25);
         update_typed<u256>(&mutator, &string::utf8(b"u256"), 0x26);
-        update_typed<vector<u8>>(
-            &mutator,
-            &string::utf8(b"vector<u8>"),
-            vector[0x02]
-        );
+        update_typed<vector<u8>>(&mutator, &string::utf8(b"vector<u8>"), vector[0x02]);
         update_typed<String>(
             &mutator,
             &string::utf8(b"0x1::string::String"),
             string::utf8(b"ha")
         );
 
-        assert!(
-            !read_bool(object, &string::utf8(b"bool")),
-            10
-        );
-        assert!(
-            read_u8(object, &string::utf8(b"u8")) == 0x21,
-            11
-        );
-        assert!(
-            read_u16(object, &string::utf8(b"u16")) == 0x22,
-            12
-        );
-        assert!(
-            read_u32(object, &string::utf8(b"u32")) == 0x23,
-            13
-        );
-        assert!(
-            read_u64(object, &string::utf8(b"u64")) == 0x24,
-            14
-        );
-        assert!(
-            read_u128(object, &string::utf8(b"u128")) == 0x25,
-            15
-        );
-        assert!(
-            read_u256(object, &string::utf8(b"u256")) == 0x26,
-            16
-        );
+        assert!(!read_bool(object, &string::utf8(b"bool")), 10);
+        assert!(read_u8(object, &string::utf8(b"u8")) == 0x21, 11);
+        assert!(read_u16(object, &string::utf8(b"u16")) == 0x22, 12);
+        assert!(read_u32(object, &string::utf8(b"u32")) == 0x23, 13);
+        assert!(read_u64(object, &string::utf8(b"u64")) == 0x24, 14);
+        assert!(read_u128(object, &string::utf8(b"u128")) == 0x25, 15);
+        assert!(read_u256(object, &string::utf8(b"u256")) == 0x26, 16);
         assert!(
             read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x02],
             17
         );
         assert!(
-            read_string(
-                object,
-                &string::utf8(b"0x1::string::String")
-            ) == string::utf8(b"ha"),
+            read_string(object, &string::utf8(b"0x1::string::String"))
+                == string::utf8(b"ha"),
             18
         );
 
@@ -520,10 +462,7 @@ module minitia_std::property_map {
         remove(&mutator, &string::utf8(b"u128"));
         remove(&mutator, &string::utf8(b"u256"));
         remove(&mutator, &string::utf8(b"vector<u8>"));
-        remove(
-            &mutator,
-            &string::utf8(b"0x1::string::String")
-        );
+        remove(&mutator, &string::utf8(b"0x1::string::String"));
 
         assert!(length(object) == 0, 20);
 
@@ -534,54 +473,27 @@ module minitia_std::property_map {
         add_typed<u64>(&mutator, string::utf8(b"u64"), 0x24);
         add_typed<u128>(&mutator, string::utf8(b"u128"), 0x25);
         add_typed<u256>(&mutator, string::utf8(b"u256"), 0x26);
-        add_typed<vector<u8>>(
-            &mutator,
-            string::utf8(b"vector<u8>"),
-            vector[0x02]
-        );
+        add_typed<vector<u8>>(&mutator, string::utf8(b"vector<u8>"), vector[0x02]);
         add_typed<String>(
             &mutator,
             string::utf8(b"0x1::string::String"),
             string::utf8(b"ha")
         );
 
-        assert!(
-            !read_bool(object, &string::utf8(b"bool")),
-            21
-        );
-        assert!(
-            read_u8(object, &string::utf8(b"u8")) == 0x21,
-            22
-        );
-        assert!(
-            read_u16(object, &string::utf8(b"u16")) == 0x22,
-            23
-        );
-        assert!(
-            read_u32(object, &string::utf8(b"u32")) == 0x23,
-            24
-        );
-        assert!(
-            read_u64(object, &string::utf8(b"u64")) == 0x24,
-            25
-        );
-        assert!(
-            read_u128(object, &string::utf8(b"u128")) == 0x25,
-            26
-        );
-        assert!(
-            read_u256(object, &string::utf8(b"u256")) == 0x26,
-            27
-        );
+        assert!(!read_bool(object, &string::utf8(b"bool")), 21);
+        assert!(read_u8(object, &string::utf8(b"u8")) == 0x21, 22);
+        assert!(read_u16(object, &string::utf8(b"u16")) == 0x22, 23);
+        assert!(read_u32(object, &string::utf8(b"u32")) == 0x23, 24);
+        assert!(read_u64(object, &string::utf8(b"u64")) == 0x24, 25);
+        assert!(read_u128(object, &string::utf8(b"u128")) == 0x25, 26);
+        assert!(read_u256(object, &string::utf8(b"u256")) == 0x26, 27);
         assert!(
             read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x02],
             28
         );
         assert!(
-            read_string(
-                object,
-                &string::utf8(b"0x1::string::String")
-            ) == string::utf8(b"ha"),
+            read_string(object, &string::utf8(b"0x1::string::String"))
+                == string::utf8(b"ha"),
             29
         );
 
@@ -595,10 +507,7 @@ module minitia_std::property_map {
         remove(&mutator, &string::utf8(b"u128"));
         remove(&mutator, &string::utf8(b"u256"));
         remove(&mutator, &string::utf8(b"vector<u8>"));
-        remove(
-            &mutator,
-            &string::utf8(b"0x1::string::String")
-        );
+        remove(&mutator, &string::utf8(b"0x1::string::String"));
 
         assert!(length(object) == 0, 31);
 
@@ -660,22 +569,10 @@ module minitia_std::property_map {
         );
 
         assert!(read_bool(object, &string::utf8(b"bool")), 32);
-        assert!(
-            read_u8(object, &string::utf8(b"u8")) == 0x12,
-            33
-        );
-        assert!(
-            read_u16(object, &string::utf8(b"u16")) == 0x1234,
-            34
-        );
-        assert!(
-            read_u32(object, &string::utf8(b"u32")) == 0x12345678,
-            35
-        );
-        assert!(
-            read_u64(object, &string::utf8(b"u64")) == 0x1234567812345678,
-            36
-        );
+        assert!(read_u8(object, &string::utf8(b"u8")) == 0x12, 33);
+        assert!(read_u16(object, &string::utf8(b"u16")) == 0x1234, 34);
+        assert!(read_u32(object, &string::utf8(b"u32")) == 0x12345678, 35);
+        assert!(read_u64(object, &string::utf8(b"u64")) == 0x1234567812345678, 36);
         assert!(
             read_u128(object, &string::utf8(b"u128"))
                 == 0x12345678123456781234567812345678,
@@ -691,10 +588,8 @@ module minitia_std::property_map {
             39
         );
         assert!(
-            read_string(
-                object,
-                &string::utf8(b"0x1::string::String")
-            ) == string::utf8(b"a"),
+            read_string(object, &string::utf8(b"0x1::string::String"))
+                == string::utf8(b"a"),
             40
         );
 
@@ -755,43 +650,20 @@ module minitia_std::property_map {
             bcs::to_bytes<String>(&string::utf8(b"ha"))
         );
 
-        assert!(
-            !read_bool(object, &string::utf8(b"bool")),
-            10
-        );
-        assert!(
-            read_u8(object, &string::utf8(b"u8")) == 0x21,
-            11
-        );
-        assert!(
-            read_u16(object, &string::utf8(b"u16")) == 0x22,
-            12
-        );
-        assert!(
-            read_u32(object, &string::utf8(b"u32")) == 0x23,
-            13
-        );
-        assert!(
-            read_u64(object, &string::utf8(b"u64")) == 0x24,
-            14
-        );
-        assert!(
-            read_u128(object, &string::utf8(b"u128")) == 0x25,
-            15
-        );
-        assert!(
-            read_u256(object, &string::utf8(b"u256")) == 0x26,
-            16
-        );
+        assert!(!read_bool(object, &string::utf8(b"bool")), 10);
+        assert!(read_u8(object, &string::utf8(b"u8")) == 0x21, 11);
+        assert!(read_u16(object, &string::utf8(b"u16")) == 0x22, 12);
+        assert!(read_u32(object, &string::utf8(b"u32")) == 0x23, 13);
+        assert!(read_u64(object, &string::utf8(b"u64")) == 0x24, 14);
+        assert!(read_u128(object, &string::utf8(b"u128")) == 0x25, 15);
+        assert!(read_u256(object, &string::utf8(b"u256")) == 0x26, 16);
         assert!(
             read_bytes(object, &string::utf8(b"vector<u8>")) == vector[0x02],
             17
         );
         assert!(
-            read_string(
-                object,
-                &string::utf8(b"0x1::string::String")
-            ) == string::utf8(b"ha"),
+            read_string(object, &string::utf8(b"0x1::string::String"))
+                == string::utf8(b"ha"),
             18
         );
     }

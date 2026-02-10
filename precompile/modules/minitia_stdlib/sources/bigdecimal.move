@@ -74,10 +74,7 @@ module minitia_std::bigdecimal {
     }
 
     public fun from_ratio(numerator: BigUint, denominator: BigUint): BigDecimal {
-        assert!(
-            !denominator.is_zero(),
-            error::invalid_argument(EDIVISION_BY_ZERO)
-        );
+        assert!(!denominator.is_zero(), error::invalid_argument(EDIVISION_BY_ZERO));
 
         let numerator = numerator.mul(f());
         BigDecimal { scaled: numerator.div(denominator) }
@@ -135,7 +132,6 @@ module minitia_std::bigdecimal {
     }
 
     // cmp
-
     public fun eq(self: BigDecimal, other: BigDecimal): bool {
         self.scaled.eq(other.scaled)
     }
@@ -165,7 +161,6 @@ module minitia_std::bigdecimal {
     }
 
     // arithmetic
-
     public fun add(self: BigDecimal, other: BigDecimal): BigDecimal {
         BigDecimal { scaled: self.scaled.add(other.scaled) }
     }
@@ -262,10 +257,7 @@ module minitia_std::bigdecimal {
     }
 
     public fun div(self: BigDecimal, other: BigDecimal): BigDecimal {
-        assert!(
-            !other.scaled.is_zero(),
-            error::invalid_argument(EDIVISION_BY_ZERO)
-        );
+        assert!(!other.scaled.is_zero(), error::invalid_argument(EDIVISION_BY_ZERO));
 
         BigDecimal {
             scaled: self.scaled.mul(f()).div(other.scaled)
@@ -291,7 +283,6 @@ module minitia_std::bigdecimal {
     }
 
     // cast
-
     public fun truncate(self: BigDecimal): BigUint {
         self.scaled.div(f())
     }
@@ -341,7 +332,6 @@ module minitia_std::bigdecimal {
     }
 
     // tests
-
     #[test]
     fun test_bigdecimal() {
         let num1 = from_ratio(biguint::from_u64(1), biguint::from_u64(2));

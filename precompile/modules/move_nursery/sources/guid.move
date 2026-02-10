@@ -47,10 +47,7 @@ module std::guid {
     public fun create_with_capability(
         addr: address, _cap: &CreateCapability
     ): GUID acquires Generator {
-        assert!(
-            exists<Generator>(addr),
-            EGUID_GENERATOR_NOT_PUBLISHED
-        );
+        assert!(exists<Generator>(addr), EGUID_GENERATOR_NOT_PUBLISHED);
         create_impl(addr)
     }
 

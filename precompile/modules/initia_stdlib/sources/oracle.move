@@ -10,10 +10,7 @@ module initia_std::oracle {
 
     #[test_only]
     public fun set_price(
-        pair_id: &String,
-        price: u256,
-        updated_at: u64,
-        decimals: u64
+        pair_id: &String, price: u256, updated_at: u64, decimals: u64
     ) {
         set_price_internal(
             *string::bytes(pair_id),
@@ -25,10 +22,7 @@ module initia_std::oracle {
 
     #[test_only]
     native fun set_price_internal(
-        pair_id: vector<u8>,
-        price: u256,
-        updated_at: u64,
-        decimals: u64
+        pair_id: vector<u8>, price: u256, updated_at: u64, decimals: u64
     );
 
     #[test]

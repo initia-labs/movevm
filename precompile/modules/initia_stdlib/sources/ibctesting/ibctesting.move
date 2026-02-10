@@ -73,9 +73,7 @@ module initia_std::ibctesting {
         );
 
         let chain_signer = account::create_signer_for_test(@std);
-        move_to<ChainStore>(
-            &chain_signer, ChainStore { packets, results: vector::empty() }
-        );
+        move_to<ChainStore>(&chain_signer, ChainStore { packets, results: vector::empty() });
     }
 
     /// Relay the packets to the counterparty chain.
@@ -198,8 +196,7 @@ module initia_std::ibctesting {
                     let async_callback = option::destroy_some(result.async_callback);
                     let function_info =
                         ibc_timeout_callback_function_info(
-                            async_callback.module_address,
-                            async_callback.module_name
+                            async_callback.module_address, async_callback.module_name
                         );
 
                     check_dispatch_type_compatibility_for_testing(
@@ -210,8 +207,7 @@ module initia_std::ibctesting {
                     let async_callback = option::destroy_some(result.async_callback);
                     let function_info =
                         ibc_ack_callback_function_info(
-                            async_callback.module_address,
-                            async_callback.module_name
+                            async_callback.module_address, async_callback.module_name
                         );
 
                     check_dispatch_type_compatibility_for_testing(
@@ -299,7 +295,6 @@ module initia_std::ibctesting {
     //
     // Helper Functions
     //
-
     fun callback_function_info(callback_fid: String): FunctionInfo {
         let idx = string::index_of(&callback_fid, &string::utf8(b"::"));
         let module_addr = string::sub_string(&callback_fid, 0, idx);
@@ -358,7 +353,6 @@ module initia_std::ibctesting {
     //
     // Types
     //
-
     struct ChainStore has key, drop {
         packets: vector<TransferRequest>,
         results: vector<TransferResult>
@@ -409,7 +403,6 @@ module initia_std::ibctesting {
     //
     // Struct Unpacking
     //
-
     public fun new_move_message(
         module_address: address,
         module_name: String,
@@ -417,22 +410,30 @@ module initia_std::ibctesting {
         type_args: vector<String>,
         args: vector<String>
     ): MoveMessage {
-        MoveMessage { module_address, module_name, function_name, type_args, args }
+        MoveMessage {
+            module_address,
+            module_name,
+            function_name,
+            type_args,
+            args
+        }
     }
 
     //
     // Native Functions
     //
-
     native fun dispatchable_callback(
         callback_id: u64, success: bool, f: &FunctionInfo
     );
+
     native fun dispatchable_on_receive(
         recipient: &signer, message: &Option<MoveMessage>, f: &FunctionInfo
     ): bool;
+
     native fun dispatchable_ibc_ack(
         callback_id: u64, success: bool, f: &FunctionInfo
     );
+
     native fun dispatchable_ibc_timeout(
         callback_id: u64, f: &FunctionInfo
     );

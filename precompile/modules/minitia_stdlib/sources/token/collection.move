@@ -149,10 +149,7 @@ module minitia_std::collection {
         royalty: Option<Royalty>,
         uri: String
     ): ConstructorRef {
-        assert!(
-            max_supply != 0,
-            error::invalid_argument(EMAX_SUPPLY_CANNOT_BE_ZERO)
-        );
+        assert!(max_supply != 0, error::invalid_argument(EMAX_SUPPLY_CANNOT_BE_ZERO));
         let collection_seed = create_collection_seed(&name);
         let constructor_ref = object::create_named_object(creator, collection_seed);
 
@@ -289,10 +286,7 @@ module minitia_std::collection {
         };
 
         if (option::is_some(&royalty)) {
-            royalty::init(
-                &constructor_ref,
-                option::extract(&mut royalty)
-            )
+            royalty::init(&constructor_ref, option::extract(&mut royalty))
         };
 
         constructor_ref
@@ -363,7 +357,6 @@ module minitia_std::collection {
     }
 
     // Accessors
-
     inline fun check_collection_exists(addr: address) {
         assert!(
             exists<Collection>(addr),
@@ -465,7 +458,6 @@ module minitia_std::collection {
     }
 
     // Mutators
-
     inline fun borrow_mut(mutator_ref: &MutatorRef): &mut Collection {
         check_collection_exists(mutator_ref.self);
         borrow_global_mut<Collection>(mutator_ref.self)
@@ -508,7 +500,6 @@ module minitia_std::collection {
     }
 
     // Tests
-
     #[test(creator = @0x123)]
     fun test_create_mint_burn_for_unlimited(
         creator: &signer
@@ -525,17 +516,9 @@ module minitia_std::collection {
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         assert!(count(collection) == option::some(0), 0);
-        increment_supply(
-            collection,
-            string::utf8(b"token_id"),
-            @0x11111
-        );
+        increment_supply(collection, string::utf8(b"token_id"), @0x11111);
         assert!(count(collection) == option::some(1), 0);
-        decrement_supply(
-            collection,
-            string::utf8(b"token_id"),
-            @0x11112
-        );
+        decrement_supply(collection, string::utf8(b"token_id"), @0x11112);
         assert!(count(collection) == option::some(0), 0);
     }
 
@@ -556,17 +539,9 @@ module minitia_std::collection {
         let collection_address = create_collection_address(creator_address, &name);
         let collection = object::address_to_object<Collection>(collection_address);
         assert!(count(collection) == option::some(0), 0);
-        increment_supply(
-            collection,
-            string::utf8(b"token_id"),
-            @0x11111
-        );
+        increment_supply(collection, string::utf8(b"token_id"), @0x11111);
         assert!(count(collection) == option::some(1), 0);
-        decrement_supply(
-            collection,
-            string::utf8(b"token_id"),
-            @0x11112
-        );
+        decrement_supply(collection, string::utf8(b"token_id"), @0x11112);
         assert!(count(collection) == option::some(0), 0);
     }
 
@@ -582,15 +557,8 @@ module minitia_std::collection {
             object::address_to_object<Collection>(
                 create_collection_address(creator_address, &collection_name)
             );
-        assert!(
-            object::owner(collection) == creator_address,
-            1
-        );
-        object::transfer(
-            creator,
-            collection,
-            signer::address_of(recipient)
-        );
+        assert!(object::owner(collection) == creator_address, 1);
+        object::transfer(creator, collection, signer::address_of(recipient));
     }
 
     #[test(creator = @0x123)]
@@ -614,8 +582,7 @@ module minitia_std::collection {
         let collection =
             object::address_to_object<Collection>(
                 create_collection_address(
-                    signer::address_of(creator),
-                    &collection_name
+                    signer::address_of(creator), &collection_name
                 )
             );
         let mutator_ref = generate_mutator_ref(&constructor_ref);
@@ -633,8 +600,7 @@ module minitia_std::collection {
         let collection =
             object::address_to_object<Collection>(
                 create_collection_address(
-                    signer::address_of(creator),
-                    &collection_name
+                    signer::address_of(creator), &collection_name
                 )
             );
         let uri = string::utf8(b"no fail");
@@ -671,11 +637,7 @@ module minitia_std::collection {
             0
         );
 
-        nfts = nfts(
-            collection,
-            option::some(string::utf8(b"3")),
-            5
-        );
+        nfts = nfts(collection, option::some(string::utf8(b"3")), 5);
         assert!(
             nfts
                 == vector[

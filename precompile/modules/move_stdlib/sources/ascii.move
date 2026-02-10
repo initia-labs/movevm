@@ -68,6 +68,7 @@ module std::ascii {
             if (!is_valid_char(possible_byte)) return option::none();
             i = i + 1;
         };
+
         spec {
             assert i == len;
             assert forall j in 0..len: is_valid_char(bytes[j]);
@@ -91,6 +92,7 @@ module std::ascii {
             if (!is_printable_char(byte)) return false;
             i = i + 1;
         };
+
         spec {
             assert i == len;
             assert forall j in 0..len: is_printable_char(string.bytes[j]);
@@ -100,7 +102,9 @@ module std::ascii {
 
     spec all_characters_printable {
         ensures result ==>
-            (forall j in 0..len(string.bytes): is_printable_char(string.bytes[j]));
+            (
+                forall j in 0..len(string.bytes): is_printable_char(string.bytes[j])
+            );
     }
 
     public fun push_char(string: &mut String, char: Char) {

@@ -37,8 +37,7 @@ module initia_std::address {
         let res =
             json::unmarshal<ToSdkResponse>(
                 query::query_custom(
-                    b"to_sdk_address",
-                    json::marshal(&ToSdkRequest { vm_addr: vm_addr })
+                    b"to_sdk_address", json::marshal(&ToSdkRequest { vm_addr: vm_addr })
                 )
             );
 
@@ -84,6 +83,7 @@ module initia_std::address {
 
     // hex string <> address
     native public fun to_string(addr: address): String;
+
     native public fun from_string(addr_str: String): address;
 
     // bytes <> address

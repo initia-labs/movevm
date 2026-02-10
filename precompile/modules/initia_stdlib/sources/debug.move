@@ -16,6 +16,7 @@ module initia_std::debug {
     }
 
     native fun native_print(x: String);
+
     native fun native_stack_trace(): String;
 
     #[test_only]
@@ -86,10 +87,7 @@ module initia_std::debug {
         assert_equal(&v, b"[ 100, 200, 300 ]");
 
         let foo = Foo {};
-        assert_equal(
-            &foo,
-            b"0x1::debug::Foo {\n  dummy_field: false\n}"
-        );
+        assert_equal(&foo, b"0x1::debug::Foo {\n  dummy_field: false\n}");
 
         let bar = Bar { x: 404, y: Foo {}, z: true };
         assert_equal(
@@ -140,10 +138,7 @@ module initia_std::debug {
         assert_equal(&u64, b"18446744073709551615");
 
         let u128 = 340282366920938463463374607431768211455u128;
-        assert_equal(
-            &u128,
-            b"340282366920938463463374607431768211455"
-        );
+        assert_equal(&u128, b"340282366920938463463374607431768211455");
 
         let u256 =
             115792089237316195423570985008687907853269984665640564039457584007913129639935u256;
@@ -187,10 +182,7 @@ module initia_std::debug {
             msgs: vector[]
         };
 
-        assert_equal(
-            &obj,
-            b"0x1::debug::TestInner {\n  val: 10,\n  vec: [],\n  msgs: []\n}"
-        );
+        assert_equal(&obj, b"0x1::debug::TestInner {\n  val: 10,\n  vec: [],\n  msgs: []\n}");
     }
 
     #[test(s1 = @0x123, s2 = @0x456)]
@@ -220,10 +212,7 @@ module initia_std::debug {
         assert_equal(&v_addr, b"[ @0x1234, @0x5678, @0xabcdef ]");
 
         let v_signer = vector[s1, s2];
-        assert_equal(
-            &v_signer,
-            b"[ signer(@0x123), signer(@0x456) ]"
-        );
+        assert_equal(&v_signer, b"[ signer(@0x123), signer(@0x456) ]");
 
         let v = vector[
             TestInner {
@@ -264,22 +253,13 @@ module initia_std::debug {
         assert_equal(&v_u256, b"[\n  [ 256, 257 ],\n  [ 258, 259 ]\n]");
 
         let v_bool = vector[vector[true, false], vector[false, true]];
-        assert_equal(
-            &v_bool,
-            b"[\n  [ true, false ],\n  [ false, true ]\n]"
-        );
+        assert_equal(&v_bool, b"[\n  [ true, false ],\n  [ false, true ]\n]");
 
         let v_addr = vector[vector[@0x1234, @0x5678], vector[@0xabcdef, @0x9999]];
-        assert_equal(
-            &v_addr,
-            b"[\n  [ @0x1234, @0x5678 ],\n  [ @0xabcdef, @0x9999 ]\n]"
-        );
+        assert_equal(&v_addr, b"[\n  [ @0x1234, @0x5678 ],\n  [ @0xabcdef, @0x9999 ]\n]");
 
         let v_signer = vector[vector[s1], vector[s2]];
-        assert_equal(
-            &v_signer,
-            b"[\n  [ signer(@0x123) ],\n  [ signer(@0x456) ]\n]"
-        );
+        assert_equal(&v_signer, b"[\n  [ signer(@0x123) ],\n  [ signer(@0x456) ]\n]");
 
         let v = vector[
             vector[
@@ -344,9 +324,6 @@ module initia_std::debug {
     fun test_print_generic_struct() {
         let obj = GenericStruct<Foo> { val: 60u64 };
 
-        assert_equal(
-            &obj,
-            b"0x1::debug::GenericStruct<0x1::debug::Foo> {\n  val: 60\n}"
-        );
+        assert_equal(&obj, b"0x1::debug::GenericStruct<0x1::debug::Foo> {\n  val: 60\n}");
     }
 }

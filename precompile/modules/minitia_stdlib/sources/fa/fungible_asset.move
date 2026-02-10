@@ -2,7 +2,13 @@
 /// metadata object can be any object that equipped with `Metadata` resource.
 module minitia_std::fungible_asset {
     use minitia_std::event;
-    use minitia_std::object::{Self, Object, ConstructorRef, DeleteRef, ExtendRef};
+    use minitia_std::object::{
+        Self,
+        Object,
+        ConstructorRef,
+        DeleteRef,
+        ExtendRef
+    };
     use minitia_std::function_info::{Self, FunctionInfo};
 
     use std::error;
@@ -264,10 +270,7 @@ module minitia_std::fungible_asset {
             string::length(&symbol) <= MAX_SYMBOL_LENGTH,
             error::out_of_range(ESYMBOL_TOO_LONG)
         );
-        assert!(
-            decimals <= MAX_DECIMALS,
-            error::out_of_range(EDECIMALS_TOO_LARGE)
-        );
+        assert!(decimals <= MAX_DECIMALS, error::out_of_range(EDECIMALS_TOO_LARGE));
         assert!(
             string::length(&icon_uri) <= MAX_URI_LENGTH,
             error::out_of_range(EURI_TOO_LONG)
@@ -284,10 +287,7 @@ module minitia_std::fungible_asset {
         );
 
         // store supply
-        move_to(
-            metadata_object_signer,
-            Supply { current: 0, maximum: maximum_supply }
-        );
+        move_to(metadata_object_signer, Supply { current: 0, maximum: maximum_supply });
 
         // return metadata object
         object::object_from_constructor_ref<Metadata>(constructor_ref)
@@ -313,8 +313,7 @@ module minitia_std::fungible_asset {
 
                 assert!(
                     function_info::check_dispatch_type_compatibility(
-                        &dispatcher_withdraw_function_info,
-                        withdraw_function
+                        &dispatcher_withdraw_function_info, withdraw_function
                     ),
                     error::invalid_argument(EWITHDRAW_FUNCTION_SIGNATURE_MISMATCH)
                 );
@@ -333,8 +332,7 @@ module minitia_std::fungible_asset {
                 // Verify that caller type matches callee type so wrongly typed function cannot be registered.
                 assert!(
                     function_info::check_dispatch_type_compatibility(
-                        &dispatcher_deposit_function_info,
-                        deposit_function
+                        &dispatcher_deposit_function_info, deposit_function
                     ),
                     error::invalid_argument(EDEPOSIT_FUNCTION_SIGNATURE_MISMATCH)
                 );
@@ -353,8 +351,7 @@ module minitia_std::fungible_asset {
                 // Verify that caller type matches callee type so wrongly typed function cannot be registered.
                 assert!(
                     function_info::check_dispatch_type_compatibility(
-                        &dispatcher_derived_balance_function_info,
-                        balance_function
+                        &dispatcher_derived_balance_function_info, balance_function
                     ),
                     error::invalid_argument(
                         EDERIVED_BALANCE_FUNCTION_SIGNATURE_MISMATCH
@@ -779,10 +776,7 @@ module minitia_std::fungible_asset {
     /// Transfer an `amount` of fungible asset from `from_store`, which should be owned by `sender`, to `receiver`.
     /// Note: it does not move the underlying object.
     public entry fun transfer<T: key>(
-        sender: &signer,
-        from: Object<T>,
-        to: Object<T>,
-        amount: u64
+        sender: &signer, from: Object<T>, to: Object<T>, amount: u64
     ) acquires FungibleStore, DispatchFunctionStore {
         let fa = withdraw(sender, from, amount);
         deposit(to, fa);
@@ -796,7 +790,11 @@ module minitia_std::fungible_asset {
         let store_obj = &object::generate_signer(constructor_ref);
         move_to(
             store_obj,
-            FungibleStore { metadata: object::convert(metadata), balance: 0, frozen: false }
+            FungibleStore {
+                metadata: object::convert(metadata),
+                balance: 0,
+                frozen: false
+            }
         );
 
         object::object_from_constructor_ref<FungibleStore>(constructor_ref)
@@ -810,7 +808,11 @@ module minitia_std::fungible_asset {
         let store_obj = &object::generate_signer_for_extending(extend_ref);
         move_to(
             store_obj,
-            FungibleStore { metadata: object::convert(metadata), balance: 0, frozen: false }
+            FungibleStore {
+                metadata: object::convert(metadata),
+                balance: 0,
+                frozen: false
+            }
         );
 
         let obj_addr = object::address_from_extend_ref(extend_ref);
@@ -824,10 +826,7 @@ module minitia_std::fungible_asset {
         let addr = object::address_from_delete_ref(delete_ref);
         let FungibleStore { metadata: _, balance, frozen: _ } =
             move_from<FungibleStore>(addr);
-        assert!(
-            balance == 0,
-            error::permission_denied(EBALANCE_IS_NOT_ZERO)
-        );
+        assert!(balance == 0, error::permission_denied(EBALANCE_IS_NOT_ZERO));
     }
 
     /// Check the permission for withdraw operation.
@@ -1016,10 +1015,7 @@ module minitia_std::fungible_asset {
 
     /// Transfer `amount` of the fungible asset with `TransferRef` even it is frozen.
     public fun transfer_with_ref<T: key>(
-        transfer_ref: &TransferRef,
-        from: Object<T>,
-        to: Object<T>,
-        amount: u64
+        transfer_ref: &TransferRef, from: Object<T>, to: Object<T>, amount: u64
     ) acquires FungibleStore {
         let fa = withdraw_with_ref(transfer_ref, from, amount);
         deposit_with_ref(transfer_ref, to, fa);
@@ -1094,10 +1090,7 @@ module minitia_std::fungible_asset {
     ///
     /// This function is only callable by the chain.
     public(friend) fun sudo_transfer<T: key>(
-        sender: &signer,
-        from: Object<T>,
-        to: Object<T>,
-        amount: u64
+        sender: &signer, from: Object<T>, to: Object<T>, amount: u64
     ) acquires FungibleStore, DispatchFunctionStore {
         let fa = withdraw(sender, from, amount);
         sudo_deposit(to, fa);
@@ -1145,10 +1138,7 @@ module minitia_std::fungible_asset {
     /// Destroy an empty fungible asset.
     public fun destroy_zero(fungible_asset: FungibleAsset) {
         let FungibleAsset { amount, metadata: _ } = fungible_asset;
-        assert!(
-            amount == 0,
-            error::invalid_argument(EAMOUNT_IS_NOT_ZERO)
-        );
+        assert!(amount == 0, error::invalid_argument(EAMOUNT_IS_NOT_ZERO));
     }
 
     public(friend) fun deposit_internal(
@@ -1187,10 +1177,7 @@ module minitia_std::fungible_asset {
         let metadata = store.metadata;
         if (amount == 0) return zero(metadata);
 
-        assert!(
-            store.balance >= amount,
-            error::invalid_argument(EINSUFFICIENT_BALANCE)
-        );
+        assert!(store.balance >= amount, error::invalid_argument(EINSUFFICIENT_BALANCE));
         store.balance = store.balance - amount;
 
         // emit event
@@ -1298,7 +1285,9 @@ module minitia_std::fungible_asset {
     #[test_only]
     public fun init_test_metadata(
         constructor_ref: &ConstructorRef
-    ): (MintRef, TransferRef, BurnRef, MutateMetadataRef) {
+    ): (
+        MintRef, TransferRef, BurnRef, MutateMetadataRef
+    ) {
         add_fungibility(
             constructor_ref,
             option::some(100) /* max supply */,
@@ -1312,16 +1301,24 @@ module minitia_std::fungible_asset {
         let burn_ref = generate_burn_ref(constructor_ref);
         let transfer_ref = generate_transfer_ref(constructor_ref);
         let mutate_metadata_ref = generate_mutate_metadata_ref(constructor_ref);
-        (mint_ref, transfer_ref, burn_ref, mutate_metadata_ref)
+        (
+            mint_ref, transfer_ref, burn_ref, mutate_metadata_ref
+        )
     }
 
     #[test_only]
     public fun create_fungible_asset(
         creator: &signer
-    ): (MintRef, TransferRef, BurnRef, MutateMetadataRef, Object<Metadata>) {
+    ): (
+        MintRef, TransferRef, BurnRef, MutateMetadataRef, Object<Metadata>
+    ) {
         let (creator_ref, token_object) = create_test_token(creator);
-        let (mint, transfer, burn, mutate_metadata) = init_test_metadata(&creator_ref);
-        (mint, transfer, burn, mutate_metadata, object::convert(token_object))
+        let (
+            mint, transfer, burn, mutate_metadata
+        ) = init_test_metadata(&creator_ref);
+        (
+            mint, transfer, burn, mutate_metadata, object::convert(token_object)
+        )
     }
 
     #[test_only]
@@ -1329,10 +1326,7 @@ module minitia_std::fungible_asset {
         owner: &signer, metadata: Object<T>
     ): Object<FungibleStore> {
         let owner_addr = signer::address_of(owner);
-        create_store(
-            &object::create_object(owner_addr, true),
-            metadata
-        )
+        create_store(&object::create_object(owner_addr, true), metadata)
     }
 
     #[test(creator = @0xcafe)]
@@ -1372,8 +1366,9 @@ module minitia_std::fungible_asset {
     fun test_e2e_basic_flow(
         creator: &signer, aaron: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore, Metadata, ExtraMetadata {
-        let (mint_ref, transfer_ref, burn_ref, mutate_metadata_ref, test_token) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, transfer_ref, burn_ref, mutate_metadata_ref, test_token
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
         let creator_store = create_test_store(creator, metadata);
         let aaron_store = create_test_store(aaron, metadata);
@@ -1425,8 +1420,9 @@ module minitia_std::fungible_asset {
     #[test(creator = @0xcafe)]
     #[expected_failure(abort_code = 0x50003, location = Self)]
     fun test_frozen(creator: &signer) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
 
         let creator_store = create_test_store(creator, mint_ref.metadata);
         let fa = mint(&mint_ref, 100);
@@ -1438,8 +1434,9 @@ module minitia_std::fungible_asset {
     fun test_transfer_with_ref(
         creator: &signer, aaron: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
         let creator_store = create_test_store(creator, metadata);
         let aaron_store = create_test_store(aaron, metadata);
@@ -1457,8 +1454,9 @@ module minitia_std::fungible_asset {
 
     #[test(creator = @0xcafe)]
     fun test_merge_and_exact(creator: &signer) acquires Supply {
-        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let fa = mint(&mint_ref, 100);
         let cash = extract(&mut fa, 80);
         assert!(fa.amount == 20, 1);
@@ -1495,8 +1493,9 @@ module minitia_std::fungible_asset {
     fun test_freeze_module_account_store(
         creator: &signer, module_acc: &signer
     ) acquires FungibleStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
@@ -1510,8 +1509,9 @@ module minitia_std::fungible_asset {
     fun test_burn_module_account_funds(
         creator: &signer, module_acc: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
@@ -1527,8 +1527,9 @@ module minitia_std::fungible_asset {
     fun test_withdraw_module_account_funds_with_ref(
         creator: &signer, module_acc: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let module_acc_store = create_test_store(module_acc, metadata);
@@ -1545,8 +1546,9 @@ module minitia_std::fungible_asset {
     fun test_deposit_blocked_account(
         creator: &signer, blocked_acc: &signer
     ) acquires FungibleStore, Supply, DispatchFunctionStore {
-        let (mint_ref, _transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, _transfer_ref, _burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);
@@ -1561,8 +1563,9 @@ module minitia_std::fungible_asset {
     fun test_deposit_blocked_account_with_ref(
         creator: &signer, blocked_acc: &signer
     ) acquires FungibleStore, Supply {
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _) =
-            create_fungible_asset(creator);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref, _
+        ) = create_fungible_asset(creator);
         let metadata = mint_ref.metadata;
 
         let blocked_acc_store = create_test_store(blocked_acc, metadata);

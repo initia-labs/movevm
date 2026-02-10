@@ -9,7 +9,12 @@ module initia_std::managed_coin {
 
     use initia_std::object::{Self, Object};
     use initia_std::fungible_asset::{Metadata, FungibleAsset};
-    use initia_std::coin::{Self, BurnCapability, FreezeCapability, MintCapability};
+    use initia_std::coin::{
+        Self,
+        BurnCapability,
+        FreezeCapability,
+        MintCapability
+    };
 
     //
     // Errors
@@ -36,7 +41,6 @@ module initia_std::managed_coin {
     //
     // sudo functions
     //
-
     fun check_sudo(account: &signer) {
         assert!(
             signer::address_of(account) == @initia_std,
@@ -85,7 +89,9 @@ module initia_std::managed_coin {
         icon_uri: String,
         project_uri: String
     ) {
-        let (mint_cap, burn_cap, freeze_cap, extend_ref) =
+        let (
+            mint_cap, burn_cap, freeze_cap, extend_ref
+        ) =
             coin::initialize_and_generate_extend_ref(
                 account,
                 maximum_supply,
@@ -162,7 +168,6 @@ module initia_std::managed_coin {
     //
     // Tests
     //
-
     #[test_only]
     use initia_std::primary_fungible_store;
 
@@ -205,20 +210,14 @@ module initia_std::managed_coin {
         mint_to(&mod_account, source_addr, metadata, 50);
         mint_to(&mod_account, destination_addr, metadata, 10);
         assert!(coin::balance(source_addr, metadata) == 50, 1);
-        assert!(
-            coin::balance(destination_addr, metadata) == 10,
-            2
-        );
+        assert!(coin::balance(destination_addr, metadata) == 10, 2);
 
         let supply = coin::supply(metadata);
         assert!(supply == option::some(60), 2);
 
         coin::transfer(&source, destination_addr, metadata, 10);
         assert!(coin::balance(source_addr, metadata) == 40, 3);
-        assert!(
-            coin::balance(destination_addr, metadata) == 20,
-            4
-        );
+        assert!(coin::balance(destination_addr, metadata) == 20, 4);
 
         coin::transfer(
             &source,

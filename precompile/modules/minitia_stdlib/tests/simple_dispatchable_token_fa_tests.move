@@ -40,8 +40,9 @@ module minitia_std::simple_token_fa_tests {
     #[test(creator = @0xcafe, aaron = @0xface)]
     fun test_transfer_with_ref(creator: &signer, aaron: &signer) {
         let (creator_ref, test_token) = create_test_token(creator);
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref) =
-            init_test_metadata(&creator_ref);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref
+        ) = init_test_metadata(&creator_ref);
         let metadata = object::convert<TestToken, Metadata>(test_token);
         simple_token::initialize(creator, &creator_ref);
 
@@ -62,8 +63,9 @@ module minitia_std::simple_token_fa_tests {
     #[test(creator = @0xcafe)]
     fun test_merge_and_exact(creator: &signer) {
         let (creator_ref, _test_token) = create_test_token(creator);
-        let (mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref) =
-            init_test_metadata(&creator_ref);
+        let (
+            mint_ref, _transfer_ref, burn_ref, _mutate_metadata_ref
+        ) = init_test_metadata(&creator_ref);
         simple_token::initialize(creator, &creator_ref);
 
         let fa = mint(&mint_ref, 100);
@@ -81,8 +83,9 @@ module minitia_std::simple_token_fa_tests {
     #[expected_failure(abort_code = 0x50003, location = minitia_std::fungible_asset)]
     fun test_mint_to_frozen(creator: &signer) {
         let (creator_ref, test_token) = create_test_token(creator);
-        let (mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref) =
-            init_test_metadata(&creator_ref);
+        let (
+            mint_ref, transfer_ref, _burn_ref, _mutate_metadata_ref
+        ) = init_test_metadata(&creator_ref);
         let metadata = object::convert<TestToken, Metadata>(test_token);
         simple_token::initialize(creator, &creator_ref);
 

@@ -143,7 +143,6 @@ module initia_std::ed25519 {
     //
     // Tests
     //
-
     #[test]
     fun test_gen_sign_verify() {
         let (sk, vk) = generate_keys();

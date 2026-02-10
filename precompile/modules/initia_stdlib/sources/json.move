@@ -69,8 +69,7 @@ module initia_std::json {
 
         if (!found) {
             vector::push_back(
-                &mut self.elems,
-                Element { key: *key_bytes, value: marshal(value) }
+                &mut self.elems, Element { key: *key_bytes, value: marshal(value) }
             );
         } else {
             let elem = vector::borrow_mut(&mut self.elems, idx);
@@ -80,9 +79,7 @@ module initia_std::json {
 
     /// Set or overwrite the element in the JSON object.
     /// Same as `set_elem` but without the drop restriction on type parameter T.
-    public fun set_elem_v2<T>(
-        self: &mut JSONObject, key: String, value: &T
-    ) {
+    public fun set_elem_v2<T>(self: &mut JSONObject, key: String, value: &T) {
         let key_bytes = string::bytes(&key);
         let (found, idx) = vector::find(
             &self.elems,
@@ -94,8 +91,7 @@ module initia_std::json {
 
         if (!found) {
             vector::push_back(
-                &mut self.elems,
-                Element { key: *key_bytes, value: marshal_v2(value) }
+                &mut self.elems, Element { key: *key_bytes, value: marshal_v2(value) }
             );
         } else {
             let elem = vector::borrow_mut(&mut self.elems, idx);
@@ -158,7 +154,9 @@ module initia_std::json {
     }
 
     native fun marshal_internal<T>(value: &T): vector<u8>;
+
     native fun marshal_to_string_internal<T>(value: &T): String;
+
     native fun unmarshal_internal<T: drop>(json: vector<u8>): T;
 
     #[test_only]

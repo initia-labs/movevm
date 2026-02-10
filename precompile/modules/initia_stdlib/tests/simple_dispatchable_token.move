@@ -16,16 +16,12 @@ module 0xcafe::simple_token {
 
         let withdraw =
             function_info::new_function_info(
-                account,
-                string::utf8(b"simple_token"),
-                string::utf8(b"withdraw")
+                account, string::utf8(b"simple_token"), string::utf8(b"withdraw")
             );
 
         let deposit =
             function_info::new_function_info(
-                account,
-                string::utf8(b"simple_token"),
-                string::utf8(b"deposit")
+                account, string::utf8(b"simple_token"), string::utf8(b"deposit")
             );
 
         dispatchable_fungible_asset::register_dispatch_functions(

@@ -443,7 +443,6 @@ module minitia_std::cosmos {
     //
     // Native Functions
     //
-
     native fun stargate_internal(
         sender: address, data: vector<u8>, option: Options
     );
@@ -507,7 +506,8 @@ module minitia_std::cosmos {
     public fun allow_failure_with_callback(id: u64, fid: String): Options {
         assert!(id > 0, error::invalid_argument(EINVALID_CALLBACK_ID));
         assert!(
-            !string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID)
+            !string::is_empty(&fid),
+            error::invalid_argument(EINVALID_CALLBACK_FID)
         );
 
         Options {
@@ -522,7 +522,8 @@ module minitia_std::cosmos {
     public fun disallow_failure_with_callback(id: u64, fid: String): Options {
         assert!(id > 0, error::invalid_argument(EINVALID_CALLBACK_ID));
         assert!(
-            !string::is_empty(&fid), error::invalid_argument(EINVALID_CALLBACK_FID)
+            !string::is_empty(&fid),
+            error::invalid_argument(EINVALID_CALLBACK_FID)
         );
 
         Options {
@@ -538,7 +539,6 @@ module minitia_std::cosmos {
     }
 
     //=========================================== Tests ===========================================
-
     #[test(sender = @0xcafe)]
     public fun test_stargate_vote(sender: &signer) {
         use std::string::utf8;
@@ -590,7 +590,8 @@ module minitia_std::cosmos {
 
         assert!(
             was_message_requested_with_options(
-                &msg, &allow_failure_with_callback(1, utf8(b"0x1::test::test_fn"))
+                &msg,
+                &allow_failure_with_callback(1, utf8(b"0x1::test::test_fn"))
             ),
             1
         );

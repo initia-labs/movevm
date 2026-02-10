@@ -29,7 +29,6 @@ module minitia_std::auth_data {
 
     // separate authenticator and derivable_authenticator - to not allow accidental mixing
     // in user authentication code
-
     #[test_only]
     public fun create_derivable_auth_data(
         digest: vector<u8>, abstract_signature: vector<u8>, abstract_public_key: vector<u8>

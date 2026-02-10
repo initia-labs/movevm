@@ -73,7 +73,6 @@ module minitia_std::multisig {
     }
 
     // events
-
     #[event]
     struct CreateMultisigAccountEvent has drop, store {
         multisig_addr: address,
@@ -118,7 +117,6 @@ module minitia_std::multisig {
     }
 
     // view function response struct
-
     struct ProposalResponse has drop {
         multisig_addr: address,
         proposal_id: u64,
@@ -460,11 +458,7 @@ module minitia_std::multisig {
         };
 
         let proposal_id = table::length(&multisig_wallet.proposals) + 1;
-        table::add(
-            &mut multisig_wallet.proposals,
-            proposal_id,
-            proposal
-        );
+        table::add(&mut multisig_wallet.proposals, proposal_id, proposal);
 
         event::emit<CreateProposalEvent>(
             CreateProposalEvent {
@@ -500,9 +494,7 @@ module minitia_std::multisig {
     }
 
     fun vote(
-        votes: &mut SimpleMap<address, bool>,
-        voter: address,
-        vote_yes: bool
+        votes: &mut SimpleMap<address, bool>, voter: address, vote_yes: bool
     ) {
         if (simple_map::contains_key(votes, &voter)) {
             let vote = simple_map::borrow_mut(votes, &voter);
@@ -584,10 +576,7 @@ module minitia_std::multisig {
     inline fun assert_proposal(
         max_voting_period: &Period, proposal: &Proposal
     ) {
-        assert!(
-            proposal.status == 0,
-            error::invalid_state(EINVALID_PROPOSAL_STATUS)
-        );
+        assert!(proposal.status == 0, error::invalid_state(EINVALID_PROPOSAL_STATUS));
         assert!(
             !is_proposal_expired(
                 max_voting_period,
@@ -606,10 +595,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun create_wallet_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -671,10 +657,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun create_proposal_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -713,10 +696,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun vote_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -757,10 +737,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x30005, location = Self)]
     fun vote_after_height_expired(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -803,10 +780,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x30005, location = Self)]
     fun vote_after_timestamp_expired(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -849,10 +823,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x30008, location = Self)]
     fun execute_not_pass(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -897,10 +868,7 @@ module minitia_std::multisig {
     )]
     #[expected_failure(abort_code = 0x30003, location = Self)]
     fun execute_after_config_update(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -987,14 +955,8 @@ module minitia_std::multisig {
 
         let proposal = get_proposal(multisig_addr, 1);
         assert!(proposal.module_address == @minitia_std, 0);
-        assert!(
-            proposal.module_name == string::utf8(b"multisig"),
-            1
-        );
-        assert!(
-            proposal.function_name == string::utf8(b"update_config"),
-            2
-        );
+        assert!(proposal.module_name == string::utf8(b"multisig"), 1);
+        assert!(proposal.function_name == string::utf8(b"update_config"), 2);
         assert!(proposal.type_args == vector[], 3);
         assert!(
             proposal.json_args

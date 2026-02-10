@@ -51,11 +51,7 @@ module minitia_std::string_utils {
     }
 
     public fun format4<T0: drop, T1: drop, T2: drop, T3: drop>(
-        fmt: &vector<u8>,
-        a: T0,
-        b: T1,
-        c: T2,
-        d: T3
+        fmt: &vector<u8>, a: T0, b: T1, c: T2, d: T3
     ): String {
         native_format_list(fmt, &list4(a, b, c, d))
     }
@@ -91,8 +87,8 @@ module minitia_std::string_utils {
         cons(a, list2(b, c))
     }
 
-    inline fun list4<T0, T1, T2, T3>(a: T0, b: T1, c: T2, d: T3):
-        Cons<T0, Cons<T1, Cons<T2, Cons<T3, NIL>>>> {
+    inline fun list4<T0, T1, T2, T3>(a: T0, b: T1, c: T2, d: T3)
+        : Cons<T0, Cons<T1, Cons<T2, Cons<T3, NIL>>>> {
         cons(a, list3(b, c, d))
     }
 
@@ -104,19 +100,14 @@ module minitia_std::string_utils {
         single_line: bool,
         include_int_types: bool
     ): String;
+
     native fun native_format_list<T>(fmt: &vector<u8>, val: &T): String;
 
     #[test]
     fun test_format() {
         assert!(to_string(&1u64) == std::string::utf8(b"1"), 1);
-        assert!(
-            to_string(&false) == std::string::utf8(b"false"),
-            2
-        );
-        assert!(
-            to_string(&1u256) == std::string::utf8(b"1"),
-            3
-        );
+        assert!(to_string(&false) == std::string::utf8(b"false"), 2);
+        assert!(to_string(&1u256) == std::string::utf8(b"1"), 3);
         assert!(
             to_string(&vector[1, 2, 3]) == std::string::utf8(b"[ 1, 2, 3 ]"),
             4
@@ -144,21 +135,14 @@ module minitia_std::string_utils {
             2,
             std::string::utf8(b"My string")
         );
-        assert!(
-            s == std::string::utf8(b"a = 1 b = 2 c = \"My string\""),
-            1
-        );
+        assert!(s == std::string::utf8(b"a = 1 b = 2 c = \"My string\""), 1);
     }
 
     #[test]
     #[expected_failure(abort_code = EARGS_MISMATCH)]
     fun test_format_list_to_many_vals() {
         format4(
-            &b"a = {} b = {} c = {}",
-            1,
-            2,
-            3,
-            4
+            &b"a = {} b = {} c = {}", 1, 2, 3, 4
         );
     }
 
@@ -192,10 +176,7 @@ module minitia_std::string_utils {
     #[expected_failure(abort_code = EINVALID_FORMAT)]
     fun test_format_unclosed_braces() {
         format3(
-            &b"a = {} b = {} c = {",
-            1,
-            2,
-            3
+            &b"a = {} b = {} c = {", 1, 2, 3
         );
     }
 
@@ -203,10 +184,7 @@ module minitia_std::string_utils {
     #[expected_failure(abort_code = EINVALID_FORMAT)]
     fun test_format_unclosed_braces_2() {
         format3(
-            &b"a = {} b = { c = {}",
-            1,
-            2,
-            3
+            &b"a = {} b = { c = {}", 1, 2, 3
         );
     }
 
@@ -214,20 +192,14 @@ module minitia_std::string_utils {
     #[expected_failure(abort_code = EINVALID_FORMAT)]
     fun test_format_unopened_braces() {
         format3(
-            &b"a = } b = {} c = {}",
-            1,
-            2,
-            3
+            &b"a = } b = {} c = {}", 1, 2, 3
         );
     }
 
     #[test]
     fun test_format_escape_braces_works() {
         let s = format3(
-            &b"{{a = {} b = {} c = {}}}",
-            1,
-            2,
-            3
+            &b"{{a = {} b = {} c = {}}}", 1, 2, 3
         );
         assert!(s == std::string::utf8(b"{a = 1 b = 2 c = 3}"), 1);
     }

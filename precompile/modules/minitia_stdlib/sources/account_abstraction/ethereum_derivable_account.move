@@ -22,7 +22,6 @@
 /// - OKX
 /// - Exodus
 /// - Backpack
-
 module minitia_std::ethereum_derivable_account {
     use minitia_std::auth_data::AbstractionAuthData;
     use minitia_std::base16::base16_utf8_to_vec_u8;
@@ -92,7 +91,8 @@ module minitia_std::ethereum_derivable_account {
 
     /// Returns a tuple of the signature type and the signature.
     /// We include the issued_at in the signature as it is a required field in the SIWE standard.
-    fun deserialize_abstract_signature(abstract_signature: &vector<u8>): SIWEAbstractSignature {
+    fun deserialize_abstract_signature(abstract_signature: &vector<u8>)
+        : SIWEAbstractSignature {
         let stream = bcs_stream::new(*abstract_signature);
         let signature_type = bcs_stream::deserialize_u8(&mut stream);
         if (signature_type == 0x01) {
@@ -131,9 +131,7 @@ module minitia_std::ethereum_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(
-            b" You are approving to execute transaction on Initia blockchain ("
-        );
+        message.append(b" You are approving to execute transaction on Initia blockchain (");
         message.append(*chain_id.bytes());
         message.append(b").");
         message.append(b"\n\nURI: ");
@@ -172,10 +170,7 @@ module minitia_std::ethereum_derivable_account {
 
         let maybe_recovered = secp256k1::ecdsa_recover(*message, v - 27, &signature);
 
-        assert!(
-            option::is_some(&maybe_recovered),
-            EINVALID_SIGNATURE
-        );
+        assert!(option::is_some(&maybe_recovered), EINVALID_SIGNATURE);
 
         let pubkey = option::borrow(&maybe_recovered);
 
@@ -241,12 +236,16 @@ module minitia_std::ethereum_derivable_account {
 
     #[test_only]
     use std::bcs;
+
     #[test_only]
     use std::string::utf8;
+
     #[test_only]
     use minitia_std::auth_data::create_derivable_auth_data;
+
     #[test_only]
     use minitia_std::block::set_chain_id_for_test;
+
     #[test_only]
     fun create_abstract_public_key(
         ethereum_address: vector<u8>, domain: vector<u8>
@@ -297,7 +296,9 @@ module minitia_std::ethereum_derivable_account {
         ];
         let abstract_signature =
             create_raw_signature(
-                utf8(b"https"), utf8(b"2025-01-01T00:00:00.000Z"), signature_bytes
+                utf8(b"https"),
+                utf8(b"2025-01-01T00:00:00.000Z"),
+                signature_bytes
             );
         let siwe_abstract_signature = deserialize_abstract_signature(&abstract_signature);
         assert!(siwe_abstract_signature is SIWEAbstractSignature::MessageV2);

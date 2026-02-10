@@ -161,7 +161,6 @@ module minitia_std::storage_slots_allocator {
     // and then doing fill_reserved_slot later.
 
     // Similarly we have `remove_and_reserve`, and then `fill_reserved_slot` later.
-
     public fun reserve_slot<T: store>(
         self: &mut StorageSlotsAllocator<T>
     ): (StoredSlot, ReservedSlot) {
@@ -200,7 +199,6 @@ module minitia_std::storage_slots_allocator {
     }
 
     // ========== Section for methods handling references ========
-
     public fun reserved_to_index(self: &ReservedSlot): u64 {
         self.slot_index
     }
@@ -218,7 +216,6 @@ module minitia_std::storage_slots_allocator {
     }
 
     // ========== Section for private internal utility methods ========
-
     fun maybe_pop_from_reuse_queue<T: store>(
         self: &mut StorageSlotsAllocator<T>
     ): u64 {

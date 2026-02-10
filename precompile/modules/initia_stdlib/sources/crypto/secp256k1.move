@@ -1,5 +1,4 @@
 /// This module implements ECDSA signatures based on the prime-order secp256k1 ellptic curve (i.e., cofactor is 1).
-
 module initia_std::secp256k1 {
     use std::option::Option;
 
@@ -65,8 +64,8 @@ module initia_std::secp256k1 {
     }
 
     /// Constructs an ECDSACompressedPublicKey struct, given a 33-byte raw representation.
-    public fun ecdsa_compressed_public_key_from_bytes(bytes: vector<u8>):
-        ECDSACompressedPublicKey {
+    public fun ecdsa_compressed_public_key_from_bytes(bytes: vector<u8>)
+        : ECDSACompressedPublicKey {
         assert!(
             std::vector::length(&bytes) == COMPRESSED_PUBLIC_KEY_SIZE,
             std::error::invalid_argument(E_DESERIALIZE)
@@ -185,7 +184,6 @@ module initia_std::secp256k1 {
     //
     // Tests
     //
-
     #[test]
     fun test_secp256k1_sign_verify() {
         use std::hash;
@@ -222,18 +220,12 @@ module initia_std::secp256k1 {
         let sig = ecdsa_signature_from_bytes(sig_bytes);
         let recovered_pk = ecdsa_recover(msg, rid, &sig);
         assert!(std::option::is_some(&recovered_pk), 1);
-        assert!(
-            std::option::extract(&mut recovered_pk).bytes == pk.bytes,
-            2
-        );
+        assert!(std::option::extract(&mut recovered_pk).bytes == pk.bytes, 2);
 
         let wrong_msg: vector<u8> = hash::sha2_256(b"test initia");
         let recovered_pk = ecdsa_recover(wrong_msg, rid, &sig);
         assert!(std::option::is_some(&recovered_pk), 3);
-        assert!(
-            std::option::extract(&mut recovered_pk).bytes != pk.bytes,
-            4
-        );
+        assert!(std::option::extract(&mut recovered_pk).bytes != pk.bytes, 4);
     }
 
     #[test]
@@ -248,17 +240,11 @@ module initia_std::secp256k1 {
         let sig = ecdsa_signature_from_bytes(sig_bytes);
         let recovered_pk = ecdsa_recover_compressed(msg, rid, &sig);
         assert!(std::option::is_some(&recovered_pk), 1);
-        assert!(
-            std::option::extract(&mut recovered_pk).bytes == pk.bytes,
-            2
-        );
+        assert!(std::option::extract(&mut recovered_pk).bytes == pk.bytes, 2);
 
         let wrong_msg: vector<u8> = hash::sha2_256(b"test initia");
         let recovered_pk = ecdsa_recover_compressed(wrong_msg, rid, &sig);
         assert!(std::option::is_some(&recovered_pk), 3);
-        assert!(
-            std::option::extract(&mut recovered_pk).bytes != pk.bytes,
-            4
-        );
+        assert!(std::option::extract(&mut recovered_pk).bytes != pk.bytes, 4);
     }
 }

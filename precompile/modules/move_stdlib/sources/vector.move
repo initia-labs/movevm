@@ -392,9 +392,7 @@ module std::vector {
 
     /// Apply the function to each pair of elements in the two given vectors, consuming them.
     public inline fun zip<Element1, Element2>(
-        self: vector<Element1>,
-        v2: vector<Element2>,
-        f: |Element1, Element2|
+        self: vector<Element1>, v2: vector<Element2>, f: |Element1, Element2|
     ) {
         // We need to reverse the vectors to consume it efficiently
         self.reverse();
@@ -405,9 +403,7 @@ module std::vector {
     /// Apply the function to each pair of elements in the two given vectors in the reverse order, consuming them.
     /// This errors out if the vectors are not of the same length.
     public inline fun zip_reverse<Element1, Element2>(
-        self: vector<Element1>,
-        v2: vector<Element2>,
-        f: |Element1, Element2|
+        self: vector<Element1>, v2: vector<Element2>, f: |Element1, Element2|
     ) {
         let len = self.length();
         // We can't use the constant EVECTORS_LENGTH_MISMATCH here as all calling code would then need to define it
@@ -616,10 +612,7 @@ module std::vector {
     /// Same as above but on a sub-slice of an array [left, right) with left <= rot <= right
     /// returns the
     public fun rotate_slice<Element>(
-        self: &mut vector<Element>,
-        left: u64,
-        rot: u64,
-        right: u64
+        self: &mut vector<Element>, left: u64, rot: u64, right: u64
     ): u64 {
         self.reverse_slice(left, rot);
         self.reverse_slice(rot, right);
@@ -684,9 +677,7 @@ module std::vector {
 
     /// Destroy a vector, just a wrapper around for_each_reverse with a descriptive name
     /// when used in the context of destroying a vector.
-    public inline fun destroy<Element>(
-        self: vector<Element>, d: |Element|
-    ) {
+    public inline fun destroy<Element>(self: vector<Element>, d: |Element|) {
         self.for_each_reverse(|e| d(e))
     }
 
@@ -709,8 +700,7 @@ module std::vector {
         self: &vector<Element>, start: u64, end: u64
     ): vector<Element> {
         assert!(
-            start <= end && end <= self.length(),
-            EINVALID_SLICE_RANGE
+            start <= end && end <= self.length(), EINVALID_SLICE_RANGE
         );
 
         let vec = vector[];

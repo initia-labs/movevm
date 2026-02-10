@@ -138,11 +138,7 @@ module minitia_std::primary_fungible_store {
         if (exists<ModuleStore>(@minitia_std)) {
             let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
             if (!table::contains(&module_store.user_stores, owner_addr)) {
-                table::add(
-                    &mut module_store.user_stores,
-                    owner_addr,
-                    table::new()
-                );
+                table::add(&mut module_store.user_stores, owner_addr, table::new());
             };
 
             let user_stores = table::borrow_mut(
@@ -160,10 +156,7 @@ module minitia_std::primary_fungible_store {
     /// Get the address of the issuer for the given metadata object.
     public fun issuer<T: key>(metadata: Object<T>): address acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@minitia_std);
-        *table::borrow(
-            &module_store.issuers,
-            object::object_address(&metadata)
-        )
+        *table::borrow(&module_store.issuers, object::object_address(&metadata))
     }
 
     #[view]
@@ -177,8 +170,8 @@ module minitia_std::primary_fungible_store {
 
     #[view]
     /// Get the primary store object for the given account.
-    public fun primary_store<T: key>(owner: address, metadata: Object<T>):
-        Object<FungibleStore> {
+    public fun primary_store<T: key>(owner: address, metadata: Object<T>)
+        : Object<FungibleStore> {
         let store = primary_store_address(owner, metadata);
         object::address_to_object<FungibleStore>(store)
     }
@@ -257,16 +250,16 @@ module minitia_std::primary_fungible_store {
     ///
     /// This function is only callable by the chain.
     public(friend) fun sudo_transfer<T: key>(
-        sender: &signer,
-        metadata: Object<T>,
-        recipient: address,
-        amount: u64
+        sender: &signer, metadata: Object<T>, recipient: address, amount: u64
     ) acquires DeriveRefPod, ModuleStore {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
         dispatchable_fungible_asset::sudo_transfer(
-            sender, sender_store, recipient_store, amount
+            sender,
+            sender_store,
+            recipient_store,
+            amount
         );
     }
 
@@ -296,16 +289,16 @@ module minitia_std::primary_fungible_store {
 
     /// Transfer `amount` of fungible asset from sender's primary store to receiver's primary store.
     public entry fun transfer<T: key>(
-        sender: &signer,
-        metadata: Object<T>,
-        recipient: address,
-        amount: u64
+        sender: &signer, metadata: Object<T>, recipient: address, amount: u64
     ) acquires DeriveRefPod, ModuleStore {
         let sender_store =
             ensure_primary_store_exists(signer::address_of(sender), metadata);
         let recipient_store = ensure_primary_store_exists(recipient, metadata);
         dispatchable_fungible_asset::transfer(
-            sender, sender_store, recipient_store, amount
+            sender,
+            sender_store,
+            recipient_store,
+            amount
         );
 
         // create cosmos side account
@@ -339,8 +332,7 @@ module minitia_std::primary_fungible_store {
     public fun mint(mint_ref: &MintRef, owner: address, amount: u64) acquires DeriveRefPod, ModuleStore {
         let primary_store =
             ensure_primary_store_exists(
-                owner,
-                fungible_asset::mint_ref_metadata(mint_ref)
+                owner, fungible_asset::mint_ref_metadata(mint_ref)
             );
 
         fungible_asset::mint_to(mint_ref, primary_store, amount);
@@ -354,10 +346,7 @@ module minitia_std::primary_fungible_store {
     /// Burn from the primary store of `owner`.
     public fun burn(burn_ref: &BurnRef, owner: address, amount: u64) {
         let primary_store =
-            primary_store(
-                owner,
-                fungible_asset::burn_ref_metadata(burn_ref)
-            );
+            primary_store(owner, fungible_asset::burn_ref_metadata(burn_ref));
         fungible_asset::burn_from(burn_ref, primary_store, amount);
     }
 
@@ -367,8 +356,7 @@ module minitia_std::primary_fungible_store {
     ) acquires DeriveRefPod, ModuleStore {
         let primary_store =
             ensure_primary_store_exists(
-                owner,
-                fungible_asset::transfer_ref_metadata(transfer_ref)
+                owner, fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::set_frozen_flag(transfer_ref, primary_store, frozen);
     }
@@ -378,10 +366,7 @@ module minitia_std::primary_fungible_store {
         transfer_ref: &TransferRef, owner: address, amount: u64
     ): FungibleAsset {
         let from_primary_store =
-            primary_store(
-                owner,
-                fungible_asset::transfer_ref_metadata(transfer_ref)
-            );
+            primary_store(owner, fungible_asset::transfer_ref_metadata(transfer_ref));
         fungible_asset::withdraw_with_ref(transfer_ref, from_primary_store, amount)
     }
 
@@ -391,8 +376,7 @@ module minitia_std::primary_fungible_store {
     ) acquires DeriveRefPod, ModuleStore {
         let from_primary_store =
             ensure_primary_store_exists(
-                owner,
-                fungible_asset::transfer_ref_metadata(transfer_ref)
+                owner, fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::deposit_with_ref(transfer_ref, from_primary_store, fa);
 
@@ -404,20 +388,13 @@ module minitia_std::primary_fungible_store {
 
     /// Transfer `amount` of FA from the primary store of `from` to that of `to` ignoring frozen flag.
     public fun transfer_with_ref(
-        transfer_ref: &TransferRef,
-        from: address,
-        to: address,
-        amount: u64
+        transfer_ref: &TransferRef, from: address, to: address, amount: u64
     ) acquires DeriveRefPod, ModuleStore {
         let from_primary_store =
-            primary_store(
-                from,
-                fungible_asset::transfer_ref_metadata(transfer_ref)
-            );
+            primary_store(from, fungible_asset::transfer_ref_metadata(transfer_ref));
         let to_primary_store =
             ensure_primary_store_exists(
-                to,
-                fungible_asset::transfer_ref_metadata(transfer_ref)
+                to, fungible_asset::transfer_ref_metadata(transfer_ref)
             );
         fungible_asset::transfer_with_ref(
             transfer_ref,
@@ -439,6 +416,7 @@ module minitia_std::primary_fungible_store {
         generate_burn_ref,
         generate_transfer_ref
     };
+
     #[test_only]
     use std::string;
 
@@ -475,28 +453,16 @@ module minitia_std::primary_fungible_store {
         init_test_metadata_with_primary_store_enabled(&creator_ref);
         let creator_address = signer::address_of(creator);
         let aaron_address = signer::address_of(aaron);
-        assert!(
-            !primary_store_exists(creator_address, metadata),
-            1
-        );
-        assert!(
-            !primary_store_exists(aaron_address, metadata),
-            2
-        );
+        assert!(!primary_store_exists(creator_address, metadata), 1);
+        assert!(!primary_store_exists(aaron_address, metadata), 2);
         assert!(balance(creator_address, metadata) == 0, 3);
         assert!(balance(aaron_address, metadata) == 0, 4);
         assert!(!is_frozen(creator_address, metadata), 5);
         assert!(!is_frozen(aaron_address, metadata), 6);
         ensure_primary_store_exists(creator_address, metadata);
         ensure_primary_store_exists(aaron_address, metadata);
-        assert!(
-            primary_store_exists(creator_address, metadata),
-            7
-        );
-        assert!(
-            primary_store_exists(aaron_address, metadata),
-            8
-        );
+        assert!(primary_store_exists(creator_address, metadata), 7);
+        assert!(primary_store_exists(aaron_address, metadata), 8);
     }
 
     #[test(creator = @0xcafe, aaron = @0xface)]
@@ -553,9 +519,7 @@ module minitia_std::primary_fungible_store {
         let fungible_store_addr = object::object_address(&fungible_store);
         assert!(
             !fungible_asset::is_primary_store(
-                fungible_store_addr,
-                creator_address,
-                metadata_addr
+                fungible_store_addr, creator_address, metadata_addr
             ),
             2
         );

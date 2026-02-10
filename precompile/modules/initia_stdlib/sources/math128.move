@@ -58,10 +58,7 @@ module initia_std::math128 {
     /// Returns floor(log2(x))
     public fun floor_log2(x: u128): u8 {
         let res = 0;
-        assert!(
-            x != 0,
-            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2)
-        );
+        assert!(x != 0, std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2));
         // Effectively the position of the most significant set bit
         let n = 64;
         while (n > 0) {
@@ -243,8 +240,7 @@ module initia_std::math128 {
         while (idx < 128) {
             let res = log2(1 << idx);
             assert!(
-                fixed_point32::get_raw_value(res) == (idx as u64) << 32,
-                0
+                fixed_point32::get_raw_value(res) == (idx as u64) << 32, 0
             );
             idx = idx + 1;
         };
@@ -261,9 +257,7 @@ module initia_std::math128 {
                 - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) / 2977044472;
             // verify it matches to 8 significant digits
             assert_approx_the_same(
-                (fixed_point32::get_raw_value(res) as u128),
-                expected,
-                8
+                (fixed_point32::get_raw_value(res) as u128), expected, 8
             );
             idx = idx + 1;
         };
@@ -275,8 +269,7 @@ module initia_std::math128 {
         while (idx < 128) {
             let res = log2_64(1 << idx);
             assert!(
-                fixed_point64::get_raw_value(res) == (idx as u128) << 64,
-                0
+                fixed_point64::get_raw_value(res) == (idx as u128) << 64, 0
             );
             idx = idx + 1;
         };
@@ -296,9 +289,7 @@ module initia_std::math128 {
                         / 12786308645202655660;
             // verify it matches to 8 significant digits
             assert_approx_the_same(
-                fixed_point64::get_raw_value(res),
-                (expected as u128),
-                14
+                fixed_point64::get_raw_value(res), (expected as u128), 14
             );
             idx = idx + 1;
         };

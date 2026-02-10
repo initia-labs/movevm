@@ -19,6 +19,7 @@ module minitia_std::block {
     }
 
     native public fun get_block_info(): (u64, u64);
+
     native public fun get_block_info_nanos(): (u64, u64);
 
     #[test_only]
@@ -52,7 +53,6 @@ module minitia_std::block {
     }
 
     // Functions for compatibility with the aptos
-
     #[view]
     public fun get_current_block_height(): u64 {
         let (height, _) = get_block_info();
