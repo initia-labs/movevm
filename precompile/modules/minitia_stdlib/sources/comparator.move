@@ -71,32 +71,14 @@ module minitia_std::comparator {
         assert!(is_equal(&compare(&value1, &value1)), 1);
         assert!(is_equal(&compare(&value2, &value2)), 2);
 
-        assert!(
-            is_greater_than(&compare(&value0, &value1)),
-            3
-        );
-        assert!(
-            is_smaller_than(&compare(&value1, &value0)),
-            4
-        );
+        assert!(is_greater_than(&compare(&value0, &value1)), 3);
+        assert!(is_smaller_than(&compare(&value1, &value0)), 4);
 
-        assert!(
-            is_smaller_than(&compare(&value0, &value2)),
-            5
-        );
-        assert!(
-            is_greater_than(&compare(&value2, &value0)),
-            6
-        );
+        assert!(is_smaller_than(&compare(&value0, &value2)), 5);
+        assert!(is_greater_than(&compare(&value2, &value0)), 6);
 
-        assert!(
-            is_smaller_than(&compare(&value1, &value2)),
-            7
-        );
-        assert!(
-            is_greater_than(&compare(&value2, &value1)),
-            8
-        );
+        assert!(is_smaller_than(&compare(&value1, &value2)), 7);
+        assert!(is_greater_than(&compare(&value2, &value1)), 8);
     }
 
     #[test]
@@ -109,32 +91,14 @@ module minitia_std::comparator {
         assert!(is_equal(&compare(&value1, &value1)), 1);
         assert!(is_equal(&compare(&value2, &value2)), 2);
 
-        assert!(
-            is_smaller_than(&compare(&value0, &value1)),
-            2
-        );
-        assert!(
-            is_greater_than(&compare(&value1, &value0)),
-            3
-        );
+        assert!(is_smaller_than(&compare(&value0, &value1)), 2);
+        assert!(is_greater_than(&compare(&value1, &value0)), 3);
 
-        assert!(
-            is_smaller_than(&compare(&value0, &value2)),
-            3
-        );
-        assert!(
-            is_greater_than(&compare(&value2, &value0)),
-            4
-        );
+        assert!(is_smaller_than(&compare(&value0, &value2)), 3);
+        assert!(is_greater_than(&compare(&value2, &value0)), 4);
 
-        assert!(
-            is_smaller_than(&compare(&value1, &value2)),
-            5
-        );
-        assert!(
-            is_greater_than(&compare(&value2, &value1)),
-            6
-        );
+        assert!(is_smaller_than(&compare(&value1, &value2)), 5);
+        assert!(is_greater_than(&compare(&value2, &value1)), 6);
     }
 
     #[test_only]

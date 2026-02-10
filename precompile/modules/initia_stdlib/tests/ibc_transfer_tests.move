@@ -124,7 +124,10 @@ module cafe::ibc_transfer_tests {
             source_channel: string::utf8(b"channel-0"),
             sender: address::to_sdk(*vector::borrow(&addrs, 0)),
             receiver: address::to_sdk(*vector::borrow(&addrs, 1)),
-            token: CosmosCoin { denom: string::utf8(b"uinit"), amount: 1_000_001u64 }, // put more than balance
+            token: CosmosCoin {
+                denom: string::utf8(b"uinit"),
+                amount: 1_000_001u64
+            }, // put more than balance
             timeout_height: TimeoutHeight {
                 revision_number: 0u64, // unused in this test
                 revision_height: 10u64 // set timeout height to 10
@@ -236,7 +239,10 @@ module cafe::ibc_transfer_tests {
             source_channel: string::utf8(b"channel-0"),
             sender: address::to_sdk(*vector::borrow(&addrs, 0)),
             receiver: address::to_sdk(*vector::borrow(&addrs, 1)),
-            token: CosmosCoin { denom: string::utf8(b"uinit"), amount: 1_000_001u64 }, // put more than balance
+            token: CosmosCoin {
+                denom: string::utf8(b"uinit"),
+                amount: 1_000_001u64
+            }, // put more than balance
             timeout_height: TimeoutHeight {
                 revision_number: 0u64, // unused in this test
                 revision_height: 10u64 // set timeout height to 10
@@ -498,7 +504,6 @@ module cafe::ibc_transfer_tests {
     //
     // Helpers
     //
-
     fun init_metadata(): Object<Metadata> {
         coin::metadata(@std, string::utf8(b"uinit"))
     }
@@ -525,7 +530,6 @@ module cafe::ibc_transfer_tests {
     //
     // Types
     //
-
     struct TransferRequest has copy, drop {
         _type_: String,
         source_port: String,

@@ -10,5 +10,6 @@ module minitia_std::base64 {
     }
 
     native public fun encode(bytes: vector<u8>): vector<u8>;
+
     native public fun decode(bytes: vector<u8>): vector<u8>;
 }

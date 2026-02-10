@@ -127,8 +127,10 @@ module minitia_std::permissioned_signer {
 
     /// Destroys an ephemeral permission handle. Clean up the permission stored in that handle
     public fun destroy_permissioned_handle(p: PermissionedHandle) acquires PermissionStorage {
-        let PermissionedHandle::V1 { master_account_addr: _, permissions_storage_addr } =
-            p;
+        let PermissionedHandle::V1 {
+            master_account_addr: _,
+            permissions_storage_addr
+        } = p;
         destroy_permissions_storage_address(permissions_storage_addr);
     }
 
@@ -322,7 +324,8 @@ module minitia_std::permissioned_signer {
     /// Helper function that would abort if the signer passed in is a permissioned signer.
     public(package) fun assert_master_signer(s: &signer) {
         assert!(
-            !is_permissioned_signer(s), error::permission_denied(ENOT_MASTER_SIGNER)
+            !is_permissioned_signer(s),
+            error::permission_denied(ENOT_MASTER_SIGNER)
         );
     }
 
@@ -380,7 +383,6 @@ module minitia_std::permissioned_signer {
     ///
     /// Authorizes `permissioned` with the given permission. This requires to have access to the `master`
     /// signer.
-
     inline fun map_or<PermKey: copy + drop + store, T>(
         permissioned: &signer,
         perm: PermKey,
@@ -400,9 +402,7 @@ module minitia_std::permissioned_signer {
             let return_ = mutate(&mut value);
             perms.add(key, value);
             return_
-        } else {
-            default
-        }
+        } else { default }
     }
 
     inline fun insert_or<PermKey: copy + drop + store>(
@@ -432,10 +432,7 @@ module minitia_std::permissioned_signer {
     ///
     /// Consumption using `check_permission_consume` will deduct the capacity.
     public(package) fun authorize_increase<PermKey: copy + drop + store>(
-        master: &signer,
-        permissioned: &signer,
-        capacity: u256,
-        perm: PermKey
+        master: &signer, permissioned: &signer, capacity: u256, perm: PermKey
     ) acquires PermissionStorage {
         assert!(
             is_permissioned_signer(permissioned)
@@ -624,10 +621,7 @@ module minitia_std::permissioned_signer {
         let handle = create_permissioned_handle(creator);
         let perm_signer = signer_from_permissioned_handle(&handle);
         assert!(signer::address_of(&perm_signer) == signer::address_of(creator), 1);
-        assert!(
-            permission_address(&perm_signer) == handle.permissions_storage_addr,
-            1
-        );
+        assert!(permission_address(&perm_signer) == handle.permissions_storage_addr, 1);
         assert!(exists<PermissionStorage>(handle.permissions_storage_addr), 1);
 
         destroy_permissioned_handle(handle);
@@ -635,10 +629,7 @@ module minitia_std::permissioned_signer {
         let handle = create_storable_permissioned_handle(creator, 60);
         let perm_signer = signer_from_storable_permissioned_handle(&handle);
         assert!(signer::address_of(&perm_signer) == signer::address_of(creator), 1);
-        assert!(
-            permission_address(&perm_signer) == handle.permissions_storage_addr,
-            1
-        );
+        assert!(permission_address(&perm_signer) == handle.permissions_storage_addr, 1);
         assert!(exists<PermissionStorage>(handle.permissions_storage_addr), 1);
 
         destroy_storable_permissioned_handle(handle);

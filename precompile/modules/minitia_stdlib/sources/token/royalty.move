@@ -107,10 +107,7 @@ module minitia_std::royalty {
         let init_royalty = create(bigdecimal::from_ratio_u64(1, 2), @0x123);
         init(&constructor_ref, init_royalty);
         assert!(option::some(init_royalty) == get(object), 0);
-        assert!(
-            royalty(&init_royalty) == bigdecimal::from_ratio_u64(1, 2),
-            1
-        );
+        assert!(royalty(&init_royalty) == bigdecimal::from_ratio_u64(1, 2), 1);
         assert!(payee_address(&init_royalty) == @0x123, 2);
 
         let mutator_ref =
@@ -118,10 +115,7 @@ module minitia_std::royalty {
         let update_royalty = create(bigdecimal::from_ratio_u64(2, 5), @0x456);
         update(&mutator_ref, update_royalty);
         assert!(option::some(update_royalty) == get(object), 3);
-        assert!(
-            royalty(&update_royalty) == bigdecimal::from_ratio_u64(2, 5),
-            4
-        );
+        assert!(royalty(&update_royalty) == bigdecimal::from_ratio_u64(2, 5), 4);
         assert!(payee_address(&update_royalty) == @0x456, 5);
     }
 

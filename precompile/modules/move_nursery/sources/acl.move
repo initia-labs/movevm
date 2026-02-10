@@ -2,7 +2,6 @@
 /// have the access permission to a certain object.
 /// This module uses a `vector` to represent the list, but can be refactored to
 /// use a "set" instead when it's available in the language in the future.
-
 module std::acl {
     use std::vector;
     use std::error;

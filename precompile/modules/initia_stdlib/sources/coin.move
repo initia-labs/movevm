@@ -59,7 +59,6 @@ module initia_std::coin {
     //
     // sudo interfaces
     //
-
     fun check_sudo(account: &signer) {
         assert!(
             signer::address_of(account) == @initia_std,
@@ -109,7 +108,6 @@ module initia_std::coin {
     //
     // public interfaces
     //
-
     public fun initialize(
         creator: &signer,
         maximum_supply: Option<u128>,
@@ -141,7 +139,9 @@ module initia_std::coin {
         decimals: u8,
         icon_uri: String,
         project_uri: String
-    ): (MintCapability, BurnCapability, FreezeCapability, ExtendRef) {
+    ): (
+        MintCapability, BurnCapability, FreezeCapability, ExtendRef
+    ) {
         // create object for fungible asset metadata
         let constructor_ref =
             &object::create_named_object(creator, *string::bytes(&symbol));
@@ -206,10 +206,7 @@ module initia_std::coin {
         let metadata = mint_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
-        assert!(
-            exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND
-        );
+        assert!(exists<ManagingRefs>(metadata_addr), ERR_MANAGING_REFS_NOT_FOUND);
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         fungible_asset::mint(&refs.mint_ref, amount)
@@ -222,10 +219,7 @@ module initia_std::coin {
         let metadata = mint_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
-        assert!(
-            exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND
-        );
+        assert!(exists<ManagingRefs>(metadata_addr), ERR_MANAGING_REFS_NOT_FOUND);
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         primary_fungible_store::mint(&refs.mint_ref, recipient, amount)
@@ -236,10 +230,7 @@ module initia_std::coin {
         let metadata = burn_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
-        assert!(
-            exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND
-        );
+        assert!(exists<ManagingRefs>(metadata_addr), ERR_MANAGING_REFS_NOT_FOUND);
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         fungible_asset::burn(&refs.burn_ref, fa)
@@ -252,10 +243,7 @@ module initia_std::coin {
         let metadata = freeze_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
-        assert!(
-            exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND
-        );
+        assert!(exists<ManagingRefs>(metadata_addr), ERR_MANAGING_REFS_NOT_FOUND);
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, true)
@@ -268,10 +256,7 @@ module initia_std::coin {
         let metadata = freeze_cap.metadata;
         let metadata_addr = object::object_address(&metadata);
 
-        assert!(
-            exists<ManagingRefs>(metadata_addr),
-            ERR_MANAGING_REFS_NOT_FOUND
-        );
+        assert!(exists<ManagingRefs>(metadata_addr), ERR_MANAGING_REFS_NOT_FOUND);
         let refs = borrow_global<ManagingRefs>(metadata_addr);
 
         primary_fungible_store::set_frozen_flag(&refs.transfer_ref, account_addr, false)
@@ -280,7 +265,6 @@ module initia_std::coin {
     //
     // Query interfaces
     //
-
     #[view]
     public fun balance(account: address, metadata: Object<Metadata>): u64 {
         primary_fungible_store::balance(account, metadata)
@@ -413,15 +397,9 @@ module initia_std::coin {
         initia_std::primary_fungible_store::init_module_for_test();
         initialize_coin_for_testing(&chain, string::utf8(b"INIT"));
         initialize_coin_for_testing(&not_chain, string::utf8(b"INIT"));
-        let metadata = metadata(
-            std::signer::address_of(&chain),
-            string::utf8(b"INIT")
-        );
+        let metadata = metadata(std::signer::address_of(&chain), string::utf8(b"INIT"));
         let metadata_ =
-            metadata(
-                std::signer::address_of(&not_chain),
-                string::utf8(b"INIT")
-            );
+            metadata(std::signer::address_of(&not_chain), string::utf8(b"INIT"));
         let denom = metadata_to_denom(metadata);
         let denom_ = metadata_to_denom(metadata_);
         let metadata_from_denom = denom_to_metadata(denom);

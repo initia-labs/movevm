@@ -56,10 +56,7 @@ module initia_std::math64 {
     /// Returns floor(lg2(x))
     public fun floor_log2(x: u64): u8 {
         let res = 0;
-        assert!(
-            x != 0,
-            std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2)
-        );
+        assert!(x != 0, std::error::invalid_argument(EINVALID_ARG_FLOOR_LOG2));
         // Effectively the position of the most significant set bit
         let n = 32;
         while (n > 0) {
@@ -221,8 +218,7 @@ module initia_std::math64 {
         while (idx < 64) {
             let res = log2(1 << idx);
             assert!(
-                fixed_point32::get_raw_value(res) == (idx as u64) << 32,
-                0
+                fixed_point32::get_raw_value(res) == (idx as u64) << 32, 0
             );
             idx = idx + 1;
         };
@@ -239,9 +235,7 @@ module initia_std::math64 {
                 - ((taylor1 + taylor2 / 2 + taylor3 / 3) << 32) / 2977044472;
             // verify it matches to 8 significant digits
             assert_approx_the_same(
-                (fixed_point32::get_raw_value(res) as u128),
-                expected,
-                8
+                (fixed_point32::get_raw_value(res) as u128), expected, 8
             );
             idx = idx + 1;
         };

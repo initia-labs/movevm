@@ -32,10 +32,7 @@ module minitia_std::table {
 
     /// Destroy a table. The table must be empty to succeed.
     public fun destroy_empty<K: copy + drop, V>(self: Table<K, V>) {
-        assert!(
-            self.length == 0,
-            error::invalid_state(ENOT_EMPTY)
-        );
+        assert!(self.length == 0, error::invalid_state(ENOT_EMPTY));
         destroy_empty_box<K, V, Box<V>>(&self);
         drop_unchecked_box<K, V, Box<V>>(self)
     }
@@ -64,9 +61,8 @@ module minitia_std::table {
     public fun borrow_with_default<K: copy + drop, V>(
         self: &Table<K, V>, key: K, default: &V
     ): &V {
-        if (!self.contains(copy key)) {
-            default
-        } else {
+        if (!self.contains(copy key)) { default }
+        else {
             self.borrow(copy key)
         }
     }
@@ -90,9 +86,7 @@ module minitia_std::table {
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Insert the pair (`key`, `default`) first if there is no entry for `key`.
     public fun borrow_mut_with_default<K: copy + drop, V: drop>(
-        self: &mut Table<K, V>,
-        key: K,
-        default: V
+        self: &mut Table<K, V>, key: K, default: V
     ): &mut V {
         if (!self.contains(copy key)) {
             self.add(copy key, default)
@@ -103,9 +97,7 @@ module minitia_std::table {
     /// Insert the pair (`key`, `value`) if there is no entry for `key`.
     /// update the value of the entry for `key` to `value` otherwise
     public fun upsert<K: copy + drop, V: drop>(
-        self: &mut Table<K, V>,
-        key: K,
-        value: V
+        self: &mut Table<K, V>, key: K, value: V
     ) {
         if (!self.contains(copy key)) {
             self.add(copy key, value)
@@ -306,26 +298,18 @@ module minitia_std::table {
 
     native fun contains_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): bool;
 
-    native fun remove_box<K: copy + drop, V, B>(
-        table: &mut Table<K, V>, key: K
-    ): Box<V>;
+    native fun remove_box<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K): Box<V>;
 
     native fun destroy_empty_box<K: copy + drop, V, B>(table: &Table<K, V>);
 
     native fun drop_unchecked_box<K: copy + drop, V, B>(table: Table<K, V>);
 
     native fun new_table_iter<K: copy + drop, V, B>(
-        table: &Table<K, V>,
-        start: vector<u8>,
-        end: vector<u8>,
-        order: u8
+        table: &Table<K, V>, start: vector<u8>, end: vector<u8>, order: u8
     ): &TableIter<K, V>;
 
     native fun new_table_iter_mut<K: copy + drop, V, B>(
-        table: &mut Table<K, V>,
-        start: vector<u8>,
-        end: vector<u8>,
-        order: u8
+        table: &mut Table<K, V>, start: vector<u8>, end: vector<u8>, order: u8
     ): &mut TableIter<K, V>;
 
     native fun next_box<K: copy + drop, V, B>(table_iter: &TableIter<K, V>): (K, &Box<V>);
@@ -342,7 +326,6 @@ module minitia_std::table {
 
     // ======================================================================================================
     // Tests
-
     #[test_only]
     struct TableHolder<phantom K: copy + drop, phantom V: drop> has key {
         t: Table<K, V>

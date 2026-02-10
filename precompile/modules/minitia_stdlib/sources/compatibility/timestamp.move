@@ -46,7 +46,11 @@ module minitia_std::timestamp {
     const EINVALID_TIMESTAMP: u64 = 2;
 
     #[test_only]
-    use minitia_std::block::{set_block_info, set_block_info_nanos, get_block_info_nanos};
+    use minitia_std::block::{
+        set_block_info,
+        set_block_info_nanos,
+        get_block_info_nanos
+    };
 
     #[test_only]
     use std::error;
@@ -67,8 +71,7 @@ module minitia_std::timestamp {
     public fun fast_forward_seconds(seconds: u64) {
         let (height, timestamp_nanos) = get_block_info_nanos();
         set_block_info_nanos(
-            height + 1,
-            timestamp_nanos + seconds * 1000000000u64
+            height + 1, timestamp_nanos + seconds * 1000000000u64
         );
     }
 
@@ -76,8 +79,7 @@ module minitia_std::timestamp {
     public fun fast_forward_milliseconds(milliseconds: u64) {
         let (height, timestamp_nanos) = get_block_info_nanos();
         set_block_info_nanos(
-            height + 1,
-            timestamp_nanos + milliseconds * 1000000u64
+            height + 1, timestamp_nanos + milliseconds * 1000000u64
         );
     }
 
@@ -85,8 +87,7 @@ module minitia_std::timestamp {
     public fun fast_forward_microseconds(microseconds: u64) {
         let (height, timestamp_nanos) = get_block_info_nanos();
         set_block_info_nanos(
-            height + 1,
-            timestamp_nanos + microseconds * 1000u64
+            height + 1, timestamp_nanos + microseconds * 1000u64
         );
     }
 

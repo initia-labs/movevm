@@ -36,7 +36,9 @@ module initia_std::query {
             );
 
         let res = unmarshal_proposal_response(response);
-        (res.id, res.title, res.summary, res.status)
+        (
+            res.id, res.title, res.summary, res.status
+        )
     }
 
     #[view]
@@ -47,11 +49,14 @@ module initia_std::query {
                 json::marshal(&ProposalRequest { proposal_id })
             );
         let res = unmarshal_proposal_response(response);
-        (res.id, res.status, res.submit_time, res.emergency)
+        (
+            res.id, res.status, res.submit_time, res.emergency
+        )
     }
 
     /// query_custom examples are in initia_stdlib::address module
     native public fun query_custom(name: vector<u8>, data: vector<u8>): vector<u8>;
+
     native public fun query_stargate(path: vector<u8>, data: vector<u8>): vector<u8>;
 
     #[test_only]

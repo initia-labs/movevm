@@ -15,9 +15,7 @@ module 0xcafe::nil_op_token {
         assert!(signer::address_of(account) == @0xcafe, 1);
         let withdraw =
             function_info::new_function_info(
-                account,
-                string::utf8(b"nil_op_token"),
-                string::utf8(b"withdraw")
+                account, string::utf8(b"nil_op_token"), string::utf8(b"withdraw")
             );
 
         dispatchable_fungible_asset::register_dispatch_functions(

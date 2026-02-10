@@ -242,7 +242,6 @@ module minitia_std::initia_nft {
     }
 
     // Nft accessors
-
     inline fun borrow<T: key>(nft: Object<T>): &InitiaNft {
         let nft_address = object::object_address(&nft);
         assert!(
@@ -263,7 +262,6 @@ module minitia_std::initia_nft {
     }
 
     // Nft mutators
-
     inline fun authorized_borrow<T: key>(nft: Object<T>, creator: &signer): &InitiaNft {
         let nft_address = object::object_address(&nft);
         assert!(
@@ -306,26 +304,20 @@ module minitia_std::initia_nft {
             error::permission_denied(EFIELD_NOT_MUTABLE)
         );
         let initia_nft = authorized_borrow(nft, creator);
-        nft::set_description(
-            option::borrow(&initia_nft.mutator_ref),
-            description
-        );
+        nft::set_description(option::borrow(&initia_nft.mutator_ref), description);
     }
 
     public entry fun set_uri<T: key>(
         creator: &signer, nft: Object<T>, uri: String
     ) acquires InitiaNftCollection, InitiaNft {
-        assert!(
-            is_mutable_uri(nft),
-            error::permission_denied(EFIELD_NOT_MUTABLE)
-        );
+        assert!(is_mutable_uri(nft), error::permission_denied(EFIELD_NOT_MUTABLE));
         let initia_nft = authorized_borrow(nft, creator);
         nft::set_uri(option::borrow(&initia_nft.mutator_ref), uri);
     }
 
     // Collection accessors
-
-    inline fun collection_object(creator: &signer, name: &String): Object<InitiaNftCollection> {
+    inline fun collection_object(creator: &signer, name: &String)
+        : Object<InitiaNftCollection> {
         let collection_addr =
             collection::create_collection_address(signer::address_of(creator), name);
         object::address_to_object<InitiaNftCollection>(collection_addr)
@@ -371,7 +363,6 @@ module minitia_std::initia_nft {
     }
 
     // Collection mutators
-
     inline fun authorized_borrow_collection<T: key>(
         collection: Object<T>, creator: &signer
     ): &InitiaNftCollection {
@@ -396,8 +387,7 @@ module minitia_std::initia_nft {
             error::permission_denied(EFIELD_NOT_MUTABLE)
         );
         collection::set_description(
-            option::borrow(&initia_nft_collection.mutator_ref),
-            description
+            option::borrow(&initia_nft_collection.mutator_ref), description
         );
     }
 
@@ -433,14 +423,10 @@ module minitia_std::initia_nft {
             initia_nft_collection.mutable_uri,
             error::permission_denied(EFIELD_NOT_MUTABLE)
         );
-        collection::set_uri(
-            option::borrow(&initia_nft_collection.mutator_ref),
-            uri
-        );
+        collection::set_uri(option::borrow(&initia_nft_collection.mutator_ref), uri);
     }
 
     // Tests
-
     #[test_only]
     use std::string;
 
@@ -455,10 +441,7 @@ module minitia_std::initia_nft {
         create_collection_helper(creator, collection_name, true);
         let nft = mint_helper(creator, collection_name, token_id);
 
-        assert!(
-            object::owner(nft) == signer::address_of(creator),
-            1
-        );
+        assert!(object::owner(nft) == signer::address_of(creator), 1);
         object::transfer(creator, nft, @0x345);
         assert!(object::owner(nft) == @0x345, 1);
     }
@@ -578,15 +561,9 @@ module minitia_std::initia_nft {
         let collection_name = string::utf8(b"collection name");
         let collection = create_collection_helper(creator, collection_name, true);
         let value = string::utf8(b"not");
-        assert!(
-            collection::description(collection) != value,
-            0
-        );
+        assert!(collection::description(collection) != value, 0);
         set_collection_description(creator, collection, value);
-        assert!(
-            collection::description(collection) == value,
-            1
-        );
+        assert!(collection::description(collection) == value, 1);
     }
 
     #[test(creator = @0x123)]

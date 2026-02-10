@@ -90,8 +90,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + 32 <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + 32 <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
         let res = from_bcs::to_address(data.slice(cur, cur + 32));
 
@@ -120,8 +119,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + 2 <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + 2 <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
         let res = (data[cur] as u16) | ((data[cur + 1] as u16) << 8);
 
@@ -136,8 +134,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + 4 <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + 4 <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
         let res =
             (data[cur] as u32) | ((data[cur + 1] as u32) << 8) | ((data[cur + 2] as u32)
@@ -154,8 +151,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + 8 <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + 8 <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
         let res =
             (data[cur] as u64) | ((data[cur + 1] as u64) << 8) | ((data[cur + 2] as u64)
@@ -174,8 +170,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + 16 <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + 16 <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
         let res =
             (data[cur] as u128) | ((data[cur + 1] as u128) << 8)
@@ -198,8 +193,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + 32 <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + 32 <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
         let res =
             (data[cur] as u256) | ((data[cur + 1] as u256) << 8)
@@ -255,8 +249,7 @@ module initia_std::bcs_stream {
         let cur = stream.cur;
 
         assert!(
-            cur + len <= data.length(),
-            error::out_of_range(EOUT_OF_BYTES)
+            cur + len <= data.length(), error::out_of_range(EOUT_OF_BYTES)
         );
 
         let res = string::utf8(data.slice(cur, cur + len));

@@ -104,11 +104,7 @@ module TestAccount::TableUnitTests {
     fun test_vector(s: signer) acquires S {
         let t = T::new<u8, vector<address>>();
 
-        T::add(
-            &mut t,
-            42,
-            vector::singleton<address>(@0x1012)
-        );
+        T::add(&mut t, 42, vector::singleton<address>(@0x1012));
         assert!(T::contains(&t, 42), 101);
         assert!(!T::contains(&t, 0), 102);
         assert!(vector::length(T::borrow(&t, 42)) == 1, 103);
@@ -150,20 +146,13 @@ module TestAccount::TableUnitTests {
         let global_t = &mut borrow_global_mut<S<address, Balance>>(@0x42).t;
 
         T::add(global_t, @0xCD, Balance { value: val_2 });
-        assert!(
-            *&T::borrow(global_t, @0xAB).value == val_1,
-            103
-        );
-        assert!(
-            *&T::borrow(global_t, @0xCD).value == val_2,
-            104
-        );
+        assert!(*&T::borrow(global_t, @0xAB).value == val_1, 103);
+        assert!(*&T::borrow(global_t, @0xCD).value == val_2, 104);
 
         let entry_mut_ref = T::borrow_mut(global_t, @0xCD);
         *&mut entry_mut_ref.value = entry_mut_ref.value - 1;
         assert!(
-            *&T::borrow(global_t, @0xCD).value == val_2 - 1,
-            105
+            *&T::borrow(global_t, @0xCD).value == val_2 - 1, 105
         );
 
         let Balance { value } = T::remove(global_t, @0xAB);

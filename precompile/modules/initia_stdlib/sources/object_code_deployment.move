@@ -101,11 +101,15 @@ module initia_std::object_code_deployment {
         let code_signer = &object::generate_signer(constructor_ref);
         code::publish_v2(code_signer, code, 1);
 
-        event::emit(Publish { object_address: signer::address_of(code_signer) });
+        event::emit(Publish {
+            object_address: signer::address_of(code_signer)
+        });
 
         move_to(
             code_signer,
-            ManagingRefs { extend_ref: object::generate_extend_ref(constructor_ref) }
+            ManagingRefs {
+                extend_ref: object::generate_extend_ref(constructor_ref)
+            }
         );
     }
 
@@ -115,7 +119,8 @@ module initia_std::object_code_deployment {
         let count = get_and_increment_deployment_count(publisher);
         let seeds = vector[];
         vector::append(
-            &mut seeds, bcs::to_bytes(&OBJECT_CODE_DEPLOYMENT_DOMAIN_SEPARATOR)
+            &mut seeds,
+            bcs::to_bytes(&OBJECT_CODE_DEPLOYMENT_DOMAIN_SEPARATOR)
         );
         vector::append(&mut seeds, bcs::to_bytes(&sequence_number));
         vector::append(&mut seeds, bcs::to_bytes(&count));
@@ -171,7 +176,9 @@ module initia_std::object_code_deployment {
         let code_signer = &object::generate_signer_for_extending(extend_ref);
         code::publish_v2(code_signer, code, 1);
 
-        event::emit(Upgrade { object_address: signer::address_of(code_signer) });
+        event::emit(Upgrade {
+            object_address: signer::address_of(code_signer)
+        });
     }
 
     /// Make an existing upgradable package immutable. Once this is called, the package cannot be made upgradable again.
@@ -182,6 +189,8 @@ module initia_std::object_code_deployment {
     ) {
         code::freeze_code_object(publisher, code_object);
 
-        event::emit(Freeze { object_address: object::object_address(&code_object) });
+        event::emit(Freeze {
+            object_address: object::object_address(&code_object)
+        });
     }
 }

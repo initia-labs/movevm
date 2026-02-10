@@ -34,14 +34,8 @@ module minitia_std::hex {
         let index = 0;
         while (index < len) {
             let val = *vector::borrow(bz, index);
-            vector::push_back(
-                &mut vec,
-                encode_to_char_with_option(val / 0x10, is_upper)
-            );
-            vector::push_back(
-                &mut vec,
-                encode_to_char_with_option(val % 0x10, is_upper)
-            );
+            vector::push_back(&mut vec, encode_to_char_with_option(val / 0x10, is_upper));
+            vector::push_back(&mut vec, encode_to_char_with_option(val % 0x10, is_upper));
             index = index + 1;
         };
 
@@ -50,10 +44,7 @@ module minitia_std::hex {
 
     // decode hex string to bytes
     public fun decode_string(str: &String): vector<u8> {
-        assert!(
-            is_hex_string(str),
-            error::invalid_argument(ENOT_HEXSTRING)
-        );
+        assert!(is_hex_string(str), error::invalid_argument(ENOT_HEXSTRING));
 
         let vec: vector<u8> = vector[];
         let bz = string::bytes(str);
@@ -128,13 +119,12 @@ module minitia_std::hex {
     }
 
     fun is_hex_char(char: u8): bool {
-        if (
-            (char >= ZERO
-                && char <= ZERO + 9) // 0 - 9
-                || (char >= UPPERA
-                    && char <= UPPERA + 5) // A - F
-                || (char >= LOWERA
-                    && char <= LOWERA + 5)) { // a - f
+        if ((char >= ZERO
+            && char <= ZERO + 9) // 0 - 9
+            || (char >= UPPERA
+                && char <= UPPERA + 5) // A - F
+            || (char >= LOWERA
+                && char <= LOWERA + 5)) { // a - f
             return true
         };
         false
@@ -144,10 +134,7 @@ module minitia_std::hex {
     fun test_encode_to_string() {
         let raw_bytes = b"hello world!";
         let hex_string = encode_to_string(&raw_bytes);
-        assert!(
-            *string::bytes(&hex_string) == b"68656c6c6f20776f726c6421",
-            0
-        );
+        assert!(*string::bytes(&hex_string) == b"68656c6c6f20776f726c6421", 0);
 
         // test odd bytes
         let odd_bytes = vector::empty<u8>();

@@ -373,9 +373,7 @@ module std::option {
     }
 
     /// Utility function to destroy an option that is not droppable.
-    public inline fun destroy<Element>(
-        self: Option<Element>, d: |Element|
-    ) {
+    public inline fun destroy<Element>(self: Option<Element>, d: |Element|) {
         let vec = self.to_vec();
         vec.destroy(|e| d(e));
     }

@@ -34,6 +34,7 @@ module std::bit_vector {
             bit_field.push_back(false);
             counter += 1;
         };
+
         spec {
             assert counter == length;
             assert len(bit_field) == length;

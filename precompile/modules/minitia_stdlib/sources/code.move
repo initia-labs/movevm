@@ -12,7 +12,6 @@ module minitia_std::code {
 
     // ----------------------------------------------------------------------
     // Code Publishing
-
     struct ModuleStore has key {
         /// It is a list of addresses with permission to distribute contracts,
         /// and an empty list is interpreted as allowing anyone to distribute.
@@ -81,14 +80,10 @@ module minitia_std::code {
     }
 
     fun init_module(chain: &signer) {
-        move_to(
-            chain,
-            ModuleStore { allowed_publishers: vector[], total_modules: 0 }
-        );
+        move_to(chain, ModuleStore { allowed_publishers: vector[], total_modules: 0 });
     }
 
     // view functions
-
     #[view]
     public fun allowed_publishers(): vector<address> acquires ModuleStore {
         let module_store = borrow_global<ModuleStore>(@minitia_std);
@@ -102,7 +97,6 @@ module minitia_std::code {
     }
 
     // entry public functions
-
     #[deprecated]
     public entry fun publish(
         owner: &signer,
@@ -134,7 +128,6 @@ module minitia_std::code {
     }
 
     // public functions
-
     public fun freeze_code_object(
         publisher: &signer, code_object: Object<MetadataStore>
     ) acquires MetadataStore {
@@ -164,7 +157,6 @@ module minitia_std::code {
     }
 
     // private functions
-
     fun increase_total_modules(num_modules: u64) acquires ModuleStore {
         let module_store = borrow_global_mut<ModuleStore>(@minitia_std);
         module_store.total_modules = module_store.total_modules + num_modules;
@@ -217,10 +209,7 @@ module minitia_std::code {
             }
         );
 
-        move_to<MetadataStore>(
-            chain,
-            MetadataStore { metadata: metadata_table }
-        );
+        move_to<MetadataStore>(chain, MetadataStore { metadata: metadata_table });
 
         set_allowed_publishers(chain, allowed_publishers);
         increase_total_modules(vector::length(&module_ids));
@@ -237,16 +226,15 @@ module minitia_std::code {
     ) acquires ModuleStore, MetadataStore {
         verify_modules_upgrade_policy(publisher, module_ids, upgrade_policy);
         verify_dependencies_upgrade_policy(
-            vec_dependency_addresses,
-            vec_dependency_ids,
-            upgrade_policy
+            vec_dependency_addresses, vec_dependency_ids, upgrade_policy
         );
     }
 
     /// Verify the upgrade policy of the modules and record the upgrade policy in the metadata store
     /// and update the total_modules count.
     fun verify_modules_upgrade_policy(
-        publisher: &signer, module_ids: vector<String>, // 0x1::coin
+        publisher: &signer,
+        module_ids: vector<String>, // 0x1::coin
         upgrade_policy: u8
     ) acquires ModuleStore, MetadataStore {
         assert_no_duplication(&module_ids);
@@ -291,16 +279,12 @@ module minitia_std::code {
                     metadata.upgrade_policy = upgrade_policy;
                 } else {
                     table::add<String, ModuleMetadata>(
-                        metadata_table,
-                        *module_id,
-                        ModuleMetadata { upgrade_policy }
+                        metadata_table, *module_id, ModuleMetadata { upgrade_policy }
                     );
                     new_modules = new_modules + 1;
                 };
 
-                event::emit(
-                    ModulePublishedEvent { module_id: *module_id, upgrade_policy }
-                );
+                event::emit(ModulePublishedEvent { module_id: *module_id, upgrade_policy });
             }
         );
 

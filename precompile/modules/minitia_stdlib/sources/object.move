@@ -298,7 +298,11 @@ module minitia_std::object {
 
         move_to(
             &object_signer,
-            ObjectCore { owner: creator_address, allow_ungated_transfer: true, version }
+            ObjectCore {
+                owner: creator_address,
+                allow_ungated_transfer: true,
+                version
+            }
         );
 
         event::emit(CreateEvent { owner: creator_address, object, version });
@@ -310,10 +314,7 @@ module minitia_std::object {
 
     /// Generates the DeleteRef, which can be used to remove ObjectCore from global storage.
     public fun generate_delete_ref(ref: &ConstructorRef): DeleteRef {
-        assert!(
-            ref.can_delete,
-            error::permission_denied(ECANNOT_DELETE)
-        );
+        assert!(ref.can_delete, error::permission_denied(ECANNOT_DELETE));
         DeleteRef { self: ref.self, version: ref.version }
     }
 
@@ -385,10 +386,7 @@ module minitia_std::object {
         let ObjectCore { owner, allow_ungated_transfer: _, version } = object_core;
 
         // set tombstone
-        move_to<Tombstone>(
-            &account::create_signer(ref.self),
-            Tombstone { version }
-        );
+        move_to<Tombstone>(&account::create_signer(ref.self), Tombstone { version });
 
         event::emit(DeleteEvent { object: ref.self, owner });
     }
@@ -552,7 +550,6 @@ module minitia_std::object {
     }
 
     // Accessors
-
     #[view]
     /// Return true if ungated transfer is allowed.
     public fun ungated_transfer_allowed<T: key>(object: Object<T>): bool acquires ObjectCore {
@@ -618,6 +615,7 @@ module minitia_std::object {
 
     #[test_only]
     const EHERO_DOES_NOT_EXIST: u64 = 0x100;
+
     #[test_only]
     const EWEAPON_DOES_NOT_EXIST: u64 = 0x101;
 

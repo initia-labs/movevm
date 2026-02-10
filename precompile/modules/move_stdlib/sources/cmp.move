@@ -122,27 +122,19 @@ module std::cmp {
             2
         );
         assert!(
-            compare(
-                &vector[1, 2], &vector[1, 2]
-            ) is Ordering::Equal,
+            compare(&vector[1, 2], &vector[1, 2]) is Ordering::Equal,
             3
         );
         assert!(
-            compare(
-                &vector[1, 2, 3], &vector[5]
-            ) is Ordering::Less,
+            compare(&vector[1, 2, 3], &vector[5]) is Ordering::Less,
             4
         );
         assert!(
-            compare(
-                &vector[1, 2, 3], &vector[5, 6, 7]
-            ) is Ordering::Less,
+            compare(&vector[1, 2, 3], &vector[5, 6, 7]) is Ordering::Less,
             5
         );
         assert!(
-            compare(
-                &vector[1, 2, 3], &vector[1, 2, 7]
-            ) is Ordering::Less,
+            compare(&vector[1, 2, 3], &vector[1, 2, 7]) is Ordering::Less,
             6
         );
     }
@@ -151,29 +143,29 @@ module std::cmp {
     fun test_compare_structs() {
         assert!(
             compare(
-                &SomeStruct { field_1: 1, field_2: 2 },
-                &SomeStruct { field_1: 1, field_2: 2 }
+                &SomeStruct { field_1: 1, field_2: 2 }, &SomeStruct { field_1: 1, field_2:
+                    2 }
             ) is Ordering::Equal,
             0
         );
         assert!(
             compare(
-                &SomeStruct { field_1: 1, field_2: 2 },
-                &SomeStruct { field_1: 1, field_2: 3 }
+                &SomeStruct { field_1: 1, field_2: 2 }, &SomeStruct { field_1: 1, field_2:
+                    3 }
             ) is Ordering::Less,
             1
         );
         assert!(
             compare(
-                &SomeStruct { field_1: 1, field_2: 2 },
-                &SomeStruct { field_1: 1, field_2: 1 }
+                &SomeStruct { field_1: 1, field_2: 2 }, &SomeStruct { field_1: 1, field_2:
+                    1 }
             ) is Ordering::Greater,
             2
         );
         assert!(
             compare(
-                &SomeStruct { field_1: 2, field_2: 1 },
-                &SomeStruct { field_1: 1, field_2: 2 }
+                &SomeStruct { field_1: 2, field_2: 1 }, &SomeStruct { field_1: 1, field_2:
+                    2 }
             ) is Ordering::Greater,
             3
         );
@@ -183,24 +175,24 @@ module std::cmp {
     fun test_compare_vector_of_structs() {
         assert!(
             compare(
-                &vector[
-                    SomeStruct { field_1: 1, field_2: 2 },
-                    SomeStruct { field_1: 3, field_2: 4 }
-                ],
+                &vector[SomeStruct { field_1: 1, field_2: 2 }, SomeStruct {
+                    field_1: 3,
+                    field_2: 4
+                }],
                 &vector[SomeStruct { field_1: 1, field_2: 3 }]
             ) is Ordering::Less,
             0
         );
         assert!(
             compare(
-                &vector[
-                    SomeStruct { field_1: 1, field_2: 2 },
-                    SomeStruct { field_1: 3, field_2: 4 }
-                ],
-                &vector[
-                    SomeStruct { field_1: 1, field_2: 2 },
-                    SomeStruct { field_1: 1, field_2: 3 }
-                ]
+                &vector[SomeStruct { field_1: 1, field_2: 2 }, SomeStruct {
+                    field_1: 3,
+                    field_2: 4
+                }],
+                &vector[SomeStruct { field_1: 1, field_2: 2 }, SomeStruct {
+                    field_1: 1,
+                    field_2: 3
+                }]
             ) is Ordering::Greater,
             1
         );

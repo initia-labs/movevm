@@ -123,7 +123,6 @@ module initia_std::incentive {
     //
     // view functions
     //
-
     #[view]
     public fun simulate_claim(
         addr: address, stake_token_metadata: Object<Metadata>
@@ -203,26 +202,25 @@ module initia_std::incentive {
     //
     // init module
     //
-
     fun init_module(chain: &signer) {
         let obj = object::create_object(@initia_std, false);
         let extend_ref = object::generate_extend_ref(&obj);
 
         move_to(
             chain,
-            ModuleStore { admin: @initia_std, extend_ref, epoch_start_timestamp: 0 }
+            ModuleStore {
+                admin: @initia_std,
+                extend_ref,
+                epoch_start_timestamp: 0
+            }
         );
 
-        move_to(
-            chain,
-            IncentiveStore { incentive_entities: table::new() }
-        )
+        move_to(chain, IncentiveStore { incentive_entities: table::new() })
     }
 
     //
     // admin entry functions
     //
-
     public entry fun set_epoch_start_timestamp(
         admin: &signer, epoch_start_timestamp: u64
     ) acquires ModuleStore {
@@ -285,7 +283,6 @@ module initia_std::incentive {
     //
     // user entry functions
     //
-
     public entry fun incentivize(
         account: &signer,
         stake_token_metadata: Object<Metadata>,
@@ -436,7 +433,8 @@ module initia_std::incentive {
         let stake_info = user_store.stake_infos.borrow_mut(stake_token_metadata);
         assert!(amount > 0, error::invalid_argument(EZERO_AMOUNT));
         assert!(
-            stake_info.amount >= amount, error::invalid_argument(EINSUFFICIENT_STAKE)
+            stake_info.amount >= amount,
+            error::invalid_argument(EINSUFFICIENT_STAKE)
         );
         stake_info.amount -= amount;
         let incentive_entity =
@@ -571,7 +569,10 @@ module initia_std::incentive {
         let key = encode_u64(epoch);
         if (!incentive.schedules.contains(key)) {
             incentive.schedules.add(
-                key, Schedule { is_increase: true, gradient_diff: bigdecimal::zero() }
+                key, Schedule {
+                    is_increase: true,
+                    gradient_diff: bigdecimal::zero()
+                }
             )
         };
 
@@ -593,7 +594,10 @@ module initia_std::incentive {
         let key = encode_u64(epoch);
         if (!incentive.schedules.contains(key)) {
             incentive.schedules.add(
-                key, Schedule { is_increase: true, gradient_diff: bigdecimal::zero() }
+                key, Schedule {
+                    is_increase: true,
+                    gradient_diff: bigdecimal::zero()
+                }
             )
         };
 
@@ -610,16 +614,12 @@ module initia_std::incentive {
     }
 
     fun get_epoch(module_store: &ModuleStore, timestamp: u64): u64 {
-        if (timestamp < module_store.epoch_start_timestamp) {
-            return 0
-        };
+        if (timestamp < module_store.epoch_start_timestamp) { return 0 };
 
         (timestamp - module_store.epoch_start_timestamp) / EPOCH_DURATION + 1
     }
 
-    fun get_epoch_timestamp_range(
-        module_store: &ModuleStore, epoch: u64
-    ): (u64, u64) {
+    fun get_epoch_timestamp_range(module_store: &ModuleStore, epoch: u64): (u64, u64) {
         let start_timestamp = module_store.epoch_start_timestamp
             + (epoch - 1) * EPOCH_DURATION;
         let end_timestamp = start_timestamp + EPOCH_DURATION;
@@ -702,12 +702,10 @@ module initia_std::incentive {
 
         assert!(get_epoch(module_store, 1000) == 1, 1);
         assert!(
-            get_epoch(module_store, 1000 + EPOCH_DURATION - 1) == 1,
-            2
+            get_epoch(module_store, 1000 + EPOCH_DURATION - 1) == 1, 2
         );
         assert!(
-            get_epoch(module_store, 1000 + EPOCH_DURATION) == 2,
-            3
+            get_epoch(module_store, 1000 + EPOCH_DURATION) == 2, 3
         );
     }
 

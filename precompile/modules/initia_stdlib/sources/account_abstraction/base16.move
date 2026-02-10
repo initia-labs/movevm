@@ -12,9 +12,7 @@ module initia_std::base16 {
             c - 55
         } else if (c >= 97 && c <= 102) { // 'a' to 'f'
             c - 87
-        } else {
-            abort 1
-        }
+        } else { abort 1 }
     }
 
     // Convert a base16 encoded string to a vector of u8

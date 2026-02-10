@@ -18,7 +18,11 @@
 /// - OKX
 module initia_std::solana_derivable_account {
     use initia_std::auth_data::AbstractionAuthData;
-    use std::ed25519::{Self, signature_from_bytes, public_key_from_bytes};
+    use std::ed25519::{
+        Self,
+        signature_from_bytes,
+        public_key_from_bytes
+    };
     use std::bcs_stream::{Self, deserialize_u8};
     use std::block::get_chain_id;
     use std::string_utils;
@@ -71,7 +75,8 @@ module initia_std::solana_derivable_account {
     }
 
     /// Returns a tuple of the signature type and the signature.
-    fun deserialize_abstract_signature(abstract_signature: &vector<u8>): SIWSAbstractSignature {
+    fun deserialize_abstract_signature(abstract_signature: &vector<u8>)
+        : SIWSAbstractSignature {
         let stream = bcs_stream::new(*abstract_signature);
         let signature_type = bcs_stream::deserialize_u8(&mut stream);
         if (signature_type == 0x00) {
@@ -95,9 +100,7 @@ module initia_std::solana_derivable_account {
         message.append(b"\n\nPlease confirm you explicitly initiated this request from ");
         message.append(*domain);
         message.append(b".");
-        message.append(
-            b" You are approving to execute transaction on Initia blockchain ("
-        );
+        message.append(b" You are approving to execute transaction on Initia blockchain (");
         message.append(*chain_id.bytes());
         message.append(b").");
         message.append(b"\n\nNonce: ");
@@ -195,10 +198,13 @@ module initia_std::solana_derivable_account {
 
     #[test_only]
     use std::bcs;
+
     #[test_only]
     use std::string::{String, utf8};
+
     #[test_only]
     use initia_std::auth_data::{create_derivable_auth_data};
+
     #[test_only]
     use initia_std::block::set_chain_id_for_test;
 

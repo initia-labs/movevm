@@ -1,6 +1,5 @@
 /// Defines a fixed-point numeric type with a 64-bit integer part and
 /// a 64-bit fractional part.
-
 module initia_std::fixed_point64 {
 
     /// Define a fixed-point numeric type with 64 fractional bits.
@@ -224,8 +223,7 @@ module initia_std::fixed_point64 {
         assert!(denominator != 0, EDENOMINATOR);
         let quotient = scaled_numerator / (denominator as u256);
         assert!(
-            quotient != 0 || numerator == 0,
-            ERATIO_OUT_OF_RANGE
+            quotient != 0 || numerator == 0, ERATIO_OUT_OF_RANGE
         );
         // Return the quotient as a fixed-point number. We first need to check whether the cast
         // can succeed.

@@ -2,6 +2,7 @@ module minitia_std::bech32 {
     use minitia_std::string::String;
 
     native public fun encode(prefix: String, data: vector<u8>): String;
+
     native public fun decode(addr: String): (String, vector<u8>);
 
     #[test_only]

@@ -106,9 +106,7 @@ module std::capability {
 
     /// Creates a new capability class, owned by the passed signer. A caller must pass a witness that
     /// they own the `Feature` type parameter.
-    public fun create<Feature>(
-        owner: &signer, _feature_witness: &Feature
-    ) {
+    public fun create<Feature>(owner: &signer, _feature_witness: &Feature) {
         let addr = signer::address_of(owner);
         assert!(
             !exists<CapState<Feature>>(addr),

@@ -9,7 +9,6 @@ module minitia_std::keccak {
     //
     // Testing
     //
-
     #[test]
     fun keccak256_test() {
         let inputs = vector[b"testing", b""];

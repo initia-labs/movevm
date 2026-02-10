@@ -89,9 +89,7 @@ module minitia_std::simple_map {
 
     /// Add a key/value pair to the map. The key must not already exist.
     public fun add<Key: store, Value: store>(
-        self: &mut SimpleMap<Key, Value>,
-        key: Key,
-        value: Value
+        self: &mut SimpleMap<Key, Value>, key: Key, value: Value
     ) {
         let maybe_idx = self.find(&key);
         assert!(maybe_idx.is_none(), error::invalid_argument(EKEY_ALREADY_EXISTS));
@@ -112,9 +110,7 @@ module minitia_std::simple_map {
 
     /// Insert key/value pair or update an existing key to a new value
     public fun upsert<Key: store, Value: store>(
-        self: &mut SimpleMap<Key, Value>,
-        key: Key,
-        value: Value
+        self: &mut SimpleMap<Key, Value>, key: Key, value: Value
     ): (std::option::Option<Key>, std::option::Option<Value>) {
         let data = &mut self.data;
         let len = data.length();
@@ -162,9 +158,7 @@ module minitia_std::simple_map {
     /// For maps that cannot be dropped this is a utility to destroy them
     /// using lambdas to destroy the individual keys and values.
     public inline fun destroy<Key: store, Value: store>(
-        self: SimpleMap<Key, Value>,
-        dk: |Key|,
-        dv: |Value|
+        self: SimpleMap<Key, Value>, dk: |Key|, dv: |Value|
     ) {
         let (keys, values) = self.to_vec_pair();
         keys.destroy(|_k| dk(_k));

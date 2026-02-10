@@ -105,9 +105,7 @@ module minitia_std::ordered_map {
 
     /// If the key doesn't exist in the map, inserts the key/value, and returns none.
     /// Otherwise, updates the value under the given key, and returns the old value.
-    public fun upsert<K: drop, V>(
-        self: &mut OrderedMap<K, V>, key: K, value: V
-    ): Option<V> {
+    public fun upsert<K: drop, V>(self: &mut OrderedMap<K, V>, key: K, value: V): Option<V> {
         let len = self.entries.length();
         let index = binary_search(&key, &self.entries, 0, len);
 
@@ -181,9 +179,7 @@ module minitia_std::ordered_map {
     /// Add multiple key/value pairs to the map. The keys must not already exist.
     /// Aborts with EKEY_ALREADY_EXISTS if key already exist, or duplicate keys are passed in.
     public fun add_all<K, V>(
-        self: &mut OrderedMap<K, V>,
-        keys: vector<K>,
-        values: vector<V>
+        self: &mut OrderedMap<K, V>, keys: vector<K>, values: vector<V>
     ) {
         // TODO: Can be optimized, by sorting keys and values, and then creating map.
         keys.zip(values, |key, value| {
@@ -194,9 +190,7 @@ module minitia_std::ordered_map {
     /// Add multiple key/value pairs to the map, overwrites values if they exist already,
     /// or if duplicate keys are passed in.
     public fun upsert_all<K: drop, V: drop>(
-        self: &mut OrderedMap<K, V>,
-        keys: vector<K>,
-        values: vector<V>
+        self: &mut OrderedMap<K, V>, keys: vector<K>, values: vector<V>
     ) {
         // TODO: Can be optimized, by sorting keys and values, and then creating map.
         keys.zip(values, |key, value| {
@@ -469,7 +463,8 @@ module minitia_std::ordered_map {
         self: &IteratorPtr, map: &OrderedMap<K, V>
     ): &K {
         assert!(
-            !(self is IteratorPtr::End), error::invalid_argument(EITER_OUT_OF_BOUNDS)
+            !(self is IteratorPtr::End),
+            error::invalid_argument(EITER_OUT_OF_BOUNDS)
         );
 
         &map.entries.borrow(self.index).key
@@ -482,7 +477,8 @@ module minitia_std::ordered_map {
         self: IteratorPtr, map: &OrderedMap<K, V>
     ): &V {
         assert!(
-            !(self is IteratorPtr::End), error::invalid_argument(EITER_OUT_OF_BOUNDS)
+            !(self is IteratorPtr::End),
+            error::invalid_argument(EITER_OUT_OF_BOUNDS)
         );
         &map.entries.borrow(self.index).value
     }
@@ -494,7 +490,8 @@ module minitia_std::ordered_map {
         self: IteratorPtr, map: &mut OrderedMap<K, V>
     ): &mut V {
         assert!(
-            !(self is IteratorPtr::End), error::invalid_argument(EITER_OUT_OF_BOUNDS)
+            !(self is IteratorPtr::End),
+            error::invalid_argument(EITER_OUT_OF_BOUNDS)
         );
         &mut map.entries.borrow_mut(self.index).value
     }
@@ -506,7 +503,8 @@ module minitia_std::ordered_map {
         self: IteratorPtr, map: &mut OrderedMap<K, V>
     ): V {
         assert!(
-            !(self is IteratorPtr::End), error::invalid_argument(EITER_OUT_OF_BOUNDS)
+            !(self is IteratorPtr::End),
+            error::invalid_argument(EITER_OUT_OF_BOUNDS)
         );
 
         let Entry { key: _, value } = map.entries.remove(self.index);
@@ -517,12 +515,11 @@ module minitia_std::ordered_map {
     /// Aborts with EITER_OUT_OF_BOUNDS if iterator is pointing to the end.
     /// Note: Requires that the map is not changed after the input iterator is generated.
     public(friend) fun iter_replace<K: copy + drop, V>(
-        self: IteratorPtr,
-        map: &mut OrderedMap<K, V>,
-        value: V
+        self: IteratorPtr, map: &mut OrderedMap<K, V>, value: V
     ): V {
         assert!(
-            !(self is IteratorPtr::End), error::invalid_argument(EITER_OUT_OF_BOUNDS)
+            !(self is IteratorPtr::End),
+            error::invalid_argument(EITER_OUT_OF_BOUNDS)
         );
 
         // TODO once mem::replace is public/released, update to:
@@ -538,10 +535,7 @@ module minitia_std::ordered_map {
     /// Aborts with ENEW_KEY_NOT_IN_ORDER is key is not larger than the key before the iterator,
     /// or smaller than the key at the iterator position.
     public(friend) fun iter_add<K, V>(
-        self: IteratorPtr,
-        map: &mut OrderedMap<K, V>,
-        key: K,
-        value: V
+        self: IteratorPtr, map: &mut OrderedMap<K, V>, key: K, value: V
     ) {
         let len = map.entries.length();
         let insert_index =
@@ -611,11 +605,7 @@ module minitia_std::ordered_map {
 
     /// For maps that cannot be dropped this is a utility to destroy them
     /// using lambdas to destroy the individual keys and values.
-    public inline fun destroy<K, V>(
-        self: OrderedMap<K, V>,
-        dk: |K|,
-        dv: |V|
-    ) {
+    public inline fun destroy<K, V>(self: OrderedMap<K, V>, dk: |K|, dv: |V|) {
         let (keys, values) = self.to_vec_pair();
         keys.destroy(|_k| dk(_k));
         values.destroy(|_v| dv(_v));
@@ -720,7 +710,6 @@ module minitia_std::ordered_map {
     }
 
     // ========= Section with private methods ===============
-
     inline fun new_iter(index: u64): IteratorPtr {
         IteratorPtr::Position { index: index }
     }
@@ -728,10 +717,7 @@ module minitia_std::ordered_map {
     // return index containing the key, or insert position.
     // I.e. index of first element that has key larger or equal to the passed `key` argument.
     fun binary_search<K, V>(
-        key: &K,
-        entries: &vector<Entry<K, V>>,
-        start: u64,
-        end: u64
+        key: &K, entries: &vector<Entry<K, V>>, start: u64, end: u64
     ): u64 {
         let l = start;
         let r = end;
