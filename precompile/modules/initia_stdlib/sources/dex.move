@@ -188,6 +188,7 @@ module initia_std::dex {
     }
 
     struct ClammTokenPairs has key {
+        dex_clamm_package_addr: address,
         // clamm pair => [token0, token1]
         pair_to_tokens: Table<address, vector<Object<Metadata>>>
     }
@@ -782,9 +783,9 @@ module initia_std::dex {
         bigdecimal::from_ratio_u64(5, 100)
     }
 
-    public entry fun init_clamm_pair_index(chain: &signer) {
+    public entry fun init_clamm_pair_index(chain: &signer, dex_clamm_package_addr: address) {
         check_sudo(chain);
-        move_to(chain, ClammTokenPairs { pair_to_tokens: table::new() });
+        move_to(chain, ClammTokenPairs { dex_clamm_package_addr, pair_to_tokens: table::new() });
     }
 
     /// update swap fee rate
@@ -1356,12 +1357,13 @@ module initia_std::dex {
         weights: Weights
     ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+        let clamm_pair_to_tokens = borrow_global_mut<ClammTokenPairs>(@initia_std);
 
         let coin_a_addr = coin_address(&coin_a);
         let coin_b_addr = coin_address(&coin_b);
 
         // To support skip api store clamm pairs
-        if (signer::address_of(creator) == @dex_clamm_package) {
+        if (signer::address_of(creator) == clamm_pair_to_tokens.dex_clamm_package_addr) {
             let pair_addr = initia_std::address::from_string(name);
             module_store.pair_count = module_store.pair_count + 1;
 
@@ -1384,7 +1386,6 @@ module initia_std::dex {
             );
 
             // add clamm index
-            let clamm_pair_to_tokens = borrow_global_mut<ClammTokenPairs>(@initia_std);
             clamm_pair_to_tokens.pair_to_tokens.add(
                 pair_addr,
                 vector[
