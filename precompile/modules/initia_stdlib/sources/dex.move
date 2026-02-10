@@ -187,6 +187,11 @@ module initia_std::dex {
         pair_count: u64
     }
 
+    struct ClammTokenPairs has key {
+        // clamm pair => [token0, token1]
+        pair_to_tokens: Table<address, vector<Object<Metadata>>>
+    }
+
     // Errors
 
     /// Can not withdraw zero liquidity
@@ -461,9 +466,25 @@ module initia_std::dex {
     /// get pool info
     public fun get_pool_info_by_denom(
         pair_denom: String
-    ): PoolInfoResponse acquires Pool, FlashSwapLock {
-        let pair_metadata = coin::denom_to_metadata(pair_denom);
-        get_pool_info(object::convert(pair_metadata))
+    ): PoolInfoResponse acquires Pool, FlashSwapLock, ClammTokenPairs {
+        let addr = denom_to_address(pair_denom);
+        if (exists<Config>(addr)) {
+            return get_pool_info(object::address_to_object(addr))
+        };
+
+        // To support skip api
+        let clamm_pair_to_tokens = borrow_global<ClammTokenPairs>(@initia_std);
+        let token_addresses = clamm_pair_to_tokens.pair_to_tokens.borrow(addr);
+        let coin_a_amount = coin::balance(addr, *token_addresses.borrow(0));
+        let coin_b_amount = coin::balance(addr, *token_addresses.borrow(1));
+        let share =
+            if (coin_a_amount > coin_b_amount) {
+                coin_a_amount
+            } else {
+                coin_b_amount
+            };
+
+        PoolInfoResponse { coin_a_amount, coin_b_amount, total_share: (share as u128) }
     }
 
     #[view]
@@ -582,21 +603,16 @@ module initia_std::dex {
 
         let start_after =
             if (option::is_some(&coin_a_start_after)) {
-                let coin_a_start_after =
-                    coin::denom_to_metadata(option::extract(&mut coin_a_start_after));
-                let coin_b_start_after =
-                    coin::denom_to_metadata(option::extract(&mut coin_b_start_after));
+                let coin_a_start_after = option::extract(&mut coin_a_start_after);
+                let coin_b_start_after = option::extract(&mut coin_b_start_after);
                 let liquidity_token_start_after =
-                    coin::denom_to_metadata(
-                        option::extract(&mut liquidity_token_start_after)
-                    );
+                    option::extract(&mut liquidity_token_start_after);
+
                 option::some(
                     PairKey {
-                        coin_a: object::object_address(&coin_a_start_after),
-                        coin_b: object::object_address(&coin_b_start_after),
-                        liquidity_token: object::object_address(
-                            &liquidity_token_start_after
-                        )
+                        coin_a: denom_to_address(coin_a_start_after),
+                        coin_b: denom_to_address(coin_b_start_after),
+                        liquidity_token: denom_to_address(liquidity_token_start_after)
                     }
                 )
             } else {
@@ -620,15 +636,9 @@ module initia_std::dex {
                 vector::push_back(
                     &mut res,
                     PairByDenomResponse {
-                        coin_a: coin::metadata_to_denom(
-                            object::address_to_object(value.coin_a)
-                        ),
-                        coin_b: coin::metadata_to_denom(
-                            object::address_to_object(value.coin_b)
-                        ),
-                        liquidity_token: coin::metadata_to_denom(
-                            object::address_to_object(value.liquidity_token)
-                        ),
+                        coin_a: address_to_denom(value.coin_a),
+                        coin_b: address_to_denom(value.coin_b),
+                        liquidity_token: address_to_denom(value.liquidity_token),
                         weights: value.weights,
                         swap_fee_rate: value.swap_fee_rate
                     }
@@ -772,6 +782,11 @@ module initia_std::dex {
         bigdecimal::from_ratio_u64(5, 100)
     }
 
+    public entry fun init_clamm_pair_index(chain: &signer) {
+        check_sudo(chain);
+        move_to(chain, ClammTokenPairs { pair_to_tokens: table::new() });
+    }
+
     /// update swap fee rate
     public entry fun update_swap_fee_rate(
         chain: &signer, pair: Object<Config>, swap_fee_rate: BigDecimal
@@ -849,7 +864,7 @@ module initia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock {
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock, ClammTokenPairs {
         let (_, timestamp) = get_block_info();
         let weights = Weights {
             weights_before: Weight { coin_a_weight, coin_b_weight, timestamp },
@@ -890,7 +905,7 @@ module initia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock {
+    ) acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
         let (_, timestamp) = get_block_info();
         assert!(
             start_time > timestamp,
@@ -1339,7 +1354,50 @@ module initia_std::dex {
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         weights: Weights
-    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock {
+    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
+        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
+
+        let coin_a_addr = coin_address(&coin_a);
+        let coin_b_addr = coin_address(&coin_b);
+
+        // To support skip api store clamm pairs
+        if (signer::address_of(creator) == @dex_clamm_package) {
+            let pair_addr = initia_std::address::from_string(name);
+            module_store.pair_count = module_store.pair_count + 1;
+
+            let pair_key = PairKey {
+                coin_a: coin_a_addr,
+                coin_b: coin_b_addr,
+                liquidity_token: pair_addr
+            };
+
+            table::add(
+                &mut module_store.pairs,
+                pair_key,
+                PairResponse {
+                    coin_a: coin_a_addr,
+                    coin_b: coin_b_addr,
+                    liquidity_token: pair_addr,
+                    weights,
+                    swap_fee_rate
+                }
+            );
+
+            // add clamm index
+            let clamm_pair_to_tokens = borrow_global_mut<ClammTokenPairs>(@initia_std);
+            clamm_pair_to_tokens.pair_to_tokens.add(
+                pair_addr,
+                vector[
+                    object::address_to_object(coin_a_addr),
+                    object::address_to_object(coin_b_addr)
+                ]
+            );
+
+            // destroy coin_b and just return coin a
+            fungible_asset::destroy_zero(coin_b);
+            return coin_a
+        };
+
         let (mint_cap, burn_cap, freeze_cap, extend_ref) =
             coin::initialize_and_generate_extend_ref(
                 creator,
@@ -1378,8 +1436,6 @@ module initia_std::dex {
                 pair_addr,
                 fungible_asset::asset_metadata(&coin_b)
             );
-        let coin_a_addr = coin_address(&coin_a);
-        let coin_b_addr = coin_address(&coin_b);
 
         move_to(pair_signer, Pool { coin_a_store, coin_b_store });
 
@@ -1422,7 +1478,6 @@ module initia_std::dex {
         config.weights = weights;
 
         // update module store
-        let module_store = borrow_global_mut<ModuleStore>(@initia_std);
         module_store.pair_count = module_store.pair_count + 1;
 
         // let coin_a_type = type_info::type_name<CoinA>();
@@ -1787,6 +1842,29 @@ module initia_std::dex {
         return coin_amount_in_without_fee
     }
 
+    fun denom_to_address(denom: String): address {
+        if (string::length(&denom) > 5
+            && &b"move/" == string::bytes(&string::sub_string(&denom, 0, 5))) {
+            let len = string::length(&denom);
+            let hex_string = string::sub_string(&denom, 5, len);
+            initia_std::from_bcs::to_address(initia_std::hex::decode_string(&hex_string))
+        } else {
+            coin::metadata_address(@initia_std, denom)
+        }
+    }
+
+    fun address_to_denom(addr: address): String {
+        if (!fungible_asset::is_fungible_asset(addr)) {
+            let denom = string::utf8(b"move/");
+            let addr_bytes = initia_std::bcs::to_bytes(&addr);
+            let addr_string = initia_std::hex::encode_to_string(&addr_bytes);
+            string::append(&mut denom, addr_string);
+            return denom
+        };
+
+        coin::metadata_to_denom(object::address_to_object(addr))
+    }
+
     /// get all pool info at once (a_amount, b_amount, a_weight, b_weight, fee_rate)
     public fun pool_info(
         pair: Object<Config>, lbp_assertion: bool
@@ -2028,7 +2106,9 @@ module initia_std::dex {
     }
 
     #[test(chain = @0x1)]
-    fun end_to_end(chain: signer) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock {
+    fun end_to_end(
+        chain: signer
+    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2177,7 +2257,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun lbp_end_to_end(
         chain: signer
-    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock {
+    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2354,7 +2434,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun get_pair_test(
         chain: signer
-    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock {
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock, ClammTokenPairs {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2612,7 +2692,9 @@ module initia_std::dex {
     }
 
     #[test_only]
-    fun test_setup(chain: &signer) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock {
+    fun test_setup(
+        chain: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs {
         init_module(chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2688,7 +2770,7 @@ module initia_std::dex {
         borrower: &signer,
         borrow_amount: u64,
         mint_amount: u64
-    ): (TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ): (TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         test_setup(chain);
 
         let chain_addr = signer::address_of(chain);
@@ -2729,7 +2811,7 @@ module initia_std::dex {
     #[test(chain = @0x1, borrower = @0x1782)]
     fun test_dex_flash_swap(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (test_metadata, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
@@ -2746,7 +2828,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x10017, location = Self)]
     fun test_dex_flash_swap_not_enough_repayment(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (_, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 999);
         let borrower_addr = signer::address_of(borrower);
@@ -2759,7 +2841,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x10017, location = Self)]
     fun test_dex_flash_swap_extra_repayment(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (_, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1001);
         let borrower_addr = signer::address_of(borrower);
@@ -2772,7 +2854,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_recursive(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (test_metadata, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
@@ -2797,7 +2879,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_swap(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (test_metadata, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
@@ -2814,7 +2896,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_provide_liquidity(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (test_metadata, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
@@ -2831,7 +2913,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_withdraw_liquidity(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
         let (test_metadata, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1000);
         let borrower_addr = signer::address_of(borrower);
@@ -2930,7 +3012,7 @@ module initia_std::dex {
     #[test(chain = @initia_std)]
     fun provide_test(
         chain: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs {
         init_module(chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
