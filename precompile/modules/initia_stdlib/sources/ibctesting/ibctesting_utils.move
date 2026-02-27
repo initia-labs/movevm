@@ -8,7 +8,7 @@ module initia_std::ibctesting_utils {
     use std::account;
     use std::coin;
     use std::option;
-    use std::hash::sha3_256;
+    use std::hash::sha2_256;
     use std::from_bcs::to_address;
 
     public fun counterparty_metadata(metadata: Object<Metadata>): Object<Metadata> {
@@ -18,13 +18,14 @@ module initia_std::ibctesting_utils {
 
     public fun intermediate_sender(channel: String, sender: String): address {
         let seed = channel;
+        string::append_utf8(&mut seed, b"/");
         string::append(&mut seed, sender);
         let seed_bytes = *string::bytes(&seed);
         let prefix_bytes = b"ibc-move-hook-intermediary";
 
-        let buf = sha3_256(prefix_bytes);
+        let buf = sha2_256(prefix_bytes);
         vector::append(&mut buf, seed_bytes);
-        to_address(sha3_256(buf))
+        to_address(sha2_256(buf))
     }
 
     public fun counterparty_symbol(metadata: Object<Metadata>): String {
