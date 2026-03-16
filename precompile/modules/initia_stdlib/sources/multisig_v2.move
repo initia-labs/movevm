@@ -608,7 +608,8 @@ module initia_std::multisig_v2 {
         );
         let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
 
-        assert_proposal(proposal);
+        // if proposal is not in voting status or expired, just return
+        if (proposal.status != 0 || is_proposal_expired(proposal)) { return };
 
         proposal.status = 3; // canceled
 
