@@ -332,7 +332,10 @@ module initia_std::multisig_v2 {
             tiers,
             |tier| {
                 let (_, index) = vector::index_of(&tiers, &tier);
-                Tier { name: tier, weight: *vector::borrow(&tier_weights, index) }
+                Tier {
+                    name: tier,
+                    weight: *vector::borrow(&tier_weights, index)
+                }
             }
         );
 
@@ -547,10 +550,7 @@ module initia_std::multisig_v2 {
         };
 
         // check passed
-        assert!(
-            yes_score >= multisig_wallet.threshold,
-            error::invalid_state(ENOT_PASS)
-        );
+        assert!(yes_score >= multisig_wallet.threshold, error::invalid_state(ENOT_PASS));
 
         let multisig_signer =
             &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
@@ -679,7 +679,10 @@ module initia_std::multisig_v2 {
                 new_tiers,
                 |tier| {
                     let (_, index) = vector::index_of(&new_tiers, &tier);
-                    Tier { name: tier, weight: *vector::borrow(&new_tier_weights, index) }
+                    Tier {
+                        name: tier,
+                        weight: *vector::borrow(&new_tier_weights, index)
+                    }
                 }
             );
 
@@ -803,8 +806,7 @@ module initia_std::multisig_v2 {
 
                 // find tier with tier_name in tiers
                 let (found, tier_index) = vector::find(
-                    &tiers,
-                    |t| {
+                    &tiers, |t| {
                         let tt: &Tier = t;
 
                         &tt.name == &tier_name
@@ -822,8 +824,7 @@ module initia_std::multisig_v2 {
 
     fun get_member_by_address(members: vector<Member>, address: address): Member {
         let (found, index) = vector::find(
-            &members,
-            |member| {
+            &members, |member| {
                 let m: &Member = member;
                 m.address == address
             }
@@ -883,7 +884,12 @@ module initia_std::multisig_v2 {
         table::add(&mut proposal_store.active_proposals, key, true);
 
         event::emit<CreateProposalEvent>(
-            CreateProposalEvent { multisig_addr, proposal_id, proposer, execute_messages }
+            CreateProposalEvent {
+                multisig_addr,
+                proposal_id,
+                proposer,
+                execute_messages
+            }
         )
     }
 
@@ -900,9 +906,7 @@ module initia_std::multisig_v2 {
     }
 
     fun vote(
-        votes: &mut SimpleMap<Member, bool>,
-        voter: Member,
-        vote_yes: bool
+        votes: &mut SimpleMap<Member, bool>, voter: Member, vote_yes: bool
     ) {
         if (simple_map::contains_key(votes, &voter)) {
             let vote = simple_map::borrow_mut(votes, &voter);
@@ -1002,9 +1006,7 @@ module initia_std::multisig_v2 {
         let expiry_timestamp =
             if (option::is_some(&expiry_timestamp_opt)) {
                 *option::borrow(&expiry_timestamp_opt)
-            } else {
-                U64_MAX
-            };
+            } else { U64_MAX };
 
         ActiveProposalKey {
             expiry_timestamp: encode_u64(expiry_timestamp),
@@ -1088,8 +1090,8 @@ module initia_std::multisig_v2 {
 
     // create test_only function for create votes map
     #[test_only]
-    fun create_votes_map(members: vector<Member>, votes: vector<bool>):
-        SimpleMap<Member, bool> {
+    fun create_votes_map(members: vector<Member>, votes: vector<bool>)
+        : SimpleMap<Member, bool> {
         let votes_map = simple_map::create<Member, bool>();
         let index = 0;
         vector::for_each(
@@ -1107,9 +1109,7 @@ module initia_std::multisig_v2 {
 
     // view functions tests
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
-    fun is_exist_test(
-        account1: signer, account2: signer, account3: signer
-    ) {
+    fun is_exist_test(account1: signer, account2: signer, account3: signer) {
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
         let addr3 = signer::address_of(&account3);
@@ -1119,7 +1119,10 @@ module initia_std::multisig_v2 {
         assert!(!is_exist(addr1, name), 1);
 
         create_non_weighted_multisig_account(
-            &account1, name, vector[addr1, addr2, addr3], 2
+            &account1,
+            name,
+            vector[addr1, addr2, addr3],
+            2
         );
 
         assert!(is_exist(addr1, name), 1)
@@ -1130,10 +1133,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun create_non_weighted_wallet_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1250,10 +1250,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun create_weighted_wallet_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1476,10 +1473,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun create_proposal_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1521,10 +1515,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x1000c, location = Self)]
     fun invalid_list_create_proposal(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1565,10 +1556,7 @@ module initia_std::multisig_v2 {
         account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
     )]
     fun create_proposal_successfully(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1660,10 +1648,7 @@ module initia_std::multisig_v2 {
         account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
     )]
     fun proposal_to_proposal_response_weighted(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1809,10 +1794,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun vote_by_other(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1858,10 +1840,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x30004, location = Self)]
     fun vote_after_proposal_expired(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1906,10 +1885,7 @@ module initia_std::multisig_v2 {
         account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
     )]
     fun vote_proposal_of_non_weighted_multisig_successfully(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -1972,10 +1948,7 @@ module initia_std::multisig_v2 {
         account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
     )]
     fun vote_proposal_of_weighted_multisig_successfully(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -2046,10 +2019,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x50002, location = Self)]
     fun execute_by_others(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -2097,10 +2067,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x10006, location = Self)]
     fun execute_on_a_non_existing_proposal(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -2144,10 +2111,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x30005, location = Self)]
     fun non_weighted_multisig_execute_not_pass(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -2198,10 +2162,7 @@ module initia_std::multisig_v2 {
     )]
     #[expected_failure(abort_code = 0x30005, location = Self)]
     fun weighted_multisig_execute_not_pass(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -2256,10 +2217,7 @@ module initia_std::multisig_v2 {
         account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
     )]
     fun execute_pass_successfully(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         // create multisig wallet
         let addr1 = signer::address_of(&account1);
@@ -2717,7 +2675,6 @@ module initia_std::multisig_v2 {
     }
 
     // cancel_proposal tests
-
     #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
     fun cancel_proposal_successfully(
         account1: signer, account2: signer, account3: signer
@@ -2827,10 +2784,7 @@ module initia_std::multisig_v2 {
         account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
     )]
     fun execute_auto_cancels_when_no_votes_meet_threshold(
-        account1: signer,
-        account2: signer,
-        account3: signer,
-        account4: signer
+        account1: signer, account2: signer, account3: signer, account4: signer
     ) acquires MultisigWallet, ProposalStore {
         let addr1 = signer::address_of(&account1);
         let addr2 = signer::address_of(&account2);
