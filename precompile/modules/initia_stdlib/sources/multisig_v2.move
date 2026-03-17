@@ -42,7 +42,7 @@ module initia_std::multisig_v2 {
 
     // constants
 
-    const STATUS: vector<vector<u8>> = vector[b"voting", b"executed", b"expired"];
+    const STATUS: vector<vector<u8>> = vector[b"voting", b"executed", b"expired", b"canceled"];
 
     const MAX_LIMIT: u8 = 30;
 
@@ -133,6 +133,12 @@ module initia_std::multisig_v2 {
         multisig_addr: address,
         proposal_id: u64,
         executor: Member
+    }
+
+    #[event]
+    struct CancelProposalEvent has drop, store {
+        multisig_addr: address,
+        proposal_id: u64
     }
 
     #[event]
@@ -522,22 +528,34 @@ module initia_std::multisig_v2 {
 
         assert_proposal(proposal);
 
-        // check passed
-        assert!(
-            yes_vote_score(&proposal.votes, &multisig_wallet.members)
-                >= multisig_wallet.threshold,
-            error::invalid_state(ENOT_PASS)
+        // check votes
+        let (yes_score, no_score) = vote_score(
+            &proposal.votes, &multisig_wallet.members
         );
-
-        let multisig_signer =
-            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
-
-        proposal.status = 1; // change the status first in case of updating config
 
         // remove from active proposals
         let proposal_store = borrow_global_mut<ProposalStore>(multisig_addr);
         let key = get_active_proposal_key(proposal.expiry_timestamp, proposal_id);
         table::remove(&mut proposal_store.active_proposals, key);
+
+        // if no votes >= threshold, cancel the proposal
+        if (no_score >= multisig_wallet.threshold) {
+            proposal.status = 3; // canceled
+
+            event::emit<CancelProposalEvent>(
+                CancelProposalEvent { multisig_addr, proposal_id }
+            );
+
+            return
+        };
+
+        // check passed
+        assert!(yes_score >= multisig_wallet.threshold, error::invalid_state(ENOT_PASS));
+
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+
+        proposal.status = 1; // change the status first in case of updating config
 
         if (!proposal.is_json) {
             vector::for_each(
@@ -573,6 +591,35 @@ module initia_std::multisig_v2 {
 
         event::emit<ExecuteProposalEvent>(
             ExecuteProposalEvent { multisig_addr, proposal_id, executor }
+        )
+    }
+
+    /// Cancel proposal. Only execute by multisig wallet itself
+    public entry fun cancel_proposal(
+        account: &signer, proposal_id: u64
+    ) acquires MultisigWallet, ProposalStore {
+        let multisig_addr = signer::address_of(account);
+        let multisig_wallet = borrow_global_mut<MultisigWallet>(multisig_addr);
+        create_proposal_store(multisig_wallet); // for migration
+
+        assert!(
+            table::contains(&multisig_wallet.proposals, proposal_id),
+            error::invalid_argument(EPROPOSAL_NOT_FOUND)
+        );
+        let proposal = table::borrow_mut(&mut multisig_wallet.proposals, proposal_id);
+
+        // if proposal is not in voting status or expired, just return
+        if (proposal.status != 0 || is_proposal_expired(proposal)) { return };
+
+        proposal.status = 3; // canceled
+
+        // remove from active proposals
+        let proposal_store = borrow_global_mut<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, proposal_id);
+        table::remove(&mut proposal_store.active_proposals, key);
+
+        event::emit<CancelProposalEvent>(
+            CancelProposalEvent { multisig_addr, proposal_id }
         )
     }
 
@@ -869,25 +916,30 @@ module initia_std::multisig_v2 {
         };
     }
 
-    fun yes_vote_score(
+    fun vote_score(
         votes: &SimpleMap<Member, bool>, members: &vector<Member>
-    ): u64 {
-        vector::fold(
+    ): (u64, u64) {
+        let yes_score = 0u64;
+        let no_score = 0u64;
+        vector::for_each(
             *members,
-            0u64,
-            |acc, member| {
+            |member| {
                 let m: Member = member;
                 let weight =
                     if (option::is_some(&m.tier)) {
                         let tier = *option::borrow(&m.tier);
                         tier.weight
                     } else { 1u64 };
-                if (simple_map::contains_key(votes, &m)
-                    && *simple_map::borrow(votes, &m)) {
-                    acc + weight
-                } else { acc }
+                if (simple_map::contains_key(votes, &m)) {
+                    if (*simple_map::borrow(votes, &m)) {
+                        yes_score = yes_score + weight;
+                    } else {
+                        no_score = no_score + weight;
+                    }
+                }
             }
-        )
+        );
+        (yes_score, no_score)
     }
 
     fun proposal_to_proposal_response(
@@ -898,7 +950,8 @@ module initia_std::multisig_v2 {
     ): ProposalResponse {
         let status_index = proposal.status;
         let is_expired = is_proposal_expired(proposal);
-        let yes_vote_score = yes_vote_score(&proposal.votes, &multisig_wallet.members);
+        let (yes_vote_score, _no_vote_score) =
+            vote_score(&proposal.votes, &multisig_wallet.members);
         if (status_index == 0 && is_expired) {
             status_index = 2
         };
@@ -1581,7 +1634,8 @@ module initia_std::multisig_v2 {
         assert!(execute_message.function_name == string::utf8(b"update_config"), 1);
         assert!(proposal.threshold == multisig_wallet.threshold, 1);
         assert!(proposal.total_weight == 3, 1);
-        assert!(yes_vote_score(&proposal.votes, &multisig_wallet.members) == 1, 1);
+        let (yes_score, _) = vote_score(&proposal.votes, &multisig_wallet.members);
+        assert!(yes_score == 1, 1);
 
         // check if it is added to active proposals
         let proposal_store = borrow_global<ProposalStore>(multisig_addr);
@@ -2093,9 +2147,12 @@ module initia_std::multisig_v2 {
             option::some(99)
         );
 
-        vote_proposal(&account1, multisig_addr, 1, true);
+        // yes=1 (proposer auto), no=1 - neither reaches threshold(2)
         vote_proposal(&account2, multisig_addr, 1, false);
-        vote_proposal(&account3, multisig_addr, 1, false);
+
+        let proposal_response = get_proposal(multisig_addr, 1);
+        assert!(proposal_response.yes_vote_score == 1, 1);
+        assert!(simple_map::length(&proposal_response.votes) == 2, 2);
 
         execute_proposal(&account1, multisig_addr, 1);
     }
@@ -2615,5 +2672,164 @@ module initia_std::multisig_v2 {
             ),
             7
         );
+    }
+
+    // cancel_proposal tests
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun cancel_proposal_successfully(
+        account1: signer, account2: signer, account3: signer
+    ) acquires MultisigWallet, ProposalStore {
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+
+        create_non_weighted_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2
+        );
+        let multisig_addr = get_multisig_address(
+            &addr1, &string::utf8(b"multisig wallet")
+        );
+
+        set_block_info(100, 100);
+
+        create_proposal(
+            &account1,
+            multisig_addr,
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
+                    std::bcs::to_bytes(&2u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
+            option::some(99)
+        );
+
+        // cancel via multisig signer
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        cancel_proposal(multisig_signer, 1);
+
+        // verify status is canceled
+        let proposal_response = get_proposal(multisig_addr, 1);
+        assert!(proposal_response.status == string::utf8(b"canceled"), 1);
+
+        // verify removed from active proposals
+        let proposal =
+            table::borrow(&borrow_global<MultisigWallet>(multisig_addr).proposals, 1);
+        let proposal_store = borrow_global<ProposalStore>(multisig_addr);
+        let key = get_active_proposal_key(proposal.expiry_timestamp, 1);
+        assert!(!table::contains(&proposal_store.active_proposals, key), 2);
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    #[expected_failure(abort_code = 0x30003, location = Self)]
+    fun cannot_vote_on_canceled_proposal(
+        account1: signer, account2: signer, account3: signer
+    ) acquires MultisigWallet, ProposalStore {
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+
+        create_non_weighted_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2
+        );
+        let multisig_addr = get_multisig_address(
+            &addr1, &string::utf8(b"multisig wallet")
+        );
+
+        set_block_info(100, 100);
+
+        create_proposal(
+            &account1,
+            multisig_addr,
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr3]),
+                    std::bcs::to_bytes(&2u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
+            option::some(99)
+        );
+
+        // cancel the proposal
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        cancel_proposal(multisig_signer, 1);
+
+        // try to vote on canceled proposal - should fail with EINVALID_PROPOSAL_STATUS
+        vote_proposal(&account2, multisig_addr, 1, true);
+    }
+
+    #[test(
+        account1 = @0x101, account2 = @0x102, account3 = @0x103, account4 = @0x104
+    )]
+    fun execute_auto_cancels_when_no_votes_meet_threshold(
+        account1: signer, account2: signer, account3: signer, account4: signer
+    ) acquires MultisigWallet, ProposalStore {
+        let addr1 = signer::address_of(&account1);
+        let addr2 = signer::address_of(&account2);
+        let addr3 = signer::address_of(&account3);
+        let addr4 = signer::address_of(&account4);
+
+        create_non_weighted_multisig_account(
+            &account1,
+            string::utf8(b"multisig wallet"),
+            vector[addr1, addr2, addr3],
+            2
+        );
+        let multisig_addr = get_multisig_address(
+            &addr1, &string::utf8(b"multisig wallet")
+        );
+
+        set_block_info(100, 100);
+
+        create_proposal(
+            &account1,
+            multisig_addr,
+            vector[@initia_std],
+            vector[string::utf8(b"multisig_v2")],
+            vector[string::utf8(b"update_config")],
+            vector[vector[]],
+            vector[
+                vector[
+                    std::bcs::to_bytes(&vector[addr1, addr2, addr4]),
+                    std::bcs::to_bytes(&3u64),
+                    std::bcs::to_bytes(&option::none<u64>()),
+                    std::bcs::to_bytes(&option::none<u64>())
+                ]
+            ],
+            option::some(99)
+        );
+
+        // vote: 1 yes (proposer auto), 2 no
+        vote_proposal(&account2, multisig_addr, 1, false);
+        vote_proposal(&account3, multisig_addr, 1, false);
+
+        // execute should auto-cancel since no_score (2) >= threshold (2)
+        execute_proposal(&account1, multisig_addr, 1);
+
+        // verify status is canceled
+        let proposal_response = get_proposal(multisig_addr, 1);
+        assert!(proposal_response.status == string::utf8(b"canceled"), 1);
     }
 }
