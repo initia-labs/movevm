@@ -116,6 +116,10 @@ func TestTypeTagFromString_NestedVector(t *testing.T) {
 	require.IsType(t, &types.TypeTag__Vector{}, inner2.Value)
 	inner3 := inner2.Value.(*types.TypeTag__Vector)
 	require.IsType(t, &types.TypeTag__U8{}, inner3.Value)
+
+	// regression: "vectorFoo" should not be treated as a vector type
+	tag, err = TypeTagFromString("vectorFoo")
+	require.Error(t, err)
 }
 
 func TestDecodeMoveValue(t *testing.T) {
