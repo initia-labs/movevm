@@ -45,5 +45,7 @@ func handleFFIResult(res C.libmovevm_UnmanagedVector, errmsg C.libmovevm_Unmanag
 			return nil, errorWithMessage(err, errmsg)
 		}
 	}
+	// destroy errmsg on success path to avoid leaks
+	copyAndDestroyUnmanagedVector(errmsg)
 	return copyAndDestroyUnmanagedVector(res), nil
 }
