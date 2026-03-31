@@ -6,7 +6,6 @@ import "C"
 
 import (
 	"runtime"
-	"syscall"
 )
 
 type VM struct {
@@ -60,11 +59,7 @@ func Initialize(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_initialize(vm.ptr, db, _api, e, mb, ap, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // ExecuteContract call ffi(`execute_contract`) to execute
@@ -96,11 +91,7 @@ func ExecuteContract(
 
 	errmsg := uninitializedUnmanagedVector()
 	res, err := C.libmovevm_execute_contract(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // ExecuteScript call ffi(`execute_script`) to execute
@@ -133,11 +124,7 @@ func ExecuteScript(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_execute_script(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, sendersView, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // ExecuteViewFunction call ffi(`execute_view_function`) to get
@@ -168,12 +155,7 @@ func ExecuteViewFunction(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_execute_view_function(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.                                                                            │                                 struct ByteSliceView checksum,
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 func ExecuteAuthenticate(
@@ -204,9 +186,5 @@ func ExecuteAuthenticate(
 
 	errmsg := uninitializedUnmanagedVector()
 	res, err := C.libmovevm_execute_authenticate(vm.ptr, (*C.uint64_t)(gasBalance), db, _api, e, senderView, msg, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
