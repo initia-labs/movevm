@@ -37,10 +37,13 @@ func errorWithMessage(err error, b C.libmovevm_UnmanagedVector) error {
 // checking the errno, destroying the unmanaged result vector, and returning
 // the appropriate byte slice or error.
 func handleFFIResult(res C.libmovevm_UnmanagedVector, errmsg C.libmovevm_UnmanagedVector, err error) ([]byte, error) {
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// always destroy res to avoid leaks
-		copyAndDestroyUnmanagedVector(res)
-		return nil, errorWithMessage(err, errmsg)
+	if err != nil {
+		errno, ok := err.(syscall.Errno)
+		if !ok || errno != C.libmovevm_ErrnoValue_Success {
+			// always destroy res to avoid leaks
+			copyAndDestroyUnmanagedVector(res)
+			return nil, errorWithMessage(err, errmsg)
+		}
 	}
 	return copyAndDestroyUnmanagedVector(res), nil
 }
