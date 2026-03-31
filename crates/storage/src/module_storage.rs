@@ -327,52 +327,33 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
     // non-local properties of the module.
     let mut verified_dependencies = vec![];
     for (addr, name) in locally_verified_code.immediate_dependencies_iter() {
-        let dependency_id = ModuleId::new(*addr, name.to_owned());
-        match module_cache_with_context
-            .base_storage
-            .fetch_checksum(addr, name)?
-        {
-            Some(dependency_checksum) => {
-                let dependency = module_cache_with_context
-                    .module_cache
-                    .get_module_or_build_with(
-                        &dependency_id,
-                        &dependency_checksum,
-                        module_cache_with_context,
-                    )?
-                    .ok_or_else(|| module_linker_error!(addr, name))?;
+        let (dependency_id, dependency_checksum, dependency) = module_cache_with_context
+            .get_module_wrapper(addr, name)?
+            .ok_or_else(|| module_linker_error!(addr, name))?;
 
-                // Dependency is already verified!
-                if dependency.module_code.code().is_verified() {
-                    verified_dependencies.push(dependency.module_code.code().verified().clone());
-                    continue;
-                }
+        // Dependency is already verified!
+        if dependency.module_code.code().is_verified() {
+            verified_dependencies.push(dependency.module_code.code().verified().clone());
+            continue;
+        }
 
-                if visited.insert(dependency_id.clone()) {
-                    // Dependency is not verified, and we have not visited it yet.
-                    let verified_dependency = visit_dependencies_and_verify(
-                        dependency_id.clone(),
-                        dependency_checksum,
-                        dependency,
-                        visited,
-                        module_cache_with_context,
-                    )?;
-                    verified_dependencies.push(verified_dependency);
-                } else {
-                    // We must have found a cycle otherwise.
-                    return Err(module_cyclic_dependency_error!(
-                        dependency_id.address(),
-                        dependency_id.name()
-                    ));
-                }
-            }
-            None => {
-                return Err(module_linker_error!(
-                    dependency_id.address(),
-                    dependency_id.name()
-                ));
-            }
-        };
+        if visited.insert(dependency_id.clone()) {
+            // Dependency is not verified, and we have not visited it yet.
+            let verified_dependency = visit_dependencies_and_verify(
+                dependency_id.clone(),
+                dependency_checksum,
+                dependency,
+                visited,
+                module_cache_with_context,
+            )?;
+            verified_dependencies.push(verified_dependency);
+        } else {
+            // We must have found a cycle otherwise.
+            return Err(module_cyclic_dependency_error!(
+                dependency_id.address(),
+                dependency_id.name()
+            ));
+        }
     }
 
     // Build verified module and the compute size of the verified module
