@@ -189,8 +189,12 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaModule
 
 impl<S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'_, S> {
     /// Resolves a module by address and name: fetches the checksum, then looks up
-    /// (or builds) the module in the cache. Returns `None` if the checksum is missing
-    /// or the module cannot be built.
+    /// (or builds) the module in the cache.
+    ///
+    /// Returns:
+    /// - `Ok(Some((id, checksum, wrapper)))` if the module is found and built.
+    /// - `Ok(None)` if the checksum is missing or the module cannot be built from storage.
+    /// - `Err(...)` if deserialization, checksum validation, or other storage errors occur.
     fn get_module_wrapper(
         &self,
         address: &AccountAddress,
