@@ -187,21 +187,34 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaModule
     }
 }
 
+impl<S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'_, S> {
+    /// Resolves a module by address and name: fetches the checksum, then looks up
+    /// (or builds) the module in the cache. Returns `None` if the checksum is missing
+    /// or the module cannot be built.
+    fn get_module_wrapper(
+        &self,
+        address: &AccountAddress,
+        module_name: &IdentStr,
+    ) -> VMResult<Option<(ModuleId, Checksum, ModuleWrapper)>> {
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
+        let wrapper = self
+            .module_cache
+            .get_module_or_build_with(&id, &checksum, self)?;
+        Ok(wrapper.map(|w| (id, checksum, w)))
+    }
+}
+
 impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStorage<'_, S> {
     fn check_module_exists(
         &self,
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<bool> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(false),
-        };
-        Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .is_some())
+        Ok(self.get_module_wrapper(address, module_name)?.is_some())
     }
 
     fn fetch_module_bytes(
@@ -209,15 +222,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Bytes>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.extension().bytes().clone()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.extension().bytes().clone()))
     }
 
     fn fetch_module_size_in_bytes(
@@ -225,15 +232,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<usize>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.extension().bytes().len()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.extension().bytes().len()))
     }
 
     fn fetch_module_metadata(
@@ -241,15 +242,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Vec<Metadata>>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.code().deserialized().metadata.clone()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.code().deserialized().metadata.clone()))
     }
 
     fn fetch_deserialized_module(
@@ -257,15 +252,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<CompiledModule>>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.code().deserialized().clone()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.code().deserialized().clone()))
     }
 
     fn fetch_verified_module(
@@ -273,22 +262,14 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<Module>>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
+        let (id, checksum, module_code_wrapper) =
+            match self.get_module_wrapper(address, module_name)? {
+                Some(result) => result,
+                None => return Ok(None),
+            };
 
         // Look up the verified module in cache, if it is not there, or if the module is not yet
         // verified, we need to load & verify its transitive dependencies.
-        let module_code_wrapper = match self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-        {
-            Some(module) => module,
-            None => return Ok(None),
-        };
-
         if module_code_wrapper.module_code.code().is_verified() {
             return Ok(Some(
                 module_code_wrapper.module_code.code().verified().clone(),
