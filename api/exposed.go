@@ -282,7 +282,7 @@ func StringifyTypeTag(tt types.TypeTag) (string, error) {
 		return StringifyStructTag(v.Value)
 	}
 
-	return "", errors.New("known TypeTag")
+	return "", errors.New("unknown TypeTag")
 }
 
 // TypeTagFromString parse string to TypeTag
@@ -307,8 +307,8 @@ func TypeTagFromString(str string) (types.TypeTag, error) {
 	case "address":
 		return &types.TypeTag__Address{}, nil
 	}
-	if strings.HasPrefix(str, "vector") {
-		substr := strings.TrimSuffix(strings.TrimPrefix(str, "vector<"), ">")
+	if strings.HasPrefix(str, "vector<") && strings.HasSuffix(str, ">") {
+		substr := str[7 : len(str)-1]
 		subTypeTag, err := TypeTagFromString(substr)
 		if err != nil {
 			return nil, err

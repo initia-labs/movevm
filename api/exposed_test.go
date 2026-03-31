@@ -83,6 +83,41 @@ func TestParseStructTag_Coin(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStringifyTypeTag_UnknownError(t *testing.T) {
+	_, err := StringifyTypeTag(nil)
+	require.Error(t, err)
+	require.Equal(t, "unknown TypeTag", err.Error())
+}
+
+func TestTypeTagFromString_NestedVector(t *testing.T) {
+	// vector<u8>
+	tag, err := TypeTagFromString("vector<u8>")
+	require.NoError(t, err)
+	require.IsType(t, &types.TypeTag__Vector{}, tag)
+	inner := tag.(*types.TypeTag__Vector)
+	require.IsType(t, &types.TypeTag__U8{}, inner.Value)
+
+	// vector<vector<u8>>
+	tag, err = TypeTagFromString("vector<vector<u8>>")
+	require.NoError(t, err)
+	require.IsType(t, &types.TypeTag__Vector{}, tag)
+	inner = tag.(*types.TypeTag__Vector)
+	require.IsType(t, &types.TypeTag__Vector{}, inner.Value)
+	inner2 := inner.Value.(*types.TypeTag__Vector)
+	require.IsType(t, &types.TypeTag__U8{}, inner2.Value)
+
+	// vector<vector<vector<u8>>>
+	tag, err = TypeTagFromString("vector<vector<vector<u8>>>")
+	require.NoError(t, err)
+	require.IsType(t, &types.TypeTag__Vector{}, tag)
+	inner = tag.(*types.TypeTag__Vector)
+	require.IsType(t, &types.TypeTag__Vector{}, inner.Value)
+	inner2 = inner.Value.(*types.TypeTag__Vector)
+	require.IsType(t, &types.TypeTag__Vector{}, inner2.Value)
+	inner3 := inner2.Value.(*types.TypeTag__Vector)
+	require.IsType(t, &types.TypeTag__U8{}, inner3.Value)
+}
+
 func TestDecodeMoveValue(t *testing.T) {
 	store := NewLookup()
 
