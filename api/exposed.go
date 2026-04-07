@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/initia-labs/movevm/types"
 )
@@ -30,12 +29,10 @@ func ReadModuleInfo(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_read_module_info(&errmsg, compiledView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return types.AccountAddress{}, "", errorWithMessage(err, errmsg)
+	resBz, err := handleFFIResult(res, errmsg, err)
+	if err != nil {
+		return types.AccountAddress{}, "", err
 	}
-
-	resBz := copyAndDestroyUnmanagedVector(res)
 
 	var moduleInfo ModuleInfoResponse
 	err = json.Unmarshal(resBz, &moduleInfo)
@@ -73,12 +70,7 @@ func DecodeMoveResource(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_decode_move_resource(db, &errmsg, structTagView, resourceBytesView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // DecodeMoveValue decode move value bytes to move value
@@ -108,12 +100,7 @@ func DecodeMoveValue(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_decode_move_value(db, &errmsg, typeTagView, valueBytesView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // DecodeModuleBytes decode module bytes to MoveModule
@@ -129,12 +116,7 @@ func DecodeModuleBytes(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_decode_module_bytes(&errmsg, moduleBytesView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // DecodeScriptBytes decode script bytes to MoveFunction
@@ -150,12 +132,7 @@ func DecodeScriptBytes(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_decode_script_bytes(&errmsg, scriptBytesView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return copyAndDestroyUnmanagedVector(res), err
+	return handleFFIResult(res, errmsg, err)
 }
 
 // ParseStructTag parse string to StructTag
@@ -174,12 +151,12 @@ func ParseStructTag(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_parse_struct_tag(&errmsg, structTagStrView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return types.StructTag{}, errorWithMessage(err, errmsg)
+	resBz, err := handleFFIResult(res, errmsg, err)
+	if err != nil {
+		return types.StructTag{}, err
 	}
 
-	return types.BcsDeserializeStructTag(copyAndDestroyUnmanagedVector(res))
+	return types.BcsDeserializeStructTag(resBz)
 }
 
 // StringifyStructTag parse string to StructTag
@@ -199,12 +176,12 @@ func StringifyStructTag(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_stringify_struct_tag(&errmsg, structTagView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return "", errorWithMessage(err, errmsg)
+	resBz, err := handleFFIResult(res, errmsg, err)
+	if err != nil {
+		return "", err
 	}
 
-	return string(copyAndDestroyUnmanagedVector(res)), nil
+	return string(resBz), nil
 }
 
 func SortModuleBundle(
@@ -226,12 +203,10 @@ func SortModuleBundle(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.libmovevm_sort_module_bundle(&errmsg, moduleBundleBzView)
-	if err != nil && err.(syscall.Errno) != C.libmovevm_ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, errorWithMessage(err, errmsg)
+	resBz, err := handleFFIResult(res, errmsg, err)
+	if err != nil {
+		return nil, err
 	}
-
-	resBz := copyAndDestroyUnmanagedVector(res)
 
 	sortedModuleBundle, err := types.BcsDeserializeModuleBundle(resBz)
 	if err != nil {
