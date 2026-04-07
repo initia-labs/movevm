@@ -1,4 +1,4 @@
-.PHONY: all build build-rust build-go test precompile contracts-gen bcs-go-gen
+.PHONY: all build build-rust build-go test precompile contracts-gen bcs-go-gen lint fmt rust-fmt go-fmt move-fmt
 
 # Builds the Rust library libmovevm
 BUILDERS_PREFIX := initia/go-ext-builder:0002
@@ -91,8 +91,18 @@ prebuild-go:
 build-go: prebuild-go
 	go build ./...
 
-fmt:
+lint:
+	cargo clippy --all-targets -- -D warnings
+
+fmt: rust-fmt go-fmt move-fmt
+
+rust-fmt:
+	cargo clippy --fix --allow-dirty
 	cargo fmt
+
+go-fmt:
+	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./api/*" -not -name '*.pb.go' -not -name 'bcs.go' | xargs gofmt -w -s
+	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./api/*" -not -name '*.pb.go' -not -name 'bcs.go' | xargs goimports -w -local github.com/initia-labs/movevm
 
 move-fmt: install-move-fmt
 	movefmt ./precompile/modules/**/sources/*.move ./precompile/modules/**/sources/**/*.move ./precompile/modules/**/tests/*.move

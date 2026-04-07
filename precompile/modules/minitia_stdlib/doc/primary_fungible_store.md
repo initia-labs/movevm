@@ -264,7 +264,7 @@ Create a primary store object to hold fungible asset for the given address.
     <b>let</b> constructor_ref =
         &<a href="object.md#0x1_object_create_user_derived_object">object::create_user_derived_object</a>(owner_addr, derive_ref, <b>false</b>);
 
-    // Disable ungated transfer <b>as</b> deterministic stores shouldn't be transferrable.
+    // Disable ungated transfer <b>as</b> deterministic stores shouldn't be transferable.
     <b>let</b> transfer_ref = &<a href="object.md#0x1_object_generate_transfer_ref">object::generate_transfer_ref</a>(constructor_ref);
     <a href="object.md#0x1_object_disable_ungated_transfer">object::disable_ungated_transfer</a>(transfer_ref);
 

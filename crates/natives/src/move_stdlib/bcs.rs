@@ -182,7 +182,7 @@ fn native_constant_serialized_size(
         Err(_) => {
             context.charge(gas_params.bcs_serialized_size_failure)?;
 
-            // Re-use the same abort code as bcs::to_bytes.
+            // Reuse the same abort code as bcs::to_bytes.
             return Err(SafeNativeError::Abort {
                 abort_code: NFE_BCS_SERIALIZATION_FAILURE,
             });

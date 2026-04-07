@@ -160,7 +160,7 @@ fn create_string_value(s: String) -> Value {
 }
 
 fn create_vector_value(vv: Vec<Value>) -> Value {
-    // This is safe because this function is only used to create vectors of homogenous values.
+    // This is safe because this function is only used to create vectors of homogeneous values.
     Value::vector_for_testing_only(vv)
 }
 

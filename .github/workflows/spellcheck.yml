@@ -2,20 +2,27 @@ name: Spell Check
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   spellcheck:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Install codespell
+        run: pip install codespell
       - name: Run codespell
         continue-on-error: true
-        run: |
-          sudo apt-get install codespell -y
-          codespell -w --ignore-words=.github/config/.codespellignore --skip="*.git,*.so,*.dylib,go.mod,go.sum,Cargo.toml"
+        run: codespell -w --skip="*.git,*.so,*.dylib,*.a,*.h,*.json,*.bin,go.mod,go.sum,Cargo.toml,Cargo.lock" --ignore-words=.github/config/.codespellignore
       - uses: peter-evans/create-pull-request@v7.0.5
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: fix typos"
@@ -25,4 +32,3 @@ jobs:
           body: |
             This PR fixes typos in the codebase.
             Please review it, and merge if everything is fine.
-            If there are proto changes, run `make proto-gen` and commit the changes.

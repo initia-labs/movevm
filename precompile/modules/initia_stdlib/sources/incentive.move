@@ -66,7 +66,7 @@ module initia_std::incentive {
         gradient: BigDecimal,
         // last updated timestamp
         last_updated_timestamp: u64,
-        // gradient chaning schedules, key: timestamp
+        // gradient changing schedules, key: timestamp
         schedules: Table<vector<u8>, Schedule>
     }
 
@@ -470,7 +470,7 @@ module initia_std::incentive {
     }
 
     //
-    // helper functinos
+    // helper functions
     //
 
     // check signer is chain or admin

@@ -3990,7 +3990,7 @@ Event emitted when arb reverted
     <b>let</b> (_, <a href="timestamp.md#0x1_timestamp">timestamp</a>) = <a href="block.md#0x1_block_get_block_info">block::get_block_info</a>();
     <b>let</b> release_time = <a href="timestamp.md#0x1_timestamp">timestamp</a> + module_store.unbond_period;
 
-    // create and store withdraw entiry
+    // create and store withdraw entry
     <b>let</b> withdraw_entity = <a href="minitswap.md#0x1_minitswap_UnbondEntity">UnbondEntity</a> {
         <a href="account.md#0x1_account">account</a>: <a href="../../move_nursery/../move_stdlib/doc/signer.md#0x1_signer_address_of">signer::address_of</a>(<a href="account.md#0x1_account">account</a>),
         share_amount,
