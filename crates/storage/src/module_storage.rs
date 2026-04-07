@@ -187,21 +187,38 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleCodeBuilder for InitiaModule
     }
 }
 
+impl<S: ModuleBytesStorage + ChecksumStorage> InitiaModuleStorage<'_, S> {
+    /// Resolves a module by address and name: fetches the checksum, then looks up
+    /// (or builds) the module in the cache.
+    ///
+    /// Returns:
+    /// - `Ok(Some((id, checksum, wrapper)))` if the module is found and built.
+    /// - `Ok(None)` if the checksum is missing or the module cannot be built from storage.
+    /// - `Err(...)` if deserialization, checksum validation, or other storage errors occur.
+    fn get_module_wrapper(
+        &self,
+        address: &AccountAddress,
+        module_name: &IdentStr,
+    ) -> VMResult<Option<(ModuleId, Checksum, ModuleWrapper)>> {
+        let id = ModuleId::new(*address, module_name.to_owned());
+        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
+            Some(checksum) => checksum,
+            None => return Ok(None),
+        };
+        let wrapper = self
+            .module_cache
+            .get_module_or_build_with(&id, &checksum, self)?;
+        Ok(wrapper.map(|w| (id, checksum, w)))
+    }
+}
+
 impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStorage<'_, S> {
     fn check_module_exists(
         &self,
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<bool> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(false),
-        };
-        Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .is_some())
+        Ok(self.get_module_wrapper(address, module_name)?.is_some())
     }
 
     fn fetch_module_bytes(
@@ -209,15 +226,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Bytes>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.extension().bytes().clone()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.extension().bytes().clone()))
     }
 
     fn fetch_module_size_in_bytes(
@@ -225,15 +236,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<usize>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.extension().bytes().len()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.extension().bytes().len()))
     }
 
     fn fetch_module_metadata(
@@ -241,15 +246,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Vec<Metadata>>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.code().deserialized().metadata.clone()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.code().deserialized().metadata.clone()))
     }
 
     fn fetch_deserialized_module(
@@ -257,15 +256,9 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<CompiledModule>>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
         Ok(self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-            .map(|module| module.module_code.code().deserialized().clone()))
+            .get_module_wrapper(address, module_name)?
+            .map(|(_, _, module)| module.module_code.code().deserialized().clone()))
     }
 
     fn fetch_verified_module(
@@ -273,22 +266,14 @@ impl<S: ModuleBytesStorage + ChecksumStorage> ModuleStorage for InitiaModuleStor
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<Module>>> {
-        let id = ModuleId::new(*address, module_name.to_owned());
-        let checksum = match self.base_storage.fetch_checksum(address, module_name)? {
-            Some(checksum) => checksum,
-            None => return Ok(None),
-        };
+        let (id, checksum, module_code_wrapper) =
+            match self.get_module_wrapper(address, module_name)? {
+                Some(result) => result,
+                None => return Ok(None),
+            };
 
         // Look up the verified module in cache, if it is not there, or if the module is not yet
         // verified, we need to load & verify its transitive dependencies.
-        let module_code_wrapper = match self
-            .module_cache
-            .get_module_or_build_with(&id, &checksum, self)?
-        {
-            Some(module) => module,
-            None => return Ok(None),
-        };
-
         if module_code_wrapper.module_code.code().is_verified() {
             return Ok(Some(
                 module_code_wrapper.module_code.code().verified().clone(),
@@ -346,52 +331,33 @@ fn visit_dependencies_and_verify<S: ModuleBytesStorage + ChecksumStorage>(
     // non-local properties of the module.
     let mut verified_dependencies = vec![];
     for (addr, name) in locally_verified_code.immediate_dependencies_iter() {
-        let dependency_id = ModuleId::new(*addr, name.to_owned());
-        match module_cache_with_context
-            .base_storage
-            .fetch_checksum(addr, name)?
-        {
-            Some(dependency_checksum) => {
-                let dependency = module_cache_with_context
-                    .module_cache
-                    .get_module_or_build_with(
-                        &dependency_id,
-                        &dependency_checksum,
-                        module_cache_with_context,
-                    )?
-                    .ok_or_else(|| module_linker_error!(addr, name))?;
+        let (dependency_id, dependency_checksum, dependency) = module_cache_with_context
+            .get_module_wrapper(addr, name)?
+            .ok_or_else(|| module_linker_error!(addr, name))?;
 
-                // Dependency is already verified!
-                if dependency.module_code.code().is_verified() {
-                    verified_dependencies.push(dependency.module_code.code().verified().clone());
-                    continue;
-                }
+        // Dependency is already verified!
+        if dependency.module_code.code().is_verified() {
+            verified_dependencies.push(dependency.module_code.code().verified().clone());
+            continue;
+        }
 
-                if visited.insert(dependency_id.clone()) {
-                    // Dependency is not verified, and we have not visited it yet.
-                    let verified_dependency = visit_dependencies_and_verify(
-                        dependency_id.clone(),
-                        dependency_checksum,
-                        dependency,
-                        visited,
-                        module_cache_with_context,
-                    )?;
-                    verified_dependencies.push(verified_dependency);
-                } else {
-                    // We must have found a cycle otherwise.
-                    return Err(module_cyclic_dependency_error!(
-                        dependency_id.address(),
-                        dependency_id.name()
-                    ));
-                }
-            }
-            None => {
-                return Err(module_linker_error!(
-                    dependency_id.address(),
-                    dependency_id.name()
-                ));
-            }
-        };
+        if visited.insert(dependency_id.clone()) {
+            // Dependency is not verified, and we have not visited it yet.
+            let verified_dependency = visit_dependencies_and_verify(
+                dependency_id.clone(),
+                dependency_checksum,
+                dependency,
+                visited,
+                module_cache_with_context,
+            )?;
+            verified_dependencies.push(verified_dependency);
+        } else {
+            // We must have found a cycle otherwise.
+            return Err(module_cyclic_dependency_error!(
+                dependency_id.address(),
+                dependency_id.name()
+            ));
+        }
     }
 
     // Build verified module and the compute size of the verified module
