@@ -1708,7 +1708,7 @@ module initia_std::minitswap {
         let (_, timestamp) = block::get_block_info();
         let release_time = timestamp + module_store.unbond_period;
 
-        // create and store withdraw entiry
+        // create and store withdraw entry
         let withdraw_entity = UnbondEntity {
             account: signer::address_of(account),
             share_amount,
