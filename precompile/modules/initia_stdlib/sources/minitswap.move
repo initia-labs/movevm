@@ -3346,7 +3346,7 @@ module initia_std::minitswap {
             1
         );
 
-        // deactive
+        // deactivate
         assert!(!pool.active, 2);
     }
 

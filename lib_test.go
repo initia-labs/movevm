@@ -175,7 +175,7 @@ func mintCoin(
 		},
 		Function: "mint",
 		TyArgs:   []types.TypeTag{&tyArg},
-		Args:     [][]byte{[]byte(fmt.Sprintf("\"%d\"", amount))},
+		Args:     [][]byte{fmt.Appendf(nil, "\"%d\"", amount)},
 		IsJson:   true,
 	}
 

@@ -127,7 +127,7 @@ module initia_std::primary_fungible_store {
         let constructor_ref =
             &object::create_user_derived_object(owner_addr, derive_ref, false);
 
-        // Disable ungated transfer as deterministic stores shouldn't be transferrable.
+        // Disable ungated transfer as deterministic stores shouldn't be transferable.
         let transfer_ref = &object::generate_transfer_ref(constructor_ref);
         object::disable_ungated_transfer(transfer_ref);
 

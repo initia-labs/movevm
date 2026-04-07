@@ -65,7 +65,7 @@ module minitia_std::big_ordered_map {
     const LEAF_MIN_DEGREE: u16 = 3;
     const MAX_DEGREE: u64 = 4096;
 
-    const MAX_NODE_BYTES: u64 = 409600; // 400 KB, bellow the max resource limit.
+    const MAX_NODE_BYTES: u64 = 409600; // 400 KB, below the max resource limit.
 
     // Constants aligned with storage_slots_allocator
     const NULL_INDEX: u64 = 0;
@@ -307,7 +307,7 @@ module minitia_std::big_ordered_map {
     /// Map was created with reuse_slots=true, you can allocate spare slots, to pay storage fee now, to
     /// allow future insertions to not require any storage slot creation - making their gas more predictable
     /// and better bounded/fair.
-    /// (otherwsie, unlucky inserts create new storage slots and are charge more for it)
+    /// (otherwise, unlucky inserts create new storage slots and are charge more for it)
     public fun allocate_spare_slots<K: store, V: store>(
         self: &mut BigOrderedMap<K, V>, num_to_allocate: u64
     ) {
@@ -626,7 +626,7 @@ module minitia_std::big_ordered_map {
         // })
     }
 
-    // TODO: Temporary friend implementaiton, until for_each_ref can be made efficient.
+    // TODO: Temporary friend implementation, until for_each_ref can be made efficient.
     public(friend) inline fun for_each_ref_friend<K: drop + copy + store, V: store>(
         self: &BigOrderedMap<K, V>, f: |&K, &V|
     ) {
@@ -1219,7 +1219,7 @@ module minitia_std::big_ordered_map {
                 );
 
                 // Splitting root now, need to create a new root.
-                // Since root is stored direclty in the resource, we will swap-in the new node there.
+                // Since root is stored directly in the resource, we will swap-in the new node there.
                 let new_root_node = new_node<K, V>(/*is_leaf=*/ false);
 
                 // Reserve a slot where the current root will be moved to.

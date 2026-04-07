@@ -1,6 +1,6 @@
 module github.com/initia-labs/movevm
 
-go 1.22
+go 1.24
 
 require (
 	cosmossdk.io/math v1.4.0

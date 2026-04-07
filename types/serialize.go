@@ -173,7 +173,7 @@ func DeserializeBytesVector(bz []byte) ([][]byte, error) {
 	}
 
 	resBytesVector := make([][]byte, len)
-	for i := uint64(0); i < len; i++ {
+	for i := range len {
 		bz, err := d.DeserializeBytes()
 		if err != nil {
 			return nil, err
@@ -210,7 +210,7 @@ func DeserializeStringVector(bz []byte) ([]string, error) {
 	}
 
 	resStringVector := make([]string, len)
-	for i := uint64(0); i < len; i++ {
+	for i := range len {
 		str, err := d.DeserializeStr()
 		if err != nil {
 			return nil, err
@@ -247,7 +247,7 @@ func DeserializeUint64Vector(bz []byte) ([]uint64, error) {
 	}
 
 	resUint64Vector := make([]uint64, len)
-	for i := uint64(0); i < len; i++ {
+	for i := range len {
 		num, err := d.DeserializeU64()
 		if err != nil {
 			return nil, err

@@ -1,10 +1,16 @@
-# Contributing
+# Contributing to Initia MoveVM
 
-This repository uses Conventional Commits for commit messages and pull request titles.
+Thank you for your interest in contributing to Initia MoveVM.
+
+## Prerequisites
+
+- **Rust 1.86+** (install via [rustup](https://rustup.rs/))
+- **Go 1.24+**
+- **Cargo** (comes with rustup)
 
 ## Commit Convention
 
-Use this format for commits:
+This repository uses [Conventional Commits](https://www.conventionalcommits.org/) for commit messages and pull request titles.
 
 ```text
 type(scope): subject
@@ -16,7 +22,7 @@ Examples:
 feat(move): add CLAMM whitelist validation
 fix(types): correct account abstraction encoding
 docs(readme): update build instructions
-test(types): cover serialize edge cases
+test(storage): cover serialize edge cases
 chore(deps): bump initia to latest
 ```
 
@@ -25,13 +31,11 @@ Rules:
 - use lowercase `type` and `scope`
 - keep the subject short and imperative
 - do not end the subject with a period
-- if the change is breaking, add `!` in the Conventional Commit prefix
+- if the change is breaking, add `!` after the type/scope (e.g. `feat(api)!: remove legacy endpoint`)
 
 Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`
 
 ## Branch Naming
-
-Format:
 
 ```text
 type/short-description
@@ -48,28 +52,80 @@ test/serialize-edge-cases
 
 ## Pull Requests
 
-PR titles should follow the same Conventional Commit format.
+- PR titles must follow the same Conventional Commit format.
+- Follow the PR template in [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md).
+- Every PR should clearly describe what changed, why it changed, how it was validated, and whether the change is breaking.
+- Keep each PR focused on one logical change. Avoid mixing unrelated refactors, formatting-only edits, and behavior changes unless they must land together.
 
-Follow the PR template in [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md).
-At minimum, every PR should clearly describe what changed, why it changed, how it was validated, and whether the change is breaking.
+## Building
 
-## Validation
+```bash
+# Build everything (precompile + Rust + Go)
+make build
 
-Common commands:
+# Build Rust libraries only (release)
+make build-rust
 
-- build: `make build`
-- Rust tests: `cargo test --all`
-- Go tests: `go test ./...`
-- lint: `make lint`
+# Build Go code only
+make build-go
 
-## Formatting and Generated Files
+# Quick debug build for Rust (faster compile, larger binary)
+make build-rust-debug
+```
 
-For Rust code:
-- `cargo fmt --all`
+## Testing
 
-For Go code:
-- `go fmt ./...`
+```bash
+# Run all tests (precompile + Rust + Go)
+make test
 
-## Scope Discipline
+# Rust tests only
+make test-rust
 
-Keep each PR focused on one logical change. Avoid mixing unrelated refactors, formatting-only edits, and behavior changes unless they must land together.
+# Individual Rust test targets
+make test-compiler    # initia-move-compiler
+make test-lib         # initia-move-vm
+make test-movevm      # movevm FFI crate
+make test-json        # initia-move-json
+make test-storage     # initia-move-storage
+make test-e2e         # e2e-move-tests
+make test-unit        # Move stdlib unit tests
+
+# Go tests only
+make test-go
+
+# Go tests with race detector and cgo safety checks
+make test-safety
+```
+
+## Linting and Formatting
+
+```bash
+# Lint (clippy, warnings as errors)
+make lint
+
+# Format everything (Rust + Go + Move)
+make fmt
+
+# Format individually
+make rust-fmt     # clippy --fix + cargo fmt
+make go-fmt       # gofmt + goimports
+make move-fmt     # movefmt (requires nightly toolchain)
+```
+
+## Code Generation
+
+Some files are generated and must be kept in sync:
+
+```bash
+# Regenerate precompile contracts
+make precompile
+
+# Regenerate BCS Go bindings
+make bcs-go-gen
+
+# Update C header bindings after Rust changes
+make update-bindings
+```
+
+Do not manually edit generated files. Re-run the appropriate generator and commit the result.

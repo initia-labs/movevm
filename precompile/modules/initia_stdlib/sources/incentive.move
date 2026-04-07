@@ -470,7 +470,7 @@ module initia_std::incentive {
     }
 
     //
-    // helper functinos
+    // helper functions
     //
 
     // check signer is chain or admin

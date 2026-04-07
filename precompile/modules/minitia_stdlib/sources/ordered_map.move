@@ -199,7 +199,7 @@ module minitia_std::ordered_map {
     }
 
     /// Takes all elements from `other` and adds them to `self`,
-    /// overwritting if any key is already present in self.
+    /// overwriting if any key is already present in self.
     public fun append<K: drop, V: drop>(
         self: &mut OrderedMap<K, V>, other: OrderedMap<K, V>
     ) {
@@ -392,7 +392,7 @@ module minitia_std::ordered_map {
         IteratorPtr::End
     }
 
-    // ========== Section for methods opearting on iterators ========
+    // ========== Section for methods operating on iterators ========
     // Note: After any modifications to the map, do not use any of the iterators obtained beforehand.
     // Operations on iterators after map is modified are unexpected/incorrect.
 
@@ -646,7 +646,7 @@ module minitia_std::ordered_map {
         //     iter = iter.iter_next(self);
         // }
 
-        // TODO: once move supports private functions udpate to:
+        // TODO: once move supports private functions update to:
         // vector::for_each_ref(
         //     &self.entries,
         //     |entry| {
@@ -655,7 +655,7 @@ module minitia_std::ordered_map {
         // );
     }
 
-    // TODO: Temporary friend implementaiton, until for_each_ref can be made efficient.
+    // TODO: Temporary friend implementation, until for_each_ref can be made efficient.
     public(friend) inline fun for_each_ref_friend<K: copy + drop, V>(
         self: &OrderedMap<K, V>, f: |&K, &V|
     ) {
@@ -700,7 +700,7 @@ module minitia_std::ordered_map {
         //     iter = iter.iter_next(self);
         // }
 
-        // TODO: once move supports private functions udpate to:
+        // TODO: once move supports private functions update to:
         // vector::for_each_mut(
         //     &mut self.entries,
         //     |entry| {
