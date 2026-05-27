@@ -384,6 +384,7 @@ module initia_std::cosmos {
         timeout_fee: vector<CosmosCoin>
     }
 
+    #[deprecated]
     struct PayFeeRequest has copy, drop {
         _type_: String,
         _signer_: String,
@@ -393,6 +394,7 @@ module initia_std::cosmos {
         relayers: vector<String>
     }
 
+    #[deprecated]
     /// ICS29 ibc relayer fee
     /// https://github.com/cosmos/ibc/tree/main/spec/app/ics-029-fee-payment
     public entry fun pay_fee(
