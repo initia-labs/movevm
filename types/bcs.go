@@ -818,6 +818,7 @@ type Env struct {
 	NextAccountNumber uint64
 	TxHash [32]uint8
 	SessionId [32]uint8
+	FeePayer *AccountAddress
 }
 
 func (obj *Env) Serialize(serializer serde.Serializer) error {
@@ -828,6 +829,7 @@ func (obj *Env) Serialize(serializer serde.Serializer) error {
 	if err := serializer.SerializeU64(obj.NextAccountNumber); err != nil { return err }
 	if err := serialize_array32_u8_array(obj.TxHash, serializer); err != nil { return err }
 	if err := serialize_array32_u8_array(obj.SessionId, serializer); err != nil { return err }
+	if err := serialize_option_AccountAddress(obj.FeePayer, serializer); err != nil { return err }
 	serializer.DecreaseContainerDepth()
 	return nil
 }
@@ -850,6 +852,7 @@ func DeserializeEnv(deserializer serde.Deserializer) (Env, error) {
 	if val, err := deserializer.DeserializeU64(); err == nil { obj.NextAccountNumber = val } else { return obj, err }
 	if val, err := deserialize_array32_u8_array(deserializer); err == nil { obj.TxHash = val } else { return obj, err }
 	if val, err := deserialize_array32_u8_array(deserializer); err == nil { obj.SessionId = val } else { return obj, err }
+	if val, err := deserialize_option_AccountAddress(deserializer); err == nil { obj.FeePayer = val } else { return obj, err }
 	deserializer.DecreaseContainerDepth()
 	return obj, nil
 }
@@ -2119,6 +2122,28 @@ func deserialize_array32_u8_array(deserializer serde.Deserializer) ([32]uint8, e
 		if val, err := deserializer.DeserializeU8(); err == nil { obj[i] = val } else { return obj, err }
 	}
 	return obj, nil
+}
+
+func serialize_option_AccountAddress(value *AccountAddress, serializer serde.Serializer) error {
+	if value != nil {
+		if err := serializer.SerializeOptionTag(true); err != nil { return err }
+		if err := (*value).Serialize(serializer); err != nil { return err }
+	} else {
+		if err := serializer.SerializeOptionTag(false); err != nil { return err }
+	}
+	return nil
+}
+
+func deserialize_option_AccountAddress(deserializer serde.Deserializer) (*AccountAddress, error) {
+	tag, err := deserializer.DeserializeOptionTag()
+	if err != nil { return nil, err }
+	if tag {
+		value := new(AccountAddress)
+		if val, err := DeserializeAccountAddress(deserializer); err == nil { *value = val } else { return nil, err }
+	        return value, nil
+	} else {
+		return nil, nil
+	}
 }
 
 func serialize_option_CosmosCallback(value *CosmosCallback, serializer serde.Serializer) error {

@@ -42,6 +42,8 @@ pub struct MoveHarness {
     pub chain: MockChain,
     pub vm: InitiaVM,
     pub api: MockAPI,
+    /// Optional fee payer injected into every execution Env (not the initialize Env).
+    pub fee_payer: Option<AccountAddress>,
 }
 
 pub fn path_in_crate<S>(relative: S) -> PathBuf
@@ -66,7 +68,17 @@ impl MoveHarness {
         let chain = MockChain::new();
         let api = MockAPI::empty();
 
-        Self { chain, vm, api }
+        Self {
+            chain,
+            vm,
+            api,
+            fee_payer: None,
+        }
+    }
+
+    /// Sets the fee payer to be injected into the `Env` for all subsequent execution calls.
+    pub fn set_fee_payer(&mut self, fee_payer: Option<AccountAddress>) {
+        self.fee_payer = fee_payer;
     }
 
     pub fn initialize(&mut self) {
@@ -80,6 +92,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            None,
         );
 
         let output = self
@@ -182,6 +195,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            self.fee_payer,
         );
 
         self.vm.execute_view_function(
@@ -335,6 +349,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            self.fee_payer,
         );
 
         let state = self.chain.create_state();
@@ -361,6 +376,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            self.fee_payer,
         );
 
         let state = self.chain.create_state();
@@ -391,6 +407,7 @@ impl MoveHarness {
             1,
             Self::generate_random_hash().try_into().unwrap(),
             Self::generate_random_hash().try_into().unwrap(),
+            self.fee_payer,
         );
 
         let mut table_resolver = MockTableState::new(state);

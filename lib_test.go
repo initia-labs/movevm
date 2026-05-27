@@ -108,12 +108,14 @@ func publishModuleBundle(
 	require.NoError(t, err)
 	f4, err := os.ReadFile("./precompile/binaries/tests/TableTestData.mv")
 	require.NoError(t, err)
+	f5, err := os.ReadFile("./precompile/binaries/tests/TxContextTests.mv")
+	require.NoError(t, err)
 
-	moduleIds, err := json.Marshal([]string{"0x2::TestCoin", "0x2::Bundle1", "0x2::Bundle2", "0x2::Bundle3", "0x2::TableTestData"})
+	moduleIds, err := json.Marshal([]string{"0x2::TestCoin", "0x2::Bundle1", "0x2::Bundle2", "0x2::Bundle3", "0x2::TableTestData", "0x2::TxContextTests"})
 	require.NoError(t, err)
 
 	modules, err := json.Marshal([]string{
-		hex.EncodeToString(f0), hex.EncodeToString(f1), hex.EncodeToString(f2), hex.EncodeToString(f3), hex.EncodeToString(f4),
+		hex.EncodeToString(f0), hex.EncodeToString(f1), hex.EncodeToString(f2), hex.EncodeToString(f3), hex.EncodeToString(f4), hex.EncodeToString(f5),
 	})
 	require.NoError(t, err)
 
@@ -617,4 +619,136 @@ func Test_OracleAPI(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("[\"%d\",\"%d\",\"%d\"]", price, updatedAt, decimals), res.Ret)
+}
+
+// TestExecuteEntryFunctionWithFeePayer runs the TxContextTests::store_fee_payer
+// entry function with Env.FeePayer set, then reads the stored value back via the
+// view function read_stored_fee_payer to verify the round-trip from Env into Move.
+func TestExecuteEntryFunctionWithFeePayer(t *testing.T) {
+	vm, kvStore := initializeVM(t, true)
+	defer vm.Destroy()
+
+	publishModuleBundle(t, vm, kvStore)
+
+	testAccount, err := types.NewAccountAddress("0x2")
+	require.NoError(t, err)
+	sender, err := types.NewAccountAddress("0x42")
+	require.NoError(t, err)
+	feePayer, err := types.NewAccountAddress("0xCAFE")
+	require.NoError(t, err)
+
+	blockTimeNanos := uint64(time.Now().UnixNano())
+	gasBalance := uint64(100000000)
+	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
+		kvStore,
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
+		types.Env{
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
+			FeePayer:            &feePayer,
+		},
+		[]types.AccountAddress{sender},
+		types.EntryFunction{
+			Module:   types.ModuleId{Address: testAccount, Name: "TxContextTests"},
+			Function: "store_fee_payer",
+			TyArgs:   []types.TypeTag{},
+			Args:     [][]byte{},
+			IsJson:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	senderArg, err := json.Marshal(sender.String())
+	require.NoError(t, err)
+	viewGas := uint64(10000)
+	viewRes, err := vm.ExecuteViewFunction(
+		&viewGas,
+		kvStore,
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
+		types.Env{
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
+		},
+		types.ViewFunction{
+			Module:   types.ModuleId{Address: testAccount, Name: "TxContextTests"},
+			Function: "read_stored_fee_payer",
+			TyArgs:   []types.TypeTag{},
+			Args:     [][]byte{senderArg},
+			IsJson:   true,
+		},
+	)
+	require.NoError(t, err)
+	// Option<address> serialized as JSON is "0xcafe" when Some.
+	require.Equal(t, fmt.Sprintf("\"%s\"", feePayer.String()), viewRes.Ret)
+}
+
+// TestExecuteEntryFunctionSenders runs TxContextTests::store_senders with a sender
+// vector and verifies via the view function that Move sees the full senders list.
+func TestExecuteEntryFunctionSenders(t *testing.T) {
+	vm, kvStore := initializeVM(t, true)
+	defer vm.Destroy()
+
+	publishModuleBundle(t, vm, kvStore)
+
+	testAccount, err := types.NewAccountAddress("0x2")
+	require.NoError(t, err)
+	sender, err := types.NewAccountAddress("0x42")
+	require.NoError(t, err)
+
+	blockTimeNanos := uint64(time.Now().UnixNano())
+	gasBalance := uint64(100000000)
+	_, err = vm.ExecuteEntryFunction(
+		&gasBalance,
+		kvStore,
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
+		types.Env{
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
+		},
+		[]types.AccountAddress{sender},
+		types.EntryFunction{
+			Module:   types.ModuleId{Address: testAccount, Name: "TxContextTests"},
+			Function: "store_senders",
+			TyArgs:   []types.TypeTag{},
+			Args:     [][]byte{},
+			IsJson:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	senderArg, err := json.Marshal(sender.String())
+	require.NoError(t, err)
+	viewGas := uint64(10000)
+	viewRes, err := vm.ExecuteViewFunction(
+		&viewGas,
+		kvStore,
+		api.NewEmptyMockAPI(nanosToSeconds(blockTimeNanos)),
+		types.Env{
+			BlockHeight:         100,
+			BlockTimestampNanos: blockTimeNanos,
+			NextAccountNumber:   1,
+			TxHash:              [32]uint8(generateRandomHash()),
+			SessionId:           [32]uint8(generateRandomHash()),
+		},
+		types.ViewFunction{
+			Module:   types.ModuleId{Address: testAccount, Name: "TxContextTests"},
+			Function: "read_stored_senders",
+			TyArgs:   []types.TypeTag{},
+			Args:     [][]byte{senderArg},
+			IsJson:   true,
+		},
+	)
+	require.NoError(t, err)
+	// vector<address> with one element serialized as JSON is ["0x42"].
+	require.Equal(t, fmt.Sprintf("[\"%s\"]", sender.String()), viewRes.Ret)
 }

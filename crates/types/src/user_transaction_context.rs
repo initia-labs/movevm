@@ -6,23 +6,30 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserTransactionContext {
-    sender: AccountAddress,
+    senders: Vec<AccountAddress>,
+    fee_payer: Option<AccountAddress>,
     entry_function_payload: Option<EntryFunctionPayload>,
 }
 
 impl UserTransactionContext {
     pub fn new(
-        sender: AccountAddress,
+        senders: Vec<AccountAddress>,
+        fee_payer: Option<AccountAddress>,
         entry_function_payload: Option<EntryFunctionPayload>,
     ) -> Self {
         Self {
-            sender,
+            senders,
+            fee_payer,
             entry_function_payload,
         }
     }
 
-    pub fn sender(&self) -> AccountAddress {
-        self.sender
+    pub fn senders(&self) -> &[AccountAddress] {
+        &self.senders
+    }
+
+    pub fn fee_payer(&self) -> Option<AccountAddress> {
+        self.fee_payer
     }
 
     pub fn entry_function_payload(&self) -> Option<EntryFunctionPayload> {
