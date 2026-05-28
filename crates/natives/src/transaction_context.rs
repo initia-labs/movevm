@@ -1,5 +1,5 @@
 use better_any::{Tid, TidAble};
-use initia_move_gas::NumBytes;
+use initia_move_gas::{NumArgs, NumBytes};
 use initia_move_types::user_transaction_context::{EntryFunctionPayload, UserTransactionContext};
 use move_binary_format::errors::PartialVMError;
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
@@ -139,6 +139,54 @@ fn native_entry_function_payload_internal(
     }
 }
 
+#[allow(clippy::result_large_err)]
+fn native_senders(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    _args: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.transaction_context_senders_base)?;
+
+    let txn_ctx_opt = get_user_transaction_context_opt_from_context(context);
+    let senders: Vec<AccountAddress> = match txn_ctx_opt {
+        Some(ctx) => ctx.senders().to_vec(),
+        None => {
+            return Err(SafeNativeError::Abort {
+                abort_code: ETRANSACTION_CONTEXT_NOT_AVAILABLE,
+            });
+        }
+    };
+    context.charge(
+        gas_params.transaction_context_senders_per_address * NumArgs::new(senders.len() as u64),
+    )?;
+    Ok(smallvec![Value::vector_address(senders)])
+}
+
+#[allow(clippy::result_large_err)]
+fn native_fee_payer(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    _args: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    let gas_params = &context.native_gas_params.initia_stdlib;
+    context.charge(gas_params.transaction_context_fee_payer_base)?;
+
+    let txn_ctx_opt = get_user_transaction_context_opt_from_context(context);
+    let value = match txn_ctx_opt {
+        Some(ctx) => match ctx.fee_payer() {
+            Some(addr) => Value::struct_(Struct::pack(vec![Value::vector_address(vec![addr])])),
+            None => Value::struct_(Struct::pack(vec![Value::vector_address(vec![])])),
+        },
+        None => {
+            return Err(SafeNativeError::Abort {
+                abort_code: ETRANSACTION_CONTEXT_NOT_AVAILABLE,
+            });
+        }
+    };
+    Ok(smallvec![value])
+}
+
 fn create_option_some_value(value: Value) -> Value {
     Value::struct_(Struct::pack(vec![create_singleton_vector(value)]))
 }
@@ -246,6 +294,90 @@ fn native_test_only_set_transaction_hash(
     Ok(smallvec![])
 }
 
+#[cfg(feature = "testing")]
+fn ensure_user_transaction_context(ctx: &mut NativeTransactionContext) {
+    if ctx.user_transaction_context_opt.is_none() {
+        ctx.user_transaction_context_opt = Some(UserTransactionContext::new(vec![], None, None));
+    }
+}
+
+#[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
+fn native_test_only_set_senders(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    use crate::safely_pop_arg;
+    use move_vm_types::values::Vector;
+
+    debug_assert_eq!(arguments.len(), 1);
+
+    let raw_vec = safely_pop_arg!(arguments, Vector)
+        .unpack_unchecked()
+        .map_err(SafeNativeError::InvariantViolation)?;
+    let senders_vec: Vec<AccountAddress> = raw_vec
+        .into_iter()
+        .map(|v| v.value_as::<AccountAddress>())
+        .collect::<Result<_, _>>()
+        .map_err(SafeNativeError::InvariantViolation)?;
+
+    let txn_ctx = context
+        .extensions_mut()
+        .get_mut::<NativeTransactionContext>();
+    ensure_user_transaction_context(txn_ctx);
+    let prev = txn_ctx.user_transaction_context_opt.take().unwrap();
+    txn_ctx.user_transaction_context_opt = Some(UserTransactionContext::new(
+        senders_vec,
+        prev.fee_payer(),
+        prev.entry_function_payload(),
+    ));
+
+    Ok(smallvec![])
+}
+
+#[cfg(feature = "testing")]
+#[allow(clippy::result_large_err)]
+fn native_test_only_set_fee_payer(
+    context: &mut SafeNativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> SafeNativeResult<SmallVec<[Value; 1]>> {
+    use crate::safely_pop_arg;
+    use move_vm_types::values::Vector;
+
+    debug_assert_eq!(arguments.len(), 1);
+
+    // Move signature: set_fee_payer_internal(fee_payer: vector<address>)
+    // length 0 or 1. We pop it as Vector then unpack to get individual addresses.
+    let raw_vec = safely_pop_arg!(arguments, Vector)
+        .unpack_unchecked()
+        .map_err(SafeNativeError::InvariantViolation)?;
+    let fee_payer_vec: Vec<AccountAddress> = raw_vec
+        .into_iter()
+        .map(|v| v.value_as::<AccountAddress>())
+        .collect::<Result<_, _>>()
+        .map_err(SafeNativeError::InvariantViolation)?;
+    debug_assert!(
+        fee_payer_vec.len() <= 1,
+        "set_fee_payer_internal expects a vector of length 0 or 1"
+    );
+    let fee_payer = fee_payer_vec.into_iter().next();
+
+    let txn_ctx = context
+        .extensions_mut()
+        .get_mut::<NativeTransactionContext>();
+    ensure_user_transaction_context(txn_ctx);
+    let prev = txn_ctx.user_transaction_context_opt.take().unwrap();
+    txn_ctx.user_transaction_context_opt = Some(UserTransactionContext::new(
+        prev.senders().to_vec(),
+        fee_payer,
+        prev.entry_function_payload(),
+    ));
+
+    Ok(smallvec![])
+}
+
 /***************************************************************************************************
  * module
  *
@@ -264,6 +396,8 @@ pub fn make_all(
             "entry_function_payload_internal",
             native_entry_function_payload_internal,
         ),
+        ("senders", native_senders),
+        ("fee_payer_internal", native_fee_payer),
     ]);
 
     #[cfg(feature = "testing")]
@@ -276,6 +410,8 @@ pub fn make_all(
             "set_transaction_hash_internal",
             native_test_only_set_transaction_hash,
         ),
+        ("set_senders_internal", native_test_only_set_senders),
+        ("set_fee_payer_internal", native_test_only_set_fee_payer),
     ]);
 
     builder.make_named_natives(natives)

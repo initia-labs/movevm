@@ -1,3 +1,4 @@
+use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +16,9 @@ pub struct Env {
     /// SessionID is a seed for global unique ID of Table extension.
     /// Ex) transaction hash
     session_id: [u8; 32],
+    /// Optional fee payer for the current transaction. `None` means the
+    /// sender pays gas (or no fee payer concept applies).
+    fee_payer: Option<AccountAddress>,
 }
 
 impl Env {
@@ -25,6 +29,7 @@ impl Env {
         next_account_number: u64,
         tx_hash: [u8; 32],
         session_id: [u8; 32],
+        fee_payer: Option<AccountAddress>,
     ) -> Self {
         Self {
             chain_id,
@@ -33,6 +38,7 @@ impl Env {
             next_account_number,
             tx_hash,
             session_id,
+            fee_payer,
         }
     }
 
@@ -60,5 +66,10 @@ impl Env {
     /// Return session_id
     pub fn session_id(&self) -> &[u8] {
         &self.session_id
+    }
+
+    /// Return optional fee payer for the current transaction.
+    pub fn fee_payer(&self) -> Option<AccountAddress> {
+        self.fee_payer
     }
 }

@@ -472,27 +472,29 @@ impl InitiaVM {
         traversal_context: &mut TraversalContext,
     ) -> Result<MessageOutput, VMStatus> {
         let move_resolver = code_storage.state_view_impl();
-        let user_transaction_context_opt = match payload {
-            MessagePayload::Execute(entry_function) => Some(UserTransactionContext::new(
-                senders[0],
-                Some(EntryFunctionPayload::new(
-                    entry_function.module().address,
-                    entry_function.module().name.to_string(),
-                    entry_function.function().to_string(),
-                    entry_function
-                        .ty_args()
-                        .iter()
-                        .map(|ty| ty.to_string())
-                        .collect(),
-                    entry_function
-                        .args()
-                        .iter()
-                        .map(|arg| arg.to_vec())
-                        .collect(),
-                )),
+        let entry_function_payload_opt = match payload {
+            MessagePayload::Execute(entry_function) => Some(EntryFunctionPayload::new(
+                entry_function.module().address,
+                entry_function.module().name.to_string(),
+                entry_function.function().to_string(),
+                entry_function
+                    .ty_args()
+                    .iter()
+                    .map(|ty| ty.to_string())
+                    .collect(),
+                entry_function
+                    .args()
+                    .iter()
+                    .map(|arg| arg.to_vec())
+                    .collect(),
             )),
             MessagePayload::Script(..) => None,
         };
+        let user_transaction_context_opt = Some(UserTransactionContext::new(
+            senders.clone(),
+            env.fee_payer(),
+            entry_function_payload_opt,
+        ));
         let mut session = self.create_session(
             api,
             env,

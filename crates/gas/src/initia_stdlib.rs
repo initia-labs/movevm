@@ -76,6 +76,9 @@ crate::macros::define_gas_parameters!(
     [transaction_context_generate_unique_address_base: InternalGas, "transaction_context.generate_unique_address.base", 735],
     [transaction_context_entry_function_payload_base: InternalGas, "transaction_context.entry_function_payload.base", 735],
     [transaction_context_entry_function_payload_per_byte_in_str: InternalGasPerByte, "transaction_context.entry_function_payload.per_abstract_memory_unit", 18],
+    [transaction_context_senders_base: InternalGas, "transaction_context.senders.base", 735],
+    [transaction_context_senders_per_address: InternalGasPerArg, "transaction_context.senders.per_address", 18],
+    [transaction_context_fee_payer_base: InternalGas, "transaction_context.fee_payer.base", 735],
 
     // Note(Gas): These are SDK gas cost, so use `SCALING` factor
     [staking_delegate_base: InternalGas, "staking.delegate.base", 50_000 * SCALING],

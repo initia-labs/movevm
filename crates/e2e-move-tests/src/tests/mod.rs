@@ -14,6 +14,7 @@ mod solana_derivable_account_abstraction;
 mod staking;
 mod std_coin;
 mod table;
+mod transaction_context;
 mod view_output;
 
 #[cfg(feature = "testing")]

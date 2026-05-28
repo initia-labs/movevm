@@ -1,4 +1,5 @@
 module minitia_std::transaction_context {
+    use std::option;
     use std::option::Option;
     use std::string::String;
 
@@ -11,6 +12,18 @@ module minitia_std::transaction_context {
     /// number of times inside a single execution. Each such call increments
     /// the sequence number and generates a new unique address.
     native public fun generate_unique_address(): address;
+
+    /// Returns all senders of the current transaction.
+    /// This function aborts if called outside of the transaction prologue, execution, or epilogue phases.
+    native public fun senders(): vector<address>;
+
+    /// Returns the fee payer of the current transaction, or `None` if not set.
+    /// This function aborts if called outside of the transaction prologue, execution, or epilogue phases.
+    public fun fee_payer(): Option<address> {
+        fee_payer_internal()
+    }
+
+    native fun fee_payer_internal(): Option<address>;
 
     /// Represents the entry function payload.
     struct EntryFunctionPayload has copy, drop {
@@ -88,6 +101,28 @@ module minitia_std::transaction_context {
         transaction_hash: vector<u8>
     );
 
+    #[test_only]
+    public fun set_senders(senders: vector<address>) {
+        set_senders_internal(senders);
+    }
+
+    #[test_only]
+    native fun set_senders_internal(senders: vector<address>);
+
+    #[test_only]
+    public fun set_fee_payer(fee_payer: Option<address>) {
+        // Encode Option<address> as vector<address> of length 0 or 1 for the
+        // Rust-side pop convenience (see native_test_only_set_fee_payer).
+        let v: vector<address> = vector[];
+        if (option::is_some(&fee_payer)) {
+            vector::push_back(&mut v, option::extract(&mut fee_payer));
+        };
+        set_fee_payer_internal(v);
+    }
+
+    #[test_only]
+    native fun set_fee_payer_internal(fee_payer: vector<address>);
+
     #[test]
     fun test_address_uniquess() {
         use std::vector;
@@ -147,5 +182,48 @@ module minitia_std::transaction_context {
                 == x"0000000000000000000000000000000000000000000000000000000000000001",
             0
         );
+    }
+
+    #[test]
+    fun test_set_senders_empty() {
+        set_senders(vector[]);
+        let s = senders();
+        assert!(vector::length(&s) == 0, 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 393216, location = Self)]
+    fun test_senders_aborts_without_context() {
+        senders();
+    }
+
+    #[test]
+    fun test_set_and_get_senders() {
+        set_senders(vector[@0x1, @0x2]);
+        let s = senders();
+        assert!(vector::length(&s) == 2, 0);
+        assert!(*vector::borrow(&s, 0) == @0x1, 1);
+        assert!(*vector::borrow(&s, 1) == @0x2, 2);
+    }
+
+    #[test]
+    fun test_set_fee_payer_none() {
+        set_fee_payer(option::none());
+        let fp = fee_payer();
+        assert!(option::is_none(&fp), 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 393216, location = Self)]
+    fun test_fee_payer_aborts_without_context() {
+        fee_payer();
+    }
+
+    #[test]
+    fun test_set_and_get_fee_payer() {
+        set_fee_payer(option::some(@0x42));
+        let fp = fee_payer();
+        assert!(option::is_some(&fp), 0);
+        assert!(option::extract(&mut fp) == @0x42, 1);
     }
 }
