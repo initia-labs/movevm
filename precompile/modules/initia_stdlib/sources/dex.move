@@ -193,6 +193,13 @@ module initia_std::dex {
         pair_to_tokens: Table<address, vector<Object<Metadata>>>
     }
 
+    /// Trade gate for the relaunch. While enabled, only `operator`
+    /// can change pool state.
+    struct GateStore has key {
+        operator: address,
+        enabled: bool
+    }
+
     // Errors
 
     /// Can not withdraw zero liquidity
@@ -252,6 +259,12 @@ module initia_std::dex {
 
     /// Failed to repay flash swap due to incorrect repay amount
     const EFAILED_TO_REPAY_FLASH_SWAP: u64 = 23;
+
+    /// Only the operator can trade while the gate store is enabled
+    const EGATE_STORE_ENABLED: u64 = 24;
+
+    /// Gate store can be initialized only once
+    const EGATE_STORE_EXISTS: u64 = 25;
 
     // Constants
 
@@ -720,6 +733,11 @@ module initia_std::dex {
         res
     }
 
+    #[view]
+    public fun is_gate_store_enabled(): bool acquires GateStore {
+        exists<GateStore>(@initia_std) && borrow_global<GateStore>(@initia_std).enabled
+    }
+
     // Query functions
     public fun get_coin_a_amount_from_pool_info_response(
         res: &PoolInfoResponse
@@ -819,6 +837,27 @@ module initia_std::dex {
         );
     }
 
+    /// Called once by the chain from the relaunch upgrade handler.
+    public entry fun init_gate_store(chain: &signer, operator: address) {
+        check_sudo(chain);
+        assert!(
+            !exists<GateStore>(@initia_std),
+            error::already_exists(EGATE_STORE_EXISTS)
+        );
+        move_to(chain, GateStore { operator, enabled: true });
+    }
+
+    /// One way: the resource is kept, so it can never be initialized again.
+    public entry fun disable_gate_store(account: &signer) acquires GateStore {
+        let gate_store = borrow_global_mut<GateStore>(@initia_std);
+        let addr = signer::address_of(account);
+        assert!(
+            addr == gate_store.operator || addr == @initia_std,
+            error::permission_denied(EUNAUTHORIZED)
+        );
+        gate_store.enabled = false;
+    }
+
     /// update swap fee rate
     public entry fun update_swap_fee_rate(
         chain: &signer, pair: Object<Config>, swap_fee_rate: BigDecimal
@@ -860,7 +899,7 @@ module initia_std::dex {
         offer_coin: Object<Metadata>,
         offer_coin_amount: u64,
         min_return: Option<u64>
-    ) acquires Config, Pool, FlashSwapLock {
+    ) acquires Config, Pool, FlashSwapLock, GateStore {
         check_sudo(account);
 
         let offer_coin = coin::withdraw(trader, offer_coin, offer_coin_amount);
@@ -896,7 +935,7 @@ module initia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock, ClammTokenPairs {
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock, ClammTokenPairs, GateStore {
         let (_, timestamp) = get_block_info();
         let weights = Weights {
             weights_before: Weight { coin_a_weight, coin_b_weight, timestamp },
@@ -937,7 +976,7 @@ module initia_std::dex {
         coin_b_metadata: Object<Metadata>,
         coin_a_amount: u64,
         coin_b_amount: u64
-    ) acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
+    ) acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs, GateStore {
         let (_, timestamp) = get_block_info();
         assert!(start_time > timestamp, error::invalid_argument(ELBP_START_TIME));
         assert!(end_time > start_time, error::invalid_argument(EWEIGHTS_TIMESTAMP));
@@ -977,7 +1016,7 @@ module initia_std::dex {
         coin_a_amount_in: u64,
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
-    ) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
+    ) acquires CoinCapabilities, Config, Pool, FlashSwapLock, GateStore {
         provide_liquidity_from_coin_store(
             account,
             pair,
@@ -994,7 +1033,8 @@ module initia_std::dex {
         coin_a_amount_in: u64,
         coin_b_amount_in: u64,
         min_liquidity: Option<u64>
-    ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
+    ): (u64, u64, u64) acquires CoinCapabilities, Config, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_allowed(account);
         let total_share = option::extract(&mut fungible_asset::supply(pair));
 
         // if total share is zero, must provide both coin_a and coin_b
@@ -1009,7 +1049,12 @@ module initia_std::dex {
         let coin_b = coin::withdraw(account, coin_b_metadata, coin_b_amount_in);
 
         // provide liquidity
-        let liquidity_token = provide_liquidity(pair, coin_a, coin_b, min_liquidity);
+        let liquidity_token = provide_liquidity_ungated(
+            pair,
+            coin_a,
+            coin_b,
+            min_liquidity
+        );
 
         // deposit liquidity token
         let liquidity_token_amount = fungible_asset::amount(&liquidity_token);
@@ -1025,7 +1070,8 @@ module initia_std::dex {
         liquidity: u64,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>
-    ) acquires CoinCapabilities, Config, Pool, FlashSwapLock {
+    ) acquires CoinCapabilities, Config, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_allowed(account);
         assert!(liquidity != 0, error::invalid_argument(EZERO_LIQUIDITY));
 
         let addr = signer::address_of(account);
@@ -1036,7 +1082,9 @@ module initia_std::dex {
                 liquidity
             );
         let (coin_a, coin_b) =
-            withdraw_liquidity(liquidity_token, min_coin_a_amount, min_coin_b_amount);
+            withdraw_liquidity_ungated(
+                liquidity_token, min_coin_a_amount, min_coin_b_amount
+            );
 
         coin::deposit(addr, coin_a);
         coin::deposit(addr, coin_b);
@@ -1049,9 +1097,10 @@ module initia_std::dex {
         offer_coin: Object<Metadata>,
         offer_coin_amount: u64,
         min_return: Option<u64>
-    ) acquires Config, Pool, FlashSwapLock {
+    ) acquires Config, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_allowed(account);
         let offer_coin = coin::withdraw(account, offer_coin, offer_coin_amount);
-        let return_coin = swap(pair, offer_coin);
+        let return_coin = swap_ungated(pair, offer_coin);
 
         assert!(
             option::is_none(&min_return)
@@ -1069,11 +1118,12 @@ module initia_std::dex {
         provide_coin: Object<Metadata>,
         amount_in: u64,
         min_liquidity: Option<u64>
-    ) acquires Config, CoinCapabilities, Pool, FlashSwapLock {
+    ) acquires Config, CoinCapabilities, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_allowed(account);
         let addr = signer::address_of(account);
         let provide_coin = coin::withdraw(account, provide_coin, amount_in);
         let liquidity_token =
-            single_asset_provide_liquidity(pair, provide_coin, min_liquidity);
+            single_asset_provide_liquidity_ungated(pair, provide_coin, min_liquidity);
 
         coin::deposit(addr, liquidity_token);
     }
@@ -1081,6 +1131,15 @@ module initia_std::dex {
     /// Withdraw liquidity directly
     /// CONTRACT: not allow until LBP is ended
     public fun withdraw_liquidity(
+        lp_token: FungibleAsset,
+        min_coin_a_amount: Option<u64>,
+        min_coin_b_amount: Option<u64>
+    ): (FungibleAsset, FungibleAsset) acquires CoinCapabilities, Config, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_disabled();
+        withdraw_liquidity_ungated(lp_token, min_coin_a_amount, min_coin_b_amount)
+    }
+
+    fun withdraw_liquidity_ungated(
         lp_token: FungibleAsset,
         min_coin_a_amount: Option<u64>,
         min_coin_b_amount: Option<u64>
@@ -1154,6 +1213,13 @@ module initia_std::dex {
     /// CONTRACT: not allow until LBP is ended
     public fun single_asset_provide_liquidity(
         pair: Object<Config>, provide_coin: FungibleAsset, min_liquidity_amount: Option<u64>
+    ): FungibleAsset acquires Config, CoinCapabilities, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_disabled();
+        single_asset_provide_liquidity_ungated(pair, provide_coin, min_liquidity_amount)
+    }
+
+    fun single_asset_provide_liquidity_ungated(
+        pair: Object<Config>, provide_coin: FungibleAsset, min_liquidity_amount: Option<u64>
     ): FungibleAsset acquires Config, CoinCapabilities, Pool, FlashSwapLock {
         let provide_metadata = fungible_asset::metadata_from_asset(&provide_coin);
         let (coin_a_metadata, coin_b_metadata) = pool_metadata(pair);
@@ -1169,11 +1235,18 @@ module initia_std::dex {
                 (fungible_asset::zero(coin_a_metadata), provide_coin)
             };
 
-        provide_liquidity(pair, coin_a, coin_b, min_liquidity_amount)
+        provide_liquidity_ungated(pair, coin_a, coin_b, min_liquidity_amount)
     }
 
     /// Swap directly
     public fun swap(
+        pair: Object<Config>, offer_coin: FungibleAsset
+    ): FungibleAsset acquires Config, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_disabled();
+        swap_ungated(pair, offer_coin)
+    }
+
+    fun swap_ungated(
         pair: Object<Config>, offer_coin: FungibleAsset
     ): FungibleAsset acquires Config, Pool, FlashSwapLock {
         let pair_addr = object::object_address(&pair);
@@ -1262,7 +1335,8 @@ module initia_std::dex {
         offer_coin: Object<Metadata>,
         offer_amount: u64,
         min_return: Option<u64>
-    ): (FungibleAsset, FlashSwapReceipt) acquires Config, Pool, FlashSwapLock {
+    ): (FungibleAsset, FlashSwapReceipt) acquires Config, Pool, FlashSwapLock, GateStore {
+        assert_gate_store_disabled();
         let pair_addr = object::object_address(&pair);
 
         // check pool is not locked by flash swap
@@ -1366,6 +1440,26 @@ module initia_std::dex {
         );
     }
 
+    /// For functions that take the trader's signer.
+    fun assert_gate_store_allowed(account: &signer) acquires GateStore {
+        if (is_gate_store_enabled()) {
+            assert!(
+                signer::address_of(account)
+                    == borrow_global<GateStore>(@initia_std).operator,
+                error::permission_denied(EGATE_STORE_ENABLED)
+            );
+        }
+    }
+
+    /// For signer-less functions, which can not tell who calls them, so they are
+    /// closed to everyone while the gate store is enabled.
+    fun assert_gate_store_disabled() acquires GateStore {
+        assert!(
+            !is_gate_store_enabled(),
+            error::permission_denied(EGATE_STORE_ENABLED)
+        );
+    }
+
     public fun create_pair(
         creator: &signer,
         name: String,
@@ -1374,7 +1468,8 @@ module initia_std::dex {
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
         weights: Weights
-    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
+    ): FungibleAsset acquires CoinCapabilities, Config, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs, GateStore {
+        assert_gate_store_allowed(creator);
         let module_store = borrow_global_mut<ModuleStore>(@initia_std);
 
         let coin_a_addr = coin_address(&coin_a);
@@ -1489,7 +1584,7 @@ module initia_std::dex {
         );
 
         let liquidity_token =
-            provide_liquidity(
+            provide_liquidity_ungated(
                 object::address_to_object<Config>(pair_addr),
                 coin_a,
                 coin_b,
@@ -1542,6 +1637,16 @@ module initia_std::dex {
     /// Provide liquidity directly
     /// CONTRACT: not allow until LBP is ended
     public fun provide_liquidity(
+        pair: Object<Config>,
+        coin_a: FungibleAsset,
+        coin_b: FungibleAsset,
+        min_liquidity_amount: Option<u64>
+    ): FungibleAsset acquires Config, Pool, CoinCapabilities, FlashSwapLock, GateStore {
+        assert_gate_store_disabled();
+        provide_liquidity_ungated(pair, coin_a, coin_b, min_liquidity_amount)
+    }
+
+    fun provide_liquidity_ungated(
         pair: Object<Config>,
         coin_a: FungibleAsset,
         coin_b: FungibleAsset,
@@ -2121,7 +2226,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun end_to_end(
         chain: signer
-    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
+    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs, GateStore {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2255,7 +2360,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun lbp_end_to_end(
         chain: signer
-    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs {
+    ) acquires Config, CoinCapabilities, ModuleStore, Pool, FlashSwapLock, ClammTokenPairs, GateStore {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2416,7 +2521,7 @@ module initia_std::dex {
     #[test(chain = @0x1)]
     fun get_pair_test(
         chain: signer
-    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock, ClammTokenPairs {
+    ) acquires CoinCapabilities, Config, Pool, ModuleStore, FlashSwapLock, ClammTokenPairs, GateStore {
         init_module(&chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2676,7 +2781,7 @@ module initia_std::dex {
     #[test_only]
     fun test_setup(
         chain: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
         init_module(chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -2742,7 +2847,7 @@ module initia_std::dex {
         chain: &signer, borrower: &signer, borrow_amount: u64, mint_amount: u64
     ): (
         TestMetadata, FungibleAsset, FungibleAsset, FlashSwapReceipt
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         test_setup(chain);
 
         let chain_addr = signer::address_of(chain);
@@ -2783,7 +2888,7 @@ module initia_std::dex {
     #[test(chain = @0x1, borrower = @0x1782)]
     fun test_dex_flash_swap(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (
             test_metadata, offer_fa, return_fa, receipt
         ) = test_setup_flash_swap(chain, borrower, 1000, 1000);
@@ -2801,7 +2906,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x10017, location = Self)]
     fun test_dex_flash_swap_not_enough_repayment(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (_, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 999);
         let borrower_addr = signer::address_of(borrower);
@@ -2814,7 +2919,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x10017, location = Self)]
     fun test_dex_flash_swap_extra_repayment(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (_, offer_fa, return_fa, receipt) =
             test_setup_flash_swap(chain, borrower, 1000, 1001);
         let borrower_addr = signer::address_of(borrower);
@@ -2827,7 +2932,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_recursive(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (
             test_metadata, offer_fa, return_fa, receipt
         ) = test_setup_flash_swap(chain, borrower, 1000, 1000);
@@ -2853,7 +2958,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_swap(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (
             test_metadata, offer_fa, return_fa, receipt
         ) = test_setup_flash_swap(chain, borrower, 1000, 1000);
@@ -2871,7 +2976,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_provide_liquidity(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (
             test_metadata, offer_fa, return_fa, receipt
         ) = test_setup_flash_swap(chain, borrower, 1000, 1000);
@@ -2889,7 +2994,7 @@ module initia_std::dex {
     #[expected_failure(abort_code = 0x30016, location = Self)]
     fun test_dex_flash_swap_block_withdraw_liquidity(
         chain: &signer, borrower: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, CoinCapsInit, ClammTokenPairs, GateStore {
         let (
             test_metadata, offer_fa, return_fa, receipt
         ) = test_setup_flash_swap(chain, borrower, 1000, 1000);
@@ -2989,7 +3094,7 @@ module initia_std::dex {
     #[test(chain = @initia_std)]
     fun provide_test(
         chain: &signer
-    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs {
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
         init_module(chain);
         initia_std::primary_fungible_store::init_module_for_test();
 
@@ -3066,5 +3171,86 @@ module initia_std::dex {
                 && lp_balance_2 <= lp_balance_1 * 90000000 / 40000000, // lp_balance_1 * 90000000 / 40000000 - lp_balance_1 * 50000000 / 40000000 * 0.003  <= lp_balance_2 <= lp_balance_1 * 90000000 / 40000000
             2
         )
+    }
+
+    #[test(chain = @0x1, operator = @0x2, user = @0x3)]
+    fun test_gate_store(
+        chain: &signer, operator: &signer, user: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
+        test_setup(chain);
+        let init_metadata = coin::metadata(@0x1, string::utf8(b"INIT"));
+        let lp_metadata = coin::metadata(@0x1, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        coin::transfer(chain, @0x2, init_metadata, 1000);
+        coin::transfer(chain, @0x3, init_metadata, 1000);
+
+        init_gate_store(chain, @0x2);
+        assert!(is_gate_store_enabled(), 0);
+
+        // only the operator can trade while the gate store is enabled
+        swap_script(
+            operator,
+            pair,
+            init_metadata,
+            1000,
+            option::none()
+        );
+
+        disable_gate_store(operator);
+        assert!(!is_gate_store_enabled(), 1);
+
+        // anyone can trade after the gate store is disabled
+        swap_script(user, pair, init_metadata, 1000, option::none());
+    }
+
+    #[test(chain = @0x1, user = @0x3)]
+    #[expected_failure(abort_code = 0x50018, location = Self)]
+    fun test_gate_store_block_non_operator(
+        chain: &signer, user: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
+        test_setup(chain);
+        let init_metadata = coin::metadata(@0x1, string::utf8(b"INIT"));
+        let lp_metadata = coin::metadata(@0x1, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        coin::transfer(chain, @0x3, init_metadata, 1000);
+        init_gate_store(chain, @0x2);
+
+        swap_script(user, pair, init_metadata, 1000, option::none());
+    }
+
+    #[test(chain = @0x1, operator = @0x2)]
+    #[expected_failure(abort_code = 0x50018, location = Self)]
+    fun test_gate_store_block_signer_less(
+        chain: &signer, operator: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
+        test_setup(chain);
+        let init_metadata = coin::metadata(@0x1, string::utf8(b"INIT"));
+        let lp_metadata = coin::metadata(@0x1, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        coin::transfer(chain, @0x2, init_metadata, 1000);
+        init_gate_store(chain, @0x2);
+
+        // signer-less functions are closed even to the operator
+        let offer_fa = coin::withdraw(operator, init_metadata, 1000);
+        let return_fa = swap(pair, offer_fa);
+        coin::deposit(@0x2, return_fa);
+    }
+
+    #[test(chain = @0x1, user = @0x3)]
+    #[expected_failure(abort_code = 0x50007, location = Self)]
+    fun test_gate_store_disable_unauthorized(
+        chain: &signer, user: &signer
+    ) acquires GateStore {
+        init_gate_store(chain, @0x2);
+        disable_gate_store(user);
+    }
+
+    #[test(chain = @0x1)]
+    #[expected_failure(abort_code = 0x80019, location = Self)]
+    fun test_gate_store_init_once(chain: &signer) acquires GateStore {
+        init_gate_store(chain, @0x2);
+        // the chain can disable it too, but can not enable it again
+        disable_gate_store(chain);
+        init_gate_store(chain, @0x2);
     }
 }

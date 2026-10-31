@@ -20,11 +20,19 @@ use move_core_types::account_address::AccountAddress;
 #[repr(C)]
 pub struct VmT {}
 
-pub fn to_vm(ptr: *mut VmT) -> Option<&'static mut InitiaVM> {
+/// Shared, not exclusive. Go calls into one VM from several goroutines at once (CheckTx, gRPC
+/// views and simulations, block execution) and `InitiaVM` only reads its own state, so handing
+/// out `&mut` here would alias.
+const _: () = {
+    const fn assert_shared<T: Sync>() {}
+    assert_shared::<InitiaVM>();
+};
+
+pub fn to_vm(ptr: *mut VmT) -> Option<&'static InitiaVM> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut InitiaVM) };
+        let c = unsafe { &*(ptr as *const InitiaVM) };
         Some(c)
     }
 }

@@ -123,30 +123,30 @@ bs58 = "0.5.1"
 # Note: the BEGIN and END comments below are required for external tooling. Do not remove.
 # BEGIN MOVE DEPENDENCIES
 
-move-binary-format = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-bytecode-verifier = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-bytecode-utils = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-cli = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-command-line-common = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-legacy-move-compiler = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-compiler-v2 = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-linter = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-coverage = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-core-types = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-docgen = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-model = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-package = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-prover = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-prover-boogie-backend = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-prover-bytecode-pipeline = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-resource-viewer = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-stackless-bytecode = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-stdlib = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-symbol-pool = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-unit-test = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-vm-runtime = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-vm-test-utils = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
-move-vm-types = { git = "https://github.com/initia-labs/move.git", rev = "184cbee1fecacc1786981ddfe280d7e3bdc7a62c" }
+move-binary-format = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-bytecode-verifier = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-bytecode-utils = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-cli = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-command-line-common = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+legacy-move-compiler = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-compiler-v2 = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-linter = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-coverage = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-core-types = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-docgen = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-model = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-package = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-prover = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-prover-boogie-backend = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-prover-bytecode-pipeline = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-resource-viewer = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-stackless-bytecode = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-stdlib = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-symbol-pool = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-unit-test = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-vm-runtime = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-vm-test-utils = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
+move-vm-types = { git = "https://github.com/initia-labs/move-sec.git", rev = "06d119546ce8c42c7c7aee276baa49443a28639b" }
 
 # END MOVE DEPENDENCIES
 

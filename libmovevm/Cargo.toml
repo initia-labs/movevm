@@ -23,6 +23,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
+split_test = ["initia-move-vm/split_test"]
 
 [dependencies]
 bigdecimal = { workspace = true }

@@ -1,0 +1,13 @@
+module pub::b {
+    friend pub::c;
+
+    public(friend) fun make(): u64 {
+        make_inner() + 1
+    }
+
+    public(friend) fun make_inner(): u64 {
+        7
+    }
+
+    public(friend) entry fun go(_s: &signer, _x: u64) {}
+}

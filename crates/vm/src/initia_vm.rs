@@ -22,7 +22,7 @@ use move_vm_runtime::{
 use move_vm_types::{resolver::ResourceResolver, value_serde::ValueSerDeContext};
 use once_cell::sync::Lazy;
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use initia_move_gas::MiscGasParameters;
 use initia_move_gas::{
@@ -66,8 +66,10 @@ use initia_move_types::{
 use crate::{
     session::{SessionExt, SessionOutput},
     verifier::{
-        config::verifier_config, event_validation::verify_no_event_emission_in_script,
-        metadata::get_vm_metadata, script::reject_unstable_bytecode_for_script,
+        config::verifier_config,
+        event_validation::verify_no_event_emission_in_script,
+        metadata::get_vm_metadata,
+        script::{reject_legacy_bytecode_for_script, reject_unstable_bytecode_for_script},
         transaction_arg_validation::validate_combine_signer_and_txn_args,
         view_function::validate_view_function_and_construct,
     },
@@ -82,13 +84,31 @@ pub static ACCOUNT_ABSTRACTION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
 
 pub const AUTHENTICATE: &IdentStr = ident_str!("authenticate");
 
+/// One generation of the code caches. They are replaced together: a loaded module holds indices
+/// into its environment's struct name map, so neither may outlive the other.
+struct CodeCaches {
+    runtime_environment: Arc<RuntimeEnvironment>,
+    script_cache: Arc<InitiaScriptCache>,
+    module_cache: Arc<InitiaModuleCache>,
+}
+
+/// Struct names are interned for the lifetime of a generation, and every module ever loaded adds
+/// its names, including the modules of a publish that fails afterwards. Past this many names the
+/// next call starts a fresh generation and the old one is dropped with the last call still using
+/// it. Cache contents never decide a result (a reused entry is always checked against the state
+/// being executed first), so the swap is not observable, it only costs a re-verification burst.
+const MAX_STRUCT_NAME_INDEX_MAP_ENTRIES: usize = 1_000_000;
+
 #[allow(clippy::upper_case_acronyms)]
 pub struct InitiaVM {
     gas_params: InitiaGasParameters,
     initia_vm_config: InitiaVMConfig,
-    runtime_environment: Arc<RuntimeEnvironment>,
-    script_cache: Arc<InitiaScriptCache>,
-    module_cache: Arc<InitiaModuleCache>,
+    vm_config: VMConfig,
+    caches: RwLock<Arc<CodeCaches>>,
+    max_struct_name_index_map_entries: usize,
+    /// Always true in production. A test-only VM can turn it off to stage an incompatible
+    /// dependency upgrade (the pre-enforcement world) and exercise the cache/paranoid backstops.
+    check_friend_linking_on_upgrade: bool,
 }
 
 impl Default for InitiaVM {
@@ -99,30 +119,110 @@ impl Default for InitiaVM {
 
 impl InitiaVM {
     pub fn new(initia_vm_config: InitiaVMConfig) -> Self {
-        let gas_params = NativeGasParameters::initial();
-        let misc_params = MiscGasParameters::initial();
-
-        let vm_config = VMConfig {
+        #[allow(unused_mut)]
+        let mut vm_config = VMConfig {
             verifier_config: verifier_config(),
+            // Backstop against runtime type confusion. With this on, the interpreter rechecks
+            // operand types at every instruction, so a value of the wrong type is rejected.
+            paranoid_type_checks: true,
             type_max_cost: 5000,
             type_base_cost: 100,
             type_byte_cost: 1,
             ..Default::default()
         };
-        let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(
-            all_natives(gas_params, misc_params),
-            vm_config,
-        ));
-        let script_cache = InitiaScriptCache::new(initia_vm_config.script_cache_capacity);
-        let module_cache = InitiaModuleCache::new(initia_vm_config.module_cache_capacity);
+        // TEST-ONLY, compiled out of production: the `split_test` feature is never built for a
+        // shipped library. It lets one localnet validator emulate the pre-fix VM through env
+        // vars, so a two-validator network can show the fix is consensus-neutral on ordinary
+        // traffic (paranoid off vs on) and still backstops a staged cache poison (friend linking
+        // off, so the incompatible dependency upgrade can be published). Defaults are the
+        // production values; only an explicit "0" turns a guard off. The verified-cache
+        // dependency-checksum check is structural and always on, so the banner reports
+        // cache_clear=true. The banner is gated on INITIA_SPLIT_BANNER so it is printed only by a
+        // node's own `start` process, never by the parsed CLI helper commands.
+        #[cfg(feature = "split_test")]
+        let check_friend_linking_on_upgrade = {
+            let disabled = |k: &str| std::env::var(k).ok().as_deref() == Some("0");
+            if disabled("INITIA_PARANOID") {
+                vm_config.paranoid_type_checks = false;
+            }
+            let friend_linking = !disabled("INITIA_FRIEND_LINKING");
+            if std::env::var("INITIA_SPLIT_BANNER").ok().as_deref() == Some("1") {
+                eprintln!(
+                    "[split-test] InitiaVM::new paranoid={} cache_clear=true friend_linking={}",
+                    vm_config.paranoid_type_checks, friend_linking
+                );
+            }
+            friend_linking
+        };
+        let vm = Self::with_vm_config(initia_vm_config, vm_config);
+        #[cfg(feature = "split_test")]
+        let vm = Self {
+            check_friend_linking_on_upgrade,
+            ..vm
+        };
+        vm
+    }
 
+    /// Builds an isolated VM for regression tests of the verifier without its runtime backstop.
+    /// Production construction always enables paranoid checks.
+    #[cfg(feature = "testing")]
+    pub fn new_with_paranoid_type_checks_for_test(paranoid: bool) -> Self {
+        let vm = Self::default();
+        let mut config = vm.vm_config.clone();
+        config.paranoid_type_checks = paranoid;
+        Self::with_vm_config(vm.initia_vm_config, config)
+    }
+
+    /// A VM that starts a new cache generation once more than `limit` struct names are interned.
+    #[cfg(feature = "testing")]
+    pub fn new_with_struct_name_limit_for_test(limit: usize) -> Self {
+        Self {
+            max_struct_name_index_map_entries: limit,
+            ..Self::default()
+        }
+    }
+
+    fn with_vm_config(initia_vm_config: InitiaVMConfig, vm_config: VMConfig) -> Self {
+        let caches = RwLock::new(Self::new_caches(&initia_vm_config, &vm_config));
         Self {
             gas_params: InitiaGasParameters::initial(),
             initia_vm_config,
-            runtime_environment,
-            script_cache,
-            module_cache,
+            vm_config,
+            caches,
+            max_struct_name_index_map_entries: MAX_STRUCT_NAME_INDEX_MAP_ENTRIES,
+            check_friend_linking_on_upgrade: true,
         }
+    }
+
+    fn new_caches(initia_vm_config: &InitiaVMConfig, vm_config: &VMConfig) -> Arc<CodeCaches> {
+        let runtime_environment = Arc::new(RuntimeEnvironment::new_with_config(
+            all_natives(NativeGasParameters::initial(), MiscGasParameters::initial()),
+            vm_config.clone(),
+        ));
+        Arc::new(CodeCaches {
+            runtime_environment,
+            script_cache: InitiaScriptCache::new(initia_vm_config.script_cache_capacity),
+            module_cache: InitiaModuleCache::new(initia_vm_config.module_cache_capacity),
+        })
+    }
+
+    /// The cache generation this call runs on. A call keeps the generation it started with.
+    fn caches(&self) -> Arc<CodeCaches> {
+        let caches = self.caches.read().unwrap().clone();
+        let within_limit = caches
+            .runtime_environment
+            .struct_name_index_map_size()
+            .is_ok_and(|size| size <= self.max_struct_name_index_map_entries);
+        if within_limit {
+            return caches;
+        }
+
+        // The first call past the limit swaps, the ones racing it reuse what it installed.
+        let mut current = self.caches.write().unwrap();
+        if Arc::ptr_eq(&current, &caches) {
+            *current = Self::new_caches(&self.initia_vm_config, &self.vm_config);
+        }
+        current.clone()
     }
 
     pub fn create_gas_meter(&self, balance: impl Into<Gas>) -> InitiaGasMeter {
@@ -136,12 +236,23 @@ impl InitiaVM {
 
     #[inline(always)]
     pub fn deserializer_config(&self) -> &DeserializerConfig {
-        &self.runtime_environment.vm_config().deserializer_config
+        &self.vm_config.deserializer_config
     }
 
     #[inline(always)]
+    pub(crate) fn check_friend_linking_on_upgrade(&self) -> bool {
+        self.check_friend_linking_on_upgrade
+    }
+
+    /// Disables the upgrade friend-linking enforcement, so a test can stage an incompatible
+    /// dependency and drive the cache/paranoid backstops. Production never calls this.
+    #[cfg(feature = "testing")]
+    pub fn set_friend_linking_check_for_test(&mut self, on: bool) {
+        self.check_friend_linking_on_upgrade = on;
+    }
+
     pub fn runtime_environment(&self) -> Arc<RuntimeEnvironment> {
-        self.runtime_environment.clone()
+        self.caches().runtime_environment.clone()
     }
 
     fn create_session<
@@ -195,7 +306,7 @@ impl InitiaVM {
         T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
-        &mut self,
+        &self,
         api: &A,
         env: &Env,
         storage: &S,
@@ -203,12 +314,12 @@ impl InitiaVM {
         module_bundle: ModuleBundle,
         allowed_publishers: Vec<AccountAddress>,
     ) -> Result<MessageOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment();
+        let caches = self.caches();
         let code_storage = InitiaStorage::new(
             storage,
-            &runtime_environment,
-            self.script_cache.clone(),
-            self.module_cache.clone(),
+            &caches.runtime_environment,
+            caches.script_cache.clone(),
+            caches.module_cache.clone(),
         );
         let move_resolver = code_storage.state_view_impl();
 
@@ -223,6 +334,7 @@ impl InitiaVM {
         let session_output = session.finish_with_module_publish(
             self.deserializer_config(),
             self.allow_unstable(),
+            self.check_friend_linking_on_upgrade(),
             &code_storage,
             &mut gas_meter,
             PublishRequest {
@@ -245,7 +357,7 @@ impl InitiaVM {
         T: TableResolver,
         A: AccountAPI + StakingAPI + QueryAPI + OracleAPI,
     >(
-        &mut self,
+        &self,
         gas_meter: &mut InitiaGasMeter,
         api: &A,
         env: &Env,
@@ -253,7 +365,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: Message,
     ) -> Result<MessageOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment();
+        let caches = self.caches();
 
         let senders = msg.senders().to_vec();
         let traversal_storage = TraversalStorage::new();
@@ -261,9 +373,9 @@ impl InitiaVM {
 
         let code_storage = InitiaStorage::new(
             storage,
-            &runtime_environment,
-            self.script_cache.clone(),
-            self.module_cache.clone(),
+            &caches.runtime_environment,
+            caches.script_cache.clone(),
+            caches.module_cache.clone(),
         );
 
         // Charge for msg byte size
@@ -296,12 +408,12 @@ impl InitiaVM {
         table_resolver: &mut T,
         view_fn: &ViewFunction,
     ) -> Result<ViewOutput, VMStatus> {
-        let runtime_environment = self.runtime_environment();
+        let caches = self.caches();
         let code_storage = InitiaStorage::new(
             storage,
-            &runtime_environment,
-            self.script_cache.clone(),
-            self.module_cache.clone(),
+            &caches.runtime_environment,
+            caches.script_cache.clone(),
+            caches.module_cache.clone(),
         );
         let move_resolver = code_storage.state_view_impl();
         let mut session = self.create_session(api, env, move_resolver, table_resolver, None);
@@ -372,7 +484,7 @@ impl InitiaVM {
         table_resolver: &mut T,
         msg: AuthenticateMessage,
     ) -> Result<AccountAddress, VMStatus> {
-        let runtime_environment = self.runtime_environment();
+        let caches = self.caches();
 
         let sender = msg.sender();
         let abstraction_data = msg.abstraction_data();
@@ -382,9 +494,9 @@ impl InitiaVM {
 
         let code_storage = InitiaStorage::new(
             storage,
-            &runtime_environment,
-            self.script_cache.clone(),
-            self.module_cache.clone(),
+            &caches.runtime_environment,
+            caches.script_cache.clone(),
+            caches.module_cache.clone(),
         );
 
         // Charge for msg byte size
@@ -532,6 +644,7 @@ impl InitiaVM {
                 if !self.allow_unstable() {
                     reject_unstable_bytecode_for_script(&compiled_script)?;
                 }
+                reject_legacy_bytecode_for_script(&compiled_script)?;
 
                 verify_no_event_emission_in_script(&compiled_script)?;
 
@@ -609,6 +722,7 @@ impl InitiaVM {
             session.finish_with_module_publish(
                 self.deserializer_config(),
                 self.allow_unstable(),
+                self.check_friend_linking_on_upgrade(),
                 code_storage,
                 gas_meter,
                 publish_request,

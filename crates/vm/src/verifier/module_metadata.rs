@@ -10,6 +10,7 @@ use move_binary_format::{
     check_complexity::check_module_complexity,
     errors::{Location, PartialVMError, VMResult},
     file_format::{FunctionDefinition, FunctionHandle},
+    file_format_common::VERSION_6,
     CompiledModule,
 };
 use move_core_types::{
@@ -38,6 +39,7 @@ pub(crate) fn validate_publish_request(
     if !allow_unstable {
         reject_unstable_bytecode(modules)?;
     }
+    reject_legacy_bytecode(modules)?;
 
     validate_module_natives(modules)?;
 
@@ -116,6 +118,25 @@ fn check_metadata_format(module: &CompiledModule) -> Result<(), MalformedError> 
         }
     }
 
+    Ok(())
+}
+
+/// Reject publishing of legacy module bytecode (below v6). Publishing only, modules already on
+/// chain keep loading and executing at any version. Bytecode v5 and older is verified by legacy
+/// paths (`control_flow_v5`, the pre-v5 entry signature rules) that no current toolchain emits,
+/// so new code must not reach them. Mirrors aptos-core a06e17d.
+fn reject_legacy_bytecode(modules: &[CompiledModule]) -> VMResult<()> {
+    for module in modules {
+        if module.version < VERSION_6 {
+            return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
+                .with_message(format!(
+                    "publishing module bytecode version {} is not allowed, the minimum \
+                     publishable version is {}",
+                    module.version, VERSION_6
+                ))
+                .finish(Location::Undefined));
+        }
+    }
     Ok(())
 }
 

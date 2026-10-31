@@ -15,12 +15,12 @@ use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
     deserializer::DeserializerConfig,
-    errors::{Location, VMResult},
+    errors::{Location, PartialVMError, VMResult},
     CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress, ident_str, identifier::Identifier, language_storage::ModuleId,
-    value::MoveValue,
+    value::MoveValue, vm_status::StatusCode,
 };
 use move_vm_runtime::{
     check_dependencies_and_charge_gas, module_traversal::TraversalContext, ModuleStorage,
@@ -40,6 +40,7 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         mut self,
         deserializer_config: &DeserializerConfig,
         allow_unstable: bool,
+        check_friend_linking: bool,
         code_storage: &InitiaStorage<S>,
         gas_meter: &mut InitiaGasMeter,
         publish_request: PublishRequest,
@@ -71,12 +72,26 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
             init_genesis_opts.is_some(),
         )?;
 
+        // Entry functions are transaction payloads, so their signatures are frozen whatever their
+        // visibility. Friend functions may change, but see `verify_friends_still_link`.
         let staging_module_storage = StagingModuleStorage::create_with_compat_config(
             &publisher,
-            Compatibility::new(true, false, false),
+            Compatibility::new(true, false, true),
             code_storage,
             module_bundle.into_bytes(),
         )?;
+
+        // The friend-linking enforcement can only be disabled by a test-only VM, so the backstop
+        // regressions can still stage an incompatible dependency the way they did before it existed.
+        if check_friend_linking {
+            Self::verify_friends_still_link(
+                code_storage,
+                gas_meter,
+                traversal_context,
+                &staging_module_storage,
+                modules,
+            )?;
+        }
 
         self.initialize_module(
             code_storage,
@@ -97,6 +112,13 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
             )?;
         }
 
+        // A publish requested while running `init_module` would never be executed, reject it.
+        if self.extract_publish_request().is_some() {
+            return Err(PartialVMError::new(StatusCode::FEATURE_UNDER_GATING)
+                .with_message("module publishing is not allowed in init_module".to_string())
+                .finish(Location::Undefined));
+        }
+
         let mut output = self.finish(&staging_module_storage)?;
         let module_write_set = Self::convert_modules_into_write_set(
             code_storage,
@@ -107,6 +129,66 @@ impl<'r, R: ResourceResolver> SessionExt<'r, R> {
         .map_err(|e| e.finish(Location::Undefined))?;
         output.1.extend(module_write_set);
         Ok(output)
+    }
+
+    /// An accepted upgrade must leave every module already linked against the old version
+    /// verifiable. The compatibility check freezes public functions and struct layouts but not
+    /// friend functions, so every module the old version named as a friend is verified again
+    /// against the staged bundle, unless the bundle republishes it.
+    fn verify_friends_still_link<'a, S: StateView, M: ModuleStorage>(
+        code_storage: &InitiaStorage<S>,
+        gas_meter: &mut InitiaGasMeter,
+        traversal_context: &mut TraversalContext<'a>,
+        staging_module_storage: &StagingModuleStorage<M>,
+        modules: &'a [CompiledModule],
+    ) -> VMResult<()> {
+        let module_ids_in_bundle = modules
+            .iter()
+            .map(|module| (module.self_addr(), module.self_name()))
+            .collect::<BTreeSet<_>>();
+
+        let mut friends = vec![];
+        for module in modules {
+            let Some(old_module) =
+                code_storage.fetch_deserialized_module(module.self_addr(), module.self_name())?
+            else {
+                continue;
+            };
+            for friend in old_module.immediate_friends() {
+                let friend = traversal_context.referenced_module_ids.alloc(friend);
+                let id = (friend.address(), friend.name());
+                if module_ids_in_bundle.contains(&id)
+                    || !code_storage.check_module_exists(id.0, id.1)?
+                {
+                    continue;
+                }
+                friends.push(id);
+            }
+        }
+
+        check_dependencies_and_charge_gas(
+            code_storage,
+            gas_meter,
+            traversal_context,
+            friends.iter().copied(),
+        )?;
+
+        for (addr, name) in friends {
+            staging_module_storage
+                .fetch_verified_module(addr, name)
+                .map_err(|err| {
+                    err.to_partial()
+                        .append_message_with_separator(
+                            '\n',
+                            format!(
+                                "upgrade breaks the friend module {}::{}, republish it in the same bundle",
+                                addr, name
+                            ),
+                        )
+                        .finish(Location::Module(ModuleId::new(*addr, name.to_owned())))
+                })?;
+        }
+        Ok(())
     }
 
     pub(crate) fn initialize_module<S: StateView, M: ModuleStorage>(

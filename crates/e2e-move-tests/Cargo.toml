@@ -52,6 +52,7 @@ move-model = { workspace = true }
 [features]
 default = []
 testing = [
+    "initia-move-vm/testing",
     "initia-move-gas/testing",
     "initia-move-natives/testing",
     "move-vm-runtime/testing",

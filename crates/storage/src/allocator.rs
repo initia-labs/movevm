@@ -43,13 +43,23 @@ fn finish_metering() -> usize {
     SIZE.with(|size| size.get())
 }
 
+/// Turns metering off when dropped, so a panic in the measured closure does not leave it on.
+struct MeteringGuard;
+
+impl Drop for MeteringGuard {
+    fn drop(&mut self) {
+        METERING.with(|metering| metering.set(false));
+    }
+}
+
 #[inline]
 pub(crate) fn get_size<T, O: FnOnce() -> VMResult<T>>(f: O) -> VMResult<(T, usize)> {
     start_metering();
-    let ret = f()?;
+    let _metering = MeteringGuard;
+    let ret = f();
     let size = finish_metering();
 
-    Ok((ret, size + size_of::<T>()))
+    Ok((ret?, size + size_of::<T>()))
 }
 
 #[cfg(test)]
@@ -58,6 +68,15 @@ mod allocator_test {
     use std::thread;
 
     use super::*;
+
+    #[test]
+    fn test_get_size_turns_metering_off_after_a_panic() {
+        let res = std::panic::catch_unwind(|| {
+            get_size(|| -> VMResult<()> { panic!("measured closure panicked") })
+        });
+        assert!(res.is_err());
+        assert!(!METERING.with(|metering| metering.get()));
+    }
 
     #[test]
     fn test_get_size() {
@@ -80,5 +99,24 @@ mod allocator_test {
 
             handle.join().unwrap();
         }
+    }
+
+    #[test]
+    fn test_get_size_after_error() {
+        let failed: VMResult<((), usize)> = get_size(|| {
+            Err(move_binary_format::errors::PartialVMError::new(
+                move_core_types::vm_status::StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .finish(move_binary_format::errors::Location::Undefined))
+        });
+        assert!(failed.is_err());
+
+        // A failed measurement must not leave metering on for the next one on this thread.
+        let (_, size) = get_size(|| {
+            let _ = vec![0u8; 1];
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(size, 1);
     }
 }

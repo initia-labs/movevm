@@ -13,7 +13,7 @@ use parking_lot::Mutex;
 
 use crate::{
     allocator::get_size,
-    code_scale::{ModuleScale, ModuleWrapper},
+    code_scale::{ModuleScale, ModuleWrapper, VerifiedDependencies},
     state_view::Checksum,
 };
 
@@ -79,7 +79,7 @@ impl InitiaModuleCache {
         extension: Arc<BytesWithHash>,
     ) -> VMResult<()> {
         // cache is too small to hold this module
-        if self.capacity < allocated_size {
+        if self.capacity <= allocated_size {
             eprintln!(
                 "Module cache is too small to hold module with size {}",
                 allocated_size
@@ -112,20 +112,33 @@ impl InitiaModuleCache {
         key: Checksum,
         verified_code: Module,
         allocated_size: usize,
+        deserialized_size: usize,
         extension: Arc<BytesWithHash>,
+        dependencies: VerifiedDependencies,
     ) -> VMResult<Arc<ModuleCode<CompiledModule, Module, BytesWithHash>>> {
         let mut module_cache = self.module_cache.lock();
         match module_cache.get(&key) {
-            Some(module_wrapper) if module_wrapper.module_code.code().is_verified() => {
+            Some(module_wrapper)
+                if module_wrapper.module_code.code().is_verified()
+                    && module_wrapper.dependencies.as_deref() == Some(&*dependencies) =>
+            {
                 Ok(module_wrapper.module_code.clone())
             }
             _ => {
                 let module = Arc::new(ModuleCode::from_verified(verified_code, extension));
-                if self.capacity >= allocated_size {
+                if self.capacity > allocated_size {
                     // NOTE: We are not handling the error here, because we are sure that the
                     // allocated size is less than the capacity.
                     module_cache
-                        .put_with_weight(key, ModuleWrapper::new(module.clone(), allocated_size))
+                        .put_with_weight(
+                            key,
+                            ModuleWrapper::verified(
+                                module.clone(),
+                                allocated_size,
+                                deserialized_size,
+                                dependencies,
+                            ),
+                        )
                         .unwrap_or_else(|_| None);
                 } else {
                     eprintln!(
@@ -167,7 +180,7 @@ impl InitiaModuleCache {
                         }
 
                         let code_wrapper = ModuleWrapper::new(Arc::new(code), allocated_size);
-                        if self.capacity >= allocated_size {
+                        if self.capacity > allocated_size {
                             // NOTE: We are not handling the error here, because we are sure that the
                             // allocated size is less than the capacity.
                             module_cache
@@ -192,5 +205,31 @@ impl InitiaModuleCache {
     pub(crate) fn num_modules(&self) -> usize {
         let module_cache = self.module_cache.lock();
         module_cache.len()
+    }
+
+    /// the dependency checksums the cached module was verified against, if verified.
+    #[cfg(test)]
+    pub(crate) fn verified_dependencies(&self, key: &Checksum) -> Option<VerifiedDependencies> {
+        let mut module_cache = self.module_cache.lock();
+        module_cache.get(key).and_then(|w| w.dependencies.clone())
+    }
+}
+
+#[cfg(test)]
+impl InitiaModuleCache {
+    /// A cache with its capacity in bytes, so a test can make it too small to retain entries.
+    pub(crate) fn with_byte_capacity(capacity: usize) -> Arc<InitiaModuleCache> {
+        Arc::new(InitiaModuleCache {
+            capacity,
+            module_cache: Mutex::new(CLruCache::with_config(
+                CLruCacheConfig::new(NonZeroUsize::new(capacity).unwrap()).with_scale(ModuleScale),
+            )),
+        })
+    }
+
+    /// The weight and the deserialized size of a cached entry.
+    pub(crate) fn entry_sizes(&self, key: &Checksum) -> Option<(usize, usize)> {
+        let mut module_cache = self.module_cache.lock();
+        module_cache.get(key).map(|w| (w.size, w.deserialized_size))
     }
 }

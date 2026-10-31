@@ -12,6 +12,8 @@ license-file.workspace = true
 
 [features]
 default = []
+testing = []
+split_test = []
 
 [dependencies]
 initia-move-types = { workspace = true }

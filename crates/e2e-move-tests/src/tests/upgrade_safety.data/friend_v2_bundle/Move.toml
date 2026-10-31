@@ -1,0 +1,11 @@
+[package]
+name = "FriendV2Bundle"
+version = "0.0.0"
+
+[dependencies]
+MoveNursery = { local = "../../../../../../precompile/modules/move_nursery" }
+InitiaStdlib = { local = "../../../../../../precompile/modules/initia_stdlib" }
+
+[addresses]
+std = "0x1"
+pub = "0xa11ce"
