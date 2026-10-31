@@ -6,7 +6,8 @@
 
 //! Implementation of native functions for utf8 strings.
 
-use move_core_types::gas_algebra::NumBytes;
+use move_binary_format::errors::PartialVMError;
+use move_core_types::{gas_algebra::NumBytes, vm_status::StatusCode};
 use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -26,9 +27,20 @@ use crate::{
 // This is possible without copying of bytes because (a) we can
 // get a `std::cell::Ref<Vec<u8>>` from a `vector<u8>` and in turn a `&[u8]`
 // from that (b) assuming that `vector<u8>` embedded in a string
-// is already valid utf8, we can use `str::from_utf8_unchecked` to
-// create a `&str` view on the bytes without a copy. Once we have this
+// is kept valid utf8 by the Move side, `checked_str` gives a `&str` view on
+// the bytes without a copy, failing instead of trusting the assumption. Once we have this
 // view, we can call ut8 functions like length, substring, etc.
+
+/// The Move side keeps `String` bytes valid utf8, but a native must not rely on that: a wrong
+/// value here is an invariant violation, not undefined behaviour.
+fn checked_str(bytes: &[u8]) -> SafeNativeResult<&str> {
+    std::str::from_utf8(bytes).map_err(|_| {
+        SafeNativeError::InvariantViolation(
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("string bytes are not valid utf8".to_string()),
+        )
+    })
+}
 
 /***************************************************************************************************
  * native fun internal_check_utf8
@@ -80,10 +92,7 @@ fn native_is_char_boundary(
     let i = safely_pop_arg!(args, u64);
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let ok = unsafe {
-        // This is safe because we guarantee the bytes to be utf8.
-        std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
-    };
+    let ok = checked_str(s_ref.as_slice())?.is_char_boundary(i as usize);
 
     Ok(smallvec![Value::bool(ok)])
 }
@@ -118,10 +127,14 @@ fn native_sub_string(
 
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let s_str = unsafe {
-        // This is safe because we guarantee the bytes to be utf8.
-        std::str::from_utf8_unchecked(s_ref.as_slice())
-    };
+    let s_str = checked_str(s_ref.as_slice())?;
+    // `string::sub_string` checks the bounds and the char boundaries before calling in.
+    if j > s_str.len() || !s_str.is_char_boundary(i) || !s_str.is_char_boundary(j) {
+        return Err(SafeNativeError::InvariantViolation(
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("sub_string range is not on char boundaries".to_string()),
+        ));
+    }
     let v = Value::vector_u8(s_str.as_bytes()[i..j].iter().cloned());
 
     Ok(smallvec![v])
@@ -147,14 +160,14 @@ fn native_index_of(
 
     let r_arg = safely_pop_arg!(args, VectorRef);
     let r_ref = r_arg.as_bytes_ref();
-    let r_str = unsafe { std::str::from_utf8_unchecked(r_ref.as_slice()) };
+    let r_str = checked_str(r_ref.as_slice())?;
 
     context
         .charge(gas_params.string_index_of_per_byte_pattern * NumBytes::new(r_str.len() as u64))?;
 
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let s_str = unsafe { std::str::from_utf8_unchecked(s_ref.as_slice()) };
+    let s_str = checked_str(s_ref.as_slice())?;
     let pos = match s_str.find(r_str) {
         Some(size) => size,
         None => s_str.len(),

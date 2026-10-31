@@ -20,7 +20,7 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
 
 pub(crate) fn initialize_vm(
-    vm: &mut InitiaVM,
+    vm: &InitiaVM,
     db_handle: GoDb,
     api: GoApi,
     env: Env,
@@ -47,7 +47,7 @@ pub(crate) fn initialize_vm(
 }
 
 pub(crate) fn execute_contract(
-    vm: &mut InitiaVM,
+    vm: &InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: GoDb,
     api: GoApi,
@@ -68,7 +68,7 @@ pub(crate) fn execute_contract(
 }
 
 pub(crate) fn execute_script(
-    vm: &mut InitiaVM,
+    vm: &InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: GoDb,
     api: GoApi,
@@ -90,7 +90,7 @@ pub(crate) fn execute_script(
 }
 
 pub(crate) fn execute_authenticate(
-    vm: &mut InitiaVM,
+    vm: &InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: GoDb,
     api: GoApi,
@@ -114,7 +114,7 @@ pub(crate) fn execute_authenticate(
 
 // execute view function
 pub(crate) fn execute_view_function(
-    vm: &mut InitiaVM,
+    vm: &InitiaVM,
     gas_meter: &mut InitiaGasMeter,
     db_handle: GoDb,
     api: GoApi,

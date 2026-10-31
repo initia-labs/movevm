@@ -105,26 +105,6 @@ fn pop_vec_of_vec_u8(arguments: &mut VecDeque<Value>) -> SafeNativeResult<Vec<Ve
     SafeNativeResult::Ok(v)
 }
 
-fn repeats_vec_of_vec_u8(item: Vec<u8>, n: usize) -> Vec<Vec<u8>> {
-    let mut result: Vec<Vec<u8>> = vec![];
-    let mut item: Vec<Vec<u8>> = vec![item];
-    let mut i = n;
-    loop {
-        if (i & 1) == 1 {
-            result.extend(item.to_vec());
-        }
-
-        i >>= 1;
-        if i == 0 {
-            break;
-        }
-
-        item.extend(item.to_vec());
-    }
-
-    result
-}
-
 /// Performs batch Ed25519 signature verification.
 ///
 /// Batch verification asks whether all signatures in some set are valid, rather than asking whether
@@ -168,34 +148,34 @@ pub fn native_batch_verify(
     debug_assert!(arguments.len() == 3);
 
     let signatures = pop_vec_of_vec_u8(&mut arguments)?;
-    let mut public_keys = pop_vec_of_vec_u8(&mut arguments)?;
-    let mut messages = safely_pop_vec_arg!(arguments, Vec<u8>);
+    let public_keys = pop_vec_of_vec_u8(&mut arguments)?;
+    let messages = safely_pop_vec_arg!(arguments, Vec<u8>);
 
     let messages_len = messages.len();
     let signatures_len = signatures.len();
     let public_keys_len = public_keys.len();
 
-    if messages_len == signatures_len && messages_len == public_keys_len { // We're good to go
-    } else if messages_len == 1 && signatures_len == public_keys_len {
-        messages = repeats_vec_of_vec_u8(messages[0].to_vec(), signatures_len);
-    } else if public_keys_len == 1 && messages_len == signatures_len {
-        public_keys = repeats_vec_of_vec_u8(public_keys[0].to_vec(), signatures_len);
-    } else {
-        return Err(SafeNativeError::Abort {
-            abort_code: NUMBER_OF_ARGUMENTS_MISMATCH,
-        });
-    }
-
-    debug_assert_eq!(messages.len(), signatures_len);
-    debug_assert_eq!(messages.len(), public_keys.len());
+    // a single message or public key is shared by every signature, index it instead of copying
+    // it once per signature before anything is charged
+    let (shared_message, shared_public_key) =
+        if messages_len == signatures_len && messages_len == public_keys_len {
+            (false, false)
+        } else if messages_len == 1 && signatures_len == public_keys_len {
+            (true, false)
+        } else if public_keys_len == 1 && messages_len == signatures_len {
+            (false, true)
+        } else {
+            return Err(SafeNativeError::Abort {
+                abort_code: NUMBER_OF_ARGUMENTS_MISMATCH,
+            });
+        };
 
     let mut batch = batch::Verifier::new();
 
-    for ((message, public_key), signature) in messages
-        .iter()
-        .zip(public_keys.iter())
-        .zip(signatures.iter())
-    {
+    for (i, signature) in signatures.iter().enumerate() {
+        let message = &messages[if shared_message { 0 } else { i }];
+        let public_key = &public_keys[if shared_public_key { 0 } else { i }];
+
         context.charge(gas_params.crypto_ed25519_per_pubkey_deserialize * NumArgs::one())?;
         let vk_bytes = match read_pubkey(public_key) {
             Ok(pk) => VerificationKeyBytes::from(pk),

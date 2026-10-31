@@ -11,6 +11,8 @@ exclude = [".gitignore"]
 
 [features]
 default = []
+testing = []
+split_test = []
 
 [dependencies]
 initia-move-types = { workspace = true }

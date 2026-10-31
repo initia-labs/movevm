@@ -206,6 +206,11 @@ fn native_format_impl(
         MoveTypeLayout::Vector(ty) => {
             if let MoveTypeLayout::U8 = ty.as_ref() {
                 let bytes = val.value_as::<Vec<u8>>()?;
+                if context.should_charge_gas {
+                    context.context.charge(
+                        gas_params.string_utils_format_per_byte * NumBytes::new(bytes.len() as u64),
+                    )?;
+                }
                 write!(out, "0x{}", hex::encode(bytes)).unwrap();
                 return Ok(());
             }

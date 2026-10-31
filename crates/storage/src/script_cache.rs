@@ -7,7 +7,7 @@ use move_vm_types::code::Code;
 use parking_lot::Mutex;
 
 use crate::{
-    code_scale::{ScriptScale, ScriptWrapper},
+    code_scale::{ScriptScale, ScriptWrapper, VerifiedDependencies},
     state_view::Checksum,
 };
 
@@ -44,7 +44,7 @@ impl InitiaScriptCache {
                 let new_script = Code::from_deserialized(deserialized_script);
                 let deserialized_script = new_script.deserialized().clone();
 
-                if self.capacity >= allocated_size {
+                if self.capacity > allocated_size {
                     // NOTE: We are not handling the error here, because we are sure that the
                     // allocated size is less than the capacity.
                     let _ = script_cache
@@ -67,20 +67,19 @@ impl InitiaScriptCache {
         key: Checksum,
         verified_script: Script,
         allocated_size: usize,
+        deserialized_size: usize,
+        dependencies: VerifiedDependencies,
     ) -> VMResult<Arc<Script>> {
         let mut script_cache = self.script_cache.lock();
 
         let (new_script, verified_script) = match script_cache.get(&key) {
-            Some(script_wrapper) => {
-                if !script_wrapper.code.is_verified() {
-                    let new_script = Code::from_verified(verified_script);
-                    let verified_script = new_script.verified().clone();
-                    (Some(new_script), verified_script)
-                } else {
-                    (None, script_wrapper.code.verified().clone())
-                }
+            Some(script_wrapper)
+                if script_wrapper.code.is_verified()
+                    && script_wrapper.dependencies.as_deref() == Some(&*dependencies) =>
+            {
+                (None, script_wrapper.code.verified().clone())
             }
-            None => {
+            _ => {
                 let new_script = Code::from_verified(verified_script);
                 let verified_script = new_script.verified().clone();
                 (Some(new_script), verified_script)
@@ -88,11 +87,19 @@ impl InitiaScriptCache {
         };
 
         if let Some(new_script) = new_script {
-            if self.capacity >= allocated_size {
+            if self.capacity > allocated_size {
                 // NOTE: We are not handling the error here, because we are sure that the
                 // allocated size is less than the capacity.
                 let _ = script_cache
-                    .put_with_weight(key, ScriptWrapper::new(new_script, allocated_size))
+                    .put_with_weight(
+                        key,
+                        ScriptWrapper::verified(
+                            new_script,
+                            allocated_size,
+                            deserialized_size,
+                            dependencies,
+                        ),
+                    )
                     .unwrap_or_else(|_| None);
             } else {
                 eprintln!(
@@ -111,5 +118,18 @@ impl InitiaScriptCache {
     #[allow(unused)]
     pub(crate) fn num_scripts(&self) -> usize {
         self.script_cache.lock().len()
+    }
+}
+
+#[cfg(test)]
+impl InitiaScriptCache {
+    /// A cache with its capacity in bytes, so a test can make it too small to retain entries.
+    pub(crate) fn with_byte_capacity(capacity: usize) -> Arc<InitiaScriptCache> {
+        Arc::new(InitiaScriptCache {
+            capacity,
+            script_cache: Mutex::new(CLruCache::with_config(
+                CLruCacheConfig::new(NonZeroUsize::new(capacity).unwrap()).with_scale(ScriptScale),
+            )),
+        })
     }
 }

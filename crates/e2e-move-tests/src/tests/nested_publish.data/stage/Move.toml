@@ -1,0 +1,12 @@
+[package]
+name = "NestedStage"
+version = "0.0.0"
+
+[dependencies]
+MoveNursery = { local = "../../../../../../precompile/modules/move_nursery" }
+InitiaStdlib = { local = "../../../../../../precompile/modules/initia_stdlib" }
+NestedOuter = { local = "../outer" }
+
+[addresses]
+std = "0x1"
+pub = "0xa11ce"
