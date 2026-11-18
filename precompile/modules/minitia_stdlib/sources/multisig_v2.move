@@ -39,6 +39,8 @@ module minitia_std::multisig_v2 {
 
     const EINVALID_PROPOSAL_MESSAGE_LENGTH: u64 = 12;
 
+    const EMULTISIG_WALLET_NOT_FOUND: u64 = 13;
+
     // constants
 
     const STATUS: vector<vector<u8>> = vector[b"voting", b"executed", b"expired"];
@@ -252,6 +254,7 @@ module minitia_std::multisig_v2 {
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let multisig_signer = object::generate_signer(&constructor_ref);
         let multisig_addr = signer::address_of(&multisig_signer);
+        object::transfer_raw(account, multisig_addr, @0x0);
 
         assert_uniqueness(members);
 
@@ -322,6 +325,7 @@ module minitia_std::multisig_v2 {
         let extend_ref = object::generate_extend_ref(&constructor_ref);
         let multisig_signer = object::generate_signer(&constructor_ref);
         let multisig_addr = signer::address_of(&multisig_signer);
+        object::transfer_raw(account, multisig_addr, @0x0);
 
         let tiers = vector::map(
             tiers,
@@ -355,6 +359,23 @@ module minitia_std::multisig_v2 {
                 threshold
             }
         )
+    }
+
+    /// Detach the object owner of wallets created before the owner was detached at
+    /// creation. That owner (the creator, unless it was transferred) could move every
+    /// asset the wallet owns without a proposal. Anyone can call this; it only removes
+    /// that authority.
+    public entry fun detach_owner(multisig_addrs: vector<address>) {
+        vector::for_each(
+            multisig_addrs,
+            |multisig_addr| {
+                assert!(
+                    exists<MultisigWallet>(multisig_addr),
+                    error::not_found(EMULTISIG_WALLET_NOT_FOUND)
+                );
+                object::transfer_by_friend(multisig_addr, @0x0);
+            }
+        );
     }
 
     fun total_weight(members: &vector<Member>): u64 {
@@ -2461,5 +2482,236 @@ module minitia_std::multisig_v2 {
             ),
             1
         );
+    }
+
+    // wallet object ownership tests
+    #[test_only]
+    use minitia_std::object::Object;
+
+    #[test_only]
+    use minitia_std::fungible_asset::{Self, Metadata};
+
+    #[test_only]
+    use minitia_std::primary_fungible_store;
+
+    // create a 2-of-3 non weighted wallet and return its address
+    #[test_only]
+    fun create_wallet_for_test(
+        creator: &signer, member2: address, member3: address
+    ): address {
+        let creator_addr = signer::address_of(creator);
+        let name = string::utf8(b"multisig wallet");
+        create_non_weighted_multisig_account(
+            creator,
+            name,
+            vector[creator_addr, member2, member3],
+            2
+        );
+        get_multisig_address(&creator_addr, &name)
+    }
+
+    // deposit 100 of a new test token to the wallet
+    #[test_only]
+    fun fund_for_test(issuer: &signer, multisig_addr: address): Object<Metadata> {
+        let (constructor_ref, token) = fungible_asset::create_test_token(issuer);
+        let (mint_ref, _, _) =
+            primary_fungible_store::init_test_metadata_with_primary_store_enabled(
+                &constructor_ref
+            );
+        let metadata: Object<Metadata> = object::convert(token);
+        primary_fungible_store::deposit(
+            multisig_addr, fungible_asset::mint(&mint_ref, 100)
+        );
+        metadata
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun create_non_weighted_wallet_without_owner(
+        account1: signer, account2: signer, account3: signer
+    ) {
+        let multisig_addr =
+            create_wallet_for_test(
+                &account1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            );
+
+        let wallet = object::address_to_object<MultisigWallet>(multisig_addr);
+        assert!(object::owner(wallet) == @0x0, 1);
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    fun create_weighted_wallet_without_owner(
+        account1: signer, account2: signer, account3: signer
+    ) {
+        let addr1 = signer::address_of(&account1);
+        let name = string::utf8(b"multisig wallet");
+        create_weighted_multisig_account(
+            &account1,
+            name,
+            vector[string::utf8(b"admin"), string::utf8(b"member")],
+            vector[2, 1],
+            vector[
+                addr1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            ],
+            vector[
+                string::utf8(b"admin"),
+                string::utf8(b"member"),
+                string::utf8(b"member")
+            ],
+            2
+        );
+
+        let wallet =
+            object::address_to_object<MultisigWallet>(
+                get_multisig_address(&addr1, &name)
+            );
+        assert!(object::owner(wallet) == @0x0, 1);
+    }
+
+    #[test(
+        issuer = @0xcafe, account1 = @0x101, account2 = @0x102, account3 = @0x103
+    )]
+    #[expected_failure(abort_code = 0x50008, location = minitia_std::fungible_asset)]
+    fun creator_cannot_withdraw_from_wallet(
+        issuer: signer, account1: signer, account2: signer, account3: signer
+    ) {
+        let multisig_addr =
+            create_wallet_for_test(
+                &account1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            );
+        let metadata = fund_for_test(&issuer, multisig_addr);
+
+        let from = primary_fungible_store::primary_store(multisig_addr, metadata);
+        let to =
+            primary_fungible_store::ensure_primary_store_exists(
+                signer::address_of(&account1), metadata
+            );
+        fungible_asset::transfer(&account1, from, to, 100);
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    #[expected_failure(abort_code = 0x50004, location = minitia_std::object)]
+    fun creator_cannot_transfer_wallet(
+        account1: signer, account2: signer, account3: signer
+    ) {
+        let multisig_addr =
+            create_wallet_for_test(
+                &account1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            );
+
+        object::transfer_call(&account1, multisig_addr, signer::address_of(&account1));
+    }
+
+    #[test(account1 = @0x101, account2 = @0x102, account3 = @0x103)]
+    #[expected_failure(abort_code = 0x50004, location = minitia_std::object)]
+    fun creator_cannot_transfer_object_owned_by_wallet(
+        account1: signer, account2: signer, account3: signer
+    ) acquires MultisigWallet {
+        let multisig_addr =
+            create_wallet_for_test(
+                &account1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            );
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        let constructor_ref =
+            object::create_named_object(multisig_signer, b"owned by wallet");
+
+        object::transfer_call(
+            &account1,
+            object::address_from_constructor_ref(&constructor_ref),
+            signer::address_of(&account1)
+        );
+    }
+
+    #[test(
+        issuer = @0xcafe, account1 = @0x101, account2 = @0x102, account3 = @0x103
+    )]
+    fun wallet_withdraws_without_owner(
+        issuer: signer, account1: signer, account2: signer, account3: signer
+    ) acquires MultisigWallet {
+        let addr2 = signer::address_of(&account2);
+        let multisig_addr =
+            create_wallet_for_test(&account1, addr2, signer::address_of(&account3));
+        let metadata = fund_for_test(&issuer, multisig_addr);
+
+        // same signer as an executed proposal
+        let multisig_wallet = borrow_global<MultisigWallet>(multisig_addr);
+        let multisig_signer =
+            &object::generate_signer_for_extending(&multisig_wallet.extend_ref);
+        primary_fungible_store::transfer(multisig_signer, metadata, addr2, 100);
+
+        assert!(primary_fungible_store::balance(addr2, metadata) == 100, 1);
+    }
+
+    #[test(
+        issuer = @0xcafe, account1 = @0x101, account2 = @0x102, account3 = @0x103
+    )]
+    fun detach_owner_of_legacy_wallet(
+        issuer: signer, account1: signer, account2: signer, account3: signer
+    ) {
+        let addr1 = signer::address_of(&account1);
+        let multisig_addr =
+            create_wallet_for_test(
+                &account1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            );
+        let metadata = fund_for_test(&issuer, multisig_addr);
+
+        // wallets created before the fix are owned by their creator,
+        // who can withdraw without a proposal
+        object::transfer_by_friend(multisig_addr, addr1);
+        let from = primary_fungible_store::primary_store(multisig_addr, metadata);
+        let to = primary_fungible_store::ensure_primary_store_exists(addr1, metadata);
+        fungible_asset::transfer(&account1, from, to, 1);
+        assert!(primary_fungible_store::balance(addr1, metadata) == 1, 1);
+
+        detach_owner(vector[multisig_addr]);
+        let wallet = object::address_to_object<MultisigWallet>(multisig_addr);
+        assert!(object::owner(wallet) == @0x0, 2);
+
+        // no-op on a detached wallet
+        detach_owner(vector[multisig_addr]);
+        assert!(object::owner(wallet) == @0x0, 3);
+    }
+
+    #[test(
+        issuer = @0xcafe, account1 = @0x101, account2 = @0x102, account3 = @0x103
+    )]
+    #[expected_failure(abort_code = 0x50008, location = minitia_std::fungible_asset)]
+    fun legacy_creator_cannot_withdraw_after_detach(
+        issuer: signer, account1: signer, account2: signer, account3: signer
+    ) {
+        let addr1 = signer::address_of(&account1);
+        let multisig_addr =
+            create_wallet_for_test(
+                &account1,
+                signer::address_of(&account2),
+                signer::address_of(&account3)
+            );
+        let metadata = fund_for_test(&issuer, multisig_addr);
+        object::transfer_by_friend(multisig_addr, addr1);
+
+        detach_owner(vector[multisig_addr]);
+
+        let from = primary_fungible_store::primary_store(multisig_addr, metadata);
+        let to = primary_fungible_store::ensure_primary_store_exists(addr1, metadata);
+        fungible_asset::transfer(&account1, from, to, 1);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0x6000D, location = Self)]
+    fun detach_owner_rejects_non_wallet() {
+        detach_owner(vector[@0x999]);
     }
 }

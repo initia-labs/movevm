@@ -29,6 +29,8 @@ module initia_std::object {
 
     friend initia_std::primary_fungible_store;
     friend initia_std::nft;
+    friend initia_std::multisig;
+    friend initia_std::multisig_v2;
 
     /// An object already exists at this address
     const EOBJECT_EXISTS: u64 = 1;
@@ -505,6 +507,22 @@ module initia_std::object {
         owner: &signer, object: Object<O>, to: Object<T>
     ) acquires ObjectCore {
         transfer(owner, object, to.inner)
+    }
+
+    /// Transfer ownership without the owner's signature or a `TransferRef`. Only for
+    /// stdlib modules that must control who owns their objects, e.g. a multisig wallet,
+    /// whose owner would otherwise be able to move every asset the wallet owns.
+    public(friend) fun transfer_by_friend(object: address, to: address) acquires ObjectCore {
+        assert!(
+            exists<ObjectCore>(object),
+            error::not_found(EOBJECT_DOES_NOT_EXIST)
+        );
+
+        let object_core = borrow_global_mut<ObjectCore>(object);
+        if (object_core.owner == to) { return };
+
+        event::emit(TransferEvent { object, from: object_core.owner, to });
+        object_core.owner = to;
     }
 
     /// This checks that the destination address is eventually owned by the owner and that each
