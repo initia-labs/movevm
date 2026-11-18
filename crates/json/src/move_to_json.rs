@@ -7,7 +7,10 @@ use move_core_types::{
 };
 use serde_json::{Map, Value as JSONValue};
 
-use crate::errors::{deserialization_error_with_msg, max_decimal_scale};
+use crate::errors::{
+    big_number_len, big_number_too_large, deserialization_error_with_msg, exceeds_big_number_limit,
+    max_decimal_scale,
+};
 
 pub fn serialize_move_value_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     convert_move_value_to_json_value(val, 1)
@@ -218,6 +221,19 @@ fn convert_string_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     Ok(JSONValue::String(json_val.to_string()))
 }
 
+/// A `BigUint`, or the integer of a `BigDecimal`, above `MAX_BIG_NUMBER_BYTES` is not written:
+/// turning it into decimal digits takes time that grows with the square of its size. The check
+/// looks at the bytes only, before anything is converted.
+fn check_big_number_size(bytes_le: &[u8]) -> VMResult<()> {
+    if exceeds_big_number_limit(bytes_le) {
+        return Err(PartialVMError::new(StatusCode::VALUE_SERIALIZATION_ERROR)
+            .with_message(big_number_too_large(big_number_len(bytes_le)))
+            .finish(Location::Undefined));
+    }
+
+    Ok(())
+}
+
 fn convert_biguint_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     Ok(JSONValue::String(match val {
         MoveValue::Vector(bytes_val) => {
@@ -229,6 +245,7 @@ fn convert_biguint_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
                 })
                 .collect::<Vec<u8>>();
 
+            check_big_number_size(&bytes_le)?;
             BigUint::from_bytes_le(&bytes_le).to_string()
         }
         _ => unreachable!(),
@@ -278,6 +295,7 @@ fn convert_decimal_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
                             })
                             .collect::<Vec<u8>>();
 
+                        check_big_number_size(&bytes_le)?;
                         let num = BigUint::from_bytes_le(&bytes_le);
                         BigDecimal::new(num.into(), 18)
                     }
@@ -682,13 +700,23 @@ mod decimal_text_tests {
     use std::str::FromStr;
 
     use bigdecimal::{num_bigint::BigUint, BigDecimal};
+    use move_binary_format::errors::VMResult;
+    use move_core_types::{
+        language_storage::{StructTag, CORE_CODE_ADDRESS},
+        value::{MoveStruct, MoveValue},
+        vm_status::StatusCode,
+    };
+    use serde_json::Value as JSONValue;
 
     use crate::errors::{
         decimal_test_cases::{
-            big_decimal_text, fixed_point32_text, fixed_point64_text, head, pow10,
+            big_decimal_text, fixed_point32_text, fixed_point64_text, head, largest_of,
+            plain_decimal, pow10, smallest_of, try_big_decimal_text, try_big_uint_text,
+            within_limit,
         },
-        parse_bounded_decimal,
+        parse_bounded_decimal, MAX_BIG_NUMBER_BYTES,
     };
+    use crate::move_to_json::serialize_move_value_to_json_value;
 
     fn int(digits: &str) -> BigUint {
         BigUint::from_str(digits).unwrap()
@@ -801,6 +829,63 @@ mod decimal_text_tests {
             assert_eq!(big_decimal_text(&scaled), text, "BigDecimal {}", scaled);
             assert_eq!(display(&scaled), text, "BigDecimal {}", scaled);
         }
+
+        // Up to the largest numbers within MAX_BIG_NUMBER_BYTES. These are neither whole nor
+        // do they end in a zero, so all their digits are written, with the last 18 after the
+        // point.
+        let max = MAX_BIG_NUMBER_BYTES;
+        for scaled in [
+            largest_of(32),
+            largest_of(64),
+            smallest_of(max - 1) + 1u8,
+            largest_of(max - 1),
+            smallest_of(max) + 1u8,
+            largest_of(max),
+        ] {
+            let text = big_decimal_text(&scaled);
+            assert!(text == plain_decimal(&scaled), "{}..", head(&text));
+            assert!(text == display(&scaled), "{}..", head(&text));
+        }
+        // the largest power of ten: all its zeros are written
+        let text = big_decimal_text(&pow10(2466));
+        assert!(
+            text == format!("1{}", "0".repeat(2448)),
+            "{}..",
+            head(&text)
+        );
+
+        // a BigUint is written in plain digits
+        for (value, text) in [
+            (int("0"), "0"),
+            (int("1"), "1"),
+            (int("1077952576"), "1077952576"),
+            (BigUint::from(u64::MAX), "18446744073709551615"),
+            (
+                BigUint::from(u128::MAX),
+                "340282366920938463463374607431768211455",
+            ),
+            (int(u256_max), u256_max),
+            (pow10(21), "1000000000000000000000"),
+        ] {
+            assert_eq!(try_big_uint_text(&value).unwrap(), text);
+        }
+        for value in [
+            pow10(1000),
+            pow10(2466),
+            smallest_of(max - 1),
+            largest_of(max - 1),
+            smallest_of(max),
+            largest_of(max),
+        ] {
+            let text = try_big_uint_text(&value).unwrap();
+            assert!(text == value.to_string(), "{}..", head(&text));
+            assert!(int(&text) == value, "{}..", head(&text));
+        }
+        // the largest number, 2^8192 - 1: its length, its first and its last digits
+        let text = try_big_uint_text(&largest_of(max)).unwrap();
+        assert_eq!(text.len(), 2467);
+        assert!(text.starts_with("109074813561941592946298424473378286244826416199623269243183"));
+        assert!(text.ends_with("605403581781469090806576468950587661997186505665475715792895"));
     }
 
     /// BigDecimal values (times 10^18) of many shapes: digits that end in no zero, followed by
@@ -846,10 +931,13 @@ mod decimal_text_tests {
     // Whenever the parser accepts `Display` of the normalized number, the serializer writes
     // exactly that. For all other values it writes the same number in plain digits, which the
     // parser accepts.
+    //
+    // 41 of the 1,700 values are above MAX_BIG_NUMBER_BYTES and are not written at all
+    // (`numbers_above_the_limit_are_not_written`).
     #[test]
     fn decimal_text_changes_only_where_the_parser_would_refuse_it() {
         let (mut unchanged, mut plain) = (0, 0);
-        for scaled in spread() {
+        for scaled in spread().into_iter().filter(within_limit) {
             let text = big_decimal_text(&scaled);
             let before = display(&scaled);
             if parse_bounded_decimal(&before).is_ok() {
@@ -883,6 +971,7 @@ mod decimal_text_tests {
         for (digits, zeros, refused) in [
             ("1", 1032u32, "1e+1032"),
             ("1", 2000, "1e+2000"),
+            ("1", 2448, "1e+2448"),
             ("1", 9999, "1e+9999"),
             ("1", 10_000, "1e+10000"),
             ("12", 1033, "12e+1033"),
@@ -891,6 +980,13 @@ mod decimal_text_tests {
             let scaled = int(digits) * pow10(zeros + 18);
             assert_eq!(display(&scaled), refused);
             assert!(parse_bounded_decimal(refused).is_err(), "{}", refused);
+
+            if !within_limit(&scaled) {
+                // 10^9999 and 10^10000 are above MAX_BIG_NUMBER_BYTES: not written
+                assert!(zeros >= 9999, "{}", refused);
+                assert!(try_big_decimal_text(&scaled).is_err(), "{}", refused);
+                continue;
+            }
 
             let text = big_decimal_text(&scaled);
             let expected = format!("{}{}", digits, "0".repeat(zeros as usize));
@@ -901,6 +997,119 @@ mod decimal_text_tests {
                 "{}",
                 refused
             );
+        }
+    }
+
+    fn refusal(result: VMResult<String>) -> (StatusCode, String) {
+        let err = result.unwrap_err();
+        (
+            err.major_status(),
+            err.message().cloned().unwrap_or_default(),
+        )
+    }
+
+    // A BigUint, and the integer of a BigDecimal, of MAX_BIG_NUMBER_BYTES - 1 and of
+    // MAX_BIG_NUMBER_BYTES bytes is written; one byte more and it is refused.
+    #[test]
+    fn numbers_above_the_limit_are_not_written() {
+        let max = MAX_BIG_NUMBER_BYTES;
+        for len in [max - 1, max, max + 1] {
+            for value in [smallest_of(len), largest_of(len)] {
+                if len <= max {
+                    assert!(try_big_uint_text(&value).unwrap() == value.to_string());
+                    assert!(try_big_decimal_text(&value).is_ok());
+                    continue;
+                }
+                let message = format!(
+                    "big number out of range: it has {} bytes and may have at most {}",
+                    len, max
+                );
+                for result in [try_big_uint_text(&value), try_big_decimal_text(&value)] {
+                    let (status, text) = refusal(result);
+                    assert_eq!(status, StatusCode::VALUE_SERIALIZATION_ERROR);
+                    assert_eq!(text, message);
+                }
+            }
+        }
+
+        // far above it
+        let (_, text) = refusal(try_big_decimal_text(&pow10(999_997 + 18)));
+        assert_eq!(
+            text,
+            "big number out of range: it has 415248 bytes and may have at most 1024"
+        );
+        assert!(try_big_uint_text(&pow10(999_997)).is_err());
+
+        // the values of the other tests that are above the limit
+        let above: Vec<BigUint> = spread().into_iter().filter(|v| !within_limit(v)).collect();
+        assert_eq!(above.len(), 41);
+        for scaled in above {
+            assert!(try_big_decimal_text(&scaled).is_err());
+        }
+    }
+
+    // The limit is on the number, not on the bytes that hold it: zero bytes at the top do not
+    // count. A number above the limit is refused wherever it sits in the value.
+    #[test]
+    fn limit_counts_the_number_and_applies_inside_other_values() {
+        use crate::errors::decimal_test_cases::{big_decimal_of_bytes, big_uint_of_bytes};
+
+        let max = MAX_BIG_NUMBER_BYTES;
+        let text = |value: &MoveValue| serialize_move_value_to_json_value(value);
+
+        let mut padded = largest_of(max).to_bytes_le();
+        padded.extend([0u8; 500]);
+        let digits = JSONValue::String(largest_of(max).to_string());
+        assert!(text(&big_uint_of_bytes(padded.clone())).unwrap() == digits);
+        assert!(text(&big_decimal_of_bytes(padded)).is_ok());
+        let zero = JSONValue::String("0".to_string());
+        assert!(text(&big_uint_of_bytes(vec![0u8; 100_000])).unwrap() == zero);
+        assert!(text(&big_decimal_of_bytes(vec![0u8; 100_000])).unwrap() == zero);
+        assert!(text(&big_uint_of_bytes(vec![])).unwrap() == zero);
+
+        let mut padded = smallest_of(max + 1).to_bytes_le();
+        padded.extend([0u8; 500]);
+        assert!(text(&big_uint_of_bytes(padded.clone())).is_err());
+        assert!(text(&big_decimal_of_bytes(padded)).is_err());
+
+        let small = big_uint_of_bytes(vec![7]);
+        let large = big_uint_of_bytes(smallest_of(max + 1).to_bytes_le());
+        let large_decimal = big_decimal_of_bytes(smallest_of(max + 1).to_bytes_le());
+        let option = |elems: Vec<MoveValue>| {
+            MoveValue::Struct(MoveStruct::WithTypes {
+                _type_: StructTag {
+                    address: CORE_CODE_ADDRESS,
+                    module: move_core_types::ident_str!("option").into(),
+                    name: move_core_types::ident_str!("Option").into(),
+                    type_args: vec![],
+                },
+                _fields: vec![(
+                    move_core_types::ident_str!("vec").into(),
+                    MoveValue::Vector(elems),
+                )],
+            })
+        };
+        let record = |field: MoveValue| {
+            MoveValue::Struct(MoveStruct::WithFields(vec![
+                (move_core_types::ident_str!("id").into(), MoveValue::U64(1)),
+                (move_core_types::ident_str!("amount").into(), field),
+            ]))
+        };
+
+        assert!(text(&MoveValue::Vector(vec![small.clone(), small.clone()])).is_ok());
+        assert!(text(&option(vec![small.clone()])).is_ok());
+        assert!(text(&record(small.clone())).is_ok());
+        for value in [
+            MoveValue::Vector(vec![small.clone(), large.clone()]),
+            MoveValue::Vector(vec![large_decimal.clone()]),
+            option(vec![large.clone()]),
+            option(vec![large_decimal.clone()]),
+            record(large.clone()),
+            record(large_decimal.clone()),
+            record(MoveValue::Vector(vec![option(vec![large.clone()])])),
+        ] {
+            let err = text(&value).unwrap_err();
+            assert_eq!(err.major_status(), StatusCode::VALUE_SERIALIZATION_ERROR);
         }
     }
 }

@@ -80,6 +80,15 @@ fn accepted_inputs() -> Vec<(&'static str, Vec<u8>)> {
         ("small", quoted("0.003")),
         ("exponent", quoted("1e+21")),
         ("fraction", quoted("123456789.123456789012345678")),
+        ("digits_2k", quoted(&format!("1{}", "0".repeat(1_999)))),
+        ("digits_2449", quoted(&format!("1{}", "0".repeat(2_448)))),
+    ]
+}
+
+/// (name, the JSON bytes) of inputs that json::unmarshal<BigDecimal> accepted before a
+/// BigDecimal was limited to MAX_BIG_NUMBER_BYTES (1024 bytes for its value times 10^18)
+fn inputs_above_the_limit() -> Vec<(&'static str, Vec<u8>)> {
+    vec![
         ("digits_10k", quoted(&format!("1{}", "0".repeat(9_999)))),
         ("digits_100k", quoted(&"7".repeat(100_000))),
     ]
@@ -104,9 +113,14 @@ const ACCEPTED_GAS: &[(&str, u64)] = &[
     ("small", 5739),
     ("exponent", 5739),
     ("fraction", 5743),
-    ("digits_10k", 9440),
-    ("digits_100k", 43640),
+    ("digits_2k", 6400),
+    ("digits_2449", 6570),
 ];
+
+// (name, gas of the transaction when the input was accepted, gas now that it is refused).
+// These two were rows of ACCEPTED_GAS before the limit.
+const ABOVE_THE_LIMIT_GAS: &[(&str, u64, u64)] =
+    &[("digits_10k", 9440, 9434), ("digits_100k", 43640, 43634)];
 
 // (name, gas of the transaction when unmarshal charged after the parse, gas now). A refused
 // input was not charged for by the native: the difference is its charge, 1102 + 18 per byte of
@@ -132,6 +146,30 @@ fn unmarshal_gas_of_an_accepted_input() {
         got.push((name, gas));
     }
     assert_eq!(got, ACCEPTED_GAS);
+}
+
+// A number above MAX_BIG_NUMBER_BYTES is refused like any other input that is refused: the
+// call aborts, and its charge is paid.
+#[test]
+fn unmarshal_refuses_a_number_above_the_limit() {
+    let mut h = setup();
+    let mut got = vec![];
+    for ((name, json), (_, gas_accepted, _)) in inputs_above_the_limit()
+        .into_iter()
+        .zip(ABOVE_THE_LIMIT_GAS)
+    {
+        let (res, gas) = unmarshal(&mut h, &json, LIMIT);
+        let Err(status) = res else {
+            panic!("{name}: accepted");
+        };
+        assert!(is_refused(&status), "{name}: {status:?}");
+        println!(
+            "JSON_UNMARSHAL above the limit {name} bytes={} gas={gas}",
+            json.len()
+        );
+        got.push((name, *gas_accepted, gas));
+    }
+    assert_eq!(got, ABOVE_THE_LIMIT_GAS);
 }
 
 #[test]
@@ -200,7 +238,8 @@ fn view(h: &mut MoveHarness, fun: &str, args: Vec<Vec<u8>>) -> Result<String, VM
 
 // What json::marshal writes for a BigDecimal is accepted by json::unmarshal and as a JSON
 // argument, and gives the value back. A power of ten is written with an exponent from 10^21 to
-// 10^1031; from 10^1032 on the exponent would be refused, and the zeros are written out.
+// 10^1031. From 10^1032 on the exponent would be refused, and the zeros are written out, up to
+// 10^2448, the largest power of ten within MAX_BIG_NUMBER_BYTES.
 #[test]
 fn marshal_output_of_a_decimal_is_accepted_as_input() {
     let mut h = setup();
@@ -211,7 +250,7 @@ fn marshal_output_of_a_decimal_is_accepted_as_input() {
         (21, "1e+21".to_string()),
         (1031, "1e+1031".to_string()),
         (1032, format!("1{}", "0".repeat(1032))),
-        (5000, format!("1{}", "0".repeat(5000))),
+        (2448, format!("1{}", "0".repeat(2448))),
     ] {
         let scaled = ten.pow(zeros + 18).to_bytes_le();
 
@@ -233,5 +272,16 @@ fn marshal_output_of_a_decimal_is_accepted_as_input() {
             .unwrap_or_else(|status| panic!("10^{zeros}: {status:?}"));
         let bytes: String = serde_json::from_str(&out).unwrap();
         assert!(bytes == hex::encode(&scaled), "10^{zeros}");
+    }
+
+    // from 10^2449 on a BigDecimal is above MAX_BIG_NUMBER_BYTES: json::marshal_to_string
+    // aborts with EUNABLE_TO_MARSHAL_SERIALIZATION_ERROR (10^5000 was written before the limit)
+    for zeros in [2449u32, 5000] {
+        let scaled = ten.pow(zeros + 18).to_bytes_le();
+        let status = view(&mut h, "round_trip", vec![bcs::to_bytes(&scaled).unwrap()]).unwrap_err();
+        assert!(
+            matches!(status, VMStatus::MoveAbort(_, 0x10005)),
+            "10^{zeros}: {status:?}"
+        );
     }
 }

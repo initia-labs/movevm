@@ -5,6 +5,7 @@ use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
 use bigdecimal::{num_bigint::BigUint, Zero};
+use initia_move_json::exceeds_big_number_limit;
 
 use crate::{
     interface::{
@@ -21,6 +22,10 @@ const NEGATIVE_RESULT: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 100;
 const DIVISION_BY_ZERO: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 101;
 const CAST_OVERFLOW: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 102;
 const INVALID_NUMERIC_TYPE: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 103;
+// An operand of mul or div is above initia_move_json::MAX_BIG_NUMBER_BYTES. The charge of these
+// two grows with the size of the operands and their work grows faster, so a larger operand is
+// refused before the work.
+const NUMBER_TOO_LARGE: u64 = (ECATEGORY_INVALID_ARGUMENT << 16) + 104;
 
 /***************************************************************************************************
  * native fun add
@@ -117,6 +122,12 @@ fn native_mul(
                 * NumBytes::new((num1_bytes.len() + num2_bytes.len()) as u64),
     )?;
 
+    if exceeds_big_number_limit(&num1_bytes) || exceeds_big_number_limit(&num2_bytes) {
+        return Err(SafeNativeError::Abort {
+            abort_code: NUMBER_TOO_LARGE,
+        });
+    }
+
     let num1 = BigUint::from_bytes_le(&num1_bytes);
     let num2 = BigUint::from_bytes_le(&num2_bytes);
 
@@ -148,6 +159,12 @@ fn native_div(
             + gas_params.biguint_div_per_byte
                 * NumBytes::new((num1_bytes.len() + num2_bytes.len()) as u64),
     )?;
+
+    if exceeds_big_number_limit(&num1_bytes) || exceeds_big_number_limit(&num2_bytes) {
+        return Err(SafeNativeError::Abort {
+            abort_code: NUMBER_TOO_LARGE,
+        });
+    }
 
     let num1 = BigUint::from_bytes_le(&num1_bytes);
     let num2 = BigUint::from_bytes_le(&num2_bytes);

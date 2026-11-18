@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use bigdecimal::{
-    num_bigint::{BigUint, ToBigInt},
-    Signed,
-};
+use bigdecimal::{num_bigint::ToBigInt, Signed};
 use move_binary_format::errors::VMResult;
 use move_core_types::{
     language_storage::ModuleId,
@@ -17,7 +14,10 @@ use move_vm_types::values::{Struct, Value};
 
 use serde_json::Value as JSONValue;
 
-use crate::errors::{deserialization_error, deserialization_error_with_msg, parse_bounded_decimal};
+use crate::errors::{
+    deserialization_error, deserialization_error_with_msg, parse_bounded_big_decimal,
+    parse_bounded_biguint, parse_bounded_fixed_point,
+};
 
 // deserialize json argument to JSONValue and convert to MoveValue,
 // and then do bcs serialization.
@@ -154,7 +154,7 @@ pub fn convert_json_value_to_value(
                     )])),
                     "0x1::fixed_point32::FixedPoint32" => {
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = parse_bounded_decimal(s)
+                        let bigint = parse_bounded_fixed_point(s)
                             .map(|v| v * (1u64 << 32))
                             .map_err(deserialization_error_with_msg)?
                             .to_bigint()
@@ -166,7 +166,7 @@ pub fn convert_json_value_to_value(
                     }
                     "0x1::fixed_point64::FixedPoint64" => {
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = parse_bounded_decimal(s)
+                        let bigint = parse_bounded_fixed_point(s)
                             .map(|v| v * (1u128 << 64))
                             .map_err(deserialization_error_with_msg)?
                             .to_bigint()
@@ -179,18 +179,14 @@ pub fn convert_json_value_to_value(
                     "0x1::biguint::BigUint" => {
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
                         let biguint =
-                            BigUint::from_str(s).map_err(deserialization_error_with_msg)?;
+                            parse_bounded_biguint(s).map_err(deserialization_error_with_msg)?;
 
                         Value::struct_(Struct::pack(vec![Value::vector_u8(biguint.to_bytes_le())]))
                     }
                     "0x1::bigdecimal::BigDecimal" => {
-                        const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = parse_bounded_decimal(s)
-                            .map(|v| v * DECIMAL_SCALE)
-                            .map_err(deserialization_error_with_msg)?
-                            .to_bigint()
-                            .ok_or_else(deserialization_error)?;
+                        let bigint =
+                            parse_bounded_big_decimal(s).map_err(deserialization_error_with_msg)?;
                         if bigint.is_negative() {
                             return Err(deserialization_error_with_msg(
                                 format!(
@@ -285,7 +281,7 @@ pub fn convert_json_value_to_value(
 
 #[cfg(test)]
 mod json_arg_testing {
-    use bigdecimal::FromPrimitive;
+    use bigdecimal::{num_bigint::BigUint, FromPrimitive};
     use move_core_types::{
         account_address::AccountAddress,
         ident_str,
@@ -865,6 +861,19 @@ mod json_arg_testing {
 
         let layout = decimal_layout("bigdecimal", "BigDecimal");
         for scaled in decimal_test_cases::round_trip_big_decimal() {
+            if !decimal_test_cases::within_limit(&scaled) {
+                assert!(decimal_test_cases::try_big_decimal_text(&scaled).is_err());
+                let text = decimal_test_cases::plain_decimal(&scaled);
+                let err = deserialize_decimal(&layout, &text).unwrap_err();
+                let message = err.message().cloned().unwrap_or_default();
+                assert!(
+                    message.starts_with("big number out of range"),
+                    "{}",
+                    message
+                );
+                continue;
+            }
+
             let text = decimal_test_cases::big_decimal_text(&scaled);
             let head = decimal_test_cases::head(&text);
             let result = match deserialize_decimal(&layout, &text) {
@@ -881,6 +890,101 @@ mod json_arg_testing {
                 text.len()
             );
         }
+    }
+
+    fn big_uint_value(bytes_le: Vec<u8>) -> Value {
+        Value::struct_(Struct::pack(vec![Value::vector_u8(bytes_le)]))
+    }
+
+    fn big_decimal_value(scaled_le: Vec<u8>) -> Value {
+        Value::struct_(Struct::pack(vec![big_uint_value(scaled_le)]))
+    }
+
+    // A BigUint within MAX_BIG_NUMBER_BYTES is written in digits that are accepted and give the
+    // number back. A larger one is not written, and its digits are not accepted.
+    #[test]
+    fn test_deserialize_json_to_value_big_uint_round_trip() {
+        let layout = decimal_layout("biguint", "BigUint");
+        for value in decimal_test_cases::round_trip_big_uint() {
+            let digits = value.to_string();
+            let head = decimal_test_cases::head(&digits);
+            if !decimal_test_cases::within_limit(&value) {
+                assert!(decimal_test_cases::try_big_uint_text(&value).is_err());
+                let err = deserialize_decimal(&layout, &digits).unwrap_err();
+                let message = err.message().cloned().unwrap_or_default();
+                assert!(
+                    message.starts_with("big number out of range"),
+                    "{}",
+                    message
+                );
+                continue;
+            }
+
+            let text = decimal_test_cases::try_big_uint_text(&value).unwrap();
+            assert!(text == digits, "{}.. ({} bytes)", head, text.len());
+            let result = match deserialize_decimal(&layout, &text) {
+                Ok(result) => result,
+                Err(err) => panic!("{}.. ({} bytes): {:?}", head, text.len(), err),
+            };
+            let expected = big_uint_value(value.to_bytes_le());
+            assert!(
+                result.equals(&expected).unwrap(),
+                "{}.. ({} bytes)",
+                head,
+                text.len()
+            );
+        }
+    }
+
+    // Texts that are refused for their length alone, and long texts of a small value.
+    #[test]
+    fn test_deserialize_json_to_value_big_number_digits() {
+        let big_uint = decimal_layout("biguint", "BigUint");
+        let big_decimal = decimal_layout("bigdecimal", "BigDecimal");
+        let message = |layout: &MoveTypeLayout, input: &str| {
+            let err = deserialize_decimal(layout, input).unwrap_err();
+            err.message().cloned().unwrap_or_default()
+        };
+        let digits = "7".repeat(2468);
+        assert!(message(&big_uint, &digits).contains("2468 significant digits"));
+        assert!(message(&big_decimal, &digits).contains("2468 significant digits"));
+        let fraction = format!("0.{}", digits);
+        assert!(message(&big_decimal, &fraction).contains("2468 significant digits"));
+        let long = "7".repeat(999_990);
+        assert!(message(&big_uint, &long).contains("999990 significant digits"));
+        assert!(message(&big_decimal, &long).contains("999990 significant digits"));
+
+        // zeros in front are not digits of the number
+        let zeros = "0".repeat(999_900);
+        let result = deserialize_decimal(&big_uint, &format!("{}7", zeros)).unwrap();
+        assert!(result.equals(&big_uint_value(vec![7])).unwrap());
+        // 7 * 10^-18
+        let result = deserialize_decimal(&big_decimal, &format!("{}7e-18", zeros)).unwrap();
+        assert!(result.equals(&big_decimal_value(vec![7])).unwrap());
+        // below 10^-18: zero
+        for text in [format!("{}7e-999900", zeros), format!("0.{}7", zeros)] {
+            let result = deserialize_decimal(&big_decimal, &text).unwrap();
+            assert!(result.equals(&big_decimal_value(vec![0])).unwrap());
+        }
+        // a power of ten as long as the text: refused
+        let text = format!("{}7e999900", zeros);
+        assert!(message(&big_decimal, &text).starts_with("big number out of range"));
+
+        // the fixed-point types have the same limit on the digits of their text
+        let fixed_point32 = decimal_layout("fixed_point32", "FixedPoint32");
+        let fixed_point64 = decimal_layout("fixed_point64", "FixedPoint64");
+        for layout in [&fixed_point32, &fixed_point64] {
+            assert!(message(layout, &fraction).contains("2468 significant digits"));
+            let text = format!("0.{}", long);
+            assert!(message(layout, &text).contains("999990 significant digits"));
+        }
+        let half = format!("0.5{}", "0".repeat(2000));
+        let result = deserialize_decimal(&fixed_point32, &half).unwrap();
+        let expected = Value::struct_(Struct::pack(vec![Value::u64(1 << 31)]));
+        assert!(result.equals(&expected).unwrap());
+        let result = deserialize_decimal(&fixed_point64, &half).unwrap();
+        let expected = Value::struct_(Struct::pack(vec![Value::u128(1 << 63)]));
+        assert!(result.equals(&expected).unwrap());
     }
 
     #[test]
