@@ -6,6 +6,7 @@ use initia_move_types::env::Env;
 use initia_move_types::message::{Message, MessageOutput};
 use move_core_types::account_address::AccountAddress;
 use move_core_types::vm_status::VMStatus;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 const PACKAGE: &str = "src/tests/string_natives.data/pack";
@@ -15,11 +16,13 @@ fn publisher() -> AccountAddress {
 }
 
 fn setup() -> MoveHarness {
+    static CODE: OnceLock<Vec<Vec<u8>>> = OnceLock::new();
+
     let mut h = MoveHarness::new();
     h.initialize();
-    let output = h
-        .publish_package(&publisher(), PACKAGE, UpgradePolicy::Compatible)
-        .expect("should success");
+    let code = CODE.get_or_init(|| h.compile_package(PACKAGE)).clone();
+    let msg = h.create_publish_message(publisher(), code, UpgradePolicy::Compatible);
+    let output = h.run_message(msg).expect("should success");
     h.commit(output, true);
     h
 }

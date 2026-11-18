@@ -6,6 +6,7 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::language_storage::TypeTag;
 use move_core_types::vm_status::VMStatus;
 use sha3::{Digest, Sha3_256};
+use std::sync::OnceLock;
 use std::time::Instant;
 
 const STAKING_SYMBOL: &[u8] = b"ustake";
@@ -227,6 +228,8 @@ const UNKNOWN_VALIDATOR: &[u8] = b"unknown";
 const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
 
 fn setup_share_to_amount() -> MoveHarness {
+    static SHARE_CODE: OnceLock<Vec<Vec<u8>>> = OnceLock::new();
+
     let mut h = MoveHarness::new();
     h.initialize();
 
@@ -248,9 +251,11 @@ fn setup_share_to_amount() -> MoveHarness {
     h.commit(output, true);
 
     let publisher = AccountAddress::from_hex_literal("0xcafe").unwrap();
-    let output = h
-        .publish_package(&publisher, SHARE_PACKAGE, UpgradePolicy::Compatible)
-        .expect("should success");
+    let code = SHARE_CODE
+        .get_or_init(|| h.compile_package(SHARE_PACKAGE))
+        .clone();
+    let msg = h.create_publish_message(publisher, code, UpgradePolicy::Compatible);
+    let output = h.run_message(msg).expect("should success");
     h.commit(output, true);
 
     // 10 shares are 20 coins

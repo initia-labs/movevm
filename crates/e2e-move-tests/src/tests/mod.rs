@@ -8,6 +8,7 @@ mod cosmos;
 mod ed25519_batch;
 mod ethereum_derivable_account_abstraction;
 mod infinite_loop;
+mod json_natives;
 mod max_loop_depth;
 mod memory_quota;
 mod oracle;

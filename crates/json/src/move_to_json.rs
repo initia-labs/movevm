@@ -7,7 +7,7 @@ use move_core_types::{
 };
 use serde_json::{Map, Value as JSONValue};
 
-use crate::errors::deserialization_error_with_msg;
+use crate::errors::{deserialization_error_with_msg, max_decimal_scale};
 
 pub fn serialize_move_value_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     convert_move_value_to_json_value(val, 1)
@@ -235,8 +235,24 @@ fn convert_biguint_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     }))
 }
 
+/// The text of a decimal value, which the caller has normalized.
+///
+/// Nothing has to be done for a fraction since the scale is at most 18 for a `BigDecimal`,
+/// 32 for a `FixedPoint32` and 64 for a `FixedPoint64`, and the parser accepts up to 1024.
+fn decimal_to_json_string(v: BigDecimal) -> String {
+    let text = v.to_string();
+    // number of fractional digits, negative when the digits are followed by zeros
+    let scale = v.fractional_digit_count();
+    if scale < 0 && scale.unsigned_abs() > max_decimal_scale(text.len()) {
+        let (digits, _) = v.into_bigint_and_exponent();
+        return format!("{}{}", digits, "0".repeat(scale.unsigned_abs() as usize));
+    }
+
+    text
+}
+
 fn convert_decimal_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
-    Ok(JSONValue::String(
+    Ok(JSONValue::String(decimal_to_json_string(
         match val {
             MoveValue::U128(num) => {
                 let num = BigUint::from_bytes_le(&num.to_le_bytes());
@@ -270,19 +286,18 @@ fn convert_decimal_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
             }
             _ => unreachable!(),
         }
-        .normalized()
-        .to_string(),
-    ))
+        .normalized(),
+    )))
 }
 
 fn convert_fixed_point_to_json_value(val: &MoveValue) -> VMResult<JSONValue> {
     Ok(JSONValue::String(match val {
-        MoveValue::U64(num) => (BigDecimal::from_u64(*num).unwrap() / (1u64 << 32))
-            .normalized()
-            .to_string(),
-        MoveValue::U128(num) => (BigDecimal::from_u128(*num).unwrap() / (1u128 << 64))
-            .normalized()
-            .to_string(),
+        MoveValue::U64(num) => decimal_to_json_string(
+            (BigDecimal::from_u64(*num).unwrap() / (1u64 << 32)).normalized(),
+        ),
+        MoveValue::U128(num) => decimal_to_json_string(
+            (BigDecimal::from_u128(*num).unwrap() / (1u128 << 64)).normalized(),
+        ),
         _ => unreachable!(),
     }))
 }
@@ -658,5 +673,234 @@ mod move_to_json_tests {
         ));
         let val = convert_move_value_to_json_value(&mv, 1).unwrap();
         assert_eq!(val, json!({"Circle": json!({"radius": "42"})}));
+    }
+}
+
+/// The text of `FixedPoint32`, `FixedPoint64` and `BigDecimal` values.
+#[cfg(test)]
+mod decimal_text_tests {
+    use std::str::FromStr;
+
+    use bigdecimal::{num_bigint::BigUint, BigDecimal};
+
+    use crate::errors::{
+        decimal_test_cases::{
+            big_decimal_text, fixed_point32_text, fixed_point64_text, head, pow10,
+        },
+        parse_bounded_decimal,
+    };
+
+    fn int(digits: &str) -> BigUint {
+        BigUint::from_str(digits).unwrap()
+    }
+
+    /// `Display` of the normalized number: what the serializer wrote for every BigDecimal before
+    /// it took the bound of the parser into account.
+    fn display(scaled: &BigUint) -> String {
+        BigDecimal::new(scaled.clone().into(), 18)
+            .normalized()
+            .to_string()
+    }
+
+    // These texts were the same before the serializer took the bound of the parser into account.
+    // With the thresholds that .cargo/config.toml sets for the bigdecimal crate, a fraction is
+    // never written with an exponent, and a whole number is when it ends in more than 20 zeros.
+    // A FixedPoint32 is below 2^32 and a FixedPoint64 below 2^64, so only a BigDecimal can be
+    // that large.
+    #[test]
+    fn decimal_text_of_ordinary_values() {
+        for (raw, text) in [
+            (0u64, "0"),
+            // the smallest: the most fractional digits
+            (1, "0.00000000023283064365386962890625"),
+            (4294, "0.0000009997747838497161865234375"),
+            (4295, "0.00000100000761449337005615234375"),
+            (42949672, "0.00999999977648258209228515625"),
+            (1 << 31, "0.5"),
+            (1 << 32, "1"),
+            ((123 << 32) / 2, "61.5"),
+            (
+                (1234567 << 32) / 10_000,
+                "123.456699999980628490447998046875",
+            ),
+            (1_000_000_000 << 32, "1000000000"),
+            (4_000_000_000 << 32, "4000000000"),
+            (u64::MAX, "4294967295.99999999976716935634613037109375"),
+        ] {
+            assert_eq!(fixed_point32_text(raw), text, "FixedPoint32 {}", raw);
+        }
+
+        for (raw, text) in [
+            (0u128, "0"),
+            // the smallest: the most fractional digits
+            (
+                1,
+                "0.0000000000000000000542101086242752217003726400434970855712890625",
+            ),
+            (
+                (1 << 64) / 100,
+                "0.00999999999999999999132638262011596452794037759304046630859375",
+            ),
+            (1 << 63, "0.5"),
+            (1 << 64, "1"),
+            ((123 << 64) / 2, "61.5"),
+            (10_000_000_000_000_000 << 64, "10000000000000000"),
+            (10_000_000_000_000_001 << 64, "10000000000000001"),
+            // the largest whole numbers: 19 zeros at most
+            (10_000_000_000_000_000_000 << 64, "10000000000000000000"),
+            (18_000_000_000_000_000_000 << 64, "18000000000000000000"),
+            (18_446_744_073_709_551_615 << 64, "18446744073709551615"),
+            (
+                u128::MAX,
+                "18446744073709551615.9999999999999999999457898913757247782996273599565029144287109375",
+            ),
+        ] {
+            assert_eq!(fixed_point64_text(raw), text, "FixedPoint64 {}", raw);
+        }
+
+        // 2^256 - 1
+        let u256_max =
+            "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+        // (the value times 10^18, text)
+        for (scaled, text) in [
+            (int("0"), "0"),
+            // the smallest: the most fractional digits
+            (int("1"), "0.000000000000000001"),
+            (int("123"), "0.000000000000000123"),
+            (int("999999999999"), "0.000000999999999999"),
+            (pow10(11), "0.0000001"),
+            (int("3") * pow10(15), "0.003"),
+            (pow10(18), "1"),
+            (int("15") * pow10(17), "1.5"),
+            (
+                int("123456789123456789012345678"),
+                "123456789.123456789012345678",
+            ),
+            (pow10(18 + 16) + 1u8, "10000000000000000.000000000000000001"),
+            // up to 20 zeros are written out
+            (pow10(18 + 20), "100000000000000000000"),
+            (pow10(18 + 21), "1e+21"),
+            (int("25") * pow10(18 + 20), "2500000000000000000000"),
+            (int("25") * pow10(18 + 21), "25e+21"),
+            (int("12345") * pow10(18 + 20), "1234500000000000000000000"),
+            (int("12345") * pow10(18 + 21), "12345e+21"),
+            (int("12345") * pow10(18 + 100), "12345e+100"),
+            (int("12345") * pow10(18 + 101), "12345e+101"),
+            (
+                int(u256_max),
+                "115792089237316195423570985008687907853269984665640564039457.584007913129639935",
+            ),
+            (int(u256_max) * pow10(18), u256_max),
+            (pow10(18 + 77), "1e+77"),
+            (pow10(18 + 1000), "1e+1000"),
+            // the largest exponents the parser accepts for one, two and nine digits
+            (pow10(18 + 1031), "1e+1031"),
+            (int("12") * pow10(18 + 1032), "12e+1032"),
+            (int("123456789") * pow10(18 + 1039), "123456789e+1039"),
+        ] {
+            assert_eq!(big_decimal_text(&scaled), text, "BigDecimal {}", scaled);
+            assert_eq!(display(&scaled), text, "BigDecimal {}", scaled);
+        }
+    }
+
+    /// BigDecimal values (times 10^18) of many shapes: digits that end in no zero, followed by
+    /// 0 to 45, 1040 to 1075 and a few thousand zeros.
+    fn spread() -> Vec<BigUint> {
+        let mut digits = vec![
+            int("1"),
+            int("7"),
+            int("12"),
+            int("99"),
+            int("12345"),
+            int("123456789"),
+            BigUint::from(u64::MAX),
+            BigUint::from(u128::MAX),
+            (BigUint::from(1u8) << 256) - 1u8,
+            (BigUint::from(1u8) << 1000) + 1u8,
+            pow10(40) + 1u8,
+            pow10(1100) + 3u8,
+        ];
+        // some more of 20 to 160 digits, from a fixed sequence
+        let mut x = 0x9e37_79b9_7f4a_7c15u64;
+        for limbs in 1..=8 {
+            let mut d = BigUint::from(0u8);
+            for _ in 0..limbs {
+                x = x
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
+                d = (d << 64) + x;
+            }
+            digits.push(d * 10u8 + 7u8);
+        }
+
+        let zeros = (0..=45).chain(1040..=1075).chain([2000, 9999, 10_000]);
+        let mut values = vec![];
+        for zeros in zeros {
+            for d in &digits {
+                values.push(d * pow10(zeros));
+            }
+        }
+        values
+    }
+
+    // Whenever the parser accepts `Display` of the normalized number, the serializer writes
+    // exactly that. For all other values it writes the same number in plain digits, which the
+    // parser accepts.
+    #[test]
+    fn decimal_text_changes_only_where_the_parser_would_refuse_it() {
+        let (mut unchanged, mut plain) = (0, 0);
+        for scaled in spread() {
+            let text = big_decimal_text(&scaled);
+            let before = display(&scaled);
+            if parse_bounded_decimal(&before).is_ok() {
+                assert!(text == before, "{}.. is now {}..", before, head(&text));
+                unchanged += 1;
+            } else {
+                assert!(before.contains("e+"), "{}", before);
+                assert!(
+                    text.bytes().all(|b| b.is_ascii_digit()),
+                    "{}: {}..",
+                    before,
+                    head(&text)
+                );
+                let parsed = parse_bounded_decimal(&text).unwrap();
+                assert!(
+                    parsed == BigDecimal::new(scaled.into(), 18),
+                    "{}: {}..",
+                    before,
+                    head(&text)
+                );
+                plain += 1;
+            }
+        }
+        println!("DECIMAL_TEXT spread: unchanged={unchanged} plain_digits={plain}");
+        assert!(unchanged > 1000 && plain > 100);
+    }
+
+    #[test]
+    fn decimal_text_beyond_the_bound_is_plain_digits() {
+        // (digits, zeros that follow them, what `Display` gives: the parser refuses it)
+        for (digits, zeros, refused) in [
+            ("1", 1032u32, "1e+1032"),
+            ("1", 2000, "1e+2000"),
+            ("1", 9999, "1e+9999"),
+            ("1", 10_000, "1e+10000"),
+            ("12", 1033, "12e+1033"),
+            ("123456789", 1040, "123456789e+1040"),
+        ] {
+            let scaled = int(digits) * pow10(zeros + 18);
+            assert_eq!(display(&scaled), refused);
+            assert!(parse_bounded_decimal(refused).is_err(), "{}", refused);
+
+            let text = big_decimal_text(&scaled);
+            let expected = format!("{}{}", digits, "0".repeat(zeros as usize));
+            assert!(text == expected, "{}: {}..", refused, head(&text));
+            assert_eq!(
+                parse_bounded_decimal(&text).unwrap(),
+                BigDecimal::from_str(refused).unwrap(),
+                "{}",
+                refused
+            );
+        }
     }
 }

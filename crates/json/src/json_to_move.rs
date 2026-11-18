@@ -1052,6 +1052,32 @@ mod json_arg_testing {
     }
 
     #[test]
+    fn test_deserialize_json_args_decimal_round_trip() {
+        for raw in decimal_test_cases::ROUND_TRIP_FIXED_POINT32 {
+            let text = decimal_test_cases::fixed_point32_text(*raw);
+            let result = deserialize_decimal("fixed_point32", "FixedPoint32", &text).unwrap();
+            assert_eq!(result, bcs::to_bytes(raw).unwrap(), "{}", text);
+        }
+
+        for raw in decimal_test_cases::ROUND_TRIP_FIXED_POINT64 {
+            let text = decimal_test_cases::fixed_point64_text(*raw);
+            let result = deserialize_decimal("fixed_point64", "FixedPoint64", &text).unwrap();
+            assert_eq!(result, bcs::to_bytes(raw).unwrap(), "{}", text);
+        }
+
+        for scaled in decimal_test_cases::round_trip_big_decimal() {
+            let text = decimal_test_cases::big_decimal_text(&scaled);
+            let head = decimal_test_cases::head(&text);
+            let result = match deserialize_decimal("bigdecimal", "BigDecimal", &text) {
+                Ok(result) => result,
+                Err(err) => panic!("{}.. ({} bytes): {:?}", head, text.len(), err),
+            };
+            let expected = bcs::to_bytes(&scaled.to_bytes_le()).unwrap();
+            assert!(result == expected, "{}.. ({} bytes)", head, text.len());
+        }
+    }
+
+    #[test]
     fn test_deserialize_json_args_decimal_exponent_out_of_range() {
         for (module, name) in [
             ("fixed_point32", "FixedPoint32"),

@@ -846,6 +846,44 @@ mod json_arg_testing {
     }
 
     #[test]
+    fn test_deserialize_json_to_value_decimal_round_trip() {
+        let layout = decimal_layout("fixed_point32", "FixedPoint32");
+        for raw in decimal_test_cases::ROUND_TRIP_FIXED_POINT32 {
+            let text = decimal_test_cases::fixed_point32_text(*raw);
+            let result = deserialize_decimal(&layout, &text).unwrap();
+            let expected = Value::struct_(Struct::pack(vec![Value::u64(*raw)]));
+            assert!(result.equals(&expected).unwrap(), "{}", text);
+        }
+
+        let layout = decimal_layout("fixed_point64", "FixedPoint64");
+        for raw in decimal_test_cases::ROUND_TRIP_FIXED_POINT64 {
+            let text = decimal_test_cases::fixed_point64_text(*raw);
+            let result = deserialize_decimal(&layout, &text).unwrap();
+            let expected = Value::struct_(Struct::pack(vec![Value::u128(*raw)]));
+            assert!(result.equals(&expected).unwrap(), "{}", text);
+        }
+
+        let layout = decimal_layout("bigdecimal", "BigDecimal");
+        for scaled in decimal_test_cases::round_trip_big_decimal() {
+            let text = decimal_test_cases::big_decimal_text(&scaled);
+            let head = decimal_test_cases::head(&text);
+            let result = match deserialize_decimal(&layout, &text) {
+                Ok(result) => result,
+                Err(err) => panic!("{}.. ({} bytes): {:?}", head, text.len(), err),
+            };
+            let expected = Value::struct_(Struct::pack(vec![Value::struct_(Struct::pack(vec![
+                Value::vector_u8(scaled.to_bytes_le()),
+            ]))]));
+            assert!(
+                result.equals(&expected).unwrap(),
+                "{}.. ({} bytes)",
+                head,
+                text.len()
+            );
+        }
+    }
+
+    #[test]
     fn test_deserialize_json_to_value_decimal_exponent_out_of_range() {
         for (module, name) in [
             ("fixed_point32", "FixedPoint32"),
