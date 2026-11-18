@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bigdecimal::{
     num_bigint::{BigUint, ToBigInt},
-    BigDecimal, Signed,
+    Signed,
 };
 use move_binary_format::errors::VMResult;
 use move_core_types::{
@@ -17,7 +17,7 @@ use move_vm_types::values::{Struct, Value};
 
 use serde_json::Value as JSONValue;
 
-use crate::errors::{deserialization_error, deserialization_error_with_msg};
+use crate::errors::{deserialization_error, deserialization_error_with_msg, parse_bounded_decimal};
 
 // deserialize json argument to JSONValue and convert to MoveValue,
 // and then do bcs serialization.
@@ -154,7 +154,7 @@ pub fn convert_json_value_to_value(
                     )])),
                     "0x1::fixed_point32::FixedPoint32" => {
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = bigdecimal::BigDecimal::from_str(s)
+                        let bigint = parse_bounded_decimal(s)
                             .map(|v| v * (1u64 << 32))
                             .map_err(deserialization_error_with_msg)?
                             .to_bigint()
@@ -166,7 +166,7 @@ pub fn convert_json_value_to_value(
                     }
                     "0x1::fixed_point64::FixedPoint64" => {
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = BigDecimal::from_str(s)
+                        let bigint = parse_bounded_decimal(s)
                             .map(|v| v * (1u128 << 64))
                             .map_err(deserialization_error_with_msg)?
                             .to_bigint()
@@ -186,7 +186,7 @@ pub fn convert_json_value_to_value(
                     "0x1::bigdecimal::BigDecimal" => {
                         const DECIMAL_SCALE: u128 = 1_000_000_000_000_000_000;
                         let s = json_val.as_str().ok_or_else(deserialization_error)?;
-                        let bigint = BigDecimal::from_str(s)
+                        let bigint = parse_bounded_decimal(s)
                             .map(|v| v * DECIMAL_SCALE)
                             .map_err(deserialization_error_with_msg)?
                             .to_bigint()
@@ -289,12 +289,14 @@ mod json_arg_testing {
     use move_core_types::{
         account_address::AccountAddress,
         ident_str,
+        identifier::Identifier,
         language_storage::StructTag,
         value::{MoveFieldLayout, MoveStructLayout},
     };
     use move_vm_types::value_serde::ValueSerDeContext;
 
     use super::*;
+    use crate::errors::decimal_test_cases;
 
     fn module_id() -> ModuleId {
         ModuleId::new(AccountAddress::TWO, ident_str!("test").into())
@@ -795,5 +797,76 @@ mod json_arg_testing {
 
         let arg = b"{\"value\": \"0x1\"}";
         _ = deserialize_json_to_value(&module_id(), &layout, arg).unwrap_err();
+    }
+
+    fn decimal_layout(module: &str, name: &str) -> MoveTypeLayout {
+        MoveTypeLayout::Struct(MoveStructLayout::with_types(
+            StructTag {
+                address: AccountAddress::ONE,
+                module: Identifier::new(module).unwrap(),
+                name: Identifier::new(name).unwrap(),
+                type_args: vec![],
+            },
+            vec![MoveFieldLayout {
+                name: ident_str!("value").into(),
+                layout: MoveTypeLayout::Vector(Box::new(MoveTypeLayout::Address)),
+            }],
+        ))
+    }
+
+    fn deserialize_decimal(layout: &MoveTypeLayout, input: &str) -> VMResult<Value> {
+        deserialize_json_to_value(&module_id(), layout, format!("\"{}\"", input).as_bytes())
+    }
+
+    #[test]
+    fn test_deserialize_json_to_value_decimal_values() {
+        let layout = decimal_layout("fixed_point32", "FixedPoint32");
+        for (input, raw) in decimal_test_cases::FIXED_POINT32 {
+            let result = deserialize_decimal(&layout, input).unwrap();
+            let expected = Value::struct_(Struct::pack(vec![Value::u64(*raw)]));
+            assert!(result.equals(&expected).unwrap(), "{}", input);
+        }
+
+        let layout = decimal_layout("fixed_point64", "FixedPoint64");
+        for (input, raw) in decimal_test_cases::FIXED_POINT64 {
+            let result = deserialize_decimal(&layout, input).unwrap();
+            let expected = Value::struct_(Struct::pack(vec![Value::u128(*raw)]));
+            assert!(result.equals(&expected).unwrap(), "{}", input);
+        }
+
+        let layout = decimal_layout("bigdecimal", "BigDecimal");
+        for (input, scaled) in decimal_test_cases::big_decimal() {
+            let result = deserialize_decimal(&layout, &input).unwrap();
+            let bytes = BigUint::from_str(&scaled).unwrap().to_bytes_le();
+            let expected = Value::struct_(Struct::pack(vec![Value::struct_(Struct::pack(vec![
+                Value::vector_u8(bytes),
+            ]))]));
+            assert!(result.equals(&expected).unwrap(), "{}", input);
+        }
+    }
+
+    #[test]
+    fn test_deserialize_json_to_value_decimal_exponent_out_of_range() {
+        for (module, name) in [
+            ("fixed_point32", "FixedPoint32"),
+            ("fixed_point64", "FixedPoint64"),
+            ("bigdecimal", "BigDecimal"),
+        ] {
+            let layout = decimal_layout(module, name);
+            for input in decimal_test_cases::EXPONENT_OUT_OF_RANGE {
+                let err = match deserialize_decimal(&layout, input) {
+                    Ok(_) => panic!("{} \"{}\" was converted", name, input),
+                    Err(err) => err,
+                };
+                let message = err.message().cloned().unwrap_or_default();
+                assert!(
+                    message.contains("decimal exponent out of range"),
+                    "{} \"{}\": {}",
+                    name,
+                    input,
+                    message
+                );
+            }
+        }
     }
 }
