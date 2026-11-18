@@ -193,8 +193,8 @@ module initia_std::dex {
         pair_to_tokens: Table<address, vector<Object<Metadata>>>
     }
 
-    /// Trade gate for the relaunch. While enabled, only `operator`
-    /// can change pool state.
+    /// Trade gate the chain turns on when it relaunches after an incident.
+    /// While enabled, only `operator` can change pool state.
     struct GateStore has key {
         operator: address,
         enabled: bool
@@ -262,9 +262,6 @@ module initia_std::dex {
 
     /// Only the operator can trade while the gate store is enabled
     const EGATE_STORE_ENABLED: u64 = 24;
-
-    /// Gate store can be initialized only once
-    const EGATE_STORE_EXISTS: u64 = 25;
 
     // Constants
 
@@ -837,17 +834,21 @@ module initia_std::dex {
         );
     }
 
-    /// Called once by the chain from the relaunch upgrade handler.
-    public entry fun init_gate_store(chain: &signer, operator: address) {
+    /// Turns the gate on. Called by the chain from an upgrade handler. Creates the
+    /// gate store, or enables it again with the new `operator` if it already exists.
+    public entry fun init_gate_store(chain: &signer, operator: address) acquires GateStore {
         check_sudo(chain);
-        assert!(
-            !exists<GateStore>(@initia_std),
-            error::already_exists(EGATE_STORE_EXISTS)
-        );
-        move_to(chain, GateStore { operator, enabled: true });
+        if (exists<GateStore>(@initia_std)) {
+            let gate_store = borrow_global_mut<GateStore>(@initia_std);
+            gate_store.operator = operator;
+            gate_store.enabled = true;
+        } else {
+            move_to(chain, GateStore { operator, enabled: true });
+        }
     }
 
-    /// One way: the resource is kept, so it can never be initialized again.
+    /// Turns the gate off. The resource is kept, so the chain can turn it on again
+    /// with `init_gate_store`.
     public entry fun disable_gate_store(account: &signer) acquires GateStore {
         let gate_store = borrow_global_mut<GateStore>(@initia_std);
         let addr = signer::address_of(account);
@@ -3245,12 +3246,82 @@ module initia_std::dex {
         disable_gate_store(user);
     }
 
-    #[test(chain = @0x1)]
-    #[expected_failure(abort_code = 0x80019, location = Self)]
-    fun test_gate_store_init_once(chain: &signer) acquires GateStore {
+    #[test(chain = @0x1, new_operator = @0x4, user = @0x3)]
+    fun test_gate_store_reenable(
+        chain: &signer, new_operator: &signer, user: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
+        test_setup(chain);
+        let init_metadata = coin::metadata(@0x1, string::utf8(b"INIT"));
+        let lp_metadata = coin::metadata(@0x1, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        coin::transfer(chain, @0x4, init_metadata, 1000);
+        coin::transfer(chain, @0x3, init_metadata, 1000);
+
         init_gate_store(chain, @0x2);
-        // the chain can disable it too, but can not enable it again
         disable_gate_store(chain);
+        assert!(!is_gate_store_enabled(), 0);
+
+        // the chain can enable it again with a new operator
+        init_gate_store(chain, @0x4);
+        assert!(is_gate_store_enabled(), 1);
+        swap_script(
+            new_operator,
+            pair,
+            init_metadata,
+            1000,
+            option::none()
+        );
+
+        // the new operator can disable it again
+        disable_gate_store(new_operator);
+        assert!(!is_gate_store_enabled(), 2);
+        swap_script(user, pair, init_metadata, 1000, option::none());
+    }
+
+    #[test(chain = @0x1, old_operator = @0x2)]
+    #[expected_failure(abort_code = 0x50018, location = Self)]
+    fun test_gate_store_reenable_block_old_operator(
+        chain: &signer, old_operator: &signer
+    ) acquires ModuleStore, Pool, CoinCapabilities, Config, FlashSwapLock, ClammTokenPairs, GateStore {
+        test_setup(chain);
+        let init_metadata = coin::metadata(@0x1, string::utf8(b"INIT"));
+        let lp_metadata = coin::metadata(@0x1, string::utf8(b"SYMBOL"));
+        let pair = object::convert<Metadata, Config>(lp_metadata);
+        coin::transfer(chain, @0x2, init_metadata, 1000);
+
         init_gate_store(chain, @0x2);
+        disable_gate_store(chain);
+        init_gate_store(chain, @0x4);
+
+        swap_script(
+            old_operator,
+            pair,
+            init_metadata,
+            1000,
+            option::none()
+        );
+    }
+
+    #[test(chain = @0x1, old_operator = @0x2)]
+    #[expected_failure(abort_code = 0x50007, location = Self)]
+    fun test_gate_store_reenable_old_operator_disable_unauthorized(
+        chain: &signer, old_operator: &signer
+    ) acquires GateStore {
+        init_gate_store(chain, @0x2);
+        disable_gate_store(chain);
+        init_gate_store(chain, @0x4);
+
+        disable_gate_store(old_operator);
+    }
+
+    #[test(chain = @0x1, user = @0x3)]
+    #[expected_failure(abort_code = 0x50007, location = Self)]
+    fun test_gate_store_reenable_unauthorized(
+        chain: &signer, user: &signer
+    ) acquires GateStore {
+        init_gate_store(chain, @0x2);
+        disable_gate_store(chain);
+
+        init_gate_store(user, @0x3);
     }
 }
