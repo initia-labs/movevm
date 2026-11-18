@@ -664,17 +664,9 @@ module initia_std::staking {
                     &mut module_store.staking_states, metadata, validator
                 );
 
-            // calculate share
-            let total_unbonding_amount =
-                fungible_asset::balance(state.unbonding_coin_store);
-            let share_amount_ratio =
-                if (total_unbonding_amount == 0) {
-                    bigdecimal::one()
-                } else {
-                    bigdecimal::div_by_u64(
-                        state.unbonding_share, total_unbonding_amount
-                    )
-                };
+            // calculate share with the same capped ratio that `undelegate` used, so the
+            // aggregate share always covers the shares held by users.
+            let share_amount_ratio = unbonding_share_amount_ratio(state);
 
             let share_diff =
                 bigdecimal::mul(
@@ -2464,5 +2456,65 @@ module initia_std::staking {
                 10000 + 7 * 24 * 60 * 60
             );
         assert!(unbonding_response.unbonding_amount == 9000, 1);
+    }
+
+    #[test(chain = @0x1, user = @0x1234, donor = @0x4321)]
+    public fun test_staking_claim_unbonding_after_direct_deposit(
+        chain: &signer, user: &signer, donor: &signer
+    ) acquires DelegationStore, ModuleStore {
+        test_setup();
+
+        let user_addr = signer::address_of(user);
+        let validator = string::utf8(b"validator");
+
+        let metadata = staking_metadata_for_test();
+
+        fund_stake_coin(chain, user_addr, 1000000);
+        fund_stake_coin(chain, signer::address_of(donor), 1);
+
+        set_block_info(100, 10000);
+        set_staking_share_ratio(
+            *string::bytes(&validator),
+            &metadata,
+            &bigdecimal::from_u64(1),
+            1
+        );
+
+        register(user);
+        delegate_script(user, metadata, validator, 1000000);
+
+        // anyone can deposit to the validator's unbonding coin store
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let unbonding_coin_store =
+            load_staking_state(&module_store.staking_states, metadata, validator).unbonding_coin_store;
+        fungible_asset::deposit(
+            unbonding_coin_store, coin::withdraw(donor, metadata, 1)
+        );
+
+        undelegate_script(user, metadata, validator, 1000000);
+
+        // undelegate trigger `deposit_unbonding_coin_for_chain`
+        deposit_unbonding_coin_for_chain(
+            chain,
+            metadata,
+            vector[validator],
+            vector[1000000]
+        );
+
+        // the aggregate share must cover the share issued to the user
+        let module_store = borrow_global<ModuleStore>(@initia_std);
+        let state =
+            load_staking_state(&module_store.staking_states, metadata, validator);
+        assert!(state.unbonding_share == bigdecimal::from_u64(1000000), 0);
+        assert!(fungible_asset::balance(unbonding_coin_store) == 1000001, 1);
+
+        set_block_info(200, 10000 + 7 * 24 * 60 * 60);
+        claim_unbonding_script(
+            user,
+            metadata,
+            validator,
+            10000 + 7 * 24 * 60 * 60
+        );
+        assert!(coin::balance(user_addr, metadata) == 1000000, 2);
     }
 }
