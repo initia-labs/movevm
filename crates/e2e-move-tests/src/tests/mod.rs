@@ -16,6 +16,7 @@ mod solana_derivable_account_abstraction;
 mod staking;
 mod std_coin;
 mod string_format;
+mod string_natives;
 mod table;
 mod view_output;
 

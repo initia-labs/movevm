@@ -440,6 +440,10 @@ fn write_big_decimal(v: BigDecimal) -> SafeNativeResult<Value> {
     )])))
 }
 
+/// Upper bound for the little-endian bytes of a share (the value times 10^18). The chain side
+/// reads a share as a cosmos `LegacyDec`, which holds at most 315 bits, that is 40 bytes.
+const MAX_SHARE_BYTES: usize = 64;
+
 #[allow(clippy::result_large_err)]
 fn read_big_decimal(v: StructRef) -> SafeNativeResult<BigDecimal> {
     let scaled_le_bytes = v
@@ -451,6 +455,18 @@ fn read_big_decimal(v: StructRef) -> SafeNativeResult<BigDecimal> {
         .next()
         .unwrap()
         .value_as::<Vec<u8>>()?;
+
+    // The caller passes the share by reference, so its size is not charged here, while
+    // `big_decimal_to_string` is quadratic in it and the chain side refuses a value this large
+    // anyway. Refuse it before any conversion.
+    if scaled_le_bytes.len() > MAX_SHARE_BYTES {
+        return Err(partial_extension_error(format!(
+            "share is too large: {} bytes, at most {}",
+            scaled_le_bytes.len(),
+            MAX_SHARE_BYTES
+        ))
+        .into());
+    }
 
     let scaled = BigUint::from_le_bytes(&scaled_le_bytes);
     Ok(BigDecimal::new(scaled.into(), 18))
