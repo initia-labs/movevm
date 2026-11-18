@@ -42,6 +42,25 @@ fn checked_str(bytes: &[u8]) -> SafeNativeResult<&str> {
     })
 }
 
+/// `str::is_char_boundary` on the raw bytes. 0 and the length are boundaries, any other index
+/// is one unless the byte there is a UTF-8 continuation byte (0b10xx_xxxx). For valid UTF-8
+/// the result is the same as `checked_str(bytes)?.is_char_boundary(i)`, without reading the
+/// whole string.
+///
+/// `internal_is_char_boundary` and `internal_sub_string` are only called by `std::string` on
+/// the bytes of a `String`, which `string::utf8` has already validated (and charged for, per
+/// byte). Validating the whole string again on every call was work proportional to its length
+/// that the flat fee of these natives does not cover.
+fn is_char_boundary(bytes: &[u8], i: usize) -> bool {
+    if i == 0 {
+        return true;
+    }
+    match bytes.get(i) {
+        None => i == bytes.len(),
+        Some(&b) => (b as i8) >= -0x40,
+    }
+}
+
 /***************************************************************************************************
  * native fun internal_check_utf8
  *
@@ -92,7 +111,7 @@ fn native_is_char_boundary(
     let i = safely_pop_arg!(args, u64);
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let ok = checked_str(s_ref.as_slice())?.is_char_boundary(i as usize);
+    let ok = is_char_boundary(s_ref.as_slice(), i as usize);
 
     Ok(smallvec![Value::bool(ok)])
 }
@@ -127,15 +146,15 @@ fn native_sub_string(
 
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let s_str = checked_str(s_ref.as_slice())?;
+    let s_bytes = s_ref.as_slice();
     // `string::sub_string` checks the bounds and the char boundaries before calling in.
-    if j > s_str.len() || !s_str.is_char_boundary(i) || !s_str.is_char_boundary(j) {
+    if j > s_bytes.len() || !is_char_boundary(s_bytes, i) || !is_char_boundary(s_bytes, j) {
         return Err(SafeNativeError::InvariantViolation(
             PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                 .with_message("sub_string range is not on char boundaries".to_string()),
         ));
     }
-    let v = Value::vector_u8(s_str.as_bytes()[i..j].iter().cloned());
+    let v = Value::vector_u8(s_bytes[i..j].iter().cloned());
 
     Ok(smallvec![v])
 }
@@ -143,7 +162,7 @@ fn native_sub_string(
 /***************************************************************************************************
  * native fun internal_index_of
  *
- *   gas cost: base_cost + unit_cost * bytes_searched
+ *   gas cost: base_cost + unit_cost * pattern_length_in_bytes + unit_cost * string_length_in_bytes
  *
  **************************************************************************************************/
 #[allow(clippy::result_large_err)]
@@ -167,15 +186,16 @@ fn native_index_of(
 
     let s_arg = safely_pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
+
+    context.charge(
+        gas_params.string_index_of_per_byte_searched * NumBytes::new(s_ref.as_slice().len() as u64),
+    )?;
+
     let s_str = checked_str(s_ref.as_slice())?;
     let pos = match s_str.find(r_str) {
         Some(size) => size,
         None => s_str.len(),
     };
-
-    // TODO(Gas): What is the algorithm used for the search?
-    //            Ideally it should be something like KMP with O(n) time complexity...
-    context.charge(gas_params.string_index_of_per_byte_searched * NumBytes::new(pos as u64))?;
 
     Ok(smallvec![Value::u64(pos as u64)])
 }
@@ -194,4 +214,47 @@ pub fn make_all(
     ];
 
     builder.make_named_natives(natives)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_char_boundary;
+
+    #[test]
+    fn is_char_boundary_matches_str_on_valid_utf8() {
+        let strings = [
+            "",
+            "a",
+            "abc",
+            "\u{e9}",
+            "\u{20ac}",
+            "\u{1f600}",
+            "a\u{e9}b\u{20ac}c\u{1f600}d",
+            // first and last scalar value of each encoded length
+            "\u{0}\u{7f}\u{80}\u{7ff}\u{800}\u{ffff}\u{10000}\u{10ffff}",
+        ];
+        for s in strings {
+            // two indexes past the end as well
+            for i in 0..=s.len() + 2 {
+                assert_eq!(
+                    is_char_boundary(s.as_bytes(), i),
+                    s.is_char_boundary(i),
+                    "{:?} at {}",
+                    s,
+                    i
+                );
+            }
+            assert!(!is_char_boundary(s.as_bytes(), usize::MAX));
+        }
+    }
+
+    #[test]
+    fn is_char_boundary_on_other_bytes_looks_at_one_byte() {
+        // not valid UTF-8: a lone continuation byte, a truncated 3-byte sequence, 0xff
+        let bytes = [0x61, 0x80, 0xe2, 0x82, 0xff];
+        let expected = [true, false, true, false, true, true, false];
+        for (i, want) in expected.iter().enumerate() {
+            assert_eq!(is_char_boundary(&bytes, i), *want, "at {}", i);
+        }
+    }
 }

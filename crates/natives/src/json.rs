@@ -121,6 +121,12 @@ fn native_unmarshal(
     let annotated_layout = context.type_to_fully_annotated_layout(ty)?;
     let serde_bytes = safely_pop_arg!(arguments, Vec<u8>);
 
+    // charge before parsing, so that an input that is refused is paid for as well
+    context.charge(
+        gas_params.json_unmarshal_base
+            + gas_params.json_unmarshal_per_byte * NumBytes::new(serde_bytes.len() as u64),
+    )?;
+
     // Extract caller from the stack to assert the struct creation module permission.
     let caller = context
         .stack_frames(1)
@@ -137,11 +143,6 @@ fn native_unmarshal(
                 abort_code: EUNABLE_TO_UNMARSHAL_DESERIALIZATION_ERROR,
             }
         })?;
-
-    context.charge(
-        gas_params.json_unmarshal_base
-            + gas_params.json_unmarshal_per_byte * NumBytes::new(serde_bytes.len() as u64),
-    )?;
 
     Ok(smallvec![value])
 }

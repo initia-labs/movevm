@@ -1,6 +1,7 @@
 mod account_abstraction;
 mod args;
 mod audit_followup;
+mod big_number_limit;
 mod cache;
 mod code;
 mod common;
@@ -8,6 +9,7 @@ mod cosmos;
 mod ed25519_batch;
 mod ethereum_derivable_account_abstraction;
 mod infinite_loop;
+mod json_natives;
 mod max_loop_depth;
 mod memory_quota;
 mod oracle;
@@ -16,6 +18,7 @@ mod solana_derivable_account_abstraction;
 mod staking;
 mod std_coin;
 mod string_format;
+mod string_natives;
 mod table;
 mod view_output;
 
